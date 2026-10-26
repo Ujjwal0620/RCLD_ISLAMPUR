@@ -141,7 +141,10 @@ export default function CreateEmployeePage() {
       });
 
       const d = await r.json();
-      if (!r.ok) throw new Error(d.error || "Unable to create employee.");
+      if (!r.ok) {
+        const detail = d.detail ? ` (${d.detail})` : "";
+        throw new Error(`${d.error || "Unable to create employee."}${detail}`);
+      }
 
       setMessage(`Employee ${d.employee.employeeId} created successfully.`);
       setForm(initial);
