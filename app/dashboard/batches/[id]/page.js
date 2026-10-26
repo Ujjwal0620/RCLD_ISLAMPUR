@@ -5,13 +5,14 @@ import ERPLayout from "@/components/ERPLayout";
 
 export default function BatchDetailPage({ params }) {
   const [batch, setBatch] = useState(null);
+  const [batchId, setBatchId] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  async function load() {
+  async function load(id) {
     setLoading(true);
     try {
-      const r = await fetch("/api/batches/" + params.id, { cache: "no-store" });
+      const r = await fetch("/api/batches/" + id, { cache: "no-store" });
       const d = await r.json();
       if (r.ok) setBatch(d.batch);
       else alert(d.error || "Unable to load batch");
@@ -20,12 +21,18 @@ export default function BatchDetailPage({ params }) {
     }
   }
 
-  useEffect(() => { load(); }, [params.id]);
+  useEffect(() => {
+    (async () => {
+      const { id } = await params;
+      setBatchId(id);
+      await load(id);
+    })();
+  }, [params]);
 
   async function update(values) {
     setSaving(true);
     try {
-      const r = await fetch("/api/batches/" + params.id, {
+      const r = await fetch("/api/batches/" + batchId, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
