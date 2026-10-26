@@ -1,12 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { LayoutDashboard, Users, UserRoundCog, Menu, X, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, Users, UserRoundCog, Menu, X, ShieldCheck, Layers3, BookOpen, BrainCircuit } from "lucide-react";
 
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/students", label: "Students", icon: Users },
   { href: "/dashboard/employees", label: "Employees", icon: UserRoundCog },
+  { href: "/dashboard/courses", label: "Courses", icon: BookOpen },
+  { href: "/dashboard/batches", label: "Batches", icon: Layers3 },
+  { href: "/dashboard/ai", label: "AI Assistant", icon: BrainCircuit },
 ];
 
 export default function ERPLayout({ active, children }) {
