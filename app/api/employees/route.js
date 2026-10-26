@@ -65,7 +65,15 @@ export async function GET(request) {
     const employees = await Employee.find(filter).sort({ createdAt: -1 }).lean();
     return NextResponse.json({ employees, skills: ALL_EMPLOYEE_SKILLS });
   } catch (error) {
-    return NextResponse.json({ error: "Unable to load employees.", detail: error.message }, { status: 500 });
+    const unavailable = /MONGODB_URI|ECONNREFUSED|Server selection|connect/i.test(error.message || "");
+    return NextResponse.json(
+      {
+        error: unavailable ? "Employee database is unavailable." : "Unable to load employees.",
+        detail: error.message,
+        code: unavailable ? "DATABASE_UNAVAILABLE" : "EMPLOYEE_LOAD_FAILED",
+      },
+      { status: unavailable ? 503 : 500 }
+    );
   }
 }
 
@@ -112,6 +120,19 @@ export async function POST(request) {
 
     return NextResponse.json({ employee }, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ error: "Unable to create employee.", detail: error.message }, { status: 500 });
+    const unavailable = /MONGODB_URI|ECONNREFUSED|Server selection|connect/i.test(error.message || "");
+    const duplicate = error?.code === 11000;
+    return NextResponse.json(
+      {
+        error: duplicate
+          ? "An employee with this generated ID already exists. Please try again."
+          : unavailable
+            ? "Employee database is unavailable. Make sure MongoDB is running, then try again."
+            : "Unable to create employee.",
+        detail: error.message,
+        code: duplicate ? "DUPLICATE_EMPLOYEE" : unavailable ? "DATABASE_UNAVAILABLE" : "EMPLOYEE_CREATE_FAILED",
+      },
+      { status: duplicate ? 409 : unavailable ? 503 : 500 }
+    );
   }
 }
