@@ -18,6 +18,8 @@ const StudentSchema = new mongoose.Schema({
 
 const Student = mongoose.models.Student || mongoose.model("Student", StudentSchema);
 
+const DEFAULT_COURSES = ["CCA","DCA","ADCA","CCC","CAO","DWPD","DOM","DCST","DCAP","DHNT"];
+
 export async function GET(request) {
   try {
     await connectMongoDB();
@@ -28,19 +30,47 @@ export async function GET(request) {
     const sex = (searchParams.get("sex") || "").trim();
     const course = (searchParams.get("course") || "").trim();
     const status = (searchParams.get("status") || "").trim();
+    const registration = (searchParams.get("registration") || "").trim();
+    const fromDate = (searchParams.get("fromDate") || "").trim();
+    const toDate = (searchParams.get("toDate") || "").trim();
+
     const filter = {};
     if (search) {
-      const rx = new RegExp(search, "i");
-      filter.$or = [{ applicantName: rx }, { formNo: rx }, { mobileNumber: rx }, { courseName: rx }, { regnNo: rx }];
+      const rx = new RegExp(search.replace(/[.*+?^{}()|[\]\\]/g, "\\$&"), "i");
+      filter.$or = [
+        { applicantName: rx }, { formNo: rx }, { mobileNumber: rx },
+        { courseName: rx }, { regnNo: rx }, { fatherOrHusbandName: rx },
+        { aecCode: rx }, { kitIssueNo: rx }
+      ];
     }
     if (sex) filter.sex = sex;
     if (course) filter.courseName = course;
     if (status) filter.status = status;
-    const [students, total] = await Promise.all([
+    if (registration === "assigned") filter.regnNo = { $exists: true, $nin: ["", null] };
+    if (registration === "unassigned") filter.$and = [...(filter.$and || []), { $or: [{ regnNo: { $exists: false } }, { regnNo: "" }, { regnNo: null }] }];
+    if (fromDate || toDate) {
+      filter.createdAt = {};
+      if (fromDate) filter.createdAt.$gte = new Date(fromDate + "T00:00:00.000Z");
+      if (toDate) filter.createdAt.$lte = new Date(toDate + "T23:59:59.999Z");
+    }
+
+    const [students, total, dbCourses, statuses, sexes] = await Promise.all([
       Student.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
-      Student.countDocuments(filter)
+      Student.countDocuments(filter),
+      Student.distinct("courseName"),
+      Student.distinct("status"),
+      Student.distinct("sex")
     ]);
-    return NextResponse.json({ students, pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) } });
+
+    const courses = [...new Set([...DEFAULT_COURSES, ...dbCourses.filter(Boolean)])].sort();
+    const filterStatuses = statuses.filter(Boolean).sort();
+    const filterSexes = sexes.filter(Boolean).sort();
+
+    return NextResponse.json({
+      students,
+      pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
+      filterOptions: { courses, statuses: filterStatuses, sexes: filterSexes }
+    });
   } catch (error) {
     return NextResponse.json({ error: "Unable to load students.", detail: error.message }, { status: 500 });
   }
@@ -52,9 +82,17 @@ export async function POST(request) {
     const body = await request.json();
     const missing = ["formNo", "applicantName", "mobileNumber"].filter((key) => !String(body[key] || "").trim());
     if (missing.length) return NextResponse.json({ error: "Required fields: " + missing.join(", ") }, { status: 400 });
-    const student = await Student.create({ ...body, formNo: String(body.formNo).trim(), applicantName: String(body.applicantName).trim(), mobileNumber: String(body.mobileNumber).trim() });
+    const student = await Student.create({
+      ...body,
+      formNo: String(body.formNo).trim(),
+      applicantName: String(body.applicantName).trim(),
+      mobileNumber: String(body.mobileNumber).trim()
+    });
     return NextResponse.json({ student }, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ error: error?.code === 11000 ? "Form No. already exists." : "Unable to register student.", detail: error.message }, { status: error?.code === 11000 ? 409 : 500 });
+    return NextResponse.json({
+      error: error?.code === 11000 ? "Form No. already exists." : "Unable to register student.",
+      detail: error.message
+    }, { status: error?.code === 11000 ? 409 : 500 });
   }
 }
