@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ArrowLeft, Save } from "lucide-react";
 import ERPLayout from "@/components/ERPLayout";
 
@@ -70,24 +70,9 @@ function LeaveField({ label, name, value, onChange }) {
 
 export default function CreateEmployeePage() {
   const [form, setForm] = useState(initial);
-  const [skills, setSkills] = useState([]);
+  const [skills, setSkills] = useState(() => groups.flatMap((group) => group.skills));
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/employees", { cache: "no-store" })
-      .then((r) => r.json())
-      .then((d) => {
-        if (!cancelled) setSkills(d.skills || []);
-      })
-      .catch(() => {
-        if (!cancelled) setSkills([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const update = (key, value) => {
     setForm((current) => ({ ...current, [key]: value }));
@@ -97,6 +82,23 @@ export default function CreateEmployeePage() {
     setForm((current) => ({
       ...current,
       leaveBalance: { ...current.leaveBalance, [key]: value }
+    }));
+  };
+
+  const allSkills = groups.flatMap((group) => group.skills);
+  const allSelected = allSkills.every((skill) => form.skills.includes(skill));
+
+  const toggleAllSkills = () => {
+    setForm((current) => ({ ...current, skills: allSelected ? [] : allSkills }));
+  };
+
+  const toggleGroup = (groupSkills) => {
+    const groupSelected = groupSkills.every((skill) => form.skills.includes(skill));
+    setForm((current) => ({
+      ...current,
+      skills: groupSelected
+        ? current.skills.filter((skill) => !groupSkills.includes(skill))
+        : [...new Set([...current.skills, ...groupSkills])]
     }));
   };
 
@@ -217,12 +219,28 @@ export default function CreateEmployeePage() {
         <section className="form-section">
           <h3>Skills</h3>
           <p className="form-help">Select all skills the employee is qualified to teach or support. Multiple skills can be selected.</p>
+          <div className="form-actions" style={{ justifyContent: "flex-start", marginBottom: 16 }}>
+            <button type="button" className="ghost-btn" onClick={toggleAllSkills}>
+              {allSelected ? "Clear All Skills" : "Select All Skills"}
+            </button>
+            <span className="form-help">{form.skills.length} of {allSkills.length} selected</span>
+          </div>
           <div className="skill-groups">
             {groups.map((group) => (
               <div className="skill-group" key={group.title}>
-                <h4>{group.title}</h4>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                  <h4>{group.title}</h4>
+                  <label className="skill-group-select-all">
+                    <input
+                      type="checkbox"
+                      checked={group.skills.every((skill) => form.skills.includes(skill))}
+                      onChange={() => toggleGroup(group.skills)}
+                    />
+                    <span>Select group</span>
+                  </label>
+                </div>
                 <div className="skill-check-grid">
-                  {group.skills.filter((skill) => skills.includes(skill)).map((skill) => (
+                  {group.skills.map((skill) => (
                     <label key={skill} className={form.skills.includes(skill) ? "checked" : ""}>
                       <input type="checkbox" checked={form.skills.includes(skill)} onChange={() => toggleSkill(skill)} />
                       <span>{skill}</span>
