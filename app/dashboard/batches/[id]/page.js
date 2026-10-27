@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { ArrowLeft, CalendarDays, Users, BookOpen, Clock3, Save, Ban } from "lucide-react";
+import { ArrowLeft, CalendarDays, Users, BookOpen, Clock3, Save, Ban, Trash2 } from "lucide-react";
 import ERPLayout from "@/components/ERPLayout";
 
 export default function BatchDetailPage({ params }) {
@@ -73,7 +73,7 @@ export default function BatchDetailPage({ params }) {
           <button className="primary-btn" disabled={saving} onClick={() => update({ status: batch.status === "Active" ? "Draft" : "Active" })}>
             <Save size={16}/> {batch.status === "Active" ? "Move to Draft" : "Activate Batch"}
           </button>
-          {batch.status !== "Cancelled" && <button className="ghost-btn" onClick={cancelBatch}><Ban size={16}/> Cancel</button>}
+          {batch.status !== "Cancelled" && <><button className="ghost-btn" onClick={cancelBatch}><Ban size={16}/> Cancel</button><button className="ghost-btn" onClick={async () => { if (!confirm("Delete/archive this batch? It will be cancelled and its timetable will be released.")) return; const r = await fetch("/api/batches/" + batchId, { method: "DELETE" }); const d = await r.json(); if (!r.ok) return alert(d.error || "Unable to delete batch"); window.location.href = "/dashboard/batches"; }}><Trash2 size={16}/> Delete</button></>}
         </div>
       </div>
 
