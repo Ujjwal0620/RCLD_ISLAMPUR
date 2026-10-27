@@ -6,6 +6,7 @@ import { AI_CONTEXT_VERSION, RCLD_AI_CONTEXT } from "@/data/aiContext";
 
 const DEFAULT_MODEL = "openai/gpt-oss-120b";
 const FALLBACK_MODEL = "qwen/qwen3.8-27b";
+const DEPRECATED_MODELS = new Set(["llama-3.3-70b-versatile"]);
 
 function cleanMessages(messages = []) {
   return messages
@@ -19,6 +20,16 @@ function cleanMessages(messages = []) {
       role: message.role,
       content: message.content.trim(),
     }));
+}
+
+function getConfiguredModel() {
+  const configured = (process.env.GROQ_MODEL || "").trim();
+
+  if (!configured || DEPRECATED_MODELS.has(configured)) {
+    return DEFAULT_MODEL;
+  }
+
+  return configured;
 }
 
 async function callGroq(apiKey, model, messages) {
@@ -69,11 +80,9 @@ export async function POST(req) {
         ? body.conversationId.trim()
         : crypto.randomUUID();
 
-    let conversation = await AIConversation.findOne({ conversationId }).lean();
+    const conversation = await AIConversation.findOne({ conversationId }).lean();
     const storedMessages = cleanMessages(conversation?.messages || []);
 
-    // Prefer database history. If this is a new conversation, accept the client
-    // history so existing UI behavior remains compatible.
     const history = storedMessages.length
       ? storedMessages
       : incomingMessages.slice(0, -1);
@@ -88,7 +97,7 @@ export async function POST(req) {
       latestUserMessage,
     ];
 
-    const configuredModel = process.env.GROQ_MODEL || DEFAULT_MODEL;
+    const configuredModel = getConfiguredModel();
     let usedModel = configuredModel;
     let { response, data } = await callGroq(
       apiKey,
@@ -96,13 +105,12 @@ export async function POST(req) {
       promptMessages
     );
 
-    // Model availability changes over time. Keep the ERP context independent
-    // from the provider model and retry with a current secondary model when the
-    // configured model is unavailable.
     const modelUnavailable =
       !response.ok &&
       (response.status === 400 || response.status === 404) &&
-      /model|does not exist|access/i.test(data?.error?.message || "");
+      /model|does not exist|access|decommissioned|deprecated/i.test(
+        data?.error?.message || ""
+      );
 
     if (modelUnavailable && configuredModel !== FALLBACK_MODEL) {
       usedModel = FALLBACK_MODEL;
@@ -118,6 +126,7 @@ export async function POST(req) {
         {
           error: data?.error?.message || "Groq request failed.",
           model: usedModel,
+          configuredModel,
         },
         { status: 502 }
       );
@@ -157,6 +166,7 @@ export async function POST(req) {
       reply,
       conversationId,
       model: usedModel,
+      configuredModel,
       contextVersion: AI_CONTEXT_VERSION,
     });
   } catch (error) {
