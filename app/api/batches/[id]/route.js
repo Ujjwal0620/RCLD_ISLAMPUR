@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectMongoDB } from "@/lib/mongodb";
 import Batch from "@/models/Batch";
+import BatchSlotLock from "@/models/BatchSlotLock";
 
 async function getBatchId(params) {
   const resolvedParams = await params;
@@ -64,6 +65,15 @@ export async function PATCH(req, { params }) {
       return NextResponse.json({ error: "Batch not found." }, { status: 404 });
     }
 
+    if (update.status && ["Draft", "Active"].includes(update.status)) {
+      await BatchSlotLock.updateMany(
+        { batchId: batch._id },
+        { $set: { status: update.status } }
+      );
+    } else if (update.status && ["Completed", "Suspended", "Cancelled"].includes(update.status)) {
+      await BatchSlotLock.deleteMany({ batchId: batch._id });
+    }
+
     return NextResponse.json({ batch });
   } catch (e) {
     return NextResponse.json(
@@ -93,7 +103,8 @@ export async function DELETE(_req, { params }) {
       return NextResponse.json({ error: "Batch not found." }, { status: 404 });
     }
 
-    return NextResponse.json({ batch, message: "Batch cancelled." });
+    await BatchSlotLock.deleteMany({ batchId: batch._id });
+    return NextResponse.json({ batch, message: "Batch cancelled and its timetable slots are now available again." });
   } catch (e) {
     return NextResponse.json(
       { error: "Unable to cancel batch.", detail: e.message },
