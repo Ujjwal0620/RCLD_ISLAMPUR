@@ -37,7 +37,7 @@ function normalizeSlots(series) {
 
 function uniqueHours(schedules) {
   return [...new Map(
-    schedules.map(x => [x.time, {
+    schedules.map(x => [`${x.day}|${x.time}|${x.series}`, {
       day:x.day, time:x.time, series:x.series, slot:x.slot
     }])
   ).values()];
@@ -63,7 +63,7 @@ async function validateSchedule({ series, facultyId, course, excludeBatchId }) {
   const conflicts = [];
   for (const existingBatch of existingBatches) {
     for (const existingSlot of existingBatch.schedules || []) {
-      const hit = selectedHours.find(x => x.time === existingSlot.time);
+      const hit = selectedHours.find(x => x.day === existingSlot.day && x.time === existingSlot.time && x.series === existingSlot.series);
       if (hit) {
         conflicts.push({
           batchCode:existingBatch.batchCode,
@@ -198,7 +198,7 @@ export async function POST(req) {
       if (["Draft","Active"].includes(batch.status)) {
         await BatchSlotLock.insertMany(
           checked.selectedHours.map(hour => ({
-            key:`TIME|${hour.time}`,
+            key:`${hour.day}|${hour.time}|${hour.series}`,
             day:hour.day,
             time:hour.time,
             slot:hour.slot,
