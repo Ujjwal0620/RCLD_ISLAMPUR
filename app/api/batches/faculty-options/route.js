@@ -34,7 +34,7 @@ export async function GET(req){
       for(const batch of batches){
         if(batch.facultyId!==employee.employeeId)continue;
         for(const existing of batch.schedules||[]){
-          if(selectedSlots.some(selected=>selected.day===existing.day&&selected.time===existing.time)){
+          if(selectedSlots.some(selected=>selected.time===existing.time)){
             conflicts.push({batchCode:batch.batchCode,batchName:batch.name,day:existing.day,time:existing.time,series:existing.series});
           }
         }
