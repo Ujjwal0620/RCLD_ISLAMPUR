@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, UserRound, MapPin, BookOpen, FileText, CreditCard, CalendarDays, ClipboardCheck, WalletCards, Save } from "lucide-react";
+import { ArrowLeft, UserRound, MapPin, BookOpen, FileText, CreditCard, CalendarDays, ClipboardCheck, WalletCards, Save, Pencil, Trash2 } from "lucide-react";
 import ERPLayout from "@/components/ERPLayout";
 
 const value = (v) => v === undefined || v === null || v === "" ? "—" : v;
@@ -12,7 +12,7 @@ export default function StudentDetailsPage({params}){
   const [fee,setFee]=useState(null),[attendance,setAttendance]=useState({records:[],summary:{total:0,present:0,absent:0,leave:0,percentage:0}});
   const [feeForm,setFeeForm]=useState({totalFee:"",discount:"",admissionFee:"",amount:"",date:new Date().toISOString().slice(0,10),method:"Cash",reference:""});
   const [attForm,setAttForm]=useState({date:new Date().toISOString().slice(0,10),status:"Present",subject:"",batch:"",note:""});
-  const [message,setMessage]=useState("");
+  const [message,setMessage]=useState(""); const [editing,setEditing]=useState(false); const [editForm,setEditForm]=useState({});
 
   async function loadOperational(id){
     const [fr,ar]=await Promise.all([fetch("/api/students/"+id+"/fees",{cache:"no-store"}),fetch("/api/students/"+id+"/attendance",{cache:"no-store"})]);
@@ -21,16 +21,19 @@ export default function StudentDetailsPage({params}){
     if(ar.ok)setAttendance(aj);
   }
 
-  useEffect(()=>{(async()=>{try{const {id}=await params;const r=await fetch("/api/students/"+id,{cache:"no-store"});const d=await r.json();if(!r.ok)throw new Error(d.error||"Unable to load student.");setStudent(d.student);await loadOperational(id);}catch(e){setError(e.message)}finally{setLoading(false)}})()},[params]);
+  useEffect(()=>{(async()=>{try{const {id}=await params;const r=await fetch("/api/students/"+id,{cache:"no-store"});const d=await r.json();if(!r.ok)throw new Error(d.error||"Unable to load student.");setStudent(d.student);setEditForm(d.student);await loadOperational(id);}catch(e){setError(e.message)}finally{setLoading(false)}})()},[params]);
 
+  async function saveStudent(e){e.preventDefault();const r=await fetch("/api/students/"+student._id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(editForm)});const d=await r.json();if(!r.ok)return setMessage(d.error||"Unable to update student.");setStudent(d.student);setEditForm(d.student);setEditing(false);setMessage("Student updated successfully.");}
+  async function deleteStudent(){if(!confirm("Archive this student? The record will be marked Cancelled so fees, attendance and academic history are preserved."))return;const r=await fetch("/api/students/"+student._id,{method:"DELETE"});const d=await r.json();if(!r.ok)return setMessage(d.error||"Unable to archive student.");window.location.href="/dashboard/students";}
   async function saveFees(e){e.preventDefault();setMessage("");if(!student)return;const r=await fetch("/api/students/"+student._id+"/fees",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({totalFee:feeForm.totalFee,discount:feeForm.discount,admissionFee:feeForm.admissionFee,payment:feeForm.amount?{amount:feeForm.amount,date:feeForm.date,method:feeForm.method,reference:feeForm.reference}:undefined})});const d=await r.json();if(!r.ok){setMessage(d.error||"Unable to save fees.");return}setFee(d.fee);setFeeForm(f=>({...f,amount:"",reference:""}));setMessage("Fee information saved.");}
   async function saveAttendance(e){e.preventDefault();setMessage("");if(!student)return;const r=await fetch("/api/students/"+student._id+"/attendance",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(attForm)});const d=await r.json();if(!r.ok){setMessage(d.error||"Unable to save attendance.");return}const ar=await fetch("/api/students/"+student._id+"/attendance",{cache:"no-store"});setAttendance(await ar.json());setMessage("Attendance saved.");}
 
   return <ERPLayout active="/dashboard/students">
-    <header className="topbar"><div><div className="crumb">Students / Student Details</div><h1>{student?.applicantName||"Student Details"}</h1></div><a className="ghost-btn" href="/dashboard/students"><ArrowLeft size={17}/> Back to Students</a></header>
+    <header className="topbar"><div><div className="crumb">Students / Student Details</div><h1>{student?.applicantName||"Student Details"}</h1></div><div className="top-actions">{student&&<><button className="ghost-btn" onClick={()=>setEditing(true)}><Pencil size={16}/> Edit</button><button className="ghost-btn" onClick={deleteStudent}><Trash2 size={16}/> Delete</button></>}<a className="ghost-btn" href="/dashboard/students"><ArrowLeft size={17}/> Back</a></div></header>
     {loading&&<section className="panel"><div className="empty">Loading student details…</div></section>}
     {error&&<section className="panel"><div className="empty error-text">{error}</div></section>}
     {student&&<main className="student-details">
+      {editing&&<section className="detail-section"><div className="detail-section-title"><Pencil size={17}/><h3>Edit Student</h3></div><form onSubmit={saveStudent}><div className="form-grid three">{[["formNo","Form No."],["applicantName","Applicant Name"],["mobileNumber","Mobile"],["regnNo","Registration No."],["courseCode","Course Code"],["courseName","Course Name"],["dateOfBirth","Date of Birth"],["fatherOrHusbandName","Father / Husband"],["nationality","Nationality"],["address","Address"]].map(([k,l])=><label className="form-field" key={k}><span>{l}</span><input value={editForm[k]||""} onChange={e=>setEditForm(f=>({...f,[k]:e.target.value}))}/></label>)}<label className="form-field"><span>Sex</span><select value={editForm.sex||""} onChange={e=>setEditForm(f=>({...f,sex:e.target.value}))}><option value="">Select</option><option value="M">Male</option><option value="F">Female</option></select></label><label className="form-field"><span>Status</span><select value={editForm.status||"Registered"} onChange={e=>setEditForm(f=>({...f,status:e.target.value}))}>{["Registered","Admission Pending","Active","Course Completed","Dropped Out","Cancelled","Suspended","Alumni"].map(x=><option key={x}>{x}</option>)}</select></label></div><div className="form-actions"><button type="button" className="ghost-btn" onClick={()=>setEditing(false)}>Cancel</button><button className="primary-btn"><Save size={16}/> Save Changes</button></div></form></section>}
       <section className="student-profile-card"><div className="student-avatar">{student.photoUrl?<img src={student.photoUrl} alt=""/>:<UserRound size={30}/>}</div><div><div className="eyebrow">Super Admin / Student Profile</div><h2>{student.applicantName}</h2><p>Form No. {value(student.formNo)} · {value(student.courseName)} · {value(student.mobileNumber)}</p></div><span className="badge profile-status">{value(student.status)}</span></section>
 
       <section className="student-summary-grid">
