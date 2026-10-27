@@ -147,7 +147,7 @@ export async function PATCH(req,{params}){
     if(["Draft","Active"].includes(nextStatus)){
       try{
         await BatchSlotLock.insertMany(selectedHours.map(hour=>({
-          key:`${hour.day}|${hour.time}`,day:hour.day,time:hour.time,
+          key:`TIME|${hour.time}`,day:hour.day,time:hour.time,
           slot:hour.slot,series:hour.series,batchId:updated._id,
           batchCode:updated.batchCode,status:nextStatus
         })),{ordered:true});
