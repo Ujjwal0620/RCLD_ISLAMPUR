@@ -9,7 +9,7 @@ const v=(x)=>x===undefined||x===null||x===""?"—":x;
 
 export default function EmployeeDetailsPage({params}){
  const [employee,setEmployee]=useState(null); const [error,setError]=useState(""); const [loading,setLoading]=useState(true); const [editing,setEditing]=useState(false); const [form,setForm]=useState({});
- useEffect(()=>{(async()=>{try{const {id}=await params;const r=await fetch("/api/employees/"+id,{cache:"no-store"});const d=await r.json();if(!r.ok)throw new Error(d.error||"Unable to load employee.");setEmployee(d.employee);setForm(d.employee);}catch(e){setError(e.message)}finally{setLoading(false)}})()},[params]);
+ useEffect(()=>{(async()=>{try{const {id}=await params;const r=await fetch("/api/employees/"+id,{cache:"no-store"});const d=await r.json();if(!r.ok)throw new Error(d.error||"Unable to load employee.");setEmployee(d.employee);setForm(d.employee);if(new URLSearchParams(window.location.search).get("edit")==="1")setEditing(true);}catch(e){setError(e.message)}finally{setLoading(false)}})()},[params]);
  async function save(e){e.preventDefault();const r=await fetch("/api/employees/"+employee._id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(form)}),d=await r.json();if(!r.ok)return setError(d.error||"Unable to update employee.");setEmployee(d.employee);setForm(d.employee);setEditing(false);}
  async function remove(){if(!confirm("Archive this employee? The employee will become Inactive so assignment/history data is preserved."))return;const r=await fetch("/api/employees/"+employee._id,{method:"DELETE"}),d=await r.json();if(!r.ok)return setError(d.error||"Unable to archive employee.");window.location.href="/dashboard/employees";}
  return <ERPLayout active="/dashboard/employees">
