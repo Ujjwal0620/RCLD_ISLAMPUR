@@ -1,0 +1,3 @@
+import mongoose from "mongoose";
+const BatchSlotLockSchema=new mongoose.Schema({key:{type:String,unique:true,required:true,index:true},day:{type:String,required:true},time:{type:String,required:true},slot:{type:String,required:true},series:{type:String,required:true},batchId:{type:mongoose.Schema.Types.ObjectId,ref:"Batch",required:true},batchCode:{type:String,required:true},status:{type:String,enum:["Draft","Active"],default:"Draft"}},{timestamps:true});
+export default mongoose.models.BatchSlotLock||mongoose.model("BatchSlotLock",BatchSlotLockSchema);
