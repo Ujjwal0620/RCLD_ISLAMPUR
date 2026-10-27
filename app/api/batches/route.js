@@ -37,7 +37,7 @@ function normalizeSlots(series) {
 
 function uniqueHours(schedules) {
   return [...new Map(
-    schedules.map(x => [`${x.day}|${x.time}`, {
+    schedules.map(x => [x.time, {
       day:x.day, time:x.time, series:x.series, slot:x.slot
     }])
   ).values()];
@@ -63,7 +63,7 @@ async function validateSchedule({ series, facultyId, course, excludeBatchId }) {
   const conflicts = [];
   for (const existingBatch of existingBatches) {
     for (const existingSlot of existingBatch.schedules || []) {
-      const hit = selectedHours.find(x => x.day === existingSlot.day && x.time === existingSlot.time);
+      const hit = selectedHours.find(x => x.time === existingSlot.time);
       if (hit) {
         conflicts.push({
           batchCode:existingBatch.batchCode,
@@ -115,7 +115,7 @@ async function validateSchedule({ series, facultyId, course, excludeBatchId }) {
     const facultyConflicts = [];
     for (const batch of facultyBatches) {
       for (const existingSlot of batch.schedules || []) {
-        if (selectedHours.some(x => x.day === existingSlot.day && x.time === existingSlot.time)) {
+        if (selectedHours.some(x => x.time === existingSlot.time)) {
           facultyConflicts.push({
             batchCode:batch.batchCode,
             batchName:batch.name,
@@ -198,7 +198,7 @@ export async function POST(req) {
       if (["Draft","Active"].includes(batch.status)) {
         await BatchSlotLock.insertMany(
           checked.selectedHours.map(hour => ({
-            key:`${hour.day}|${hour.time}`,
+            key:`TIME|${hour.time}`,
             day:hour.day,
             time:hour.time,
             slot:hour.slot,
