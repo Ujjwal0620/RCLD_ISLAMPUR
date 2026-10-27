@@ -45,7 +45,8 @@ export async function GET(request) {
     }
     if (sex) filter.sex = sex;
     if (course) filter.courseName = course;
-    if (status) filter.status = status;
+    if (status && status !== "all") filter.status = status;
+    else if (!status) filter.status = { $ne: "Cancelled" };
     if (registration === "assigned") filter.regnNo = { $exists: true, $nin: ["", null] };
     if (registration === "unassigned") filter.$and = [...(filter.$and || []), { $or: [{ regnNo: { $exists: false } }, { regnNo: "" }, { regnNo: null }] }];
     if (fromDate || toDate) {
