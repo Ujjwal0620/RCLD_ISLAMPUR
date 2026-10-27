@@ -70,7 +70,7 @@ async function validateReschedule({id,course,series,facultyId}){
     const facultyConflicts=[];
     for(const other of facultyBatches){
       for(const existing of other.schedules||[]){
-        if(selectedHours.some(x=>x.day===existing.day&&x.time===existing.time)){
+        if(selectedHours.some(x=>x.time===existing.time)){
           facultyConflicts.push({
             batchCode:other.batchCode,batchName:other.name,
             day:existing.day,time:existing.time,series:existing.series
