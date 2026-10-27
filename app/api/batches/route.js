@@ -4,6 +4,7 @@ import Batch from "@/models/Batch";
 import Course from "@/models/Course";
 import { getSeriesSlots } from "@/data/batchSchedule";
 import mongoose from "mongoose";
+import BatchSlotLock from "@/models/BatchSlotLock";
 
 const EmployeeSchema = new mongoose.Schema(
   {
@@ -87,6 +88,40 @@ export async function POST(req) {
     }
 
     const schedules = normalizeSlots(series);
+    const existingBatches = await Batch.find({ status: { $in: ["Draft", "Active"] } })
+      .select("batchCode name schedules")
+      .lean();
+
+    const slotConflicts = [];
+    for (const existingBatch of existingBatches) {
+      for (const existingSlot of existingBatch.schedules || []) {
+        const conflict = schedules.find(
+          (slot) =>
+            slot.day === existingSlot.day &&
+            slot.time === existingSlot.time &&
+            slot.slot === existingSlot.slot
+        );
+        if (conflict) {
+          slotConflicts.push({
+            batchCode: existingBatch.batchCode,
+            batchName: existingBatch.name,
+            day: existingSlot.day,
+            time: existingSlot.time,
+            slot: existingSlot.slot,
+            series: existingSlot.series,
+          });
+        }
+      }
+    }
+    if (slotConflicts.length) {
+      return NextResponse.json(
+        {
+          error: "One or more selected timetable slots are already booked.",
+          conflicts: slotConflicts,
+        },
+        { status: 409 }
+      );
+    }
 
     if (!schedules.length) {
       return NextResponse.json(
@@ -185,6 +220,31 @@ export async function POST(req) {
       notes: b.notes || "",
       createdBy: "superadmin",
     });
+
+    try {
+      await BatchSlotLock.insertMany(
+        schedules.map((slot) => ({
+          key: `${slot.day}|${slot.time}|${slot.slot}`,
+          day: slot.day,
+          time: slot.time,
+          slot: slot.slot,
+          series: slot.series,
+          batchId: batch._id,
+          batchCode: batch.batchCode,
+          status: batch.status === "Active" ? "Active" : "Draft",
+        })),
+        { ordered: true }
+      );
+    } catch (lockError) {
+      await Batch.findByIdAndDelete(batch._id);
+      if (lockError?.code === 11000) {
+        return NextResponse.json(
+          { error: "A timetable slot was booked by another batch while this batch was being created. Refresh the timetable and choose another slot." },
+          { status: 409 }
+        );
+      }
+      throw lockError;
+    }
 
     return NextResponse.json({ batch }, { status: 201 });
   } catch (e) {
