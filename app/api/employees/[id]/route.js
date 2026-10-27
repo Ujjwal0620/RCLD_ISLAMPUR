@@ -1,28 +1,9 @@
 import { NextResponse } from "next/server";
 import { connectMongoDB } from "@/lib/mongodb";
 import mongoose from "mongoose";
-
-const EmployeeSchema = new mongoose.Schema({
-  employeeId: String, name: String, age: Number, dateOfBirth: String, gender: String,
-  mobile: String, email: String, address: String, joiningDate: String,
-  designation: String, department: String, employmentType: String, salary: Number,
-  salaryFrequency: String, bankName: String, accountNumber: String, ifsc: String,
-  emergencyContactName: String, emergencyContactNumber: String,
-  leaveBalance: { casual: Number, sick: Number, earned: Number, other: Number },
-  skills: [String], status: String, notes: String
-}, { timestamps: true });
-
-const Employee = mongoose.models.Employee || mongoose.model("Employee", EmployeeSchema);
-
-export async function GET(request, { params }) {
-  try {
-    await connectMongoDB();
-    const { id } = await params;
-    if (!mongoose.Types.ObjectId.isValid(id)) return NextResponse.json({ error: "Invalid employee ID." }, { status: 400 });
-    const employee = await Employee.findById(id).lean();
-    if (!employee) return NextResponse.json({ error: "Employee not found." }, { status: 404 });
-    return NextResponse.json({ employee });
-  } catch (error) {
-    return NextResponse.json({ error: "Unable to load employee.", detail: error.message }, { status: 500 });
-  }
-}
+const EmployeeSchema=new mongoose.Schema({employeeId:String,name:String,age:Number,dateOfBirth:String,gender:String,mobile:String,email:String,address:String,joiningDate:String,designation:String,department:String,employmentType:String,salary:Number,salaryFrequency:String,bankName:String,accountNumber:String,ifsc:String,emergencyContactName:String,emergencyContactNumber:String,leaveBalance:{casual:Number,sick:Number,earned:Number,other:Number},skills:[String],status:String,notes:String},{timestamps:true});
+const Employee=mongoose.models.Employee||mongoose.model("Employee",EmployeeSchema);
+async function idOf(params){return (await params)?.id}
+export async function GET(request,{params}){try{await connectMongoDB();const id=await idOf(params);if(!mongoose.Types.ObjectId.isValid(id))return NextResponse.json({error:"Invalid employee ID."},{status:400});const employee=await Employee.findById(id).lean();if(!employee)return NextResponse.json({error:"Employee not found."},{status:404});return NextResponse.json({employee});}catch(error){return NextResponse.json({error:"Unable to load employee.",detail:error.message},{status:500});}}
+export async function PATCH(req,{params}){try{await connectMongoDB();const id=await idOf(params);if(!mongoose.Types.ObjectId.isValid(id))return NextResponse.json({error:"Invalid employee ID."},{status:400});const body=await req.json();const allowed=["name","age","dateOfBirth","gender","mobile","email","address","joiningDate","designation","department","employmentType","salary","salaryFrequency","bankName","accountNumber","ifsc","emergencyContactName","emergencyContactNumber","leaveBalance","skills","status","notes"];const update={};for(const k of allowed)if(body[k]!==undefined)update[k]=body[k];if(update.age!==undefined)update.age=Number(update.age)||0;if(update.salary!==undefined)update.salary=Number(update.salary)||0;const employee=await Employee.findByIdAndUpdate(id,update,{new:true,runValidators:true}).lean();if(!employee)return NextResponse.json({error:"Employee not found."},{status:404});return NextResponse.json({employee,message:"Employee updated."});}catch(error){return NextResponse.json({error:"Unable to update employee.",detail:error.message},{status:400});}}
+export async function DELETE(req,{params}){try{await connectMongoDB();const id=await idOf(params);if(!mongoose.Types.ObjectId.isValid(id))return NextResponse.json({error:"Invalid employee ID."},{status:400});const employee=await Employee.findByIdAndUpdate(id,{status:"Inactive"},{new:true}).lean();if(!employee)return NextResponse.json({error:"Employee not found."},{status:404});return NextResponse.json({employee,message:"Employee archived as Inactive. Historical assignments were preserved."});}catch(error){return NextResponse.json({error:"Unable to archive employee.",detail:error.message},{status:400});}}
