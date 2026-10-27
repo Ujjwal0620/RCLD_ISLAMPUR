@@ -122,7 +122,7 @@ export async function PATCH(req,{params}){
         error:`Select exactly ${classFrequency} series for this batch.`
       },{status:400});
       const checked=await validateReschedule({id,course,series,facultyId});
-      if(checked.response)return checked;
+      if(checked.response)return checked.response;
       schedules=checked.schedules;
       selectedHours=checked.selectedHours;
       facultyName=body.facultyName!==undefined?String(body.facultyName||""):checked.employee?.name||"";
