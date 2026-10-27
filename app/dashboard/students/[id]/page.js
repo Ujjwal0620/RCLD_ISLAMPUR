@@ -21,7 +21,7 @@ export default function StudentDetailsPage({params}){
     if(ar.ok)setAttendance(aj);
   }
 
-  useEffect(()=>{(async()=>{try{const {id}=await params;const r=await fetch("/api/students/"+id,{cache:"no-store"});const d=await r.json();if(!r.ok)throw new Error(d.error||"Unable to load student.");setStudent(d.student);setEditForm(d.student);await loadOperational(id);}catch(e){setError(e.message)}finally{setLoading(false)}})()},[params]);
+  useEffect(()=>{(async()=>{try{const {id}=await params;const r=await fetch("/api/students/"+id,{cache:"no-store"});const d=await r.json();if(!r.ok)throw new Error(d.error||"Unable to load student.");setStudent(d.student);setEditForm(d.student);if(new URLSearchParams(window.location.search).get("edit")==="1")setEditing(true);await loadOperational(id);}catch(e){setError(e.message)}finally{setLoading(false)}})()},[params]);
 
   async function saveStudent(e){e.preventDefault();const r=await fetch("/api/students/"+student._id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(editForm)});const d=await r.json();if(!r.ok)return setMessage(d.error||"Unable to update student.");setStudent(d.student);setEditForm(d.student);setEditing(false);setMessage("Student updated successfully.");}
   async function deleteStudent(){if(!confirm("Archive this student? The record will be marked Cancelled so fees, attendance and academic history are preserved."))return;const r=await fetch("/api/students/"+student._id,{method:"DELETE"});const d=await r.json();if(!r.ok)return setMessage(d.error||"Unable to archive student.");window.location.href="/dashboard/students";}
