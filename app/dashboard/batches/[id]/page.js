@@ -20,7 +20,7 @@ export default function BatchDetailPage({params}){
       const [bd,sd,cd,ad]=await Promise.all([br.json(),sr.json(),cr.json(),Promise.resolve(fetch("/api/batches",{cache:"no-store"})).then(x=>x.then(r=>r.json()))]);
       if(!br.ok) throw new Error(bd.error||"Unable to load batch.");
       setBatch(bd.batch); setSeries(sd.series||[]); setCourses(cd.courses||[]); setAllBatches(ad.batches||[]);
-      setSelectedSeries(bd.batch.series||[]); setFacultyId(bd.batch.facultyId||"");
+      setSelectedSeries(bd.batch.series||[]); setFacultyId(bd.batch.facultyId||""); if(new URLSearchParams(window.location.search).get("edit")==="1") setEditing(true);
     }catch(e){alert(e.message)}finally{setLoading(false)}
   }
 
