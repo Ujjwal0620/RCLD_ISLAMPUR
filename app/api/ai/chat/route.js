@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { connectMongoDB } from "@/lib/mongodb";
 import AIConversation from "@/models/AIConversation";
 import { AI_CONTEXT_VERSION, RCLD_AI_CONTEXT } from "@/data/aiContext";
+import { retrieveRAGContext } from "@/lib/ai-rag";
 
 // Keep the provider/model choice server-side and model-independent from ERP context.
 // Do not allow an old local GROQ_MODEL value to silently switch this route back
@@ -107,8 +108,15 @@ export async function POST(req) {
       ? storedMessages
       : incomingMessages.slice(0, -1);
 
+    let rag = { context: "", sources: [] };
+    try {
+      rag = await retrieveRAGContext(latestUserMessage.content);
+    } catch (ragError) {
+      console.error("RAG retrieval failed:", ragError);
+    }
+
     const promptMessages = [
-      { role: "system", content: RCLD_AI_CONTEXT },
+      { role: "system", content: RCLD_AI_CONTEXT + "\n\nRETRIEVED RCLD ERP CONTEXT:\n" + rag.context + "\n\nAnswer from retrieved/live ERP context when available. Never invent records. If data is unavailable, say so." },
       ...history.slice(-30),
       latestUserMessage,
     ];
@@ -170,6 +178,7 @@ export async function POST(req) {
       provider: "Groq",
       model: usedModel,
       contextVersion: AI_CONTEXT_VERSION,
+      sources: rag.sources,
     });
   } catch (error) {
     console.error("AI chat route failed:", error);
