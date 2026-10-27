@@ -60,7 +60,8 @@ export async function GET(request) {
       const rx = new RegExp(escaped, "i");
       filter.$or = [{ employeeId: rx }, { name: rx }, { mobile: rx }, { email: rx }, { designation: rx }, { department: rx }];
     }
-    if (status) filter.status = status;
+    if (status && status !== "all") filter.status = status;
+    else if (!status) filter.status = { $ne: "Inactive" };
     if (skill) filter.skills = skill;
     const employees = await Employee.find(filter).sort({ createdAt: -1 }).lean();
     return NextResponse.json({ employees, skills: ALL_EMPLOYEE_SKILLS });
