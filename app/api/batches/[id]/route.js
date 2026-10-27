@@ -22,7 +22,7 @@ function normalizeSlots(series){
   })));
 }
 function uniqueHours(schedules){
-  return [...new Map(schedules.map(x=>[x.time,{day:x.day,time:x.time,series:x.series,slot:x.slot}])).values()];
+  return [...new Map(schedules.map(x=>[`${x.day}|${x.time}|${x.series}`,{day:x.day,time:x.time,series:x.series,slot:x.slot}])).values()];
 }
 function uniqueConflicts(items){
   return [...new Map(items.map(x=>[`${x.batchCode}|${x.day}|${x.time}`,x])).values()];
@@ -41,7 +41,7 @@ async function validateReschedule({id,course,series,facultyId}){
   const conflicts=[];
   for(const other of others){
     for(const existing of other.schedules||[]){
-      if(selectedHours.some(x=>x.time===existing.time)){
+      if(selectedHours.some(x=>x.day===existing.day&&x.time===existing.time&&x.series===existing.series)){
         conflicts.push({
           batchCode:other.batchCode,batchName:other.name,
           day:existing.day,time:existing.time,
@@ -147,7 +147,7 @@ export async function PATCH(req,{params}){
     if(["Draft","Active"].includes(nextStatus)){
       try{
         await BatchSlotLock.insertMany(selectedHours.map(hour=>({
-          key:`TIME|${hour.time}`,day:hour.day,time:hour.time,
+          key:`${hour.day}|${hour.time}|${hour.series}`,day:hour.day,time:hour.time,
           slot:hour.slot,series:hour.series,batchId:updated._id,
           batchCode:updated.batchCode,status:nextStatus
         })),{ordered:true});
