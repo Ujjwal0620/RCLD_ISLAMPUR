@@ -22,7 +22,7 @@ function normalizeSlots(series){
   })));
 }
 function uniqueHours(schedules){
-  return [...new Map(schedules.map(x=>[`${x.day}|${x.time}`,{day:x.day,time:x.time,series:x.series,slot:x.slot}])).values()];
+  return [...new Map(schedules.map(x=>[x.time,{day:x.day,time:x.time,series:x.series,slot:x.slot}])).values()];
 }
 function uniqueConflicts(items){
   return [...new Map(items.map(x=>[`${x.batchCode}|${x.day}|${x.time}`,x])).values()];
