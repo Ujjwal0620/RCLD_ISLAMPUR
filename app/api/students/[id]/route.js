@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { connectMongoDB } from "@/lib/mongodb";
 import mongoose from "mongoose";
 import Course from "@/models/Course";
+import Batch from "@/models/Batch";
 
 const StudentSchema = new mongoose.Schema({
   formNo:{type:String,required:true,unique:true,trim:true},
-  aecCode:String,regnNo:String,enrollmentNo:String,admissionDate:String,guardianContactNumber:String,dueAmount:mongoose.Schema.Types.Mixed,paymentStatus:mongoose.Schema.Types.Mixed,sourceCourseLabel:String,importSource:String,courseName:String,courseCode:String,
+  aecCode:String,regnNo:String,enrollmentNo:String,admissionDate:String,guardianContactNumber:String,dueAmount:mongoose.Schema.Types.Mixed,paymentStatus:mongoose.Schema.Types.Mixed,sourceCourseLabel:String,importSource:String,courseName:String,courseCode:String,batchId:{type:mongoose.Schema.Types.ObjectId,ref:"Batch",default:null},batchCode:String,
   applicantName:{type:String,required:true,trim:true},nationality:String,dateOfBirth:String,sex:String,
   fatherOrHusbandName:String,address:String,pin:String,whatsappNumber:String,
   mobileNumber:{type:String,required:true,trim:true},
@@ -34,11 +35,25 @@ export async function PATCH(req,{params}){
     const body=await req.json();
     const allowed=[
       "formNo","aecCode","regnNo","enrollmentNo","admissionDate","guardianContactNumber","dueAmount","paymentStatus","sourceCourseLabel","importSource","courseName","courseCode","applicantName","nationality","dateOfBirth","sex","fatherOrHusbandName",
-      "address","pin","whatsappNumber","mobileNumber","qualifications",
+      "address","pin","whatsappNumber","mobileNumber","qualifications","batchId","batchCode",
       "enclosures","declarationDate","declarationPlace","signatureApplicant","photoUrl","status"
     ];
     const update={};
     for(const k of allowed)if(body[k]!==undefined)update[k]=body[k];
+    if(update.batchId!==undefined){
+      if(update.batchId===null || String(update.batchId).trim()===""){ update.batchId=null; update.batchCode=""; }
+      else {
+        if(!mongoose.Types.ObjectId.isValid(update.batchId))return NextResponse.json({error:"Invalid batch ID."},{status:400});
+        const targetBatch=await Batch.findById(update.batchId).lean();
+        if(!targetBatch)return NextResponse.json({error:"Selected batch not found."},{status:404});
+        const currentStudent=await Student.findById(id).select("courseCode courseName batchId").lean();
+        const sameCourse=(String(currentStudent?.courseCode||"").toUpperCase()===String(targetBatch.courseCode||"").toUpperCase())||(String(currentStudent?.courseName||"").trim()===String(targetBatch.courseName||"").trim());
+        if(!sameCourse)return NextResponse.json({error:"Student course does not match the selected batch course."},{status:409});
+        const count=await Student.countDocuments({batchId:update.batchId,_id:{$ne:id}});
+        if(count>=Number(targetBatch.capacity||50))return NextResponse.json({error:"Selected batch is already at capacity."},{status:409});
+        update.batchId=targetBatch._id; update.batchCode=targetBatch.batchCode;
+      }
+    }
     if(update.formNo!==undefined)update.formNo=String(update.formNo).trim();
     if(update.applicantName!==undefined)update.applicantName=String(update.applicantName).trim();
     if(update.mobileNumber!==undefined)update.mobileNumber=String(update.mobileNumber).trim();
