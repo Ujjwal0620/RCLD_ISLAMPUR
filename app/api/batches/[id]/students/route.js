@@ -21,10 +21,12 @@ export async function GET(_req,{params}){
     const [students,available]=await Promise.all([
       Student.find({batchId:id}).sort({applicantName:1}).lean(),
       Student.find({
-        $or:[{batchId:null},{batchId:{$exists:false}}],
-        $or:[
-          {courseCode:String(batch.courseCode||"").toUpperCase()},
-          {courseName:String(batch.courseName||"").trim()}
+        $and:[
+          {$or:[{batchId:null},{batchId:{$exists:false}}]},
+          {$or:[
+            {courseCode:String(batch.courseCode||"").toUpperCase()},
+            {courseName:String(batch.courseName||"").trim()}
+          ]}
         ],
         status:{$nin:["Cancelled","Dropped Out","Suspended"]}
       }).sort({applicantName:1}).lean()
