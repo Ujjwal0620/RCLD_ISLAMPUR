@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectMongoDB } from "@/lib/mongodb";
 import mongoose from "mongoose";
+import Course from "@/models/Course";
 
 const StudentSchema = new mongoose.Schema({
   formNo:{type:String,required:true,unique:true,trim:true},
@@ -45,6 +46,19 @@ export async function PATCH(req,{params}){
       return NextResponse.json({error:"Applicant name and mobile are required."},{status:400});
     }
     const student=await Student.findByIdAndUpdate(id,update,{new:true,runValidators:true}).lean();
+    if(student && (update.courseCode!==undefined || update.courseName!==undefined)){
+      const conditions=[];
+      if(student.courseCode) conditions.push({code:String(student.courseCode).trim().toUpperCase()});
+      if(student.courseName) conditions.push({name:String(student.courseName).trim()});
+      if(conditions.length){
+        const course=await Course.findOne({$or:conditions}).lean();
+        if(course){
+          const FeeSchema=new mongoose.Schema({studentId:{type:mongoose.Schema.Types.ObjectId,unique:true,index:true,ref:"Student"},totalFee:{type:Number,default:0},discount:{type:Number,default:0},admissionFee:{type:Number,default:0},payments:Array,updatedBy:String},{timestamps:true});
+          const StudentFee=mongoose.models.StudentFee||mongoose.model("StudentFee",FeeSchema);
+          await StudentFee.findOneAndUpdate({studentId:student._id},{$set:{totalFee:Number(course.fee||0),admissionFee:Number(course.admissionFee||0)}},{upsert:true,new:true,setDefaultsOnInsert:true});
+        }
+      }
+    }
     if(!student)return NextResponse.json({error:"Student not found."},{status:404});
     return NextResponse.json({student,message:"Student updated."});
   }catch(error){
