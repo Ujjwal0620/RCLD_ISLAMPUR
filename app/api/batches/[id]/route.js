@@ -6,6 +6,9 @@ import BatchSlotLock from "@/models/BatchSlotLock";
 import mongoose from "mongoose";
 import { getSeriesSlots } from "@/data/batchSchedule";
 
+const StudentSchema = new mongoose.Schema({batchId:{type:mongoose.Schema.Types.ObjectId,ref:"Batch"},batchCode:String},{strict:false});
+const Student = mongoose.models.Student || mongoose.model("Student", StudentSchema);
+
 const EmployeeSchema = new mongoose.Schema(
   { employeeId:String,name:String,designation:String,skills:[String],status:String },
   { timestamps:true }
@@ -173,6 +176,7 @@ export async function DELETE(_req,{params}){
     await connectMongoDB();
     const batch=await Batch.findByIdAndDelete(id).lean();
     if(!batch)return NextResponse.json({error:"Batch not found."},{status:404});
+    await Student.updateMany({batchId:batch._id},{$set:{batchId:null,batchCode:""}});
     await BatchSlotLock.deleteMany({batchId:batch._id});
     return NextResponse.json({batch,message:"Batch permanently deleted and its timetable series are immediately available again."});
   }catch(e){return NextResponse.json({error:"Unable to delete batch.",detail:e.message},{status:400});}
