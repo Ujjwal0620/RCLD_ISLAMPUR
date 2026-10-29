@@ -171,9 +171,9 @@ export async function DELETE(_req,{params}){
     const id=await getBatchId(params);
     if(!id)return NextResponse.json({error:"Batch id is required."},{status:400});
     await connectMongoDB();
-    const batch=await Batch.findByIdAndUpdate(id,{status:"Cancelled"},{new:true,runValidators:true}).lean();
+    const batch=await Batch.findByIdAndDelete(id).lean();
     if(!batch)return NextResponse.json({error:"Batch not found."},{status:404});
     await BatchSlotLock.deleteMany({batchId:batch._id});
-    return NextResponse.json({batch,message:"Batch cancelled and its timetable hours are now available again."});
-  }catch(e){return NextResponse.json({error:"Unable to cancel batch.",detail:e.message},{status:400});}
+    return NextResponse.json({batch,message:"Batch permanently deleted and its timetable series are immediately available again."});
+  }catch(e){return NextResponse.json({error:"Unable to delete batch.",detail:e.message},{status:400});}
 }
