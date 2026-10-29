@@ -13,7 +13,7 @@ const links = [
   { href: "/dashboard/batches", label: "Batches", icon: Layers3 },
 ];
 
-export default function ERPLayout({ active, children }) {
+export default function ERPLayout({ active, children, hideAssistant = false }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="erp-shell">
@@ -37,7 +37,7 @@ export default function ERPLayout({ active, children }) {
       </aside>
       <button className="mobile-menu-button" onClick={() => setOpen(true)} aria-label="Open menu"><Menu size={20} /></button>
       <section className="erp-main">{children}</section>
-      <RAGAssistant />
+      {!hideAssistant && <RAGAssistant />}
     </div>
   );
 }
