@@ -9,7 +9,7 @@ const links = [
   { href: "/dashboard/students", label: "Students", icon: Users },
   { href: "/dashboard/employees", label: "Employees", icon: UserRoundCog },
   { href: "/dashboard/courses", label: "Courses", icon: BookOpen },
-  { href: "/dashboard/subjects", label: "Subjects", icon: BookOpen },
+  { href: "/dashboard/course-content", label: "Course Content", icon: BookOpen },
   { href: "/dashboard/batches", label: "Batches", icon: Layers3 },
 ];
 
