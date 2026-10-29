@@ -21,7 +21,7 @@ export default function DashboardPage() {
   useEffect(() => { load(); }, []);
 
   return (
-    <ERPLayout active="/dashboard">
+    <ERPLayout active="/dashboard" hideAssistant>
       <header className="topbar"><div><div className="crumb">RCLD Islampur / ERP</div><h1>Dashboard</h1></div><button className="icon-btn" onClick={load} title="Refresh" aria-label="Refresh"><RefreshCw size={18}/></button></header>
       <div className="welcome"><div><span className="eyebrow">ERP CONTROL CENTER</span><h2>Student Management</h2><p>Manage RCLD registrations from one place.</p></div><a className="primary-btn" href="/dashboard/students/register"><UserPlus size={17}/> Register Student</a></div>
       <div className="metric-grid">
