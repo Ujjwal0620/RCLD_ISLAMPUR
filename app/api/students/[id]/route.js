@@ -59,8 +59,8 @@ export async function DELETE(req,{params}){
   try{
     await connectMongoDB();const id=await idOf(params);
     if(!mongoose.Types.ObjectId.isValid(id))return NextResponse.json({error:"Invalid student ID."},{status:400});
-    const student=await Student.findByIdAndUpdate(id,{status:"Cancelled"},{new:true}).lean();
+    const student=await Student.findByIdAndDelete(id).lean();
     if(!student)return NextResponse.json({error:"Student not found."},{status:404});
-    return NextResponse.json({student,message:"Student archived as Cancelled. Historical records were preserved."});
-  }catch(error){return NextResponse.json({error:"Unable to archive student.",detail:error.message},{status:400});}
+    return NextResponse.json({student,message:"Student permanently deleted from the database."});
+  }catch(error){return NextResponse.json({error:"Unable to delete student.",detail:error.message},{status:400});}
 }
