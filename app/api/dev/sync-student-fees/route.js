@@ -11,7 +11,7 @@ const Student = mongoose.models.Student || mongoose.model("Student", StudentSche
 
 const PaymentSchema = new mongoose.Schema({
   amount: { type: Number, required: true, min: 0 }, date: { type: String, required: true },
-  method: { type: String, default: "Cash" }, reference: String, note: String,
+            reference: "DUMMY-PAY-" + String(index + 1).padStart(4, "0"),
 }, { _id: true });
 const FeeSchema = new mongoose.Schema({
   studentId: { type: mongoose.Schema.Types.ObjectId, required: true, unique: true, index: true, ref: "Student" },
