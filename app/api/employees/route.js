@@ -37,14 +37,17 @@ const EmployeeSchema = new mongoose.Schema({
 const Employee = mongoose.models.Employee || mongoose.model("Employee", EmployeeSchema);
 
 async function nextEmployeeId() {
-  const CounterSchema = new mongoose.Schema({ key: { type: String, unique: true }, seq: { type: Number, default: 0 } });
-  const Counter = mongoose.models.EmployeeCounter || mongoose.model("EmployeeCounter", CounterSchema);
-  const counter = await Counter.findOneAndUpdate(
-    { key: "employee" },
-    { $inc: { seq: 1 } },
-    { upsert: true, new: true }
-  ).lean();
-  return `RCLD/ISL/${String(counter.seq).padStart(3, "0")}`;
+  // IDs are reusable. Always allocate the lowest free number so a hard-deleted
+  // employee ID becomes available to the next employee.
+  const rows = await Employee.find({ employeeId: /^RCLD\/ISL\/\d+$/ }).select("employeeId").lean();
+  const used = new Set(
+    rows
+      .map((row) => Number(String(row.employeeId || "").split("/").pop()))
+      .filter((value) => Number.isInteger(value) && value > 0)
+  );
+  let seq = 1;
+  while (used.has(seq)) seq += 1;
+  return `RCLD/ISL/${String(seq).padStart(3, "0")}`;
 }
 
 export async function GET(request) {
