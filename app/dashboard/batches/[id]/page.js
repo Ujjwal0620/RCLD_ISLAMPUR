@@ -17,7 +17,7 @@ export default function BatchDetailPage({params}){
         fetch("/api/batch-series",{cache:"no-store"}),
         fetch("/api/courses",{cache:"no-store"})
       ]);
-      const [bd,sd,cd,ad]=await Promise.all([br.json(),sr.json(),cr.json(),Promise.resolve(fetch("/api/batches",{cache:"no-store"})).then(x=>x.then(r=>r.json()))]);
+      const ar=await fetch("/api/batches",{cache:"no-store"});\n      const [bd,sd,cd,ad]=await Promise.all([br.json(),sr.json(),cr.json(),ar.json()]);
       if(!br.ok) throw new Error(bd.error||"Unable to load batch.");
       setBatch(bd.batch); setSeries(sd.series||[]); setCourses(cd.courses||[]); setAllBatches(ad.batches||[]);
       setSelectedSeries(bd.batch.series||[]); setFacultyId(bd.batch.facultyId||""); if(new URLSearchParams(window.location.search).get("edit")==="1") setEditing(true);
@@ -68,7 +68,7 @@ export default function BatchDetailPage({params}){
   if(loading)return <ERPLayout active="/dashboard/batches"><div className="empty">Loading batch…</div></ERPLayout>;
   if(!batch)return <ERPLayout active="/dashboard/batches"><div className="empty">Batch not found.</div></ERPLayout>;
 
-  const occupiedTimes=new Set(allBatches.filter(b=>b._id!==batchId&&["Draft","Active"].includes(b.status)).flatMap(b=>(b.schedules||[]).map(x=>x.time)));
+  const occupiedSeries=new Set(allBatches.filter(b=>String(b._id)!==String(batchId)&&["Draft","Active"].includes(b.status)).flatMap(b=>b.series||[]));
 
   return <ERPLayout active="/dashboard/batches">
     <header className="topbar"><div><div className="crumb">RCLD Islampur / Batches / {batch.batchCode}</div><h1>{batch.name}</h1></div><div className="top-actions"><button className="ghost-btn" onClick={()=>setEditing(v=>!v)}><Pencil size={16}/> {editing?"Close Edit":"Edit Batch"}</button><a className="ghost-btn" href="/dashboard/batches"><ArrowLeft size={16}/> Back</a></div></header>
@@ -90,8 +90,8 @@ export default function BatchDetailPage({params}){
         <label className="form-field"><span>End Date</span><input type="date" value={batch.endDate?new Date(batch.endDate).toISOString().slice(0,10):""} onChange={e=>setBatch({...batch,endDate:e.target.value})}/></label>
       </div>
       <div className="builder-step" style={{margin:0,border:0,borderRadius:0}}>
-        <div className="step-title"><span>01</span><div><h3>Weekly Series</h3><p>Only free timetable times can be selected. A time used by another active/draft batch is disabled across all days.</p></div></div>
-        <div className="series-grid">{series.map(s=>{const locked=(s.slots||[]).some(x=>occupiedTimes.has(x.time)) && !selectedSeries.includes(s.code);return <button type="button" key={s.code} disabled={locked} className={selectedSeries.includes(s.code)?"series-chip selected":locked?"series-chip occupied":"series-chip"} onClick={()=>toggleSeries(s.code)} title={locked?"This series contains a timetable time already booked by another batch":"Select series"}>{s.code}{locked&&<LockKeyhole size={12}/>}</button>})}</div>
+        <div className="step-title"><span>01</span><div><h3>Weekly Series</h3><p>Only series already assigned to another active/draft batch are disabled. Other series remain selectable even when they share the same time.</p></div></div>
+        <div className="series-grid">{series.map(s=>{const locked=occupiedSeries.has(s.code) && !selectedSeries.includes(s.code);return <button type="button" key={s.code} disabled={locked} className={selectedSeries.includes(s.code)?"series-chip selected":locked?"series-chip occupied":"series-chip"} onClick={()=>toggleSeries(s.code)} title={locked?"This series is already assigned to another active/draft batch":"Select series"}>{s.code}{locked&&<LockKeyhole size={12}/>}</button>})}</div>
       </div>
       <div style={{padding:"0 20px 18px"}}>
         <label className="form-field"><span>Faculty / Trainer</span><select value={facultyId} onChange={e=>setFacultyId(e.target.value)}><option value="">Unassigned</option>{faculty.map(f=><option key={f.employeeId} value={f.employeeId}>{f.name} — {f.designation||"Faculty"} · {f.skillMatch} matched skills</option>)}</select></label>
