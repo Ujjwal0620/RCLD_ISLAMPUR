@@ -28,7 +28,7 @@ export async function GET(request, { params }) {
     if (!mongoose.Types.ObjectId.isValid(id)) return NextResponse.json({ error: "Invalid student ID." }, { status: 400 });
     const fee = await StudentFee.findOne({ studentId: id }).lean();
     const record = fee || { totalFee: 0, discount: 0, admissionFee: 0, payments: [] };
-    const payable = Math.max(0, Number(record.totalFee || 0) - Number(record.discount || 0));
+    const payable = Math.max(0, Number(record.totalFee || 0) + Number(record.admissionFee || 0) - Number(record.discount || 0));
     const paid = (record.payments || []).reduce((sum, p) => sum + Number(p.amount || 0), 0);
     return NextResponse.json({ fee: { ...record, payable, paid, due: Math.max(0, payable - paid) } });
   } catch (error) {
@@ -61,7 +61,7 @@ export async function POST(request, { params }) {
       },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     ).lean();
-    const payable = Math.max(0, Number(fee.totalFee || 0) - Number(fee.discount || 0));
+    const payable = Math.max(0, Number(fee.totalFee || 0) + Number(fee.admissionFee || 0) - Number(fee.discount || 0));
     const paid = (fee.payments || []).reduce((sum, p) => sum + Number(p.amount || 0), 0);
     return NextResponse.json({ fee: { ...fee, payable, paid, due: Math.max(0, payable - paid) } }, { status: 200 });
   } catch (error) {
