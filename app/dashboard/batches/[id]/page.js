@@ -17,7 +17,8 @@ export default function BatchDetailPage({params}){
         fetch("/api/batch-series",{cache:"no-store"}),
         fetch("/api/courses",{cache:"no-store"})
       ]);
-      const ar=await fetch("/api/batches",{cache:"no-store"});\n      const [bd,sd,cd,ad]=await Promise.all([br.json(),sr.json(),cr.json(),ar.json()]);
+      const ar=await fetch("/api/batches",{cache:"no-store"});
+      const [bd,sd,cd,ad]=await Promise.all([br.json(),sr.json(),cr.json(),ar.json()]);
       if(!br.ok) throw new Error(bd.error||"Unable to load batch.");
       setBatch(bd.batch); setSeries(sd.series||[]); setCourses(cd.courses||[]); setAllBatches(ad.batches||[]);
       setSelectedSeries(bd.batch.series||[]); setFacultyId(bd.batch.facultyId||""); if(new URLSearchParams(window.location.search).get("edit")==="1") setEditing(true);
