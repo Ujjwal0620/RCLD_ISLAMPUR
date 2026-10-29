@@ -7,7 +7,7 @@ const DAYS=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunda
 
 export default function BatchDetailPage({params}){
   const [batch,setBatch]=useState(null),[batchId,setBatchId]=useState(""),[courses,setCourses]=useState([]),[series,setSeries]=useState([]),[faculty,setFaculty]=useState([]),[allBatches,setAllBatches]=useState([]);
-  const [selectedSeries,setSelectedSeries]=useState([]),[facultyId,setFacultyId]=useState(""),[editing,setEditing]=useState(false),[saving,setSaving]=useState(false),[loading,setLoading]=useState(true);
+  const [selectedSeries,setSelectedSeries]=useState([]),[facultyId,setFacultyId]=useState(""),[editing,setEditing]=useState(false),[saving,setSaving]=useState(false),[loading,setLoading]=useState(true),[contentProgress,setContentProgress]=useState(null);
 
   async function load(id){
     setLoading(true);
@@ -21,7 +21,7 @@ export default function BatchDetailPage({params}){
       const [bd,sd,cd,ad]=await Promise.all([br.json(),sr.json(),cr.json(),ar.json()]);
       if(!br.ok) throw new Error(bd.error||"Unable to load batch.");
       setBatch(bd.batch); setSeries(sd.series||[]); setCourses(cd.courses||[]); setAllBatches(ad.batches||[]);
-      setSelectedSeries(bd.batch.series||[]); setFacultyId(bd.batch.facultyId||""); if(new URLSearchParams(window.location.search).get("edit")==="1") setEditing(true);
+      setSelectedSeries(bd.batch.series||[]); setFacultyId(bd.batch.facultyId||""); const pr=await fetch("/api/batches/"+id+"/course-content",{cache:"no-store"}); const pd=await pr.json(); setContentProgress(pd.progress||null); if(new URLSearchParams(window.location.search).get("edit")==="1") setEditing(true);
     }catch(e){alert(e.message)}finally{setLoading(false)}
   }
 
@@ -52,6 +52,11 @@ export default function BatchDetailPage({params}){
       if(!r.ok)return alert(d.detail||d.error||"Unable to update batch.");
       setBatch(d.batch);setSelectedSeries(d.batch.series||[]);setFacultyId(d.batch.facultyId||"");setEditing(false);alert("Batch updated successfully.");
     }finally{setSaving(false)}
+  }
+
+  async function updateTopic(topic,completed,date){
+    const r=await fetch("/api/batches/"+batchId+"/course-content",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({contentTopicId:topic.contentTopicId,completed,completedDate:date})});
+    const d=await r.json();if(!r.ok)return alert(d.error||"Unable to update topic.");setContentProgress(d.progress);
   }
 
   async function setStatus(status){
@@ -100,6 +105,8 @@ export default function BatchDetailPage({params}){
       </div>
       <div className="form-actions"><button className="ghost-btn" onClick={()=>{setEditing(false);setSelectedSeries(batch.series||[]);setFacultyId(batch.facultyId||"")}}>Cancel</button><button className="primary-btn" disabled={saving} onClick={save}><Save size={16}/> {saving?"Saving…":"Save Batch Changes"}</button></div>
     </section>}
+
+    <section className="panel batch-course-progress"><div className="panel-head"><div><h3>Course Content Progress</h3><p>Tick each topic when completed and record the actual completion date. Progress belongs to this batch only.</p></div><span>{contentProgress?contentProgress.modules.reduce((n,m)=>n+(m.topics||[]).filter(t=>t.completed).length,0)+"/"+contentProgress.modules.reduce((n,m)=>n+(m.topics||[]).length,0):"Not mapped"}</span></div>{contentProgress?<div className="progress-module-list">{contentProgress.modules.map(m=><div className="progress-module" key={String(m.contentModuleId)}><div className="progress-module-head"><strong>Module {m.moduleNo}: {m.module}</strong><span>{(m.topics||[]).filter(t=>t.completed).length}/{m.topics?.length||0} completed</span></div>{(m.topics||[]).map(t=><div className={"progress-topic "+(t.completed?"done":"")} key={String(t.contentTopicId)}><label><input type="checkbox" checked={!!t.completed} onChange={e=>updateTopic(t,e.target.checked,e.target.checked?(t.completedDate||new Date().toISOString().slice(0,10)):"")}/><b>{t.sNo}.</b><span>{t.topic}</span></label><input type="date" value={t.completedDate||""} disabled={!t.completed} onChange={e=>updateTopic(t,true,e.target.value)}/></div>)}</div>)}</div>:<div className="empty">No Course Content has been mapped to {batch.courseCode} yet. Add it from Course Content, then reload this batch.</div>}</section>
 
     <section className="panel"><div className="panel-head"><div><h3>Current Weekly Schedule</h3><p>Each occupied day + time is reserved for this batch.</p></div><span>{batch.schedules?.length||0} records</span></div>
       <div className="table-wrap"><table><thead><tr><th>Day</th><th>Time</th><th>Series</th><th>Slot</th><th>Faculty</th></tr></thead><tbody>{(batch.schedules||[]).map((s,i)=><tr key={i}><td><strong>{s.day}</strong></td><td>{s.time}</td><td>{s.series}</td><td>{s.slot}</td><td>{s.facultyName||"Unassigned"}</td></tr>)}</tbody></table></div>
