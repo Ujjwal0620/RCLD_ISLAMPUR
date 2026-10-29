@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import RAGAssistant from "@/components/RAGAssistant";
-import { LayoutDashboard, Users, UserRoundCog, Menu, X, ShieldCheck, Layers3, BookOpen } from "lucide-react";
+import { LayoutDashboard, Users, UserRoundCog, Menu, X, ShieldCheck, Layers3, BookOpen, BarChart3 } from "lucide-react";
 
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -11,6 +11,7 @@ const links = [
   { href: "/dashboard/courses", label: "Courses", icon: BookOpen },
   { href: "/dashboard/course-content", label: "Course Content", icon: BookOpen },
   { href: "/dashboard/batches", label: "Batches", icon: Layers3 },
+  { href: "/dashboard/reports", label: "Reports", icon: BarChart3 },
 ];
 
 export default function ERPLayout({ active, children, hideAssistant = true }) {
