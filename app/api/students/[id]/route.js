@@ -4,14 +4,12 @@ import mongoose from "mongoose";
 
 const StudentSchema = new mongoose.Schema({
   formNo:{type:String,required:true,unique:true,trim:true},
-  kitIssueNo:String,aecCode:String,regnNo:String,courseName:String,courseCode:String,
-  demandDraftNo:String,amount:String,demandDraftDate:String,bank:String,
+  aecCode:String,regnNo:String,courseName:String,courseCode:String,
   applicantName:{type:String,required:true,trim:true},nationality:String,dateOfBirth:String,sex:String,
-  fatherOrHusbandName:String,address:String,pin:String,stdCode:String,telephoneNumber:String,
+  fatherOrHusbandName:String,address:String,pin:String,whatsappNumber:String,
   mobileNumber:{type:String,required:true,trim:true},
   qualifications:[{examCourse:String,boardUniversity:String,collegeInstitute:String,year:String,percentage:String}],
-  gdcaSem2:String,gdcaSem3:String,
-  enclosures:{stampPhoto:Boolean,qualifyingCertificates:Boolean,demandDraft:Boolean},
+  enclosures:{stampPhoto:Boolean,qualifyingCertificates:Boolean,matricAdmitCard:Boolean},
   declarationDate:String,declarationPlace:String,signatureApplicant:String,photoUrl:String,
   status:{type:String,default:"Registered"}
 },{timestamps:true});
@@ -34,9 +32,8 @@ export async function PATCH(req,{params}){
     if(!mongoose.Types.ObjectId.isValid(id))return NextResponse.json({error:"Invalid student ID."},{status:400});
     const body=await req.json();
     const allowed=[
-      "formNo","kitIssueNo","aecCode","regnNo","courseName","courseCode","demandDraftNo","amount",
-      "demandDraftDate","bank","applicantName","nationality","dateOfBirth","sex","fatherOrHusbandName",
-      "address","pin","stdCode","telephoneNumber","mobileNumber","qualifications","gdcaSem2","gdcaSem3",
+      "formNo","aecCode","regnNo","courseName","courseCode","applicantName","nationality","dateOfBirth","sex","fatherOrHusbandName",
+      "address","pin","whatsappNumber","mobileNumber","qualifications",
       "enclosures","declarationDate","declarationPlace","signatureApplicant","photoUrl","status"
     ];
     const update={};
