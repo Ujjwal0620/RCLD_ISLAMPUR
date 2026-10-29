@@ -4,7 +4,7 @@ import mongoose from "mongoose";
 
 const StudentSchema = new mongoose.Schema({
   formNo:{type:String,required:true,unique:true,trim:true},
-  aecCode:String,regnNo:String,courseName:String,courseCode:String,
+  aecCode:String,regnNo:String,enrollmentNo:String,admissionDate:String,guardianContactNumber:String,dueAmount:mongoose.Schema.Types.Mixed,paymentStatus:mongoose.Schema.Types.Mixed,sourceCourseLabel:String,importSource:String,courseName:String,courseCode:String,
   applicantName:{type:String,required:true,trim:true},nationality:String,dateOfBirth:String,sex:String,
   fatherOrHusbandName:String,address:String,pin:String,whatsappNumber:String,
   mobileNumber:{type:String,required:true,trim:true},
@@ -32,7 +32,7 @@ export async function PATCH(req,{params}){
     if(!mongoose.Types.ObjectId.isValid(id))return NextResponse.json({error:"Invalid student ID."},{status:400});
     const body=await req.json();
     const allowed=[
-      "formNo","aecCode","regnNo","courseName","courseCode","applicantName","nationality","dateOfBirth","sex","fatherOrHusbandName",
+      "formNo","aecCode","regnNo","enrollmentNo","admissionDate","guardianContactNumber","dueAmount","paymentStatus","sourceCourseLabel","importSource","courseName","courseCode","applicantName","nationality","dateOfBirth","sex","fatherOrHusbandName",
       "address","pin","whatsappNumber","mobileNumber","qualifications",
       "enclosures","declarationDate","declarationPlace","signatureApplicant","photoUrl","status"
     ];
