@@ -54,3 +54,16 @@ input{min-height:42px;border:1px solid var(--border);border-radius:8px;padding:0
 .attendance-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 20px;border-bottom:1px solid var(--border,#e7eaf0);background:var(--surface-soft,#f8fafc)}.attendance-toolbar>div:first-child{display:flex;gap:12px;align-items:center}.attendance-toolbar span{font-size:12px;color:var(--muted,#667085)}
 .batch-roster-table td>small{display:block;color:var(--muted,#667085);font-size:11px;margin-top:3px}.batch-roster-table select,.batch-roster-table input{min-width:100px}.fee-inline{display:flex;align-items:center;gap:6px;min-width:310px}.fee-inline input{width:105px}.fee-inline select{width:125px}.fee-inline .ghost-btn{white-space:nowrap}.fee-due{font-weight:700}.fee-paid{font-weight:700}
 @media(max-width:900px){.batch-assignment-toolbar,.attendance-toolbar{align-items:stretch;flex-direction:column}.student-batch-summary{grid-template-columns:1fr}.fee-inline{min-width:260px;flex-wrap:wrap}}
+
+
+/* Report Center */
+.report-info-card{border:1px solid var(--border,#e7eaf0);border-radius:14px;padding:16px;background:var(--surface,#fff);display:flex;flex-direction:column;gap:5px;min-width:0}
+.report-info-card small{font-size:11px;text-transform:uppercase;letter-spacing:.08em;opacity:.65}
+.report-info-card strong{font-size:18px;line-height:1.25}
+.report-info-card span{font-size:12px;opacity:.7}
+.report-kpi-grid .panel{overflow:hidden}
+.report-kpi-grid .panel small{display:block;margin-top:9px;text-transform:uppercase;letter-spacing:.07em;opacity:.65}
+.report-kpi-grid .panel h2{margin:5px 0;font-size:26px}
+.report-kpi-grid .panel span{font-size:12px;opacity:.7}
+@media(max-width:1100px){.report-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important}.report-info-card{grid-column:auto}}
+@media(max-width:700px){.report-kpi-grid{grid-template-columns:1fr !important}.report-info-card{padding:13px}}
