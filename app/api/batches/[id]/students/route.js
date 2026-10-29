@@ -19,7 +19,7 @@ export async function GET(_req,{params}){
     const batch=await Batch.findById(id).lean();
     if(!batch)return NextResponse.json({error:"Batch not found."},{status:404});
     const [students,available]=await Promise.all([
-      Student.find({batchId:id}).sort({applicantName:1}).lean(),
+      Student.find({$or:[{batchId:id},{batchId:new mongoose.Types.ObjectId(id)},{batchCode:String(batch.batchCode||"")}]}).sort({applicantName:1}).lean(),
       Student.find({
         $and:[
           {$or:[{batchId:null},{batchId:{$exists:false}}]},
@@ -52,11 +52,11 @@ export async function POST(req,{params}){
     if(wrongCourse)return NextResponse.json({error:"All selected students must belong to the batch course."},{status:409});
     const alreadyElsewhere=students.filter(s=>s.batchId && String(s.batchId)!==String(id));
     if(alreadyElsewhere.length)return NextResponse.json({error:"Some selected students are already assigned to another batch. Change their batch from the student profile first.",students:alreadyElsewhere.map(s=>({id:s._id,name:s.applicantName,batchCode:s.batchCode}))},{status:409});
-    const currentCount=await Student.countDocuments({batchId:id});
+    const currentCount=await Student.countDocuments({$or:[{batchId:id},{batchId:new mongoose.Types.ObjectId(id)},{batchCode:String(batch.batchCode||"")}]});
     const newCount=students.filter(s=>String(s.batchId||"")!==String(id)).length;
     if(currentCount+newCount>Number(batch.capacity||50))return NextResponse.json({error:`Batch capacity is ${batch.capacity||50}; only ${Math.max(0,Number(batch.capacity||50)-currentCount)} seats remain.`},{status:409});
     await Student.updateMany({_id:{$in:ids},$or:[{batchId:null},{batchId:{$exists:false}},{batchId:id}]},{$set:{batchId:batch._id,batchCode:batch.batchCode}});
-    const assigned=await Student.find({batchId:id}).sort({applicantName:1}).lean();
+    const assigned=await Student.find({$or:[{batchId:id},{batchId:new mongoose.Types.ObjectId(id)},{batchCode:String(batch.batchCode||"")}]}).sort({applicantName:1}).lean();
     return NextResponse.json({students:assigned,message:`${ids.length} student(s) assigned to ${batch.batchCode}.`});
   }catch(error){return NextResponse.json({error:"Unable to assign students.",detail:error.message},{status:400});}
 }
