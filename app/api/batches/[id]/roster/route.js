@@ -17,7 +17,8 @@ export async function GET(req,{params}){
     if(!mongoose.Types.ObjectId.isValid(id))return NextResponse.json({error:"Invalid batch ID."},{status:400});
     const batch=await Batch.findById(id).lean();if(!batch)return NextResponse.json({error:"Batch not found."},{status:404});
     const date=new URL(req.url).searchParams.get("date")||new Date().toISOString().slice(0,10);
-    const students=await Student.find({batchId:id}).sort({applicantName:1}).lean();
+    const batchFilter={$or:[{batchId:id},{batchId:new mongoose.Types.ObjectId(id)},{batchCode:String(batch.batchCode||"")} ]};
+    const students=await Student.find(batchFilter).sort({applicantName:1}).lean();
     const ids=students.map(s=>s._id);
     const [fees,attendance]=await Promise.all([
       ids.length?StudentFee.find({studentId:{$in:ids}}).lean():[],
