@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, Save } from "lucide-react";
 import ERPLayout from "@/components/ERPLayout";
 
@@ -33,6 +33,12 @@ export default function RegisterStudentPage() {
   const [form, setForm] = useState(initial);
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const [courses, setCourses] = useState([]);
+  const [selectedCourse, setSelectedCourse] = useState(null);
+
+  useEffect(() => { fetch("/api/courses",{cache:"no-store"}).then(r=>r.json()).then(d=>setCourses(d.courses||[])).catch(()=>{}); }, []);
+
+  const selectCourse = (code) => { const c = courses.find(x=>x.code===code); setSelectedCourse(c||null); setForm(current=>({...current,courseCode:c?.code||"",courseName:c?.name||""})); };
 
   const update = (key, value) => {
     setForm((current) => ({ ...current, [key]: value }));
@@ -102,9 +108,11 @@ export default function RegisterStudentPage() {
             <Field label="Form No." name="formNo" value={form.formNo} onChange={update} required />
             <Field label="AEC Code" name="aecCode" value={form.aecCode} onChange={update} />
             <Field label="Regn. No." name="regnNo" value={form.regnNo} onChange={update} />
+            <label className="form-field"><span>Course *</span><select value={form.courseCode} onChange={e=>selectCourse(e.target.value)} required><option value="">Select course</option>{courses.map(c=><option key={c._id} value={c.code}>{c.code} — {c.name}</option>)}</select></label>
             <Field label="Course Name" name="courseName" value={form.courseName} onChange={update} />
             <Field label="Course Code" name="courseCode" value={form.courseCode} onChange={update} />
           </div>
+          {selectedCourse && <div className="course-fee-summary"><div><span>Course Fee</span><strong>₹{Number(selectedCourse.fee||0).toLocaleString("en-IN")}</strong></div><div><span>Admission Fee</span><strong>₹{Number(selectedCourse.admissionFee||0).toLocaleString("en-IN")}</strong></div><div><span>Initial Payable</span><strong>₹{(Number(selectedCourse.fee||0)+Number(selectedCourse.admissionFee||0)).toLocaleString("en-IN")}</strong></div></div>}
         </section>
 
         <section className="form-section">
