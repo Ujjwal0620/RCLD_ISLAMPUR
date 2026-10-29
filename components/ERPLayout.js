@@ -13,7 +13,7 @@ const links = [
   { href: "/dashboard/batches", label: "Batches", icon: Layers3 },
 ];
 
-export default function ERPLayout({ active, children, hideAssistant = false }) {
+export default function ERPLayout({ active, children, hideAssistant = true }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="erp-shell">
