@@ -5,13 +5,11 @@ import { ArrowLeft, Save } from "lucide-react";
 import ERPLayout from "@/components/ERPLayout";
 
 const initial = {
-  formNo: "", kitIssueNo: "", aecCode: "", regnNo: "", courseName: "", courseCode: "",
-  demandDraftNo: "", amount: "", demandDraftDate: "", bank: "", applicantName: "",
+  formNo: "", aecCode: "", regnNo: "", courseName: "", courseCode: "", applicantName: "",
   nationality: "", dateOfBirth: "", sex: "", fatherOrHusbandName: "", address: "",
-  pin: "", stdCode: "", telephoneNumber: "", mobileNumber: "",
+  pin: "", whatsappNumber: "", mobileNumber: "",
   qualifications: [{ examCourse: "", boardUniversity: "", collegeInstitute: "", year: "", percentage: "" }],
-  gdcaSem2: "", gdcaSem3: "",
-  enclosures: { stampPhoto: false, qualifyingCertificates: false, demandDraft: false },
+  enclosures: { stampPhoto: false, qualifyingCertificates: false, matricAdmitCard: false },
   declarationDate: "", declarationPlace: "", signatureApplicant: ""
 };
 
@@ -102,15 +100,10 @@ export default function RegisterStudentPage() {
           <h3>Office / Registration Details</h3>
           <div className="form-grid four">
             <Field label="Form No." name="formNo" value={form.formNo} onChange={update} required />
-            <Field label="KIT Issue No." name="kitIssueNo" value={form.kitIssueNo} onChange={update} />
             <Field label="AEC Code" name="aecCode" value={form.aecCode} onChange={update} />
             <Field label="Regn. No." name="regnNo" value={form.regnNo} onChange={update} />
             <Field label="Course Name" name="courseName" value={form.courseName} onChange={update} />
             <Field label="Course Code" name="courseCode" value={form.courseCode} onChange={update} />
-            <Field label="Demand Draft No." name="demandDraftNo" value={form.demandDraftNo} onChange={update} />
-            <Field label="Amount" name="amount" type="number" value={form.amount} onChange={update} />
-            <Field label="Demand Draft Date" name="demandDraftDate" type="date" value={form.demandDraftDate} onChange={update} />
-            <Field label="Bank" name="bank" value={form.bank} onChange={update} />
           </div>
         </section>
 
@@ -123,8 +116,7 @@ export default function RegisterStudentPage() {
             <label className="form-field"><span>Sex</span><select value={form.sex} onChange={(e) => update("sex", e.target.value)}><option value="">Select</option><option value="M">M - Male</option><option value="F">F - Female</option></select></label>
             <Field label="Father / Husband Name" name="fatherOrHusbandName" value={form.fatherOrHusbandName} onChange={update} />
             <Field label="PIN" name="pin" value={form.pin} onChange={update} maxLength={10} />
-            <Field label="STD Code" name="stdCode" value={form.stdCode} onChange={update} />
-            <Field label="Telephone Number" name="telephoneNumber" value={form.telephoneNumber} onChange={update} maxLength={15} />
+            <Field label="WhatsApp Number" name="whatsappNumber" value={form.whatsappNumber} onChange={update} maxLength={15} />
             <Field label="Mobile Number" name="mobileNumber" value={form.mobileNumber} onChange={update} required maxLength={15} />
           </div>
           <label className="form-field full"><span>Complete Address</span><textarea value={form.address} onChange={(e) => update("address", e.target.value)} rows="3" /></label>
@@ -142,17 +134,9 @@ export default function RegisterStudentPage() {
         </section>
 
         <section className="form-section">
-          <h3>Course Selection for G.D.C.A. Candidate only</h3>
-          <div className="form-grid two">
-            <Field label="SEM - II" name="gdcaSem2" value={form.gdcaSem2} onChange={update} />
-            <Field label="SEM - III" name="gdcaSem3" value={form.gdcaSem3} onChange={update} />
-          </div>
-        </section>
-
-        <section className="form-section">
           <h3>Enclosures</h3>
           <div className="checks">
-            {[["stampPhoto", "One Stamp Size Photo"], ["qualifyingCertificates", "Xerox copy of qualifying certificates"], ["demandDraft", "Demand Draft"]].map(([key, label]) => (
+            {[["stampPhoto", "One Stamp Size Photo"], ["qualifyingCertificates", "Xerox copy of qualifying certificates"], ["matricAdmitCard", "Matric Admit Card"]].map(([key, label]) => (
               <label key={key}><input type="checkbox" checked={form.enclosures[key]} onChange={(e) => setForm((current) => ({ ...current, enclosures: { ...current.enclosures, [key]: e.target.checked } }))} />{label}</label>
             ))}
           </div>
