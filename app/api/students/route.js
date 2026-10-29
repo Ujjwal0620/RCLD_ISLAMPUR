@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectMongoDB } from "@/lib/mongodb";
 import mongoose from "mongoose";
+import Course from "@/models/Course";
 
 const StudentSchema = new mongoose.Schema({
   formNo: { type: String, required: true, unique: true, trim: true },
@@ -87,6 +88,17 @@ export async function POST(request) {
       applicantName: String(body.applicantName).trim(),
       mobileNumber: String(body.mobileNumber).trim()
     });
+    if (body.courseCode || body.courseName) {
+      const conditions = [];
+      if (body.courseCode) conditions.push({ code: String(body.courseCode).trim().toUpperCase() });
+      if (body.courseName) conditions.push({ name: String(body.courseName).trim() });
+      const course = await Course.findOne({ $or: conditions }).lean();
+      if (course) {
+        const FeeSchema = new mongoose.Schema({ studentId:{type:mongoose.Schema.Types.ObjectId,unique:true,index:true,ref:"Student"}, totalFee:{type:Number,default:0}, discount:{type:Number,default:0}, admissionFee:{type:Number,default:0}, payments:Array, updatedBy:String }, {timestamps:true});
+        const StudentFee = mongoose.models.StudentFee || mongoose.model("StudentFee", FeeSchema);
+        await StudentFee.findOneAndUpdate({studentId:student._id}, {$set:{totalFee:Number(course.fee||0),admissionFee:Number(course.admissionFee||0)}}, {upsert:true,new:true,setDefaultsOnInsert:true});
+      }
+    }
     return NextResponse.json({ student }, { status: 201 });
   } catch (error) {
     return NextResponse.json({
