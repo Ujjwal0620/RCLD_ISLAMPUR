@@ -10,7 +10,8 @@ export default function StudentsPage(){
   const [options,setOptions]=useState({courses:fallbackCourses,statuses:["Registered"],sexes:["M","F"]});
   const [filters,setFilters]=useState({search:"",sex:"",course:"",status:"",registration:"",fromDate:"",toDate:""});
   const [advanced,setAdvanced]=useState(false),[loading,setLoading]=useState(true);
-  const [selectedStudents,setSelectedStudents]=useState([]),[batches,setBatches]=useState([]),[selectedBatch,setSelectedBatch]=useState(""),[assigning,setAssigning]=useState(false);\n  const [selectAllMatching,setSelectAllMatching]=useState(false),[bulkStatus,setBulkStatus]=useState(""),[bulkBusy,setBulkBusy]=useState(false);
+  const [selectedStudents,setSelectedStudents]=useState([]),[batches,setBatches]=useState([]),[selectedBatch,setSelectedBatch]=useState(""),[assigning,setAssigning]=useState(false);
+  const [selectAllMatching,setSelectAllMatching]=useState(false),[bulkStatus,setBulkStatus]=useState(""),[bulkBusy,setBulkBusy]=useState(false);
 
   async function load(page=1,override=filters){
     setLoading(true);
@@ -30,8 +31,9 @@ export default function StudentsPage(){
   function updateFilter(k,v){setFilters(c=>({...c,[k]:v}))}
   function clearFilters(){const e={search:"",sex:"",course:"",status:"",registration:"",fromDate:"",toDate:""};setFilters(e);load(1,e)}
   const activeCount=Object.values(filters).filter(Boolean).length;
-  const selectedRecords=students.filter(s=>selectedStudents.includes(s._id));\n  const allVisibleSelected=unassignedStudents.length>0&&unassignedStudents.every(s=>selectedStudents.includes(s._id));
+  const selectedRecords=students.filter(s=>selectedStudents.includes(s._id));
   const unassignedStudents=students.filter(s=>!s.batchId&&!s.batchCode);
+  const allVisibleSelected=unassignedStudents.length>0&&unassignedStudents.every(s=>selectedStudents.includes(s._id));
   const normalizeCourse=(value)=>{
     const v=String(value||"").trim().toUpperCase();
     if(!v)return "";
