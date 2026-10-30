@@ -27,7 +27,7 @@ export async function POST(req) {
     const body=await req.json();
     const ids=Array.isArray(body.studentIds)?[...new Set(body.studentIds.map(String))]:[];
     const batchId=String(body.batchId||"");
-    if(!ids.length||!mongoose.Types.ObjectId.isValid(batchId)) return NextResponse.json({error:"Select students and an available batch."},{status:400});
+    if((!ids.length && body.selectAllMatching!==true)||!mongoose.Types.ObjectId.isValid(batchId)) return NextResponse.json({error:"Select students and an available batch."},{status:400});
     if(ids.some(x=>!mongoose.Types.ObjectId.isValid(x))) return NextResponse.json({error:"One or more student IDs are invalid."},{status:400});
     const batch=await Batch.findById(batchId).lean();
     if(!batch||!["Draft","Active"].includes(batch.status)) return NextResponse.json({error:"Selected batch is not available."},{status:409});
@@ -36,7 +36,8 @@ export async function POST(req) {
       const filter={batchId:null,batchCode:{$in:["",null]}};
       const search=String(body.search||"").trim();
       if(search){
-        const rx=new RegExp(search.replace(/[.*+?^{}()|[\\]\\\\]/g,"\\\\const students=await Student.find({_id:{$in:ids}}).lean();"),"i");
+        const rx=new RegExp(search.replace(/[.*+?^{}()|[\\]\\\\]/g,"\\\\const rx=new RegExp(search.replace(/[.*+?^{}()|[\\]\\\\]/g,"\\\\const students=await Student.find({_id:{$in:ids}}).lean();"),"i");
+        filter.$or=[{applicantName:rx}"),"i");
         filter.$or=[{applicantName:rx},{courseName:rx},{courseCode:rx},{mobileNumber:rx},{formNo:rx}];
       }
       if(body.course) filter.courseName=String(body.course);
@@ -46,7 +47,8 @@ export async function POST(req) {
     }else{
       students=await Student.find({_id:{$in:ids}}).lean();
     }
-    if(students.length!==ids.length) return NextResponse.json({error:"One or more selected students were not found."},{status:404});
+    if(!body.selectAllMatching && students.length!==ids.length) return NextResponse.json({error:"One or more selected students were not found."},{status:404});
+    if(body.selectAllMatching && !students.length) return NextResponse.json({error:"No unassigned students match the current filters."},{status:404});
     const normalizeCourse = (value) => {
       const v = String(value || "").trim().toUpperCase();
       if (!v) return "";
@@ -85,13 +87,13 @@ export async function POST(req) {
       {$set:{batchId:batch._id,batchCode:batch.batchCode}}
     );
 
-    if(updateResult.modifiedCount!==ids.length) {
+    if(updateResult.modifiedCount!==students.length) {
       const refreshed=await Student.find({_id:{$in:ids}}).select("_id applicantName batchId batchCode").lean();
       const failed=refreshed.filter(s=>String(s.batchId||"")!==String(batch._id)||String(s.batchCode||"")!==String(batch.batchCode));
       if(failed.length) return NextResponse.json({error:"Some students could not be assigned. Please refresh and try again.",students:failed},{status:409});
     }
 
-    return NextResponse.json({message:`${ids.length} student(s) sent to ${batch.batchCode}.`,updated:ids.length,batchId:batch._id,batchCode:batch.batchCode});
+    return NextResponse.json({message:`${students.length} student(s) sent to ${batch.batchCode}.`,updated:students.length,batchId:batch._id,batchCode:batch.batchCode});
   } catch(error) {
     return NextResponse.json({error:"Unable to send students to batch.",detail:error.message},{status:500});
   }
