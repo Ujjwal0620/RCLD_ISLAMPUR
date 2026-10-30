@@ -33,6 +33,10 @@ export async function PATCH(req,{params}){
     const id=await idOf(params);
     if(!mongoose.Types.ObjectId.isValid(id))return NextResponse.json({error:"Invalid student ID."},{status:400});
     const body=await req.json();
+    const current=await Student.findById(id).select("batchId batchCode status").lean();
+    if(!current)return NextResponse.json({error:"Student not found."},{status:404});
+    if(body.batchId!==undefined && String(body.batchId||"")!==String(current.batchId||"")) return NextResponse.json({error:"Use the Batch Movement workflow to shift, drop out, or rejoin a student so the complete footprint is preserved."},{status:409});
+    if(body.status!==undefined && String(body.status||"")!==String(current.status||"")) return NextResponse.json({error:"Use the Batch Movement workflow for status changes so every movement receives a remark and audit footprint."},{status:409});
     const allowed=[
       "formNo","aecCode","regnNo","enrollmentNo","admissionDate","guardianContactNumber","dueAmount","paymentStatus","sourceCourseLabel","importSource","courseName","courseCode","applicantName","nationality","dateOfBirth","sex","fatherOrHusbandName",
       "address","pin","whatsappNumber","mobileNumber","qualifications","batchId","batchCode",
