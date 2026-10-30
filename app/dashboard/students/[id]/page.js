@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, UserRound, MapPin, BookOpen, FileText, CreditCard, CalendarDays, ClipboardCheck, WalletCards, Save, Pencil, Trash2, Printer } from "lucide-react";
+import { ArrowLeft, UserRound, MapPin, BookOpen, FileText, CreditCard, CalendarDays, ClipboardCheck, WalletCards, Save, Pencil, Trash2, Printer, ArrowRightLeft, UserX, History } from "lucide-react";
 import ERPLayout from "@/components/ERPLayout";
 
 const value = (v) => v === undefined || v === null || v === "" ? "—" : v;
@@ -21,7 +21,7 @@ export default function StudentDetailsPage({params}){
     if(ar.ok)setAttendance(aj);
   }
 
-  useEffect(()=>{(async()=>{try{const [courseResponse,batchResponse]=await Promise.all([fetch("/api/courses",{cache:"no-store"}),fetch("/api/batches",{cache:"no-store"})]);const [courseData,batchData]=await Promise.all([courseResponse.json(),batchResponse.json()]);setCourses(courseData.courses||[]);setBatches(batchData.batches||[]);const {id}=await params;const r=await fetch("/api/students/"+id,{cache:"no-store"});const d=await r.json();if(!r.ok)throw new Error(d.error||"Unable to load student.");setStudent(d.student);setEditForm(d.student);if(new URLSearchParams(window.location.search).get("edit")==="1")setEditing(true);await loadOperational(id);}catch(e){setError(e.message)}finally{setLoading(false)}})()},[params]);
+  useEffect(()=>{(async()=>{try{const [courseResponse,batchResponse]=await Promise.all([fetch("/api/courses",{cache:"no-store"}),fetch("/api/batches",{cache:"no-store"})]);const [courseData,batchData]=await Promise.all([courseResponse.json(),batchResponse.json()]);setCourses(courseData.courses||[]);setBatches(batchData.batches||[]);const {id}=await params;const r=await fetch("/api/students/"+id,{cache:"no-store"});const d=await r.json();if(!r.ok)throw new Error(d.error||"Unable to load student.");setStudent(d.student);setEditForm(d.student);const hr=await fetch("/api/students/"+id+"/batch-history",{cache:"no-store"});const hd=await hr.json();if(hr.ok)setHistory(hd.history||[]);if(new URLSearchParams(window.location.search).get("edit")==="1")setEditing(true);await loadOperational(id);}catch(e){setError(e.message)}finally{setLoading(false)}})()},[params]);
 
   async function saveStudent(e){e.preventDefault();setMessage("");const r=await fetch("/api/students/"+student._id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(editForm)});const d=await r.json();if(!r.ok)return setMessage(d.error||"Unable to update student.");const fr=await fetch("/api/students/"+student._id+"/fees",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({totalFee:feeForm.totalFee,discount:feeForm.discount||0,admissionFee:feeForm.admissionFee})});const fd=await fr.json();if(!fr.ok)return setMessage(fd.error||"Student saved, but fee mapping failed.");setFee(fd.fee);setStudent(d.student);setEditForm(d.student);setEditing(false);setMessage("Student profile and course fee mapping updated successfully.");}
   async function deleteStudent(){if(!confirm("Permanently delete this student from the database? This cannot be undone."))return;const r=await fetch("/api/students/"+student._id,{method:"DELETE"});const d=await r.json();if(!r.ok)return setMessage(d.error||"Unable to archive student.");window.location.href="/dashboard/students";}
@@ -52,6 +52,33 @@ export default function StudentDetailsPage({params}){
 <div className="edit-card"><h4>Status & Enclosures</h4><div className="form-grid two"><label className="form-field"><span>Status</span><select value={editForm.status||"Registered"} onChange={e=>setEditForm(f=>({...f,status:e.target.value}))}>{["Registered","Admission Pending","Active","Course Completed","Dropped Out","Cancelled","Suspended","Alumni"].map(x=><option key={x}>{x}</option>)}</select></label><label className="form-field"><span>Applicant Signature</span><input value={editForm.signatureApplicant||""} onChange={e=>setEditForm(f=>({...f,signatureApplicant:e.target.value}))}/></label></div><div className="checks edit-checks">{[["stampPhoto","Photo"],["qualifyingCertificates","Qualification Certificates"],["matricAdmitCard","Matric Admit Card"]].map(([k,l])=><label key={k}><input type="checkbox" checked={!!editForm.enclosures?.[k]} onChange={e=>setEditForm(f=>({...f,enclosures:{...(f.enclosures||{}),[k]:e.target.checked}}))}/>{l}</label>)}</div></div>
 </div><div className="form-actions sticky-edit-actions"><button type="button" className="ghost-btn" onClick={()=>setEditing(false)}>Cancel</button><button className="primary-btn"><Save size={16}/> Save Changes</button></div></form></section>}
       <section className="student-profile-card"><div className="student-avatar">{student.photoUrl?<img src={student.photoUrl} alt=""/>:<UserRound size={30}/>}</div><div><div className="eyebrow">Super Admin / Student Profile</div><h2>{student.applicantName}</h2><p>Form No. {value(student.formNo)} · {value(student.courseName)} · {value(student.mobileNumber)}</p></div><span className="badge profile-status">{value(student.status)}</span></section>
+<section className="detail-section student-transition-panel">
+  <div className="detail-section-title"><History size={17}/><div><h3>Batch Movement & Student Status</h3><span>Every shift, dropout and rejoin is permanently recorded with batch, series, faculty, schedule, attendance footprint and remark.</span></div></div>
+  <div className="transition-actions">
+    {student.batchId && student.status!=="Dropped Out" && <button className="ghost-btn" onClick={()=>setTransition({action:"SHIFTED",batchId:"",remark:""})}><ArrowRightLeft size={16}/> Shift Batch</button>}
+    {student.batchId && student.status!=="Dropped Out" && <button className="danger-btn" onClick={()=>setTransition({action:"DROPPED_OUT",batchId:"",remark:""})}><UserX size={16}/> Mark Dropout</button>}
+    {student.status==="Dropped Out" && <button className="primary-btn" onClick={()=>setTransition({action:"REJOINED",batchId:String(history.find(h=>h.action==="DROPPED_OUT")?.fromBatch?.batchId||""),remark:""})}><ArrowRightLeft size={16}/> Drop Back to Batch</button>}
+  </div>
+  {transition.action && <div className="transition-form">
+    <div className="transition-form-head"><strong>{transition.action==="SHIFTED"?"Shift Student":transition.action==="DROPPED_OUT"?"Mark Student as Dropout":"Drop Student Back to Batch"}</strong><button className="ghost-btn" onClick={()=>setTransition({action:"",batchId:"",remark:""})}>Cancel</button></div>
+    {(transition.action==="SHIFTED"||transition.action==="REJOINED")&&<label className="form-field"><span>{transition.action==="REJOINED"?"Restore / Select Batch":"Target Batch"}</span><select value={transition.batchId} onChange={e=>setTransition(t=>({...t,batchId:e.target.value}))}><option value="">Select batch</option>{batches.filter(b=>["Draft","Active"].includes(b.status)&&String(b.courseCode||"").toUpperCase()===String(student.courseCode||"").toUpperCase()).map(b=><option key={b._id} value={b._id}>{b.batchCode} — {b.name} · {b.courseCode}</option>)}</select></label>}
+    <label className="form-field"><span>Remark <b>*</b></span><textarea rows="3" value={transition.remark} onChange={e=>setTransition(t=>({...t,remark:e.target.value}))} placeholder={transition.action==="SHIFTED"?"Why is the student being shifted?":transition.action==="DROPPED_OUT"?"Reason for dropout":"Reason for rejoining / dropping back to batch"}/></label>
+    <button className="primary-btn" disabled={transitioning||transition.remark.trim().length<3||(transition.action!=="DROPPED_OUT"&&!transition.batchId)} onClick={async()=>{
+      setTransitioning(true);setMessage("");
+      try{const r=await fetch("/api/students/"+student._id+"/batch-history",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:transition.action,toBatchId:transition.batchId,remark:transition.remark,actor:"superadmin",actorRole:"superadmin"})});const d=await r.json();if(!r.ok){setMessage(d.error||"Unable to update student movement.");return;}const sr=await fetch("/api/students/"+student._id,{cache:"no-store"});const sd=await sr.json();if(sr.ok){setStudent(sd.student);setEditForm(sd.student);}const hr=await fetch("/api/students/"+student._id+"/batch-history",{cache:"no-store"});const hd=await hr.json();if(hr.ok)setHistory(hd.history||[]);setTransition({action:"",batchId:"",remark:""});setMessage(d.message||"Student movement updated.");}finally{setTransitioning(false);}
+    }} >{transitioning?"Saving…":"Confirm Movement"}</button>
+  </div>}
+  <div className="movement-history">
+    <div className="movement-history-title">Movement Footprint</div>
+    {history.length===0?<div className="empty">No batch movement history yet.</div>:history.map(h=><div className="movement-card" key={h._id}>
+      <div className="movement-card-head"><strong>{h.action==="SHIFTED"?"Batch Shifted":h.action==="DROPPED_OUT"?"Dropped Out":"Rejoined Batch"}</strong><span>{h.occurredAt?new Date(h.occurredAt).toLocaleString():""}</span></div>
+      <div className="movement-grid"><div><small>From</small><b>{h.fromBatch?.batchCode||"—"}</b></div><div><small>To</small><b>{h.toBatch?.batchCode||"Dropout / —"}</b></div><div><small>From Faculty</small><b>{(h.fromBatch?.faculty||[]).map(x=>x.name).filter(Boolean).join(", ")||"—"}</b></div><div><small>To Faculty</small><b>{(h.toBatch?.faculty||[]).map(x=>x.name).filter(Boolean).join(", ")||"—"}</b></div></div>
+      <div className="movement-remark"><strong>Remark:</strong> {h.remark}</div>
+      {h.attendanceSnapshot?.from&&<div className="movement-footprint">Attendance footprint: {h.attendanceSnapshot.from.total||0} records · {h.attendanceSnapshot.from.percentage||0}% present</div>}
+    </div>)}
+  </div>
+</section>
+
 
       <section className="student-summary-grid">
         <div className="summary-card"><WalletCards size={18}/><span>Fees Due</span><strong>₹{Number(fee?.due||0).toLocaleString("en-IN")}</strong></div>
