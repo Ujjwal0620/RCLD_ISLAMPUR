@@ -1,0 +1,3 @@
+import {NextResponse} from "next/server";import mongoose from "mongoose";import bcrypt from "bcryptjs";import {connectMongoDB} from "@/lib/mongodb";
+const S=new mongoose.Schema({name:String,mobile:String,password:String,loginId:String});const Employee=mongoose.models.Employee||mongoose.model("Employee",S);
+export async function POST(){try{await connectMongoDB();const password=await bcrypt.hash("Emp@123",12);const rows=await Employee.find({});let count=0;for(const e of rows){if(!e.mobile)continue;e.password=password;e.loginId=String(e.mobile).replace(/\D/g,"").slice(-10);await e.save();count++}return NextResponse.json({ok:true,updated:count,login:"mobile number",defaultPassword:"Emp@123"})}catch(e){return NextResponse.json({error:e.message},{status:500})}}
