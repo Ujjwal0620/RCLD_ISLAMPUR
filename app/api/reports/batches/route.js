@@ -18,6 +18,8 @@ const FeeSchema = new mongoose.Schema({
 },{timestamps:true});
 const StudentFee = mongoose.models.StudentFee || mongoose.model("StudentFee",FeeSchema);
 
+function monthlyDue(student,fee,asOf=new Date()){const monthlyInstallment=600;const start=new Date(student.admissionDate||asOf);const months=asOf>=new Date(start.getFullYear(),start.getMonth(),1)?((asOf.getFullYear()-start.getFullYear())*12+(asOf.getMonth()-start.getMonth())+1):0;const currentKey=asOf.getFullYear()+"-"+String(asOf.getMonth()+1).padStart(2,"0");const mp=(fee.payments||[]).filter(p=>p.paymentType==="Monthly Installment"||String(p.note||"").includes("Monthly Installment"));const cur=mp.filter(p=>(p.installmentMonth||String(p.date||"").slice(0,7))===currentKey).reduce((n,p)=>n+Number(p.amount||0),0);const all=mp.reduce((n,p)=>n+Number(p.amount||0),0);const currentMonthlyDue=months?Math.max(0,monthlyInstallment-cur):0;const outstandingPreviousDue=Math.max(0,Math.max(0,(months-1)*monthlyInstallment)-Math.max(0,all-cur));return {monthlyInstallment,outstandingPreviousDue,currentMonthlyDue,totalPayableDueTillDate:outstandingPreviousDue+currentMonthlyDue};}
+
 function money(value){ return Math.round(Number(value||0)*100)/100; }
 
 export async function GET(req){
@@ -86,7 +88,7 @@ export async function GET(req){
           status:s.status||"", paymentStatus:s.paymentStatus||"",
           totalFee:money(f.totalFee), admissionFee:money(f.admissionFee),
           discount:money(f.discount), payable:money(payable), paid:money(paid),
-          due:money(Math.max(0,payable-paid))
+          due:money(Math.max(0,payable-paid)), ...monthlyDue(s,f)
         };
       })
       .sort((a,b)=>String(a.applicantName).localeCompare(String(b.applicantName)));
@@ -95,11 +97,7 @@ export async function GET(req){
     return NextResponse.json({
       batch,
       summary,
-      faculty:{
-        employeeId:batch.facultyId||"",
-        name:batch.facultyName||"",
-        assigned:!!batch.facultyId
-      },
+      faculty:{employeeIds:batch.facultyIds?.length?batch.facultyIds:[batch.facultyId].filter(Boolean),names:batch.facultyNames?.length?batch.facultyNames:[batch.facultyName].filter(Boolean),assigned:!!(batch.facultyIds?.length||batch.facultyId)},
       students:roster
     });
   }catch(error){
