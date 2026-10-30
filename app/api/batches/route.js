@@ -5,6 +5,7 @@ import { getSeriesSlots } from "@/data/batchSchedule";
 import mongoose from "mongoose";
 import BatchSlotLock from "@/models/BatchSlotLock";
 import { connectMongoDB } from "@/lib/mongodb";
+import { getSession } from "@/lib/auth";
 
 const EmployeeSchema = new mongoose.Schema(
   { employeeId:String,name:String,designation:String,department:String,skills:[String],offDays:[String],status:String },
@@ -160,6 +161,8 @@ export async function GET() {
 
 export async function POST(req) {
   try {
+    const session=await getSession();
+    if(!session?.employeeId || !["superadmin","office-admin"].includes(session.role)) return NextResponse.json({error:"Only Super Admin or Office Admin can create batches and assign class staff."},{status:403});
     await connectMongoDB();
     const b = await req.json();
     const course = await Course.findById(b.courseId).lean();
