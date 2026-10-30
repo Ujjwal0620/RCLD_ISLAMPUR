@@ -8,6 +8,8 @@ const PaymentSchema = new mongoose.Schema({
   method: { type: String, default: "Cash" },
   reference: String,
   note: String,
+  paymentType: { type: String, default: "General" },
+  installmentMonth: String,
 }, { _id: true });
 
 const FeeSchema = new mongoose.Schema({
@@ -42,6 +44,8 @@ export async function POST(request, { params }) {
     const { id } = await params;
     if (!mongoose.Types.ObjectId.isValid(id)) return NextResponse.json({ error: "Invalid student ID." }, { status: 400 });
     const body = await request.json();
+    const actorRole=String(body.updatedBy||"").toLowerCase();
+    if(body.payment && !["superadmin","office-admin"].includes(actorRole)) return NextResponse.json({ error: "Only Super Admin or Office Admin can record fee payments." }, { status: 403 });
     const fee = await StudentFee.findOneAndUpdate(
       { studentId: id },
       {
@@ -57,6 +61,8 @@ export async function POST(request, { params }) {
           method: body.payment.method || "Cash",
           reference: body.payment.reference || "",
           note: body.payment.note || "",
+          paymentType: body.payment.paymentType || "General",
+          installmentMonth: body.payment.installmentMonth || "",
         } } } : {}),
       },
       { upsert: true, new: true, setDefaultsOnInsert: true }
