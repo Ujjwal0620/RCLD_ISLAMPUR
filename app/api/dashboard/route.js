@@ -22,6 +22,7 @@ export async function GET(){
     Student.find({}).sort({createdAt:-1}).limit(8).select("formNo applicantName courseName courseCode mobileNumber status batchCode createdAt").lean()
   ]);
 
+  const feeMap=new Map(fees.map(f=>[String(f.studentId),f]));
   const statusMap={},courseMap={},batchMap={};
   for(const s of students){
     const status=s.status||"Unknown"; statusMap[status]=(statusMap[status]||0)+1;
@@ -38,7 +39,7 @@ export async function GET(){
 
   let payable=0,collected=0,due=0;
   for(const s of students){
-    const f=fees.find(x=>String(x.studentId)===String(s._id))||{};
+    const f=feeMap.get(String(s._id))||{};
     const p=Math.max(0,Number(f.totalFee||0)+Number(f.admissionFee||0)-Number(f.discount||0));
     const paid=(f.payments||[]).reduce((n,x)=>n+Number(x.amount||0),0);
     payable+=p;collected+=paid;due+=Math.max(0,p-paid);
