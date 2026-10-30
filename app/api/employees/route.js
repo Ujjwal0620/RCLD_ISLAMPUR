@@ -106,7 +106,7 @@ export async function POST(request) {
       gender: body.gender || "",
       mobile,
       loginId: mobile,
-      password: await bcrypt.hash(String(body.password || "EMP_@123"), 12),
+      password: await bcrypt.hash(String(body.password || "emp@123"), 12),
       offDays: Array.isArray(body.offDays) ? body.offDays : [],
       email: body.email || "",
       address: body.address || "",
