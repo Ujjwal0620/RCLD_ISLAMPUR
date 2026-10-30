@@ -144,6 +144,7 @@ export async function PATCH(req,{params}){
       }));
     }
 
+    if(body.facultyIds!==undefined){const ids=[...new Set((body.facultyIds||[]).filter(Boolean).map(String))].slice(0,2);if(ids.length>2)return NextResponse.json({error:"A batch can have maximum two faculty members."},{status:400});const rows=ids.length?await Employee.find({employeeId:{$in:ids},status:"Active"}).lean():[];if(rows.length!==ids.length)return NextResponse.json({error:"One or more selected faculty are not active employees."},{status:400});update.facultyIds=ids;update.facultyNames=ids.map(fid=>rows.find(e=>e.employeeId===fid)?.name||"");update.facultyId=ids[0]||"";update.facultyName=update.facultyNames[0]||"";update.schedules=(update.schedules||schedules).map(slot=>({...slot,facultyId:update.facultyId,facultyName:update.facultyName}));}
     const updated=await Batch.findByIdAndUpdate(id,update,{new:true,runValidators:true}).lean();
 
     await BatchSlotLock.deleteMany({batchId:updated._id});
