@@ -1,0 +1,15 @@
+"use client";
+import {useState} from "react";
+import {ArrowLeft,Download,Upload,FileSpreadsheet} from "lucide-react";
+import ERPLayout from "@/components/ERPLayout";
+import * as XLSX from "xlsx";
+
+const headers=["Enrollment No.","NAME OF STUDENT","Course","Admn. Date","Contact No.\nStudent","Contact No.\nGuardian","DUE AMOUNT","Payment \nStatus"];
+export default function BulkImportPage(){
+ const [file,setFile]=useState(null),[busy,setBusy]=useState(false),[result,setResult]=useState(null);
+ function template(){const ws=XLSX.utils.aoa_to_sheet([headers,["20177","SAMPLE STUDENT","DOM-VI","18-02-2026","9876543210","9876543211","","600"]]);ws["!cols"]=[{wch:18},{wch:30},{wch:15},{wch:16},{wch:20},{wch:20},{wch:15},{wch:18}];const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Student_Data");XLSX.writeFile(wb,"RCLD_Student_Bulk_Import_Template.xlsx");}
+ async function upload(){if(!file)return alert("Select an Excel file.");setBusy(true);setResult(null);try{const fd=new FormData();fd.append("file",file);const r=await fetch("/api/students/bulk-import",{method:"POST",body:fd});const d=await r.json();if(!r.ok)throw new Error(d.error||"Import failed.");setResult(d);}catch(e){setResult({error:e.message})}finally{setBusy(false)}}
+ return <ERPLayout active="/dashboard/students"><header className="topbar"><div><div className="crumb">Students / Bulk Import</div><h1>Bulk Student Import</h1></div><a className="ghost-btn" href="/dashboard/students"><ArrowLeft size={16}/> Back</a></header>
+ <section className="welcome"><div><span className="eyebrow">EXCEL IMPORT</span><h2>Import students using the RCLD Excel format</h2><p>The template follows your supplied student sheet: Enrollment No., student name, course, admission date, student/guardian contact, due amount and payment status. Missing ERP fields are generated automatically and can be edited later.</p></div><button className="ghost-btn" onClick={template}><Download size={16}/> Download Template</button></section>
+ <section className="panel"><div className="panel-head"><div><h3>Upload Excel</h3><p>.xlsx or .xls · first worksheet will be imported.</p></div><FileSpreadsheet size={22}/></div><div style={{padding:24}}><label className="form-field"><span>Select Student Excel File</span><input type="file" accept=".xlsx,.xls" onChange={e=>setFile(e.target.files?.[0]||null)}/></label><div className="form-help" style={{margin:"12px 0"}}>Known course series are normalized automatically: DOM-VI → DOM, DCST-VI → DCST, DCA-IV → DCA, and SM-I / SM-II → Coding for Kids. The original Excel course label is preserved for later batch mapping.</div><button className="primary-btn" disabled={busy||!file} onClick={upload}><Upload size={16}/>{busy?"Importing…":"Import Students"}</button>{result&&<div className={result.error?"error-msg":"success-msg"} style={{marginTop:18}}>{result.error||<><strong>{result.message}</strong><br/>Rows: {result.totalRows} · Created: {result.created} · Skipped: {result.skipped} · Errors: {result.errors?.length||0}</>}</div>}</div></section></ERPLayout>
+}
