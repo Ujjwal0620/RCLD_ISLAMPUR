@@ -7,7 +7,7 @@ import BatchSlotLock from "@/models/BatchSlotLock";
 import { connectMongoDB } from "@/lib/mongodb";
 
 const EmployeeSchema = new mongoose.Schema(
-  { employeeId:String,name:String,designation:String,skills:[String],status:String },
+  { employeeId:String,name:String,designation:String,department:String,skills:[String],offDays:[String],status:String },
   { timestamps:true }
 );
 const Employee = mongoose.models.Employee || mongoose.model("Employee", EmployeeSchema);
@@ -58,7 +58,7 @@ async function validateSchedule({ series, facultyIds = [], course, excludeBatchI
     status:{ $in:["Draft","Active"] },
     ...(excludeBatchId && mongoose.Types.ObjectId.isValid(excludeBatchId)
       ? { _id:{ $ne:excludeBatchId } } : {})
-  }).select("batchCode name schedules facultyId facultyName").lean();
+  }).select("batchCode name schedules facultyId facultyName facultyIds facultyNames staffAssignments").lean();
 
   const conflicts = [];
   for (const existingBatch of existingBatches) {
@@ -192,8 +192,9 @@ export async function POST(req) {
       endDate:b.endDate||undefined,
       facultyIds,
       facultyNames:checked.employees?.map(e=>e.name)||[],
+      staffAssignments:(checked.employees||[]).map(e=>({employeeId:e.employeeId,name:e.name,role:/lab/i.test(`${e.designation||""} ${e.department||""}`)?"Lab Assistant":"Faculty"})),
       facultyId:facultyIds[0]||"",
-      facultyName:checked.employees?.[0]?.name||checked.employee?.name||",
+      facultyName:checked.employees?.[0]?.name||checked.employee?.name||"",
       schedules:checked.schedules.map(slot => ({
         ...slot,
         facultyId:slot.facultyId||facultyIds[0]||"",
