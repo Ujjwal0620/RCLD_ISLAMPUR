@@ -6,7 +6,7 @@ import Batch from "@/models/Batch";
 import { getSeriesSlots } from "@/data/batchSchedule";
 
 const EmployeeSchema=new mongoose.Schema({
-  employeeId:String,name:String,designation:String,department:String,skills:[String],status:String
+  employeeId:String,name:String,designation:String,department:String,skills:[String],offDays:[String],status:String
 },{timestamps:true});
 const Employee=mongoose.models.Employee||mongoose.model("Employee",EmployeeSchema);
 
@@ -24,7 +24,7 @@ export async function GET(req){
       status:{$in:["Draft","Active"]},
       ...(mongoose.Types.ObjectId.isValid(excludeBatchId)?{_id:{$ne:excludeBatchId}}:{})
     }).select("batchCode name facultyId facultyName schedules status").lean();
-    const employees=await Employee.find({status:"Active"}).select("employeeId name designation department skills status").lean();
+    const employees=await Employee.find({status:"Active"}).select("employeeId name designation department skills offDays status").lean();
 
     const options=employees.map(employee=>{
       const skills=employee.skills||[];
