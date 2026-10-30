@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import RAGAssistant from "@/components/RAGAssistant";
-import { LayoutDashboard, Users, UserRoundCog, Menu, X, ShieldCheck, Layers3, BookOpen, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Users, UserRoundCog, Menu, X, ShieldCheck, Layers3, BookOpen, BarChart3, UserRoundX } from "lucide-react";
 
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/students", label: "Students", icon: Users },
+  { href: "/dashboard/dropouts", label: "Dropouts", icon: UserRoundX },
   { href: "/dashboard/employees", label: "Employees", icon: UserRoundCog },
   { href: "/dashboard/courses", label: "Courses", icon: BookOpen },
   { href: "/dashboard/course-content", label: "Course Content", icon: BookOpen },
