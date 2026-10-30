@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import { connectMongoDB } from "@/lib/mongodb";
 import Batch from "@/models/Batch";
 
-const StudentSchema=new mongoose.Schema({formNo:String,applicantName:String,mobileNumber:String,courseCode:String,courseName:String,batchId:{type:mongoose.Schema.Types.ObjectId,ref:"Batch"},batchCode:String,status:String},{timestamps:true});
+const StudentSchema=new mongoose.Schema({formNo:String,applicantName:String,mobileNumber:String,courseCode:String,courseName:String,admissionDate:Date,batchId:{type:mongoose.Schema.Types.ObjectId,ref:"Batch"},batchCode:String,status:String},{timestamps:true});
 const Student=mongoose.models.Student||mongoose.model("Student",StudentSchema);
 const FeeSchema=new mongoose.Schema({studentId:{type:mongoose.Schema.Types.ObjectId,ref:"Student"},totalFee:Number,discount:Number,admissionFee:Number,payments:Array},{timestamps:true});
 const StudentFee=mongoose.models.StudentFee||mongoose.model("StudentFee",FeeSchema);
@@ -27,12 +27,27 @@ export async function GET(req,{params}){
     const feeMap=new Map(fees.map(f=>[String(f.studentId),f]));
     const attMap=new Map();
     attendance.forEach(a=>attMap.set(String(a.studentId),a));
+    const monthlyInstallment=600;
     const roster=students.map(s=>{
       const f=feeMap.get(String(s._id))||{totalFee:0,discount:0,admissionFee:0,payments:[]};
       const payable=Math.max(0,Number(f.totalFee||0)+Number(f.admissionFee||0)-Number(f.discount||0));
       const paid=(f.payments||[]).reduce((sum,p)=>sum+Number(p.amount||0),0);
       const a=attMap.get(String(s._id));
-      return {...s,fee:{totalFee:Number(f.totalFee||0),admissionFee:Number(f.admissionFee||0),discount:Number(f.discount||0),paid,due:Math.max(0,payable-paid)},attendance:a?{status:a.status,subject:a.subject||"",note:a.note||"",markedBy:a.markedBy||""}:null};
+      const startRaw=s.admissionDate||batch.startDate||new Date(date);
+      const start=new Date(startRaw), asOf=new Date(date+"T00:00:00");
+      const monthKey=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+      const monthsElapsed=asOf>=new Date(start.getFullYear(),start.getMonth(),1)?((asOf.getFullYear()-start.getFullYear())*12+(asOf.getMonth()-start.getMonth())+1):0;
+      const currentKey=monthKey(asOf);
+      const monthlyPayments=(f.payments||[]).filter(p=>p.paymentType==="Monthly Installment"||String(p.note||"").includes("Monthly Installment"));
+      const currentMonthPaid=monthlyPayments.filter(p=>(p.installmentMonth||String(p.date||"").slice(0,7))===currentKey).reduce((sum,p)=>sum+Number(p.amount||0),0);
+      const totalMonthlyPaid=monthlyPayments.reduce((sum,p)=>sum+Number(p.amount||0),0);
+      const expectedToDate=monthsElapsed*monthlyInstallment;
+      const currentMonthlyDue=monthsElapsed?Math.max(0,monthlyInstallment-currentMonthPaid):0;
+      const previousExpected=Math.max(0,expectedToDate-monthlyInstallment);
+      const previousPaid=Math.max(0,totalMonthlyPaid-currentMonthPaid);
+      const outstandingPreviousDue=Math.max(0,previousExpected-previousPaid);
+      const totalPayableDueTillDate=outstandingPreviousDue+currentMonthlyDue;
+      return {...s,monthlyFee:{installment:monthlyInstallment,currentMonth:currentKey,outstandingPreviousDue,currentMonthlyDue,totalPayableDueTillDate},fee:{totalFee:Number(f.totalFee||0),admissionFee:Number(f.admissionFee||0),discount:Number(f.discount||0),paid,due:Math.max(0,payable-paid)},attendance:a?{status:a.status,subject:a.subject||"",note:a.note||"",markedBy:a.markedBy||""}:null};
     });
     return NextResponse.json({batch,date,students:roster});
   }catch(error){return NextResponse.json({error:"Unable to load batch students.",detail:error.message},{status:500});}
