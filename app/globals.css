@@ -67,3 +67,11 @@ input{min-height:42px;border:1px solid var(--border);border-radius:8px;padding:0
 .report-kpi-grid .panel span{font-size:12px;opacity:.7}
 @media(max-width:1100px){.report-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important}.report-info-card{grid-column:auto}}
 @media(max-width:700px){.report-kpi-grid{grid-template-columns:1fr !important}.report-info-card{padding:13px}}
+
+
+/* Batch module collapse + monthly fee ledger */
+.progress-module-toggle{width:100%;border:0;background:transparent;text-align:left;cursor:pointer;font:inherit;color:inherit}
+.progress-module-toggle:hover{background:rgba(99,102,241,.05)}
+.monthly-due-cell{display:flex;flex-direction:column;gap:4px;min-width:190px}
+.monthly-due-cell span{font-size:12px;color:var(--muted,#64748b);display:flex;justify-content:space-between;gap:12px}
+.monthly-due-cell strong{font-size:13px;margin-top:3px}
