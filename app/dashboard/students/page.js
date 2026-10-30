@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Search, UserPlus, ChevronLeft, ChevronRight, SlidersHorizontal, X, RotateCcw, Filter, Pencil, Trash2, Send } from "lucide-react";
+import { Search, UserPlus, ChevronLeft, ChevronRight, SlidersHorizontal, X, RotateCcw, Filter, Pencil, Trash2, Send, Upload } from "lucide-react";
 import ERPLayout from "@/components/ERPLayout";
 
 const fallbackCourses=["CCA","DCA","ADCA","CCC","CAO","DWPD","DOM","DCST","DCAP","DHNT"];
@@ -44,7 +44,7 @@ export default function StudentsPage(){
   }
 
   return <ERPLayout active="/dashboard/students">
-    <header className="topbar"><div><div className="crumb">Students / Registry</div><h1>Students</h1></div><a className="primary-btn" href="/dashboard/students/register"><UserPlus size={17}/> Register Student</a></header>
+    <header className="topbar"><div><div className="crumb">Students / Registry</div><h1>Students</h1></div><div className="top-actions"><a className="ghost-btn" href="/dashboard/students/import"><Upload size={17}/> Bulk Import</a><a className="primary-btn" href="/dashboard/students/register"><UserPlus size={17}/> Register Student</a></div></header>
     <section className="panel filter-panel">
       <div className="filter-title"><div><h3>Student Registry</h3><p>Search a student by name, course, form number or mobile. Select multiple unassigned students and send them to an available batch.</p></div><button className="filter-toggle" onClick={()=>setAdvanced(v=>!v)}><SlidersHorizontal size={17}/>{advanced?"Hide filters":"Advanced filters"}{activeCount>0&&<span>{activeCount}</span>}</button></div>
       <div className="filters primary-filters"><div className="search-box"><Search size={17}/><input value={filters.search} onChange={e=>updateFilter("search",e.target.value)} onKeyDown={e=>e.key==="Enter"&&load(1)} placeholder="Search student name, course, form no., mobile…"/></div><select value={filters.course} onChange={e=>updateFilter("course",e.target.value)}><option value="">All Courses</option>{options.courses.map(c=><option key={c} value={c}>{c}</option>)}</select><select value={filters.status} onChange={e=>updateFilter("status",e.target.value)}><option value="">All Status</option>{options.statuses.map(s=><option key={s}>{s}</option>)}</select><button className="search-action" onClick={()=>load(1)}><Search size={16}/> Search</button></div>
