@@ -10,7 +10,7 @@ export default function StudentsPage(){
   const [options,setOptions]=useState({courses:fallbackCourses,statuses:["Registered"],sexes:["M","F"]});
   const [filters,setFilters]=useState({search:"",sex:"",course:"",status:"",registration:"",fromDate:"",toDate:""});
   const [advanced,setAdvanced]=useState(false),[loading,setLoading]=useState(true);
-  const [selectedStudents,setSelectedStudents]=useState([]),[batches,setBatches]=useState([]),[selectedBatch,setSelectedBatch]=useState(""),[assigning,setAssigning]=useState(false);
+  const [selectedStudents,setSelectedStudents]=useState([]),[batches,setBatches]=useState([]),[selectedBatch,setSelectedBatch]=useState(""),[assigning,setAssigning]=useState(false);\n  const [selectAllMatching,setSelectAllMatching]=useState(false),[bulkStatus,setBulkStatus]=useState(""),[bulkBusy,setBulkBusy]=useState(false);
 
   async function load(page=1,override=filters){
     setLoading(true);
@@ -25,12 +25,12 @@ export default function StudentsPage(){
   async function loadBatches(){const r=await fetch("/api/students/bulk-assign-batch",{cache:"no-store"});const d=await r.json();setBatches(d.batches||[])}
   useEffect(()=>{load(1)},[filters.sex,filters.course,filters.status,filters.registration,filters.fromDate,filters.toDate]);
   useEffect(()=>{loadBatches()},[]);
-  useEffect(()=>{setSelectedStudents([]);setSelectedBatch("")},[students]);
+  useEffect(()=>{setSelectedStudents([]);setSelectAllMatching(false);setSelectedBatch("")},[students]);
 
   function updateFilter(k,v){setFilters(c=>({...c,[k]:v}))}
   function clearFilters(){const e={search:"",sex:"",course:"",status:"",registration:"",fromDate:"",toDate:""};setFilters(e);load(1,e)}
   const activeCount=Object.values(filters).filter(Boolean).length;
-  const selectedRecords=students.filter(s=>selectedStudents.includes(s._id));
+  const selectedRecords=students.filter(s=>selectedStudents.includes(s._id));\n  const allVisibleSelected=unassignedStudents.length>0&&unassignedStudents.every(s=>selectedStudents.includes(s._id));
   const unassignedStudents=students.filter(s=>!s.batchId&&!s.batchCode);
   const normalizeCourse=(value)=>{
     const v=String(value||"").trim().toUpperCase();
@@ -43,14 +43,36 @@ export default function StudentsPage(){
   };
   const selectedCourses=[...new Set(selectedRecords.map(s=>normalizeCourse(s.courseCode||s.courseName||s.sourceCourseLabel)).filter(Boolean))];
   const compatibleBatches=batches.filter(b=>b.available&&(!selectedCourses.length||selectedCourses.length!==1||normalizeCourse(b.courseCode||b.courseName)===selectedCourses[0]));
+  async function runBulk(action){
+    if(bulkBusy)return;
+    if(!selectAllMatching&&!selectedStudents.length)return alert("Select at least one student.");
+    if(action==="delete"&&!confirm("Permanently delete the selected students? This cannot be undone."))return;
+    if(action==="status"&&!bulkStatus)return alert("Select the new status first.");
+    setBulkBusy(true);
+    try{
+      const r=await fetch("/api/students/bulk-actions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
+        action,studentIds:selectAllMatching?[]:selectedStudents,selectAllMatching,...filters,status:bulkStatus
+      })});
+      const d=await r.json();
+      if(!r.ok)return alert(d.error||"Bulk action failed.");
+      alert(d.message||"Bulk action completed.");
+      setSelectedStudents([]);setSelectAllMatching(false);setBulkStatus("");
+      await load(pagination.page);await loadBatches();
+    }finally{setBulkBusy(false)}
+  }
+  function toggleAll(){
+    if(selectAllMatching){setSelectAllMatching(false);setSelectedStudents([]);return}
+    if(allVisibleSelected){setSelectedStudents([]);return}
+    setSelectedStudents(unassignedStudents.map(s=>s._id));
+  }
   async function sendToBatch(){
     if(assigning)return;
-    if(!selectedStudents.length||!selectedBatch)return alert("Select students and an available batch.");
+    if((!selectedStudents.length&&!selectAllMatching)||!selectedBatch)return alert("Select students and an available batch.");
     setAssigning(true);
     try{
-      const r=await fetch("/api/students/bulk-assign-batch",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({studentIds:selectedStudents,batchId:selectedBatch})});
+      const r=await fetch("/api/students/bulk-assign-batch",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({studentIds:selectAllMatching?[]:selectedStudents,batchId:selectedBatch,selectAllMatching,...filters})});
       const d=await r.json();if(!r.ok)return alert(d.error||"Unable to send students to batch.");
-      alert(d.message||"Students assigned.");setSelectedStudents([]);setSelectedBatch("");await load(pagination.page);await loadBatches();
+      alert(d.message||"Students assigned.");setSelectedStudents([]);setSelectAllMatching(false);setSelectedBatch("");await load(pagination.page);await loadBatches();
     }finally{setAssigning(false)}
   }
 
@@ -62,9 +84,17 @@ export default function StudentsPage(){
       {advanced&&<div className="advanced-filters"><div className="filter-field"><label>Sex</label><select value={filters.sex} onChange={e=>updateFilter("sex",e.target.value)}><option value="">All</option>{options.sexes.map(s=><option key={s} value={s}>{s==="M"?"Male":s==="F"?"Female":s}</option>)}</select></div><div className="filter-field"><label>Registration No.</label><select value={filters.registration} onChange={e=>updateFilter("registration",e.target.value)}><option value="">All records</option><option value="assigned">Assigned</option><option value="unassigned">Not assigned</option></select></div><div className="filter-field"><label>Registered From</label><input type="date" value={filters.fromDate} onChange={e=>updateFilter("fromDate",e.target.value)}/></div><div className="filter-field"><label>Registered To</label><input type="date" value={filters.toDate} onChange={e=>updateFilter("toDate",e.target.value)}/></div><button className="clear-btn" onClick={clearFilters}><RotateCcw size={15}/> Reset all</button></div>}
       <div className="filter-summary"><span><Filter size={14}/> {pagination.total} matching student records</span><button className="clear-inline" onClick={clearFilters} disabled={!activeCount}><X size={14}/> Clear filters</button></div>
     </section>
-    <section className="panel table-panel">
+    <>{(selectedStudents.length>0||selectAllMatching)&&<section className="bulk-selection-bar">
+    <div><strong>{selectAllMatching?pagination.total:selectedStudents.length} student{(selectAllMatching?pagination.total:selectedStudents.length)!==1?"s":""} selected</strong><span>{selectAllMatching?"All matching records across every page are selected.":"Selected on this page."}</span></div>
+    {!selectAllMatching&&allVisibleSelected&&pagination.total>unassignedStudents.length&&<button className="link-action" onClick={()=>setSelectAllMatching(true)}>Select all {pagination.total} matching students</button>}
+    <div className="bulk-actions">
+      <select value={bulkStatus} onChange={e=>setBulkStatus(e.target.value)}><option value="">Change status…</option>{["Registered","Admission Pending","Active","Course Completed","Alumni","Suspended","Cancelled"].map(s=><option key={s}>{s}</option>)}</select>
+      <button className="ghost-btn" disabled={bulkBusy} onClick={()=>runBulk("status")}><ShieldCheck size={15}/> Apply Status</button>
+      <button className="danger-btn" disabled={bulkBusy} onClick={()=>runBulk("delete")}><Trash2 size={15}/> Bulk Delete</button>
+    </div>
+  </section>}</><section className="panel table-panel">
       {selectedStudents.length>0&&<div className="batch-assignment-toolbar"><div><strong>{selectedStudents.length} student{selectedStudents.length>1?"s":""} selected</strong><span>Only unassigned students can be sent to a batch. Multiple selected students must match the selected batch course.</span></div><div className="top-actions"><select value={selectedBatch} onChange={e=>setSelectedBatch(e.target.value)}><option value="">Select available batch</option>{compatibleBatches.map(b=><option key={b._id} value={b._id}>{b.batchCode} — {b.courseCode} · {b.remaining} seats left</option>)}</select><button className="primary-btn" disabled={assigning||!selectedBatch} onClick={sendToBatch}><Send size={16}/>{assigning?"Sending…":"Send to Batch"}</button></div></div>}
-      {loading?<div className="empty">Loading students…</div>:students.length===0?<div className="empty">No students match the selected filters.</div>:<div className="table-wrap"><table><thead><tr><th><input type="checkbox" checked={unassignedStudents.length>0&&unassignedStudents.every(s=>selectedStudents.includes(s._id))} onChange={e=>setSelectedStudents(e.target.checked?unassignedStudents.map(s=>s._id):[])}/></th><th>Form No.</th><th>Applicant Name</th><th>Course</th><th>Batch</th><th>Mobile</th><th>Due</th><th>Status</th><th>Actions</th></tr></thead><tbody>{students.map(s=><tr key={s._id} className="student-row" onClick={()=>window.location.href=`/dashboard/students/${s._id}`}><td onClick={e=>e.stopPropagation()}><input type="checkbox" disabled={!!s.batchId||!!s.batchCode} checked={selectedStudents.includes(s._id)} onChange={e=>setSelectedStudents(v=>e.target.checked?[...v,s._id]:v.filter(id=>id!==s._id))}/></td><td><strong>{s.formNo}</strong></td><td>{s.applicantName}</td><td>{s.courseCode||s.courseName||"—"}</td><td>{s.batchCode||"Unassigned"}</td><td>{s.mobileNumber}</td><td>₹{Number(s.dueAmount||0).toLocaleString("en-IN")}</td><td><span className="badge">{s.status}</span></td><td><div className="top-actions" onClick={e=>e.stopPropagation()}><a className="ghost-btn" href={`/dashboard/students/${s._id}?edit=1`}><Pencil size={14}/> Edit</a><button className="ghost-btn" onClick={async e=>{e.stopPropagation();if(!confirm("Permanently delete this student?"))return;const r=await fetch(`/api/students/${s._id}`,{method:"DELETE"});const d=await r.json();if(!r.ok)return alert(d.error||"Unable to delete student");load(pagination.page)}}><Trash2 size={14}/> Delete</button></div></td></tr>)}</tbody></table></div>}
+      {loading?<div className="empty">Loading students…</div>:students.length===0?<div className="empty">No students match the selected filters.</div>:<div className="table-wrap"><table><thead><tr><th><input type="checkbox" checked={selectAllMatching||allVisibleSelected} onChange={toggleAll}/></th><th>Form No.</th><th>Applicant Name</th><th>Course</th><th>Batch</th><th>Mobile</th><th>Due</th><th>Status</th><th>Actions</th></tr></thead><tbody>{students.map(s=><tr key={s._id} className="student-row" onClick={()=>window.location.href=`/dashboard/students/${s._id}`}><td onClick={e=>e.stopPropagation()}><input type="checkbox" disabled={(!!s.batchId||!!s.batchCode)&&!selectAllMatching} checked={selectAllMatching||selectedStudents.includes(s._id)} onChange={e=>setSelectedStudents(v=>e.target.checked?[...v,s._id]:v.filter(id=>id!==s._id))}/></td><td><strong>{s.formNo}</strong></td><td>{s.applicantName}</td><td>{s.courseCode||s.courseName||"—"}</td><td>{s.batchCode||"Unassigned"}</td><td>{s.mobileNumber}</td><td>₹{Number(s.dueAmount||0).toLocaleString("en-IN")}</td><td><span className="badge">{s.status}</span></td><td><div className="top-actions" onClick={e=>e.stopPropagation()}><a className="ghost-btn" href={`/dashboard/students/${s._id}?edit=1`}><Pencil size={14}/> Edit</a><button className="ghost-btn" onClick={async e=>{e.stopPropagation();if(!confirm("Permanently delete this student?"))return;const r=await fetch(`/api/students/${s._id}`,{method:"DELETE"});const d=await r.json();if(!r.ok)return alert(d.error||"Unable to delete student");load(pagination.page)}}><Trash2 size={14}/> Delete</button></div></td></tr>)}</tbody></table></div>}
       <div className="pagination"><span>Showing {students.length?((pagination.page-1)*50)+1:0}–{Math.min(pagination.page*50,pagination.total)} of {pagination.total}</span><div><button disabled={pagination.page<=1} onClick={()=>load(pagination.page-1)}><ChevronLeft size={17}/></button><span className="page-no">Page {pagination.page} of {pagination.totalPages}</span><button disabled={pagination.page>=pagination.totalPages} onClick={()=>load(pagination.page+1)}><ChevronRight size={17}/></button></div></div>
     </section>
   </ERPLayout>
