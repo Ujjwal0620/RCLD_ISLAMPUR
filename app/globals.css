@@ -75,3 +75,23 @@ input{min-height:42px;border:1px solid var(--border);border-radius:8px;padding:0
 .monthly-due-cell{display:flex;flex-direction:column;gap:4px;min-width:190px}
 .monthly-due-cell span{font-size:12px;color:var(--muted,#64748b);display:flex;justify-content:space-between;gap:12px}
 .monthly-due-cell strong{font-size:13px;margin-top:3px}
+
+
+/* Student movement / dropout workflow */
+.transition-actions{display:flex;gap:10px;flex-wrap:wrap;margin:4px 0 16px}
+.danger-btn{display:inline-flex;align-items:center;gap:7px;border:1px solid #ef4444;background:#ef4444;color:#fff;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
+.transition-form{border:1px solid #dbe3ee;border-radius:14px;padding:16px;background:#f8fafc;margin-bottom:18px}
+.transition-form-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.movement-history{border-top:1px solid #e5e7eb;padding-top:16px}
+.movement-history-title{display:flex;align-items:center;gap:8px;font-weight:800;margin-bottom:10px}
+.movement-card{border:1px solid #e2e8f0;border-radius:13px;padding:14px;margin-top:10px;background:#fff}
+.movement-card-head{display:flex;justify-content:space-between;gap:12px;margin-bottom:10px}
+.movement-card-head span,.muted{color:#64748b;font-size:12px}
+.movement-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.movement-grid div{background:#f8fafc;border-radius:9px;padding:10px}
+.movement-grid small{display:block;color:#64748b;margin-bottom:4px}
+.movement-grid b{font-size:13px}
+.movement-remark{margin-top:10px;padding:10px;border-left:3px solid #64748b;background:#f8fafc}
+.movement-footprint{margin-top:8px;color:#475569;font-size:12px}
+.dropback-panel{padding:16px;border:1px solid #dbe3ee;border-radius:12px;background:#f8fafc}
+@media(max-width:800px){.movement-grid{grid-template-columns:1fr 1fr}.movement-card-head{flex-direction:column}}
