@@ -7,7 +7,7 @@ const DAYS=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunda
 
 export default function BatchDetailPage({params}){
   const [batch,setBatch]=useState(null),[batchId,setBatchId]=useState(""),[courses,setCourses]=useState([]),[series,setSeries]=useState([]),[faculty,setFaculty]=useState([]),[allBatches,setAllBatches]=useState([]),[batchStudents,setBatchStudents]=useState([]),[availableStudents,setAvailableStudents]=useState([]),[selectedStudents,setSelectedStudents]=useState([]),[studentLoading,setStudentLoading]=useState(false);
-  const [selectedSeries,setSelectedSeries]=useState([]),[facultyId,setFacultyId]=useState(""),[editing,setEditing]=useState(false),[saving,setSaving]=useState(false),[loading,setLoading]=useState(true),[contentProgress,setContentProgress]=useState(null),[openModules,setOpenModules]=useState({});
+  const [selectedSeries,setSelectedSeries]=useState([]),[facultyId,setFacultyId]=useState(""),[facultyId2,setFacultyId2]=useState(""),[editing,setEditing]=useState(false),[saving,setSaving]=useState(false),[loading,setLoading]=useState(true),[contentProgress,setContentProgress]=useState(null),[openModules,setOpenModules]=useState({});
 
   async function loadBatchStudents(id){const r=await fetch("/api/batches/"+id+"/students",{cache:"no-store"});const d=await r.json();if(r.ok){setBatchStudents(d.students||[]);setAvailableStudents(d.available||[]);}}
   async function assignSelectedStudents(){if(!selectedStudents.length)return alert("Select at least one student.");setStudentLoading(true);try{const r=await fetch("/api/batches/"+batchId+"/students",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({studentIds:selectedStudents})});const d=await r.json();if(!r.ok)return alert(d.error||"Unable to assign students.");setSelectedStudents([]);await loadBatchStudents(batchId);}finally{setStudentLoading(false)}}
@@ -25,7 +25,7 @@ export default function BatchDetailPage({params}){
       const [bd,sd,cd,ad]=await Promise.all([br.json(),sr.json(),cr.json(),ar.json()]);
       if(!br.ok) throw new Error(bd.error||"Unable to load batch.");
       setBatch(bd.batch); setSeries(sd.series||[]); setCourses(cd.courses||[]); setAllBatches(ad.batches||[]);
-      setSelectedSeries(bd.batch.series||[]); setFacultyId(bd.batch.facultyId||""); await loadBatchStudents(id); const pr=await fetch("/api/batches/"+id+"/course-content",{cache:"no-store"}); const pd=await pr.json(); setContentProgress(pd.progress||null); if(new URLSearchParams(window.location.search).get("edit")==="1") setEditing(true);
+      setSelectedSeries(bd.batch.series||[]); setFacultyId(bd.batch.facultyIds?.[0]||bd.batch.facultyId||""); setFacultyId2(bd.batch.facultyIds?.[1]||""); await loadBatchStudents(id); const pr=await fetch("/api/batches/"+id+"/course-content",{cache:"no-store"}); const pd=await pr.json(); setContentProgress(pd.progress||null); if(new URLSearchParams(window.location.search).get("edit")==="1") setEditing(true);
     }catch(e){alert(e.message)}finally{setLoading(false)}
   }
 
@@ -45,16 +45,16 @@ export default function BatchDetailPage({params}){
   async function save(){
     if(!batch)return;
     if(course && selectedSeries.length!==Number(batch.classFrequency)) return alert(`Select exactly ${batch.classFrequency} series.`);
-    const selected=faculty.find(f=>f.employeeId===facultyId);
+    const selected=faculty.find(f=>f.employeeId===facultyId); const selected2=faculty.find(f=>f.employeeId===facultyId2); if(facultyId&&facultyId===facultyId2)return alert("Select two different faculty members.");
     setSaving(true);
     try{
       const r=await fetch("/api/batches/"+batchId,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({
         name:batch.name,capacity:batch.capacity,startDate:batch.startDate?new Date(batch.startDate).toISOString().slice(0,10):"",endDate:batch.endDate?new Date(batch.endDate).toISOString().slice(0,10):"",
-        notes:batch.notes||"",status:batch.status,series:selectedSeries,classFrequency:batch.classFrequency,facultyId,facultyName:selected?.name||batch.facultyName||""
+        notes:batch.notes||"",status:batch.status,series:selectedSeries,classFrequency:batch.classFrequency,facultyId,facultyName:selected?.name||batch.facultyName||"",facultyIds:[facultyId,facultyId2].filter(Boolean),facultyNames:[selected?.name,selected2?.name].filter(Boolean)
       })});
       const d=await r.json();
       if(!r.ok)return alert(d.detail||d.error||"Unable to update batch.");
-      setBatch(d.batch);setSelectedSeries(d.batch.series||[]);setFacultyId(d.batch.facultyId||"");setEditing(false);alert("Batch updated successfully.");
+      setBatch(d.batch);setSelectedSeries(d.batch.series||[]);setFacultyId(d.batch.facultyIds?.[0]||d.batch.facultyId||"");setFacultyId2(d.batch.facultyIds?.[1]||"");setEditing(false);alert("Batch updated successfully.");
     }finally{setSaving(false)}
   }
 
@@ -104,10 +104,10 @@ export default function BatchDetailPage({params}){
         <div className="series-grid">{series.map(s=>{const locked=occupiedSeries.has(s.code) && !selectedSeries.includes(s.code);return <button type="button" key={s.code} disabled={locked} className={selectedSeries.includes(s.code)?"series-chip selected":locked?"series-chip occupied":"series-chip"} onClick={()=>toggleSeries(s.code)} title={locked?"This series is already assigned to another active/draft batch":"Select series"}>{s.code}{locked&&<LockKeyhole size={12}/>}</button>})}</div>
       </div>
       <div style={{padding:"0 20px 18px"}}>
-        <label className="form-field"><span>Faculty / Trainer</span><select value={facultyId} onChange={e=>setFacultyId(e.target.value)}><option value="">Unassigned</option>{faculty.map(f=><option key={f.employeeId} value={f.employeeId}>{f.name} — {f.designation||"Faculty"} · {f.skillMatch} matched skills</option>)}</select></label>
+        <label className="form-field"><span>Primary Faculty / Trainer</span><select value={facultyId} onChange={e=>setFacultyId(e.target.value)}><option value="">Unassigned</option>{faculty.map(f=><option key={f.employeeId} value={f.employeeId}>{f.name} — {f.designation||"Faculty"} · {f.skillMatch} matched skills</option>)}</select></label><label className="form-field"><span>Backup Faculty / Trainer</span><select value={facultyId2} onChange={e=>setFacultyId2(e.target.value)}><option value="">Unassigned</option>{faculty.filter(f=>f.employeeId!==facultyId).map(f=><option key={f.employeeId} value={f.employeeId}>{f.name} — {f.designation||"Faculty"} · {f.skillMatch} matched skills</option>)}</select><small>Used when the primary faculty is absent or this weekday is their configured off day.</small></label>
         <label className="form-field"><span>Notes</span><textarea rows="3" value={batch.notes||""} onChange={e=>setBatch({...batch,notes:e.target.value})}/></label>
       </div>
-      <div className="form-actions"><button className="ghost-btn" onClick={()=>{setEditing(false);setSelectedSeries(batch.series||[]);setFacultyId(batch.facultyId||"")}}>Cancel</button><button className="primary-btn" disabled={saving} onClick={save}><Save size={16}/> {saving?"Saving…":"Save Batch Changes"}</button></div>
+      <div className="form-actions"><button className="ghost-btn" onClick={()=>{setEditing(false);setSelectedSeries(batch.series||[]);setFacultyId(batch.facultyIds?.[0]||batch.facultyId||"");setFacultyId2(batch.facultyIds?.[1]||"")}}>Cancel</button><button className="primary-btn" disabled={saving} onClick={save}><Save size={16}/> {saving?"Saving…":"Save Batch Changes"}</button></div>
     </section>}
 
 <section className="panel"><div className="panel-head"><div><h3>Students in this Batch</h3><p>Students are assigned from the Student Registry. This batch page only shows students already assigned to this batch.</p></div><a className="primary-btn" href={"/dashboard/batches/"+batchId+"/students"}><Users size={16}/> Students ({batchStudents.length})</a></div><div style={{padding:"20px"}}><div className="student-batch-summary"><div><span>Assigned students</span><strong>{batchStudents.length}</strong></div><div><span>Capacity</span><strong>{batch.capacity||50}</strong></div><div><span>Seats remaining</span><strong>{Math.max(0,Number(batch.capacity||50)-batchStudents.length)}</strong></div></div><p className="form-help" style={{marginTop:"14px"}}>Use <strong>Students</strong> to open the complete batch roster, mark attendance and record fee payments in one table.</p></div></section>
