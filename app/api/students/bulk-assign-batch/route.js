@@ -31,7 +31,21 @@ export async function POST(req) {
     if(ids.some(x=>!mongoose.Types.ObjectId.isValid(x))) return NextResponse.json({error:"One or more student IDs are invalid."},{status:400});
     const batch=await Batch.findById(batchId).lean();
     if(!batch||!["Draft","Active"].includes(batch.status)) return NextResponse.json({error:"Selected batch is not available."},{status:409});
-    const students=await Student.find({_id:{$in:ids}}).lean();
+    let students;
+    if(body.selectAllMatching===true && !ids.length){
+      const filter={batchId:null,batchCode:{$in:["",null]}};
+      const search=String(body.search||"").trim();
+      if(search){
+        const rx=new RegExp(search.replace(/[.*+?^{}()|[\\]\\\\]/g,"\\\\const students=await Student.find({_id:{$in:ids}}).lean();"),"i");
+        filter.$or=[{applicantName:rx},{courseName:rx},{courseCode:rx},{mobileNumber:rx},{formNo:rx}];
+      }
+      if(body.course) filter.courseName=String(body.course);
+      if(body.status && body.status!=="all") filter.status=String(body.status);
+      if(body.sex) filter.sex=String(body.sex);
+      students=await Student.find(filter).lean();
+    }else{
+      students=await Student.find({_id:{$in:ids}}).lean();
+    }
     if(students.length!==ids.length) return NextResponse.json({error:"One or more selected students were not found."},{status:404});
     const normalizeCourse = (value) => {
       const v = String(value || "").trim().toUpperCase();
