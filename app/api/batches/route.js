@@ -49,7 +49,7 @@ function uniqueConflicts(items) {
   ).values()];
 }
 
-async function validateSchedule({ series, facultyId, course, excludeBatchId }) {
+async function validateSchedule({ series, facultyIds = [], course, excludeBatchId }) {
   const schedules = normalizeSlots(series);
   if (!schedules.length) throw new Error("The selected series have no valid timetable slots.");
   const selectedHours = uniqueHours(schedules);
@@ -87,8 +87,14 @@ async function validateSchedule({ series, facultyId, course, excludeBatchId }) {
   }
 
   let employee = null;
-  if (facultyId) {
-    employee = await Employee.findOne({ employeeId:facultyId, status:"Active" }).lean();
+  const ids = [...new Set((facultyIds || []).filter(Boolean).map(String))].slice(0,2);
+  if (ids.length > 2) return {ok:false,response:NextResponse.json({error:"A batch can have maximum two faculty members."},{status:400})};
+  const employees = ids.length ? await Employee.find({employeeId:{$in:ids},status:"Active"}).lean() : [];
+  if (ids.length && employees.length !== ids.length) return {ok:false,response:NextResponse.json({error:"One or more selected faculty are not active."},{status:400})};
+  const facultyById = new Map(employees.map(e=>[e.employeeId,e]));
+  const facultyForDay = day => ids.find(id => !(facultyById.get(id)?.offDays || []).includes(day)) || null;
+  if (ids.length) {
+    employee = employees[0] || null;
     if (!employee) {
       return { ok:false, response:NextResponse.json({error:"Selected faculty is not an active employee."},{status:400}) };
     }
@@ -106,7 +112,7 @@ async function validateSchedule({ series, facultyId, course, excludeBatchId }) {
     }
 
     const facultyBatches = await Batch.find({
-      facultyId:employee.employeeId,
+      $or:[{facultyId:{$in:ids}},{facultyIds:{$in:ids}}],
       status:{ $in:["Draft","Active"] },
       ...(excludeBatchId && mongoose.Types.ObjectId.isValid(excludeBatchId)
         ? { _id:{ $ne:excludeBatchId } } : {})
@@ -115,7 +121,7 @@ async function validateSchedule({ series, facultyId, course, excludeBatchId }) {
     const facultyConflicts = [];
     for (const batch of facultyBatches) {
       for (const existingSlot of batch.schedules || []) {
-        if (selectedHours.some(x => x.time === existingSlot.time)) {
+        if (selectedHours.some(x => x.day === existingSlot.day && x.time === existingSlot.time && ids.includes(existingSlot.facultyId))) {
           facultyConflicts.push({
             batchCode:batch.batchCode,
             batchName:batch.name,
@@ -126,6 +132,7 @@ async function validateSchedule({ series, facultyId, course, excludeBatchId }) {
         }
       }
     }
+    for (const hour of selectedHours) { if (!facultyForDay(hour.day)) return {ok:false,response:NextResponse.json({error:`Both selected faculty are off on ${hour.day}. Select another faculty.`},{status:409})}; }
     if (facultyConflicts.length) {
       return {
         ok:false,
@@ -137,7 +144,8 @@ async function validateSchedule({ series, facultyId, course, excludeBatchId }) {
     }
   }
 
-  return { ok:true, schedules, selectedHours, employee };
+  const assignedSchedules=schedules.map(slot=>{const id=facultyForDay(slot.day);const emp=id?facultyById.get(id):null;return {...slot,facultyId:id||"",facultyName:emp?.name||""};});
+  return {ok:true,schedules:assignedSchedules,selectedHours,employee,employees};
 }
 
 export async function GET() {
@@ -167,7 +175,8 @@ export async function POST(req) {
       },{status:400});
     }
 
-    const checked = await validateSchedule({series,facultyId:b.facultyId||"",course});
+    const facultyIds=[...new Set((b.facultyIds || (b.facultyId ? [b.facultyId] : [])).filter(Boolean).map(String))].slice(0,2);
+    const checked = await validateSchedule({series,facultyIds,course});
     if (!checked.ok) return checked.response;
 
     const batch = await Batch.create({
@@ -181,12 +190,14 @@ export async function POST(req) {
       capacity:Number(b.capacity)||50,
       startDate:b.startDate||undefined,
       endDate:b.endDate||undefined,
-      facultyId:b.facultyId||"",
-      facultyName:b.facultyName||checked.employee?.name||"",
+      facultyIds,
+      facultyNames:checked.employees?.map(e=>e.name)||[],
+      facultyId:facultyIds[0]||"",
+      facultyName:checked.employees?.[0]?.name||checked.employee?.name||",
       schedules:checked.schedules.map(slot => ({
         ...slot,
-        facultyId:b.facultyId||"",
-        facultyName:b.facultyName||checked.employee?.name||"",
+        facultyId:slot.facultyId||facultyIds[0]||"",
+        facultyName:slot.facultyName||checked.employees?.[0]?.name||"",
         room:b.room||""
       })),
       status:b.status||"Draft",
