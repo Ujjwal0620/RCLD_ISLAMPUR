@@ -23,7 +23,7 @@ export async function GET(req){
     const batches=await Batch.find({
       status:{$in:["Draft","Active"]},
       ...(mongoose.Types.ObjectId.isValid(excludeBatchId)?{_id:{$ne:excludeBatchId}}:{})
-    }).select("batchCode name facultyId facultyName schedules status").lean();
+    }).select("batchCode name facultyId facultyName facultyIds schedules status").lean();
     const employees=await Employee.find({status:"Active"}).select("employeeId name designation department skills offDays status").lean();
 
     const options=employees.map(employee=>{
@@ -32,7 +32,7 @@ export async function GET(req){
       const missingSkills=required.filter(skill=>!skills.includes(skill));
       const conflicts=[];
       for(const batch of batches){
-        if(batch.facultyId!==employee.employeeId)continue;
+        if(batch.facultyId!==employee.employeeId && !(batch.facultyIds||[]).includes(employee.employeeId))continue;
         for(const existing of batch.schedules||[]){
           if(selectedSlots.some(selected=>selected.day===existing.day&&selected.time===existing.time&&selected.series===existing.series)){
             conflicts.push({batchCode:batch.batchCode,batchName:batch.name,day:existing.day,time:existing.time,series:existing.series});
@@ -42,7 +42,7 @@ export async function GET(req){
       const skillEligible=required.length===0||missingSkills.length===0;
       const scheduleAvailable=conflicts.length===0;
       return {...employee,skillMatch:matchedSkills.length,matchedSkills,missingSkills,
-        assignedBatches:batches.filter(batch=>batch.facultyId===employee.employeeId).length,
+        assignedBatches:batches.filter(batch=>batch.facultyId===employee.employeeId || (batch.facultyIds||[]).includes(employee.employeeId)).length,
         conflicts,skillEligible,scheduleAvailable,available:skillEligible&&scheduleAvailable};
     }).filter(e=>e.skillEligible&&e.scheduleAvailable).sort((a,b)=>b.skillMatch-a.skillMatch||a.assignedBatches-b.assignedBatches||a.name.localeCompare(b.name));
 
