@@ -50,7 +50,7 @@ export async function POST(req) {
       if (isEmail) {
         employee = await Employee.findOne({ email: { $regex: new RegExp("^" + normalizedLogin.replace(/[.*+?^$()|[\]\\]/g, "\\$&") + "$", "i") } }).lean();
       } else {
-        employee = await Employee.findOne({ $or: [{ loginId: normalizedLogin }, { mobile: normalizedLogin }] }).lean();
+        employee = await Employee.findOne({ $or: [{ loginId: normalizedLogin }, { mobile: normalizedLogin }, { mobile: rawLogin }] }).lean();
       }
 
       if (!employee || employee.status === "Inactive") return NextResponse.json({ error: "Invalid employee login." }, { status: 401 });
