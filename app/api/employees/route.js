@@ -9,7 +9,10 @@ const EmployeeSchema = new mongoose.Schema({
   age: Number,
   dateOfBirth: String,
   gender: String,
-  mobile: String,
+  mobile: { type: String, index: true },
+  loginId: String,
+  password: String,
+  offDays: { type: [String], default: [] },
   email: String,
   address: String,
   joiningDate: String,
@@ -90,6 +93,9 @@ export async function POST(request) {
     const allowedSkills = new Set(ALL_EMPLOYEE_SKILLS);
     const skills = Array.isArray(body.skills) ? body.skills.filter((skill) => allowedSkills.has(skill)) : [];
     const employeeId = await nextEmployeeId();
+    const mobile=String(body.mobile||"").replace(/\D/g,"").slice(-10);
+    if((String(body.designation||"").toLowerCase().includes("faculty")||String(body.department||"").toLowerCase().includes("faculty")) && !mobile) return NextResponse.json({error:"Faculty mobile number is required because it is the faculty login ID."},{status:400});
+    if(mobile && await Employee.exists({mobile})) return NextResponse.json({error:"This mobile number is already used by another employee."},{status:409});
 
     const employee = await Employee.create({
       employeeId,
@@ -97,7 +103,10 @@ export async function POST(request) {
       age: body.age ? Number(body.age) : undefined,
       dateOfBirth: body.dateOfBirth || "",
       gender: body.gender || "",
-      mobile: body.mobile || "",
+      mobile,
+      loginId: mobile,
+      password: body.password || "",
+      offDays: Array.isArray(body.offDays) ? body.offDays : [],
       email: body.email || "",
       address: body.address || "",
       joiningDate: body.joiningDate || "",
