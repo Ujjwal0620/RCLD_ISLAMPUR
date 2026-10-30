@@ -32,9 +32,19 @@ export default function StudentsPage(){
   const activeCount=Object.values(filters).filter(Boolean).length;
   const selectedRecords=students.filter(s=>selectedStudents.includes(s._id));
   const unassignedStudents=students.filter(s=>!s.batchId&&!s.batchCode);
-  const selectedCourses=[...new Set(selectedRecords.map(s=>String(s.courseCode||"").toUpperCase()).filter(Boolean))];
-  const compatibleBatches=batches.filter(b=>b.available&&(!selectedCourses.length||selectedCourses.length!==1||String(b.courseCode||"").toUpperCase()===selectedCourses[0]));
+  const normalizeCourse=(value)=>{
+    const v=String(value||"").trim().toUpperCase();
+    if(!v)return "";
+    if(/^SM(?:[-_ ]|$)/.test(v)||v.includes("CODING FOR KIDS"))return "KIDS";
+    if(/^DOM(?:[-_ ]|$)/.test(v)||v.includes("DIPLOMA IN OFFICE MANAGEMENT"))return "DOM";
+    if(/^DCST(?:[-_ ]|$)/.test(v))return "DCST";
+    if(/^DCA(?:[-_ ]|$)/.test(v))return "DCA";
+    return v.replace(/\\s+/g,"");
+  };
+  const selectedCourses=[...new Set(selectedRecords.map(s=>normalizeCourse(s.courseCode||s.courseName||s.sourceCourseLabel)).filter(Boolean))];
+  const compatibleBatches=batches.filter(b=>b.available&&(!selectedCourses.length||selectedCourses.length!==1||normalizeCourse(b.courseCode||b.courseName)===selectedCourses[0]));
   async function sendToBatch(){
+    if(assigning)return;
     if(!selectedStudents.length||!selectedBatch)return alert("Select students and an available batch.");
     setAssigning(true);
     try{
