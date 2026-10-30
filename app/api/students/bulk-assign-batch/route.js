@@ -33,15 +33,15 @@ export async function POST(req) {
     if(!batch||!["Draft","Active"].includes(batch.status)) return NextResponse.json({error:"Selected batch is not available."},{status:409});
     const students=await Student.find({_id:{$in:ids}}).lean();
     if(students.length!==ids.length) return NextResponse.json({error:"One or more selected students were not found."},{status:404});
-    const assigned=students.filter(s=>s.batchId);
+    const assigned=students.filter(s=>s.batchId||s.batchCode);
     if(assigned.length) return NextResponse.json({error:"Some selected students are already assigned to a batch. Only unassigned students can be sent here.",students:assigned.map(s=>({id:s._id,name:s.applicantName,batchCode:s.batchCode}))},{status:409});
-    const courseOk=students.every(s=>String(s.courseCode||"").toUpperCase()===String(batch.courseCode||"").toUpperCase()||String(s.courseName||"").trim()===String(batch.courseName||"").trim());
+    const courseOk=students.every(s=>String(s.courseCode||"").toUpperCase()===String(batch.courseCode||"").toUpperCase()||String(s.courseName||"").trim().toLowerCase()===String(batch.courseName||"").trim().toLowerCase()||String(s.sourceCourseLabel||"").trim().toUpperCase().startsWith(String(batch.courseCode||"").toUpperCase()));
     if(!courseOk) return NextResponse.json({error:"All selected students must belong to the selected batch course."},{status:409});
-    const current=await Student.countDocuments({batchId:batch._id});
+    const current=await Student.countDocuments({$or:[{batchId:batch._id},{batchCode:batch.batchCode}]});
     const capacity=Number(batch.capacity||50);
     if(current+students.length>capacity) return NextResponse.json({error:`Only ${Math.max(0,capacity-current)} seats are available in ${batch.batchCode}.`},{status:409});
-    await Student.updateMany({_id:{$in:ids},$or:[{batchId:null},{batchId:{$exists:false}}]},{$set:{batchId:batch._id,batchCode:batch.batchCode}});
-    return NextResponse.json({message:`${ids.length} student(s) sent to ${batch.batchCode}.`,batchId:batch._id,batchCode:batch.batchCode});
+    const updateResult=await Student.updateMany({_id:{$in:ids},$or:[{batchId:null},{batchId:{$exists:false}},{batchCode:""},{batchCode:null},{batchCode:{$exists:false}}]},{$set:{batchId:batch._id,batchCode:batch.batchCode}});
+    return NextResponse.json({message:`${updateResult.modifiedCount} student(s) sent to ${batch.batchCode}.`,updated:updateResult.modifiedCount,batchId:batch._id,batchCode:batch.batchCode});
   } catch(error) {
     return NextResponse.json({error:"Unable to send students to batch.",detail:error.message},{status:500});
   }
