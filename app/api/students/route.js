@@ -24,7 +24,7 @@ export async function GET(request) {
     await connectMongoDB();
     const { searchParams } = new URL(request.url);
     const page = Math.max(1, Number(searchParams.get("page") || 1));
-    const limit = 50;
+    const limit = Math.min(500, Math.max(1, Number(searchParams.get("limit") || 50)));
     const search = (searchParams.get("search") || "").trim();
     const sex = (searchParams.get("sex") || "").trim();
     const course = (searchParams.get("course") || "").trim();
