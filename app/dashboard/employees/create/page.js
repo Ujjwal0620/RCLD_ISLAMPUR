@@ -10,6 +10,8 @@ const initial = {
   dateOfBirth: "",
   gender: "",
   mobile: "",
+  password: "",
+  offDays: [],
   email: "",
   address: "",
   joiningDate: "",
@@ -179,7 +181,8 @@ export default function CreateEmployeePage() {
             <Field label="Age" name="age" type="number" value={form.age} onChange={update} />
             <Field label="Date of Birth" name="dateOfBirth" type="date" value={form.dateOfBirth} onChange={update} />
             <label className="form-field"><span>Gender</span><select value={form.gender} onChange={(e) => update("gender", e.target.value)}><option value="">Select</option><option>Male</option><option>Female</option><option>Other</option></select></label>
-            <Field label="Mobile Number" name="mobile" value={form.mobile} onChange={update} maxLength={15} />
+            <Field label="Mobile Number / Faculty Login ID" name="mobile" value={form.mobile} onChange={update} maxLength={15} />
+            <Field label="Faculty Login Password" name="password" type="password" value={form.password} onChange={update} />
             <Field label="Email" name="email" type="email" value={form.email} onChange={update} />
             <Field label="Joining Date" name="joiningDate" type="date" value={form.joiningDate} onChange={update} />
             <Field label="Designation" name="designation" value={form.designation} onChange={update} />
@@ -197,6 +200,7 @@ export default function CreateEmployeePage() {
               <LeaveField key={key} label={`${key[0].toUpperCase()}${key.slice(1)} Leave`} name={key} value={form.leaveBalance[key]} onChange={updateLeave} />
             ))}
           </div>
+          <div className="form-field full"><span>Weekly Off Days</span><div className="skill-check-grid">{["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].map(day=><label key={day} className={form.offDays.includes(day)?"checked":""}><input type="checkbox" checked={form.offDays.includes(day)} onChange={e=>setForm(x=>({...x,offDays:e.target.checked?[...x.offDays,day]:x.offDays.filter(d=>d!==day)}))}/><span>{day}</span></label>)}</div></div>
           <p className="form-help">These are the employee's opening leave balances. Actual attendance, leave applications and approvals will be managed in the Employee Attendance & Leave module.</p>
         </section>
 
