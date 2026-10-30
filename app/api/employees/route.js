@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectMongoDB } from "@/lib/mongodb";
 import mongoose from "mongoose";
+import bcrypt from "bcryptjs";
 import { ALL_EMPLOYEE_SKILLS } from "@/lib/access-control";
 
 const EmployeeSchema = new mongoose.Schema({
@@ -105,7 +106,7 @@ export async function POST(request) {
       gender: body.gender || "",
       mobile,
       loginId: mobile,
-      password: body.password || "",
+      password: await bcrypt.hash(String(body.password || "Emp@123"), 12),
       offDays: Array.isArray(body.offDays) ? body.offDays : [],
       email: body.email || "",
       address: body.address || "",
