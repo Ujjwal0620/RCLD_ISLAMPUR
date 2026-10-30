@@ -13,6 +13,7 @@ export default function StudentDetailsPage({params}){
   const [feeForm,setFeeForm]=useState({totalFee:"",discount:"",admissionFee:"",amount:"",date:new Date().toISOString().slice(0,10),method:"Cash",reference:""});
   const [attForm,setAttForm]=useState({date:new Date().toISOString().slice(0,10),status:"Present",subject:"",batch:"",note:""});
   const [message,setMessage]=useState(""); const [editing,setEditing]=useState(false); const [editForm,setEditForm]=useState({});
+  const [history,setHistory]=useState([]); const [transition,setTransition]=useState({action:"",batchId:"",remark:""}); const [transitioning,setTransitioning]=useState(false);
 
   async function loadOperational(id){
     const [fr,ar]=await Promise.all([fetch("/api/students/"+id+"/fees",{cache:"no-store"}),fetch("/api/students/"+id+"/attendance",{cache:"no-store"})]);
