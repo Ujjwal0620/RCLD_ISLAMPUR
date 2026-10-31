@@ -28,6 +28,16 @@ function to24(raw){
  if(m){let h=Number(m[1]);if(m[3].toLowerCase()==="pm"&&h!==12)h+=12;if(m[3].toLowerCase()==="am"&&h===12)h=0;return String(h).padStart(2,"0")+":"+m[2];}
  m=s.match(/(\d{1,2}):(\d{2})/);return m?String(Number(m[1])).padStart(2,"0")+":"+m[2]:"";
 }
+function batchAssociatedIds(batches){
+ const ids=new Set();
+ for(const batch of batches){
+  if(batch.facultyId)ids.add(String(batch.facultyId));
+  for(const id of batch.facultyIds||[])if(id)ids.add(String(id));
+  for(const a of batch.staffAssignments||[])if(a.employeeId)ids.add(String(a.employeeId));
+  for(const s of batch.schedules||[])if(s.facultyId)ids.add(String(s.facultyId));
+ }
+ return ids;
+}
 function batchBusyIds(batches,date,startTime,endTime){
  const day=new Date(date+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",timeZone:"Asia/Kolkata"});
  const busy=new Set();
@@ -36,7 +46,7 @@ function batchBusyIds(batches,date,startTime,endTime){
   const parts=String(s.time||"").split(/\s*(?:-|–|to)\s*/i);
   if(parts.length<2)continue;
   const bs=to24(parts[0]),be=to24(parts[1]);
-  if(bs&&be&&overlaps(startTime,endTime,bs,be))busy.add(s.facultyId);
+  if(bs&&be&&overlaps(startTime,endTime,bs,be))busy.add(String(s.facultyId));
  }
  return busy;
 }
@@ -50,13 +60,19 @@ export async function GET(req){
   const [allTasks,employees,batches]=await Promise.all([
    BackOfficeTask.find({taskDate:date}).sort({startTime:1,createdAt:-1}).lean(),
    isManager?Employee.find({status:{$ne:"Inactive"}}).select("employeeId name designation department").sort({name:1}).lean():Promise.resolve([]),
-   isManager?Batch.find({status:{$in:["Draft","Active"]}}).select("schedules").lean():Promise.resolve([])
+   isManager?Batch.find({status:{$in:["Draft","Active"]}}).select("facultyId facultyIds staffAssignments schedules").lean():Promise.resolve([])
   ]);
   const tasks=isManager?allTasks:allTasks.filter(t=>(t.assignments||[]).some(a=>a.employeeId===g.session.employeeId)||t.assignedTo===g.session.employeeId);
   if(!isManager)return NextResponse.json({tasks,availableEmployees:[],date,canAssign:false});
-  const assignedInSlot=new Set(startTime&&endTime?allTasks.filter(t=>overlaps(startTime,endTime,t.startTime,t.endTime)).flatMap(t=>(t.assignments||[]).map(a=>a.employeeId).concat(t.assignedTo?[t.assignedTo]:[])):[]);
+  // A faculty/staff member already mapped to any active/draft batch is not eligible for Task Assignment.
+  // An employee who already has any task on the selected date is also unavailable for another task.
+  const batchAssociated=batchAssociatedIds(batches);
+  const alreadyAssignedToday=new Set(allTasks.flatMap(t=>(t.assignments||[]).map(a=>String(a.employeeId)).concat(t.assignedTo?[String(t.assignedTo)]:[])));
   const classBusy=startTime&&endTime?batchBusyIds(batches,date,startTime,endTime):new Set();
-  const availableEmployees=employees.filter(e=>!assignedInSlot.has(e.employeeId)&&!classBusy.has(e.employeeId));
+  const availableEmployees=employees.filter(e=>{
+   const id=String(e.employeeId);
+   return !batchAssociated.has(id)&&!alreadyAssignedToday.has(id)&&!classBusy.has(id);
+  });
   return NextResponse.json({tasks,availableEmployees,date,canAssign:true});
  }catch(e){return NextResponse.json({error:"Unable to load Task Assignment.",detail:e.message},{status:500});}
 }
@@ -73,14 +89,18 @@ export async function POST(req){
   if(!validSlot(startTime,endTime))return NextResponse.json({error:"Select one of the fixed hourly task slots."},{status:400});
   const [employees,batches,dayTasks]=await Promise.all([
    Employee.find({employeeId:{$in:ids},status:{$ne:"Inactive"}}).select("employeeId name").lean(),
-   Batch.find({status:{$in:["Draft","Active"]}}).select("schedules").lean(),
+   Batch.find({status:{$in:["Draft","Active"]}}).select("facultyId facultyIds staffAssignments schedules").lean(),
    BackOfficeTask.find({taskDate}).lean()
   ]);
   if(employees.length!==ids.length)return NextResponse.json({error:"One or more selected employees are unavailable."},{status:409});
-  const assignedInSlot=new Set(dayTasks.filter(t=>overlaps(startTime,endTime,t.startTime,t.endTime)).flatMap(t=>(t.assignments||[]).map(a=>a.employeeId).concat(t.assignedTo?[t.assignedTo]:[])));
+  const batchAssociated=batchAssociatedIds(batches);
+  const alreadyAssignedToday=new Set(dayTasks.flatMap(t=>(t.assignments||[]).map(a=>String(a.employeeId)).concat(t.assignedTo?[String(t.assignedTo)]:[])));
   const busyClass=batchBusyIds(batches,taskDate,startTime,endTime);
-  const blocked=employees.filter(e=>assignedInSlot.has(e.employeeId)||busyClass.has(e.employeeId));
-  if(blocked.length)return NextResponse.json({error:"One or more employees already have a task or class in this time.",employees:blocked.map(e=>e.name)},{status:409});
+  const blocked=employees.filter(e=>{
+   const id=String(e.employeeId);
+   return batchAssociated.has(id)||alreadyAssignedToday.has(id)||busyClass.has(id);
+  });
+  if(blocked.length)return NextResponse.json({error:"One or more selected employees are already associated with a batch, already have a task today, or have a class in this time.",employees:blocked.map(e=>e.name)},{status:409});
   const assignments=employees.map(e=>({employeeId:e.employeeId,employeeName:e.name}));
   const task=await BackOfficeTask.create({title,assignments,assignedTo:assignments[0]?.employeeId||"",assignedToName:assignments[0]?.employeeName||"",workArea:b.workArea,taskDate,startTime,endTime,status:"Open",createdBy:g.session.employeeId,createdByName:g.session.name||""});
   return NextResponse.json({task},{status:201});
