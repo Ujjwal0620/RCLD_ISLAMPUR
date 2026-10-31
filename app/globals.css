@@ -496,3 +496,178 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#a5b4fc!import
 .dashboard-user-chip{display:inline-flex;align-items:center;gap:8px;margin-right:4px;padding:5px 10px 5px 6px;border:1px solid #dfe5ef;background:#fff;border-radius:999px}
 .dashboard-user-avatar{width:27px;height:27px;font-size:11px}.dashboard-user-chip strong,.dashboard-user-chip small{display:block;line-height:1.1}.dashboard-user-chip strong{font-size:10px;color:#344054}.dashboard-user-chip small{font-size:8px;color:#98a2b3;margin-top:2px}
 @media(max-width:700px){.erp-user-bar{min-height:52px}.dashboard-user-chip{max-width:150px}.dashboard-user-chip small{display:none}.dashboard-user-chip strong{max-width:95px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+
+
+/* =========================================================
+   RCLD UI SYSTEM v2 — shared shell + page polish
+   Visual direction: Lexa-inspired admin shell, modern
+   education ERP density, restrained color and clear hierarchy.
+   ========================================================= */
+:root{
+  --bg:#f4f6f9;
+  --surface:#ffffff;
+  --surface-soft:#f8fafc;
+  --text:#172033;
+  --text-2:#344054;
+  --muted:#7b8798;
+  --muted-2:#98a2b3;
+  --border:#e7ebf1;
+  --border-strong:#d9e0e9;
+  --primary:#16a36a;
+  --primary-dark:#0f8555;
+  --primary-soft:#eaf8f1;
+  --accent:#5b67e8;
+  --sidebar:#17202b;
+  --sidebar-2:#1d2936;
+  --sidebar-text:#aeb9c8;
+  --shadow-sm:0 1px 2px rgba(16,24,40,.04);
+  --shadow:0 8px 24px rgba(16,24,40,.06);
+  --radius:14px;
+}
+html,body{background:var(--bg);color:var(--text);font-family:"Outfit","Inter",ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+body{font-size:14px;-webkit-font-smoothing:antialiased}
+button,a,input,select,textarea{transition:border-color .16s ease,background-color .16s ease,color .16s ease,box-shadow .16s ease,transform .16s ease}
+.erp-shell{background:var(--bg)}
+.erp-sidebar{
+  width:258px;
+  background:linear-gradient(180deg,#17212c 0%,#151e28 100%);
+  border-right:1px solid rgba(255,255,255,.05);
+  padding:18px 12px 14px;
+  box-shadow:8px 0 30px rgba(15,23,42,.08);
+}
+.brand{padding:4px 10px 20px;gap:11px}
+.brand-mark{width:38px;height:38px;border-radius:12px;background:linear-gradient(145deg,#21bf7a,#118857);box-shadow:0 8px 18px rgba(22,163,106,.24)}
+.brand-mark span{font-size:18px;color:#fff}
+.brand-copy strong{font-size:15px;letter-spacing:.02em}
+.brand-copy span{font-size:10px;color:#8795a7}
+.workspace-switcher{
+  display:flex;align-items:center;gap:9px;margin:0 4px 15px;padding:10px 10px;
+  border:1px solid rgba(255,255,255,.08);border-radius:11px;background:rgba(255,255,255,.045);color:#d9e1eb
+}
+.workspace-switcher>div:nth-child(2){min-width:0;flex:1}
+.workspace-switcher strong,.workspace-switcher span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.workspace-switcher strong{font-size:11px}.workspace-switcher span{font-size:9px;color:#8795a7;margin-top:2px}
+.workspace-icon{width:28px;height:28px;border-radius:8px;background:rgba(22,163,106,.16);color:#54d39a;display:grid;place-items:center;flex:0 0 auto}
+.side-label{padding:14px 10px 6px;font-size:9px;letter-spacing:.14em;color:#647286;font-weight:700}
+.erp-nav{gap:1px}
+.side-link{
+  position:relative;margin:2px 0;padding:10px 11px;border-radius:9px;color:#aab6c5;font-size:12px;font-weight:500
+}
+.side-link:hover{background:rgba(255,255,255,.055);color:#f5f8fb}
+.side-link.active{background:linear-gradient(90deg,rgba(22,163,106,.19),rgba(22,163,106,.08));color:#fff;box-shadow:inset 2px 0 0 #25c786}
+.side-link.active svg{color:#55d89d}
+.side-active-dot{margin-left:auto;width:5px;height:5px;border-radius:50%;background:#2bd18a;box-shadow:0 0 0 3px rgba(43,209,138,.08)}
+.sidebar-bottom{margin-top:auto}
+.rbac-notice{margin:12px 4px 10px;padding:10px;border:1px solid rgba(255,255,255,.08);border-radius:10px;background:rgba(255,255,255,.035)}
+.rbac-notice svg{color:#67dca8}
+.sidebar-footer{padding:9px 8px 7px;font-size:10px}
+.side-logout{width:100%;display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid rgba(255,255,255,.08);border-radius:9px;background:rgba(255,255,255,.035);color:#aab6c5;cursor:pointer}
+.side-logout:hover{background:rgba(239,68,68,.1);color:#ffd0d0;border-color:rgba(239,68,68,.18)}
+.erp-main{margin-left:258px;padding:0 30px 40px}
+.erp-shell.sidebar-collapsed .erp-sidebar{width:78px;padding-left:10px;padding-right:10px}
+.erp-shell.sidebar-collapsed .erp-main{margin-left:78px}
+.erp-shell.sidebar-collapsed .brand{justify-content:center;padding-left:0;padding-right:0}
+.erp-shell.sidebar-collapsed .brand-copy,.erp-shell.sidebar-collapsed .workspace-switcher>div:nth-child(2),.erp-shell.sidebar-collapsed .workspace-switcher>svg,.erp-shell.sidebar-collapsed .side-label,.erp-shell.sidebar-collapsed .side-link span,.erp-shell.sidebar-collapsed .side-active-dot,.erp-shell.sidebar-collapsed .rbac-notice div,.erp-shell.sidebar-collapsed .sidebar-footer,.erp-shell.sidebar-collapsed .side-logout span{display:none}
+.erp-shell.sidebar-collapsed .workspace-switcher{justify-content:center;padding:9px 0}
+.erp-shell.sidebar-collapsed .side-link{justify-content:center;padding:11px 0}
+.erp-shell.sidebar-collapsed .side-link svg{margin:0}
+.erp-shell.sidebar-collapsed .side-logout{justify-content:center}
+.erp-user-bar{
+  min-height:66px;margin:0 -30px;padding:0 30px;background:rgba(255,255,255,.94);
+  border-bottom:1px solid var(--border);position:sticky;top:0;z-index:40;backdrop-filter:blur(14px)
+}
+.erp-command-search{
+  display:flex;align-items:center;gap:9px;width:min(420px,42vw);height:38px;padding:0 11px;
+  border:1px solid #e2e7ee;border-radius:9px;background:#f8fafc;color:#98a2b3
+}
+.erp-command-search:focus-within{border-color:#b9c5ef;background:#fff;box-shadow:0 0 0 3px rgba(91,103,232,.08)}
+.erp-command-search input{border:0;outline:0;background:transparent;width:100%;min-height:34px;color:#344054;font-size:12px}
+.erp-command-search kbd{border:1px solid #dfe5ed;border-radius:5px;background:#fff;padding:3px 6px;font-size:9px;color:#98a2b3;white-space:nowrap}
+.erp-top-actions{display:flex;align-items:center;gap:7px}
+.erp-top-icon,.erp-sidebar-toggle{
+  position:relative;width:36px;height:36px;display:grid;place-items:center;border:1px solid transparent;border-radius:9px;background:transparent;color:#667085;cursor:pointer
+}
+.erp-top-icon:hover,.erp-sidebar-toggle:hover{background:#f4f6f9;border-color:#e4e8ee;color:#344054}
+.erp-top-icon i{position:absolute;right:7px;top:7px;width:5px;height:5px;border-radius:50%;background:#ef5350}
+.erp-user-identity{padding-left:10px;margin-left:3px;border-left:1px solid #edf0f4}
+.erp-user-avatar{width:34px;height:34px;background:linear-gradient(145deg,#eaf8f1,#d9f4e7);color:#148457;border:1px solid #c9eddb}
+.erp-user-identity strong{font-size:11px;color:#243044}.erp-user-identity span{font-size:9px;color:#8993a3}
+.user-chevron{color:#98a2b3}
+.topbar{
+  min-height:78px;border-bottom:0;display:flex;align-items:center;padding-top:7px
+}
+.topbar h1{font-size:24px;letter-spacing:-.025em;color:#172033}
+.crumb{font-size:10px;color:#98a2b3}
+.top-actions{gap:8px}
+.icon-btn,.ghost-btn,.clear-btn{min-height:38px;border-color:#e1e6ed;border-radius:9px;background:#fff}
+.icon-btn:hover,.ghost-btn:hover{border-color:#cbd3df;background:#f9fafb}
+.primary-btn{min-height:38px;border-radius:9px;background:#16a36a;box-shadow:0 5px 12px rgba(22,163,106,.16)}
+.primary-btn:hover{background:#118957;transform:translateY(-1px)}
+.dashboard-hero{
+  margin:8px 0 16px;padding:26px 28px;border-radius:17px;
+  background:radial-gradient(circle at 85% 20%,rgba(68,201,145,.25),transparent 28%),linear-gradient(135deg,#16252b 0%,#193c36 60%,#1e5547 100%);
+  box-shadow:0 16px 34px rgba(18,53,46,.14)
+}
+.dashboard-hero h2{font-size:26px}.dashboard-hero p{font-size:11px}
+.hero-light-btn{color:#135a42}.hero-light-btn:hover{transform:translateY(-1px)}
+.dashboard-kpis{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.dash-kpi{min-height:104px;border-radius:13px;padding:15px;box-shadow:var(--shadow-sm)}
+.dash-kpi:hover{transform:translateY(-1px);box-shadow:var(--shadow)}
+.dash-kpi strong{font-size:22px}
+.panel{border-color:var(--border);border-radius:14px;box-shadow:var(--shadow-sm)}
+.panel-head,.filter-title{padding:16px 18px}
+.panel-head h3,.filter-title h3{font-size:14px}
+.panel-head p,.filter-title p{font-size:11px}
+.dashboard-grid-main,.dashboard-bottom-grid{gap:14px}
+.dashboard-chart-panel,.dashboard-bottom-grid>.panel{min-height:0}
+.dashboard-activity-panel{margin-top:16px}
+.activity-header{padding:18px 20px}
+.activity-header h3{font-size:16px}
+.ops-kpis{gap:10px;padding:14px 18px}
+.ops-kpis>div{border:1px solid #edf0f4;border-radius:10px;background:#fafbfc;padding:11px}
+.table-wrap{border-radius:0 0 14px 14px}
+th{background:#f8fafc;color:#667085;font-size:10px}
+td{font-size:12px}
+tbody tr:hover{background:#fafdfb}
+.badge{border:1px solid #cdebdc}
+.filters,.advanced-filters{background:#fff}
+.search-box,.filters select,.filter-field input,.filter-field select{border-color:#dfe5ec;border-radius:9px}
+.search-box:focus-within{border-color:#b9c5ef;box-shadow:0 0 0 3px rgba(91,103,232,.08)}
+.form-field input,.form-field select,.form-field textarea,.qualification-grid input{border-color:#dfe5ec;border-radius:9px}
+.form-field input:focus,.form-field select:focus,.form-field textarea:focus{border-color:#b9c5ef;box-shadow:0 0 0 3px rgba(91,103,232,.08)}
+.registration-form{border-radius:14px;box-shadow:var(--shadow)}
+.form-intro{background:linear-gradient(135deg,#17232d,#1c4037)}
+.form-section{padding:20px 22px}
+.form-actions{background:#fafbfc}
+.student-profile-card{border-radius:14px;background:linear-gradient(135deg,#17232d,#1e4a3e)}
+.detail-section,.student-summary-grid .summary-card{border-radius:12px}
+.summary-card{box-shadow:var(--shadow-sm)}
+.pagination button{border-radius:8px}
+@media(max-width:1100px){
+  .erp-main{padding-left:22px;padding-right:22px}
+  .erp-user-bar{margin-left:-22px;margin-right:-22px;padding-left:22px;padding-right:22px}
+  .dashboard-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:900px){
+  .erp-sidebar{width:258px}
+  .erp-main,.erp-shell.sidebar-collapsed .erp-main{margin-left:0}
+  .erp-shell.sidebar-collapsed .erp-sidebar{width:258px}
+  .erp-shell.sidebar-collapsed .brand-copy,.erp-shell.sidebar-collapsed .workspace-switcher>div:nth-child(2),.erp-shell.sidebar-collapsed .workspace-switcher>svg,.erp-shell.sidebar-collapsed .side-label,.erp-shell.sidebar-collapsed .side-link span,.erp-shell.sidebar-collapsed .side-active-dot,.erp-shell.sidebar-collapsed .rbac-notice div,.erp-shell.sidebar-collapsed .sidebar-footer,.erp-shell.sidebar-collapsed .side-logout span{display:block}
+  .erp-shell.sidebar-collapsed .workspace-switcher{justify-content:flex-start;padding:10px}
+  .erp-shell.sidebar-collapsed .side-link{justify-content:flex-start;padding:10px 11px}
+  .erp-shell.sidebar-collapsed .side-logout{justify-content:flex-start}
+  .erp-sidebar-toggle{display:none}
+  .erp-command-search{width:min(52vw,360px)}
+}
+@media(max-width:600px){
+  .erp-main{padding-left:14px;padding-right:14px}
+  .erp-user-bar{margin-left:-14px;margin-right:-14px;padding:0 14px;min-height:60px}
+  .erp-command-search{width:44px;padding:0 13px}.erp-command-search input,.erp-command-search kbd{display:none}
+  .erp-top-icon:nth-child(1){display:none}
+  .erp-user-identity{padding-left:6px}
+  .user-chevron{display:none}
+  .dashboard-kpis{grid-template-columns:1fr}
+  .topbar{min-height:72px;align-items:flex-start;padding-top:10px}
+  .topbar h1{font-size:21px}
+  .dashboard-hero{padding:21px}
+}
