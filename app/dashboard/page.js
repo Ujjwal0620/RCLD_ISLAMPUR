@@ -39,7 +39,7 @@ export default function DashboardPage(){
   setActivityLoading(true);
   try{const q=new URLSearchParams({mode:period,date,month});const r=await fetch("/api/dashboard/activity?"+q.toString(),{cache:"no-store"});setActivity(await r.json())}finally{setActivityLoading(false)}
  }
- useEffect(()=>{load()},[]);
+ useEffect(()=>{load()},[]);\n useEffect(()=>{\n  let active=true;\n  fetch("/api/auth/me",{cache:"no-store"}).then(r=>r.ok?r.json():null).then(d=>{if(active&&d?.authenticated)setUser(d.user)}).catch(()=>{});\n  const timer=setInterval(()=>setNow(new Date()),60000);\n  return ()=>{active=false;clearInterval(timer)};\n },[]);
  useEffect(()=>{loadActivity()},[period,date,month]);
 
  const statusTotal=data.studentStatus.reduce((n,x)=>n+x.value,0)||data.students;
@@ -54,9 +54,9 @@ export default function DashboardPage(){
  const feeTotal=activity.fees.collected;
 
  return <ERPLayout active="/dashboard" hideAssistant={false}>
-  <header className="topbar"><div><div className="crumb">RCLD Islampur / ERP</div><h1>Dashboard</h1></div><div className="top-actions"><span className="dashboard-live"><span/> Live data</span><button className="icon-btn" onClick={()=>{load();loadActivity()}} title="Refresh"><RefreshCw size={18}/></button><a className="primary-btn" href="/dashboard/students/register"><UserPlus size={17}/> Register Student</a></div></header>
+  <header className="topbar"><div><div className="crumb">RCLD Islampur / ERP</div><h1>Dashboard</h1></div><div className="top-actions"><span className="dashboard-user-chip"><span className="dashboard-user-avatar">{loggedInName.charAt(0).toUpperCase()}</span><span><strong>{loggedInName}</strong><small>{user?.designation||"RCLD User"}</small></span></span><span className="dashboard-live"><span/> Live data</span><button className="icon-btn" onClick={()=>{load();loadActivity()}} title="Refresh"><RefreshCw size={18}/></button><a className="primary-btn" href="/dashboard/students/register"><UserPlus size={17}/> Register Student</a></div></header>
 
-  <section className="dashboard-hero"><div><span className="eyebrow">ERP CONTROL CENTER</span><h2>Good morning, RCLD Islampur 👋</h2><p>Students, batches, faculty, attendance, classes and fee collection — all in one operational view.</p><div className="hero-actions"><a className="hero-light-btn" href="/dashboard/students">Open Student Registry <ArrowUpRight size={15}/></a><a className="hero-ghost-btn" href="/dashboard/reports">View Reports <ArrowUpRight size={15}/></a></div></div><div className="hero-orbit"><div className="orbit-ring"/><div className="hero-orbit-core"><Activity size={24}/><strong>ERP</strong><span>LIVE</span></div></div></section>
+  <section className="dashboard-hero"><div><span className="eyebrow">ERP CONTROL CENTER</span><h2>{greeting}, {loggedInName} 👋</h2><p>Students, batches, faculty, attendance, classes and fee collection — all in one operational view.</p><div className="hero-actions"><a className="hero-light-btn" href="/dashboard/students">Open Student Registry <ArrowUpRight size={15}/></a><a className="hero-ghost-btn" href="/dashboard/reports">View Reports <ArrowUpRight size={15}/></a></div></div><div className="hero-orbit"><div className="orbit-ring"/><div className="hero-orbit-core"><Activity size={24}/><strong>ERP</strong><span>LIVE</span></div></div></section>
 
   <section className="dashboard-kpis">
    <div className="dash-kpi"><div className="dash-kpi-icon blue"><Users size={20}/></div><div><span>Total Students</span><strong>{loading?"—":data.students}</strong><small>{data.assigned} assigned to batches</small></div></div>
