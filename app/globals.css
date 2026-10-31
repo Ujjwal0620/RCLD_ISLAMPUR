@@ -671,3 +671,16 @@ tbody tr:hover{background:#fafdfb}
   .topbar h1{font-size:21px}
   .dashboard-hero{padding:21px}
 }
+
+
+/* Auth surface — same visual language as the ERP shell */
+.login-page{background:radial-gradient(circle at 12% 12%,rgba(22,163,106,.18),transparent 28%),radial-gradient(circle at 88% 85%,rgba(91,103,232,.18),transparent 30%),linear-gradient(135deg,#101922,#17252c 55%,#1a3b34);position:relative;overflow:hidden}
+.login-page:before,.login-page:after{content:"";position:absolute;border:1px solid rgba(255,255,255,.07);border-radius:50%;pointer-events:none}
+.login-page:before{width:520px;height:520px;right:-180px;top:-220px}.login-page:after{width:380px;height:380px;left:-180px;bottom:-170px}
+.login-brand{z-index:1}.login-logo{background:linear-gradient(145deg,#21bf7a,#118857);box-shadow:0 10px 25px rgba(22,163,106,.2)}
+.login-card{position:relative;z-index:1;border-radius:18px;padding:32px;border-color:rgba(255,255,255,.7);box-shadow:0 30px 90px rgba(0,0,0,.3)}
+.login-icon{background:#eaf8f1;color:#118857}
+.login-card .eyebrow{color:#148457}
+.login-input:focus-within{border-color:#8fd9b6;box-shadow:0 0 0 3px rgba(22,163,106,.09)}
+.login-submit{background:linear-gradient(135deg,#18a86e,#0f8c59);box-shadow:0 10px 24px rgba(22,163,106,.22)}
+.login-submit:hover{transform:translateY(-1px);filter:saturate(1.05)}
