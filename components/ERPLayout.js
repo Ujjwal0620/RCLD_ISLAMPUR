@@ -14,7 +14,7 @@ const links = [
   { href: "/dashboard/batches", label: "Batches", icon: Layers3 },
   { href: "/dashboard/reports", label: "Reports", icon: BarChart3 },
   { href: "/dashboard/attendance", label: "My Attendance", icon: Clock3 },
-  { href: "/dashboard/back-office", label: "Back Office", icon: ClipboardList },
+  { href: "/dashboard/back-office", label: "Task Assignment", icon: ClipboardList },
 ];
 
 export default function ERPLayout({ active, children, hideAssistant = true }) {
