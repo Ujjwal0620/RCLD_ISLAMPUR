@@ -684,3 +684,14 @@ tbody tr:hover{background:#fafdfb}
 .login-input:focus-within{border-color:#8fd9b6;box-shadow:0 0 0 3px rgba(22,163,106,.09)}
 .login-submit{background:linear-gradient(135deg,#18a86e,#0f8c59);box-shadow:0 10px 24px rgba(22,163,106,.22)}
 .login-submit:hover{transform:translateY(-1px);filter:saturate(1.05)}
+
+.employee-date-input{height:38px;border:1px solid #e1e6ed;border-radius:9px;background:#fff;padding:0 10px;color:#344054;font-size:11px}
+.employee-dashboard-hero{margin-bottom:14px}
+.employee-personal-kpis{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:14px}
+.employee-dashboard-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:14px}
+.employee-report-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#edf0f4;margin:0 18px 18px;border:1px solid #edf0f4;border-radius:11px;overflow:hidden}
+.employee-report-grid>div{background:#fff;padding:15px}.employee-report-grid span,.employee-profile-report span{display:block;font-size:10px;color:#98a2b3;margin-bottom:5px}.employee-report-grid strong{font-size:15px;color:#172033}
+.employee-profile-report{display:flex;gap:13px;align-items:center;padding:8px 18px 20px}.employee-report-avatar{width:46px;height:46px;border-radius:13px;background:#eaf8f1;color:#118857;display:grid;place-items:center;font-size:19px;font-weight:800}.employee-profile-report strong{display:block;font-size:14px;margin-bottom:4px}.employee-profile-report span{display:inline-block;margin-right:12px}
+.employee-work-panel{margin-bottom:18px}.employee-work-list{padding:0 18px 18px;display:grid;gap:8px}.employee-work-row{display:grid;grid-template-columns:92px 1fr auto;gap:14px;align-items:center;padding:12px 13px;border:1px solid #edf0f4;border-radius:10px;background:#fafbfc}.employee-work-time strong,.employee-work-time span{display:block}.employee-work-time strong{font-size:12px;color:#148457}.employee-work-time span{font-size:10px;color:#98a2b3}.employee-work-row>div:nth-child(2) strong{display:block;font-size:12px}.employee-work-row>div:nth-child(2) span{font-size:10px;color:#98a2b3}.employee-task-status{font-size:9px;font-weight:800;text-transform:uppercase;padding:5px 8px;border-radius:99px;background:#eef2f7;color:#667085}.employee-task-status.completed{background:#eaf8f1;color:#148457}.employee-task-status.open{background:#fff7e6;color:#a16207}
+@media(max-width:900px){.employee-personal-kpis{grid-template-columns:repeat(2,1fr)}.employee-dashboard-grid{grid-template-columns:1fr}.employee-report-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.employee-personal-kpis{grid-template-columns:1fr}.employee-report-grid{grid-template-columns:1fr}.employee-work-row{grid-template-columns:1fr}.employee-task-status{justify-self:start}}
