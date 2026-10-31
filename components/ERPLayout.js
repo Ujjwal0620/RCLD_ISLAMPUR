@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import RAGAssistant from "@/components/RAGAssistant";
 import { LayoutDashboard, Users, UserRoundCog, Menu, X, ShieldCheck, Layers3, BookOpen, BarChart3, UserRoundX, Clock3, ClipboardList, LogOut } from "lucide-react";
 
@@ -18,7 +18,7 @@ const links = [
 ];
 
 export default function ERPLayout({ active, children, hideAssistant = true }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false);\n  const [user, setUser] = useState(null);\n\n  useEffect(() => {\n    let active = true;\n    fetch("/api/auth/me", { cache: "no-store" })\n      .then((r) => r.ok ? r.json() : null)\n      .then((data) => { if (active && data?.authenticated) setUser(data.user); })\n      .catch(() => {});\n    return () => { active = false; };\n  }, []);
   return (
     <div className="erp-shell">
       <div className={`sidebar-overlay ${open ? "show" : ""}`} onClick={() => setOpen(false)} />
@@ -40,7 +40,7 @@ export default function ERPLayout({ active, children, hideAssistant = true }) {
         <div className="sidebar-footer"><span className="status-dot"/> Local ERP Workspace</div><button className="side-logout" onClick={async()=>{await fetch("/api/auth/logout",{method:"POST"});window.location.href="/dashboard/login"}}><LogOut size={15}/><span>Sign out</span></button>
       </aside>
       <button className="mobile-menu-button" onClick={() => setOpen(true)} aria-label="Open menu"><Menu size={20} /></button>
-      <section className="erp-main">{children}</section>
+      <section className="erp-main">\n        <div className="erp-user-bar">\n          <div className="erp-user-identity">\n            <div className="erp-user-avatar">{String(user?.name || "R").trim().charAt(0).toUpperCase()}</div>\n            <div><strong>{user?.name || "Loading..."}</strong><span>{user?.designation || (user?.isSuperAdmin ? "Super Admin" : "RCLD User")}</span></div>\n          </div>\n        </div>\n        {children}\n      </section>
       {!hideAssistant && <RAGAssistant />}
     </div>
   );
