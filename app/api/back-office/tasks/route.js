@@ -83,8 +83,9 @@ export async function GET(req){
   if(!isManager)return NextResponse.json({tasks,availableEmployees:[],employeeAvailability:[],date,canAssign:false});
   const employeeAvailability=employeeAssignments(employees,batches,allTasks,date,startTime,endTime);
   const availableEmployees=employeeAvailability.filter(e=>e.available);
-  return NextResponse.json({tasks,availableEmployees,employeeAvailability,date,canAssign:true});
- }catch(e){return NextResponse.json({error:"Unable to load Task Assignment.",detail:e.message},{status:500});}
+  const dayName=new Date(date+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",timeZone:"Asia/Kolkata"});
+  const workRegister=employees.map(e=>{const id=String(e.employeeId),items=[];for(const b of batches){for(const s of b.schedules||[]){if(s.day!==dayName||String(s.facultyId)!==id)continue;const parts=String(s.time||"").split(/\s*(?:-|–|to)\s*/i);if(parts.length<2)continue;items.push({type:"batch",title:(b.batchCode||b.name||"Batch")+(b.courseName?" · "+b.courseName:""),startTime:to24(parts[0]),endTime:to24(parts[1]),room:s.room||"",workArea:s.room||""});}}for(const t of allTasks){for(const as of t.assignments||[]){if(String(as.employeeId)===id)items.push({type:"task",title:t.title,startTime:t.startTime,endTime:t.endTime,workArea:t.workArea,status:t.status});}if(String(t.assignedTo)===id&&!(t.assignments||[]).some(x=>String(x.employeeId)===id))items.push({type:"task",title:t.title,startTime:t.startTime,endTime:t.endTime,workArea:t.workArea,status:t.status});}items.sort((x,y)=>String(x.startTime).localeCompare(String(y.startTime)));return {...e,present:true,replacementNeeded:false,items};});
+  return NextResponse.json({tasks,availableEmployees,employeeAvailability,workRegister,date,canAssign:true}); }catch(e){return NextResponse.json({error:"Unable to load Task Assignment.",detail:e.message},{status:500});}
 }
 export async function POST(req){
  const g=await guard(true);if(g.error)return g.error;
