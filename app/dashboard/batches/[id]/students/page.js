@@ -60,7 +60,7 @@ export default function BatchStudentsPage({params}){
     if(movement.action==="SHIFTED"&&!movement.toBatchId)return alert("Select the destination batch.");
     setMoving(true);
     try{
-      const r=await fetch("/api/students/"+movement.student._id+"/batch-movement",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:movement.action,toBatchId:movement.toBatchId,remark:movementRemark})});
+      const r=await fetch("/api/students/"+movement.student._id+"/batch-history",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:movement.action,toBatchId:movement.toBatchId,remark:movementRemark})});
       const d=await r.json();if(!r.ok)throw new Error(d.error||"Unable to complete movement.");
       setMovement(null);setMovementRemark("");setOpenMenu("");setMessage(d.message||"Student movement saved.");await load(batchId,date);
     }catch(e){alert(e.message)}finally{setMoving(false)}
