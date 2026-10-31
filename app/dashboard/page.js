@@ -49,7 +49,8 @@ function EmployeeDashboard({user}){
   <section className="panel employee-work-panel"><div className="panel-head"><div><h3>My Assigned Work</h3><p>Only work assigned to your employee account.</p></div><span className="chart-total">{tasks.length} item(s)</span></div><div className="employee-work-list">{tasks.map((t,i)=><div className="employee-work-row" key={t._id||i}><div className="employee-work-time"><strong>{t.startTime||"—"}</strong><span>{t.endTime||""}</span></div><div><strong>{t.title}</strong><span>{t.workArea||"Work Area"} · {t.taskDate||date}</span></div><span className={"employee-task-status "+String(t.status||"Open").toLowerCase()}>{t.status||"Open"}</span></div>)}{!tasks.length&&<div className="empty">No assigned work found for this date.</div>}</div></section>
  </ERPLayout>;
 }
-\nexport default function DashboardPage(){
+
+export default function DashboardPage(){
  const today=new Date().toISOString().slice(0,10);
  const [data,setData]=useState({students:0,recent:[],studentStatus:[],courses:[],batchPerformance:[],finance:{payable:0,collected:0,due:0,collectionPercentage:0}});
  const [activity,setActivity]=useState({attendance:{day:{Present:0,Absent:0,Leave:0,total:0},statusTotals:{Present:0,Absent:0,Leave:0},monthly:[]},faculty:[],batchAttendance:[],plannedClasses:[],fees:{collected:0,daily:[]}});
@@ -88,7 +89,9 @@ function EmployeeDashboard({user}){
  const feeChart=period==="day"?activity.fees.daily:activity.fees.daily;
  const feeTotal=activity.fees.collected;
 
- if(user && !["superadmin","office-admin"].includes(user.role)) return <EmployeeDashboard user={user}/>;\n\n return <ERPLayout active="/dashboard" hideAssistant={false}>
+ if(user && !["superadmin","office-admin"].includes(user.role)) return <EmployeeDashboard user={user}/>;
+
+ return <ERPLayout active="/dashboard" hideAssistant={false}>
   <header className="topbar"><div><div className="crumb">RCLD Islampur / ERP</div><h1>Dashboard</h1></div><div className="top-actions"><span className="dashboard-user-chip"><span className="dashboard-user-avatar">{loggedInName.charAt(0).toUpperCase()}</span><span><strong>{loggedInName}</strong><small>{user?.designation||"RCLD User"}</small></span></span><span className="dashboard-live"><span/> Live data</span><button className="icon-btn" onClick={()=>{load();loadActivity()}} title="Refresh"><RefreshCw size={18}/></button><a className="primary-btn" href="/dashboard/students/register"><UserPlus size={17}/> Register Student</a></div></header>
 
   <section className="dashboard-hero"><div><span className="eyebrow">ERP CONTROL CENTER</span><h2>{greeting}, {loggedInName} 👋</h2><p>Students, batches, faculty, attendance, classes and fee collection — all in one operational view.</p><div className="hero-actions"><a className="hero-light-btn" href="/dashboard/students">Open Student Registry <ArrowUpRight size={15}/></a><a className="hero-ghost-btn" href="/dashboard/reports">View Reports <ArrowUpRight size={15}/></a></div></div><div className="hero-orbit"><div className="orbit-ring"/><div className="hero-orbit-core"><Activity size={24}/><strong>ERP</strong><span>LIVE</span></div></div></section>
