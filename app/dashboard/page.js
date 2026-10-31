@@ -39,8 +39,8 @@ function EmployeeDashboard({user}){
   <section className="dashboard-kpis employee-personal-kpis">
    <div className="dash-kpi"><div className="dash-kpi-icon green"><Clock3 size={20}/></div><div><span>Work Time</span><strong>{loading?"—":fmt(live)}</strong><small>{attendance?.punchIn?"Today / selected date":"No punch-in"}</small></div></div>
    <div className="dash-kpi"><div className="dash-kpi-icon blue"><CheckCircle2 size={20}/></div><div><span>Attendance</span><strong>{attendance?.status||"Not Marked"}</strong><small>{attendance?.punchIn?"In "+new Date(attendance.punchIn).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"}):"No attendance record"}</small></div></div>
-   <div className="dash-kpi"><div className="dash-kpi-icon purple"><ClipboardListIcon size={20}/></div><div><span>Assigned Work</span><strong>{tasks.length}</strong><small>Tasks assigned to you</small></div></div>
-   <div className="dash-kpi"><div className="dash-kpi-icon orange"><TimerIcon size={20}/></div><div><span>Out-time Records</span><strong>{attendance?.outTimes?.length||0}</strong><small>Personal & official</small></div></div>
+   <div className="dash-kpi"><div className="dash-kpi-icon purple"><Clock3 size={20}/></div><div><span>Assigned Work</span><strong>{tasks.length}</strong><small>Tasks assigned to you</small></div></div>
+   <div className="dash-kpi"><div className="dash-kpi-icon orange"><Clock3 size={20}/></div><div><span>Out-time Records</span><strong>{attendance?.outTimes?.length||0}</strong><small>Personal & official</small></div></div>
   </section>
   <section className="employee-dashboard-grid">
    <div className="panel"><div className="panel-head"><div><h3>My Attendance</h3><p>{date}</p></div><a href="/dashboard/attendance">Open attendance →</a></div><div className="employee-report-grid"><div><span>Punch In</span><strong>{attendance?.punchIn?new Date(attendance.punchIn).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",second:"2-digit"}):"—"}</strong></div><div><span>Punch Out</span><strong>{attendance?.punchOut?new Date(attendance.punchOut).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",second:"2-digit"}):"—"}</strong></div><div><span>Effective Work</span><strong>{fmt(live)}</strong></div><div><span>Out Time</span><strong>{fmt((attendance?.outTimes||[]).reduce((n,x)=>n+(x.end?Number(x.minutes||0):minutes(x.start,now)),0))}</strong></div></div></div>
@@ -49,7 +49,6 @@ function EmployeeDashboard({user}){
   <section className="panel employee-work-panel"><div className="panel-head"><div><h3>My Assigned Work</h3><p>Only work assigned to your employee account.</p></div><span className="chart-total">{tasks.length} item(s)</span></div><div className="employee-work-list">{tasks.map((t,i)=><div className="employee-work-row" key={t._id||i}><div className="employee-work-time"><strong>{t.startTime||"—"}</strong><span>{t.endTime||""}</span></div><div><strong>{t.title}</strong><span>{t.workArea||"Work Area"} · {t.taskDate||date}</span></div><span className={"employee-task-status "+String(t.status||"Open").toLowerCase()}>{t.status||"Open"}</span></div>)}{!tasks.length&&<div className="empty">No assigned work found for this date.</div>}</div></section>
  </ERPLayout>;
 }
-const ClipboardListIcon=ClipboardList,TimerIcon=Clock3;
 \nexport default function DashboardPage(){
  const today=new Date().toISOString().slice(0,10);
  const [data,setData]=useState({students:0,recent:[],studentStatus:[],courses:[],batchPerformance:[],finance:{payable:0,collected:0,due:0,collectionPercentage:0}});
