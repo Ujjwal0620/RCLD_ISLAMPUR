@@ -95,6 +95,7 @@ export default function ERPLayout({ active, children, hideAssistant = true }) {
         </div>
       </aside>
 
+      <button className="mobile-menu-button" onClick={() => setOpen(true)} aria-label="Open navigation"><Menu size={20} /></button>
       <section className="erp-main">
         <div className="erp-user-bar">
           <div className="erp-command-search">
