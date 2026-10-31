@@ -29,7 +29,7 @@ export default function DashboardPage(){
  const today=new Date().toISOString().slice(0,10);
  const [data,setData]=useState({students:0,recent:[],studentStatus:[],courses:[],batchPerformance:[],finance:{payable:0,collected:0,due:0,collectionPercentage:0}});
  const [activity,setActivity]=useState({attendance:{day:{Present:0,Absent:0,Leave:0,total:0},statusTotals:{Present:0,Absent:0,Leave:0},monthly:[]},faculty:[],batchAttendance:[],plannedClasses:[],fees:{collected:0,daily:[]}});
- const [period,setPeriod]=useState("day"),[date,setDate]=useState(today),[month,setMonth]=useState(today.slice(0,7)),[loading,setLoading]=useState(true),[activityLoading,setActivityLoading]=useState(false);
+ const [period,setPeriod]=useState("day"),[date,setDate]=useState(today),[month,setMonth]=useState(today.slice(0,7)),[loading,setLoading]=useState(true),[activityLoading,setActivityLoading]=useState(false);\n const [user,setUser]=useState(null);\n const [now,setNow]=useState(new Date());\n const hour=now.getHours();\n const greeting=hour>=5&&hour<12?"Good morning":hour>=12&&hour<17?"Good afternoon":hour>=17&&hour<21?"Good evening":"Good night";\n const loggedInName=String(user?.name||"RCLD User");
 
  async function load(){
   setLoading(true);
@@ -39,7 +39,13 @@ export default function DashboardPage(){
   setActivityLoading(true);
   try{const q=new URLSearchParams({mode:period,date,month});const r=await fetch("/api/dashboard/activity?"+q.toString(),{cache:"no-store"});setActivity(await r.json())}finally{setActivityLoading(false)}
  }
- useEffect(()=>{load()},[]);\n useEffect(()=>{\n  let active=true;\n  fetch("/api/auth/me",{cache:"no-store"}).then(r=>r.ok?r.json():null).then(d=>{if(active&&d?.authenticated)setUser(d.user)}).catch(()=>{});\n  const timer=setInterval(()=>setNow(new Date()),60000);\n  return ()=>{active=false;clearInterval(timer)};\n },[]);
+ useEffect(()=>{load()},[]);
+ useEffect(()=>{
+  let active=true;
+  fetch("/api/auth/me",{cache:"no-store"}).then(r=>r.ok?r.json():null).then(d=>{if(active&&d?.authenticated)setUser(d.user)}).catch(()=>{});
+  const timer=setInterval(()=>setNow(new Date()),60000);
+  return ()=>{active=false;clearInterval(timer)};
+ },[]);
  useEffect(()=>{loadActivity()},[period,date,month]);
 
  const statusTotal=data.studentStatus.reduce((n,x)=>n+x.value,0)||data.students;
