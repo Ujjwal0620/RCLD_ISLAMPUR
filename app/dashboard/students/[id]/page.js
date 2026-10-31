@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, UserRound, MapPin, BookOpen, FileText, CreditCard, CalendarDays, ClipboardCheck, WalletCards, Save, Pencil, Trash2, Printer, ArrowRightLeft, UserX, History } from "lucide-react";
+import { ArrowLeft, UserRound, MapPin, BookOpen, FileText, CreditCard, CalendarDays, ClipboardCheck, WalletCards, Save, Pencil, Trash2, Printer, ArrowRightLeft, UserX, History, Phone as PhoneIcon } from "lucide-react";
 import ERPLayout from "@/components/ERPLayout";
 
 const value = (v) => v === undefined || v === null || v === "" ? "—" : v;
@@ -13,7 +13,7 @@ export default function StudentDetailsPage({params}){
   const [feeForm,setFeeForm]=useState({totalFee:"",discount:"",admissionFee:"",amount:"",date:new Date().toISOString().slice(0,10),method:"Cash",reference:""});
   const [attForm,setAttForm]=useState({date:new Date().toISOString().slice(0,10),status:"Present",subject:"",batch:"",note:""});
   const [message,setMessage]=useState(""); const [editing,setEditing]=useState(false); const [editForm,setEditForm]=useState({});
-  const [history,setHistory]=useState([]); const [transition,setTransition]=useState({action:"",batchId:"",remark:""}); const [transitioning,setTransitioning]=useState(false);
+  const [history,setHistory]=useState([]),[contactLogs,setContactLogs]=useState([]); const [transition,setTransition]=useState({action:"",batchId:"",remark:""}); const [transitioning,setTransitioning]=useState(false);
 
   async function loadOperational(id){
     const [fr,ar]=await Promise.all([fetch("/api/students/"+id+"/fees",{cache:"no-store"}),fetch("/api/students/"+id+"/attendance",{cache:"no-store"})]);
@@ -22,7 +22,7 @@ export default function StudentDetailsPage({params}){
     if(ar.ok)setAttendance(aj);
   }
 
-  useEffect(()=>{(async()=>{try{const [courseResponse,batchResponse]=await Promise.all([fetch("/api/courses",{cache:"no-store"}),fetch("/api/batches",{cache:"no-store"})]);const [courseData,batchData]=await Promise.all([courseResponse.json(),batchResponse.json()]);setCourses(courseData.courses||[]);setBatches(batchData.batches||[]);const {id}=await params;const r=await fetch("/api/students/"+id,{cache:"no-store"});const d=await r.json();if(!r.ok)throw new Error(d.error||"Unable to load student.");setStudent(d.student);setEditForm(d.student);const hr=await fetch("/api/students/"+id+"/batch-history",{cache:"no-store"});const hd=await hr.json();if(hr.ok)setHistory(hd.history||[]);if(new URLSearchParams(window.location.search).get("edit")==="1")setEditing(true);await loadOperational(id);}catch(e){setError(e.message)}finally{setLoading(false)}})()},[params]);
+  useEffect(()=>{(async()=>{try{const [courseResponse,batchResponse]=await Promise.all([fetch("/api/courses",{cache:"no-store"}),fetch("/api/batches",{cache:"no-store"})]);const [courseData,batchData]=await Promise.all([courseResponse.json(),batchResponse.json()]);setCourses(courseData.courses||[]);setBatches(batchData.batches||[]);const {id}=await params;const r=await fetch("/api/students/"+id,{cache:"no-store"});const d=await r.json();if(!r.ok)throw new Error(d.error||"Unable to load student.");setStudent(d.student);setEditForm(d.student);const hr=await fetch("/api/students/"+id+"/batch-history",{cache:"no-store"});const hd=await hr.json();if(hr.ok)setHistory(hd.history||[]);const cr=await fetch("/api/students/"+id+"/contact-log",{cache:"no-store"});const cd=await cr.json();if(cr.ok)setContactLogs(cd.logs||[]);if(new URLSearchParams(window.location.search).get("edit")==="1")setEditing(true);await loadOperational(id);}catch(e){setError(e.message)}finally{setLoading(false)}})()},[params]);
 
   async function saveStudent(e){e.preventDefault();setMessage("");const r=await fetch("/api/students/"+student._id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(editForm)});const d=await r.json();if(!r.ok)return setMessage(d.error||"Unable to update student.");const fr=await fetch("/api/students/"+student._id+"/fees",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({totalFee:feeForm.totalFee,discount:feeForm.discount||0,admissionFee:feeForm.admissionFee})});const fd=await fr.json();if(!fr.ok)return setMessage(fd.error||"Student saved, but fee mapping failed.");setFee(fd.fee);setStudent(d.student);setEditForm(d.student);setEditing(false);setMessage("Student profile and course fee mapping updated successfully.");}
   async function deleteStudent(){if(!confirm("Permanently delete this student from the database? This cannot be undone."))return;const r=await fetch("/api/students/"+student._id,{method:"DELETE"});const d=await r.json();if(!r.ok)return setMessage(d.error||"Unable to archive student.");window.location.href="/dashboard/students";}
@@ -82,7 +82,9 @@ export default function StudentDetailsPage({params}){
 </section>
 
 
-      <section className="student-summary-grid">
+      <section className="detail-section"><div className="detail-section-title"><PhoneIcon size={17}/><h3>Calling & Follow-up History</h3></div><div className="table-wrap"><table><thead><tr><th>Date / Time</th><th>Phone</th><th>Calling Remark</th><th>Remarks</th><th>By</th></tr></thead><tbody>{contactLogs.length?contactLogs.map(x=><tr key={x._id}><td>{x.createdAt?new Date(x.createdAt).toLocaleString():"—"}</td><td><a href={x.phoneNumber?"tel:"+String(x.phoneNumber).replace(/\s+/g,""):"#"}>{x.phoneNumber||"—"}</a></td><td>{x.callingRemark||"—"}</td><td>{x.remarks||"—"}</td><td>{x.actorName||x.actorId||"—"}</td></tr>):<tr><td colSpan="5"><div className="empty">No calling or follow-up remarks recorded yet.</div></td></tr>}</tbody></table></div></section>
+
+<section className="student-summary-grid">
         <div className="summary-card"><WalletCards size={18}/><span>Fees Due</span><strong>₹{Number(fee?.due||0).toLocaleString("en-IN")}</strong></div>
         <div className="summary-card"><ClipboardCheck size={18}/><span>Attendance</span><strong>{attendance.summary?.percentage||0}%</strong></div>
         <div className="summary-card"><BookOpen size={18}/><span>Course</span><strong>{value(student.courseName)}</strong></div>
