@@ -54,7 +54,14 @@ export async function POST(req) {
       }
 
       if (!employee || employee.status === "Inactive") return NextResponse.json({ error: "Invalid employee login." }, { status: 401 });
-      const ok = employee.password?.startsWith("$2") ? await bcrypt.compare(password, employee.password) : password === employee.password;
+      let ok = employee.password?.startsWith("$2") ? await bcrypt.compare(password, employee.password) : password === employee.password;
+      // Existing/imported employees may predate employee-login credentials.
+      // Their stored mobile is the login ID and emp@123 initializes the default password on first successful login.
+      if (!ok && !employee.password && !isEmail && normalizedLogin && password === "emp@123") {
+        const hash = await bcrypt.hash("emp@123", 12);
+        await Employee.updateOne({ _id: employee._id }, { $set: { loginId: normalizedLogin, password: hash } });
+        ok = true;
+      }
       if (!ok) return NextResponse.json({ error: "Invalid employee login." }, { status: 401 });
       role = roleOfEmployee(employee);
     }
