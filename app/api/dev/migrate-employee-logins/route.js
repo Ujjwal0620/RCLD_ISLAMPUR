@@ -11,8 +11,8 @@ const Employee = mongoose.models.Employee || mongoose.model("Employee", S);
 export async function POST(req) {
   try {
     await connectMongoDB();
-    const body = await req.json();
-    const defaultPassword = String(body.defaultPassword || "").trim();
+    const body = await req.json().catch(() => ({}));
+    const defaultPassword = String(body.defaultPassword || "emp@123").trim();
     if (!defaultPassword || defaultPassword.length < 6) {
       return NextResponse.json({error:"Provide the employee default password (minimum 6 characters)."}, {status:400});
     }
