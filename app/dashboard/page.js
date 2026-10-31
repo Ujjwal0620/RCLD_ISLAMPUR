@@ -25,7 +25,32 @@ function Bars({items,valueKey,labelKey}){
  return <div className="mini-bars">{items.map((x,i)=><div className="mini-bar-col" key={i}><div className="mini-bar-track"><div className="mini-bar-fill" style={{height:Math.max(5,(Number(x[valueKey]||0)/max)*100)+"%"}}/></div><span title={x[labelKey]}>{x[labelKey]}</span><b>{x[valueKey]}</b></div>)}</div>;
 }
 
-export default function DashboardPage(){
+
+function EmployeeDashboard({user}){
+ const [date,setDate]=useState(new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Kolkata"}));
+ const [attendance,setAttendance]=useState(null),[tasks,setTasks]=useState([]),[loading,setLoading]=useState(true),[now,setNow]=useState(new Date());
+ const load=async()=>{setLoading(true);try{const [a,t]=await Promise.all([fetch("/api/employee-attendance?date="+date,{cache:"no-store"}),fetch("/api/back-office/tasks?date="+date,{cache:"no-store"})]);const ad=await a.json(),td=await t.json();setAttendance(ad.record||null);setTasks(td.tasks||[])}finally{setLoading(false)}};
+ useEffect(()=>{load();const t=setInterval(()=>setNow(new Date()),1000);return()=>clearInterval(t)},[date]);
+ const minutes=(a,b)=>a&&b?Math.max(0,Math.round((new Date(b)-new Date(a))/60000)):0;
+ const live=attendance?.punchIn?(attendance.punchOut?Number(attendance.workMinutes||0):Math.max(0,minutes(attendance.punchIn,now)-((attendance.outTimes||[]).reduce((n,x)=>n+(x.end?Number(x.minutes||0):minutes(x.start,now)),0)))):0;
+ const fmt=n=>Math.floor(Math.max(0,n)/60)+"h "+String(Math.max(0,n)%60).padStart(2,"0")+"m";
+ return <ERPLayout active="/dashboard"><header className="topbar"><div><div className="crumb">Employee / Personal Dashboard</div><h1>My Dashboard</h1></div><div className="top-actions"><input className="employee-date-input" type="date" value={date} onChange={e=>setDate(e.target.value)}/><button className="icon-btn" onClick={load}><RefreshCw size={17}/></button></div></header>
+  <section className="dashboard-hero employee-dashboard-hero"><div><span className="eyebrow">PERSONAL WORKSPACE</span><h2>Welcome, {user?.name||"Employee"} 👋</h2><p>Only your attendance, assigned work and personal performance information is shown here.</p></div><div className="hero-orbit"><div className="orbit-ring"/><div className="hero-orbit-core"><BriefcaseBusiness size={24}/><strong>MY</strong><span>WORK</span></div></div></section>
+  <section className="dashboard-kpis employee-personal-kpis">
+   <div className="dash-kpi"><div className="dash-kpi-icon green"><Clock3 size={20}/></div><div><span>Work Time</span><strong>{loading?"—":fmt(live)}</strong><small>{attendance?.punchIn?"Today / selected date":"No punch-in"}</small></div></div>
+   <div className="dash-kpi"><div className="dash-kpi-icon blue"><CheckCircle2 size={20}/></div><div><span>Attendance</span><strong>{attendance?.status||"Not Marked"}</strong><small>{attendance?.punchIn?"In "+new Date(attendance.punchIn).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"}):"No attendance record"}</small></div></div>
+   <div className="dash-kpi"><div className="dash-kpi-icon purple"><ClipboardListIcon size={20}/></div><div><span>Assigned Work</span><strong>{tasks.length}</strong><small>Tasks assigned to you</small></div></div>
+   <div className="dash-kpi"><div className="dash-kpi-icon orange"><TimerIcon size={20}/></div><div><span>Out-time Records</span><strong>{attendance?.outTimes?.length||0}</strong><small>Personal & official</small></div></div>
+  </section>
+  <section className="employee-dashboard-grid">
+   <div className="panel"><div className="panel-head"><div><h3>My Attendance</h3><p>{date}</p></div><a href="/dashboard/attendance">Open attendance →</a></div><div className="employee-report-grid"><div><span>Punch In</span><strong>{attendance?.punchIn?new Date(attendance.punchIn).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",second:"2-digit"}):"—"}</strong></div><div><span>Punch Out</span><strong>{attendance?.punchOut?new Date(attendance.punchOut).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",second:"2-digit"}):"—"}</strong></div><div><span>Effective Work</span><strong>{fmt(live)}</strong></div><div><span>Out Time</span><strong>{fmt((attendance?.outTimes||[]).reduce((n,x)=>n+(x.end?Number(x.minutes||0):minutes(x.start,now)),0))}</strong></div></div></div>
+   <div className="panel"><div className="panel-head"><div><h3>My Profile</h3><p>Employment information</p></div><a href="/dashboard/change-password">Password →</a></div><div className="employee-profile-report"><div className="employee-report-avatar">{String(user?.name||"E").charAt(0)}</div><div><strong>{user?.name||"Employee"}</strong><span>{user?.designation||user?.role||"Employee"}</span><span>{user?.department||"RCLD Islampur"}</span></div></div></div>
+  </section>
+  <section className="panel employee-work-panel"><div className="panel-head"><div><h3>My Assigned Work</h3><p>Only work assigned to your employee account.</p></div><span className="chart-total">{tasks.length} item(s)</span></div><div className="employee-work-list">{tasks.map((t,i)=><div className="employee-work-row" key={t._id||i}><div className="employee-work-time"><strong>{t.startTime||"—"}</strong><span>{t.endTime||""}</span></div><div><strong>{t.title}</strong><span>{t.workArea||"Work Area"} · {t.taskDate||date}</span></div><span className={"employee-task-status "+String(t.status||"Open").toLowerCase()}>{t.status||"Open"}</span></div>)}{!tasks.length&&<div className="empty">No assigned work found for this date.</div>}</div></section>
+ </ERPLayout>;
+}
+const ClipboardListIcon=ClipboardList,TimerIcon=Clock3;
+\nexport default function DashboardPage(){
  const today=new Date().toISOString().slice(0,10);
  const [data,setData]=useState({students:0,recent:[],studentStatus:[],courses:[],batchPerformance:[],finance:{payable:0,collected:0,due:0,collectionPercentage:0}});
  const [activity,setActivity]=useState({attendance:{day:{Present:0,Absent:0,Leave:0,total:0},statusTotals:{Present:0,Absent:0,Leave:0},monthly:[]},faculty:[],batchAttendance:[],plannedClasses:[],fees:{collected:0,daily:[]}});
@@ -44,14 +69,14 @@ export default function DashboardPage(){
   setActivityLoading(true);
   try{const q=new URLSearchParams({mode:period,date,month});const r=await fetch("/api/dashboard/activity?"+q.toString(),{cache:"no-store"});setActivity(await r.json())}finally{setActivityLoading(false)}
  }
- useEffect(()=>{load()},[]);
+ useEffect(()=>{if(user && !["superadmin","office-admin"].includes(user.role))return;load()},[user]);
  useEffect(()=>{
   let active=true;
   fetch("/api/auth/me",{cache:"no-store"}).then(r=>r.ok?r.json():null).then(d=>{if(active&&d?.authenticated)setUser(d.user)}).catch(()=>{});
   const timer=setInterval(()=>setNow(new Date()),60000);
   return ()=>{active=false;clearInterval(timer)};
  },[]);
- useEffect(()=>{loadActivity()},[period,date,month]);
+ useEffect(()=>{if(user && !["superadmin","office-admin"].includes(user.role))return;loadActivity()},[user,period,date,month]);
 
  const statusTotal=data.studentStatus.reduce((n,x)=>n+x.value,0)||data.students;
  const topCourses=data.courses.slice(0,8);
@@ -64,7 +89,7 @@ export default function DashboardPage(){
  const feeChart=period==="day"?activity.fees.daily:activity.fees.daily;
  const feeTotal=activity.fees.collected;
 
- return <ERPLayout active="/dashboard" hideAssistant={false}>
+ if(user && !["superadmin","office-admin"].includes(user.role)) return <EmployeeDashboard user={user}/>;\n\n return <ERPLayout active="/dashboard" hideAssistant={false}>
   <header className="topbar"><div><div className="crumb">RCLD Islampur / ERP</div><h1>Dashboard</h1></div><div className="top-actions"><span className="dashboard-user-chip"><span className="dashboard-user-avatar">{loggedInName.charAt(0).toUpperCase()}</span><span><strong>{loggedInName}</strong><small>{user?.designation||"RCLD User"}</small></span></span><span className="dashboard-live"><span/> Live data</span><button className="icon-btn" onClick={()=>{load();loadActivity()}} title="Refresh"><RefreshCw size={18}/></button><a className="primary-btn" href="/dashboard/students/register"><UserPlus size={17}/> Register Student</a></div></header>
 
   <section className="dashboard-hero"><div><span className="eyebrow">ERP CONTROL CENTER</span><h2>{greeting}, {loggedInName} 👋</h2><p>Students, batches, faculty, attendance, classes and fee collection — all in one operational view.</p><div className="hero-actions"><a className="hero-light-btn" href="/dashboard/students">Open Student Registry <ArrowUpRight size={15}/></a><a className="hero-ghost-btn" href="/dashboard/reports">View Reports <ArrowUpRight size={15}/></a></div></div><div className="hero-orbit"><div className="orbit-ring"/><div className="hero-orbit-core"><Activity size={24}/><strong>ERP</strong><span>LIVE</span></div></div></section>
