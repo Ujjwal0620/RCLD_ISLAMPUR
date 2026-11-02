@@ -999,3 +999,29 @@ td{font-size:11px}
  .att-summary-grid,.att-personal-metrics{grid-template-columns:1fr 1fr}
  .att-out-form{grid-template-columns:1fr}
 }
+
+
+/* Student onboarding form refresh and attendance status clarity */
+.registration-form{max-width:1360px;margin:24px auto 38px;border:1px solid #e2e8f0;border-radius:20px;background:#fff;box-shadow:0 18px 44px rgba(22,35,58,.065)}
+.registration-form .form-intro{position:relative;overflow:hidden;padding:30px 32px;background:radial-gradient(circle at 90% 12%,rgba(133,151,255,.25),transparent 27%),linear-gradient(120deg,#17253b,#263f5d 65%,#1e4a4a)}
+.registration-form .rcld-title{font-size:17px;letter-spacing:.08em}
+.registration-form .form-intro strong{font-size:20px;letter-spacing:-.025em}
+.registration-form .form-intro span{max-width:760px;font-size:10px;line-height:1.6}
+.registration-form .form-section{position:relative;padding:25px 30px 27px;background:#fff}
+.registration-form .form-section:nth-of-type(even){background:#fbfcff}
+.registration-form .form-section h3{display:flex;align-items:center;gap:10px;margin:0 0 20px;font-size:13px;color:#23344b}
+.registration-form .form-section h3:before{content:"";width:4px;height:19px;border-radius:4px;background:linear-gradient(180deg,#7185f0,#4f64d6)}
+.registration-form .form-grid{gap:17px 18px}
+.registration-form .form-field{min-width:0}
+.registration-form .form-field input,.registration-form .form-field select,.registration-form .form-field textarea{min-height:44px;border-radius:10px;background:#fff}
+.registration-form .form-field input:focus,.registration-form .form-field select:focus,.registration-form .form-field textarea:focus{border-color:#9eacef;box-shadow:0 0 0 3px rgba(82,104,223,.09)}
+.registration-form .course-fee-summary{margin-top:17px;border:1px solid #e6eaf3;border-radius:13px;background:#f8faff}
+.registration-form .qualification-grid{gap:11px}
+.registration-form .checks{gap:12px}
+.registration-form .checks label{padding:10px 12px;border:1px solid #e8edf4;border-radius:9px;background:#fff;color:#58667a;font-size:10px}
+.registration-form .declaration{padding:15px 17px;border:1px solid #e8edf4;border-radius:11px;background:#f8faff;color:#657287;font-size:10px;line-height:1.8}
+.registration-form .form-actions{display:flex;justify-content:flex-end;gap:10px;padding:20px 30px;background:#f8faff;border-top:1px solid #e8edf4}
+.att-status.not-marked{background:#fff6e7;color:#a97522}
+.att-status.holiday{background:#eef3f8;color:#61758c}
+@media(max-width:760px){.registration-form{margin:16px 0 25px;border-radius:14px}.registration-form .form-intro{padding:23px}.registration-form .form-section{padding:20px}.registration-form .form-actions{padding:16px 20px}.registration-form .form-grid.four,.registration-form .form-grid.three{grid-template-columns:repeat(2,minmax(0,1fr))}.registration-form .qualification-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.registration-form .form-grid.four,.registration-form .form-grid.three,.registration-form .form-grid.two{grid-template-columns:1fr}.registration-form .form-actions{align-items:stretch;flex-direction:column}.registration-form .form-actions>*{justify-content:center}}
