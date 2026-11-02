@@ -87,7 +87,7 @@ export default function ERPLayout({ active, children, hideAssistant = true }) {
                 <span>{group.label}</span><ChevronDown size={13} className={collapsedGroups[group.label] ? "group-chevron is-collapsed" : "group-chevron"}/>
               </button>
               {!collapsedGroups[group.label] && group.items.map(({ href, label, icon: Icon }) => (
-                <a key={href} className={`side-link ${active === href ? "active" : ""}`} href={href} onClick={() => setOpen(false)}>
+                <a key={href} className={`side-link ${active === href ? "active" : ""}`} href={href} title={collapsed ? label : undefined} aria-label={label} onClick={() => setOpen(false)}>
                   <Icon size={17} strokeWidth={1.9} /><span>{label}</span>
                   {active === href && <i className="side-active-dot" />}
                 </a>
@@ -115,7 +115,7 @@ export default function ERPLayout({ active, children, hideAssistant = true }) {
           <div className="erp-top-actions">
             <button className="erp-top-icon" title="Settings"><Settings2 size={17}/></button>
             <button className="erp-top-icon" title="Notifications"><Bell size={17}/><i/></button>
-            <button className="erp-sidebar-toggle" title="Toggle sidebar" onClick={() => setCollapsed((v) => !v)}><PanelLeftClose size={17}/></button>
+            <button className="erp-sidebar-toggle" title={collapsed ? "Expand sidebar" : "Collapse sidebar"} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} aria-pressed={collapsed} onClick={() => setCollapsed((v) => !v)}><PanelLeftClose size={17}/></button>
             <div className="erp-user-identity">
               <div className="erp-user-avatar">{initials || "R"}</div>
               <div><strong>{user?.name || "Loading..."}</strong><span>{roleLabel}</span></div>
