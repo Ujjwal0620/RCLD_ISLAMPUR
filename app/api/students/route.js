@@ -8,14 +8,19 @@ const StudentSchema = new mongoose.Schema({
   aecCode: String, regnNo: String, enrollmentNo: String, admissionDate: String, guardianContactNumber: String, dueAmount: mongoose.Schema.Types.Mixed, paymentStatus: mongoose.Schema.Types.Mixed, sourceCourseLabel: String, importSource: String, courseName: String, courseCode: String, batchId: { type: mongoose.Schema.Types.ObjectId, ref: "Batch", default: null }, batchCode: String,
   applicantName: { type: String, required: true, trim: true }, nationality: String, dateOfBirth: String, sex: String,
   fatherOrHusbandName: String, address: String, pin: String, whatsappNumber: String,
-  mobileNumber: { type: String, required: true, trim: true },\n  email: { type: String, required: true, trim: true, lowercase: true },\n  aadhaarNumber: { type: String, required: true, trim: true },\n  referralId: { type: String, default: "" }, referralName: { type: String, default: "" }, marketingEmployeeId: { type: String, default: "" }, marketingEmployeeName: { type: String, default: "" },
+  mobileNumber: { type: String, required: true, trim: true },
+  email: { type: String, required: true, trim: true, lowercase: true },
+  aadhaarNumber: { type: String, required: true, trim: true },
+  referralId: { type: String, default: "" }, referralName: { type: String, default: "" }, marketingEmployeeId: { type: String, default: "" }, marketingEmployeeName: { type: String, default: "" },
   qualifications: [{ examCourse: String, boardUniversity: String, collegeInstitute: String, year: String, percentage: String }],
   enclosures: { stampPhoto: Boolean, qualifyingCertificates: Boolean, matricAdmitCard: Boolean },
   declarationDate: String, declarationPlace: String, signatureApplicant: String, photoUrl: String,
   status: { type: String, default: "Registered" }
 }, { timestamps: true });
 
-const Student = mongoose.models.Student || mongoose.model("Student", StudentSchema);\nconst ReferralSchema = new mongoose.Schema({}, { strict: false });\nconst Referral = mongoose.models.Referral || mongoose.model("Referral", ReferralSchema);
+const Student = mongoose.models.Student || mongoose.model("Student", StudentSchema);
+const ReferralSchema = new mongoose.Schema({}, { strict: false });
+const Referral = mongoose.models.Referral || mongoose.model("Referral", ReferralSchema);
 
 const DEFAULT_COURSES = ["CCA","DCA","ADCA","CCC","CAO","DWPD","DOM","DCST","DCAP","DHNT"];
 
