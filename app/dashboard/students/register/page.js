@@ -66,7 +66,7 @@ export default function RegisterStudentPage() {
         applicantName: form.applicantName.trim(),
         mobileNumber: form.mobileNumber.trim(),
         email: form.email.trim().toLowerCase(),
-        aadhaarNumber: form.aadhaarNumber.replace(/\\D/g, ""),
+        aadhaarNumber: form.aadhaarNumber.replace(/\D/g, ""),
         address: form.address.trim()
       };
 
