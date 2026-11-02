@@ -36,6 +36,14 @@ function normalizeSlots(series) {
   );
 }
 
+function scheduleAssignmentKey(slot) {
+  return `${slot.day}|${slot.time}|${slot.slot}|${slot.series}`;
+}
+
+function getAssignedFacultyId(assignments, slot) {
+  return String(assignments[scheduleAssignmentKey(slot)] || assignments[`${slot.day}|${slot.series}`] || "");
+}
+
 function uniqueHours(schedules) {
   return [...new Map(
     schedules.map(x => [`${x.day}|${x.time}|${x.series}`, {
@@ -120,7 +128,7 @@ async function validateSchedule({ series, facultyIds = [], scheduleFacultyAssign
     }).select("batchCode name schedules").lean();
 
     const assignedIdForSlot = slot => {
-      const explicit=String(scheduleFacultyAssignments[`${slot.day}|${slot.series}`]||"");
+      const explicit=getAssignedFacultyId(scheduleFacultyAssignments,slot);
       return explicit&&facultyById.has(explicit)?explicit:facultyForDay(slot.day);
     };
     const facultyConflicts = [];
