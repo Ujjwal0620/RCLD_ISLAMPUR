@@ -5,7 +5,7 @@ import { ArrowLeft, Save } from "lucide-react";
 import ERPLayout from "@/components/ERPLayout";
 
 const initial = {
-  formNo: "", aecCode: "", regnNo: "", courseName: "", courseCode: "", applicantName: "",
+  formNo: "", aecCode: "", regnNo: "", courseName: "", courseCode: "", applicantName: "", email: "", aadhaarNumber: "", referralId: "",
   nationality: "", dateOfBirth: "", sex: "", fatherOrHusbandName: "", address: "",
   pin: "", whatsappNumber: "", mobileNumber: "",
   qualifications: [{ examCourse: "", boardUniversity: "", collegeInstitute: "", year: "", percentage: "" }],
@@ -34,9 +34,9 @@ export default function RegisterStudentPage() {
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [courses, setCourses] = useState([]);
-  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [selectedCourse, setSelectedCourse] = useState(null);\n  const [referrals, setReferrals] = useState([]);
 
-  useEffect(() => { fetch("/api/courses",{cache:"no-store"}).then(r=>r.json()).then(d=>setCourses(d.courses||[])).catch(()=>{}); }, []);
+  useEffect(() => { fetch("/api/courses",{cache:"no-store"}).then(r=>r.json()).then(d=>setCourses(d.courses||[])).catch(()=>{}); fetch("/api/referrals",{cache:"no-store"}).then(r=>r.json()).then(d=>setReferrals((d.referrals||[]).filter(x=>x.status==="Active"))).catch(()=>{}); }, []);
 
   const selectCourse = (code) => { const c = courses.find(x=>x.code===code); setSelectedCourse(c||null); setForm(current=>({...current,courseCode:c?.code||"",courseName:c?.name||""})); };
 
@@ -63,7 +63,7 @@ export default function RegisterStudentPage() {
         ...form,
         formNo: form.formNo.trim(),
         applicantName: form.applicantName.trim(),
-        mobileNumber: form.mobileNumber.trim(),
+        mobileNumber: form.mobileNumber.trim(),\n        email: form.email.trim().toLowerCase(),\n        aadhaarNumber: form.aadhaarNumber.replace(/\\D/g, ""),
         address: form.address.trim()
       };
 
@@ -125,9 +125,9 @@ export default function RegisterStudentPage() {
             <Field label="Father / Husband Name" name="fatherOrHusbandName" value={form.fatherOrHusbandName} onChange={update} />
             <Field label="PIN" name="pin" value={form.pin} onChange={update} maxLength={10} />
             <Field label="WhatsApp Number" name="whatsappNumber" value={form.whatsappNumber} onChange={update} maxLength={15} />
-            <Field label="Mobile Number" name="mobileNumber" value={form.mobileNumber} onChange={update} required maxLength={15} />
+            <Field label="Mobile Number" name="mobileNumber" value={form.mobileNumber} onChange={update} required maxLength={15} />\n            <Field label="Email Address" name="email" value={form.email} onChange={update} required type="email" />\n            <Field label="Aadhaar Card Number (12 digits)" name="aadhaarNumber" value={form.aadhaarNumber} onChange={update} required maxLength={12} />
           </div>
-          <label className="form-field full"><span>Complete Address</span><textarea value={form.address} onChange={(e) => update("address", e.target.value)} rows="3" /></label>
+          <label className="form-field"><span>Referral (optional)</span><select value={form.referralId} onChange={(e)=>update("referralId",e.target.value)}><option value="">Direct / No referral</option>{referrals.map((r)=><option key={r._id} value={r._id}>{r.name} — {r.marketingEmployeeName}</option>)}</select></label>\n          <label className="form-field full"><span>Complete Address</span><textarea value={form.address} onChange={(e) => update("address", e.target.value)} rows="3" /></label>
         </section>
 
         <section className="form-section">
