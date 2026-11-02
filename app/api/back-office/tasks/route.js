@@ -117,6 +117,10 @@ export async function POST(req){
    BackOfficeTask.find({taskDate}).lean()
   ]);
   if(employees.length!==ids.length)return NextResponse.json({error:"One or more selected employees are unavailable."},{status:409});
+  const attendanceRows=await Attendance.find({date:taskDate,employeeId:{$in:employees.map(e=>e._id)}}).select("employeeId status").lean();
+  const eligibleIds=new Set(attendanceRows.filter(a=>["Present","Half Day"].includes(a.status)).map(a=>String(a.employeeId)));
+  const notMarked=employees.filter(e=>!eligibleIds.has(String(e._id)));
+  if(notMarked.length)return NextResponse.json({error:"Task assignment blocked. Mark attendance as Present or Half Day before assigning work.",employees:notMarked.map(e=>e.name)},{status:409});
   const batchAssociated=batchAssociatedIds(batches);
   const alreadyAssignedToday=new Set(dayTasks.flatMap(t=>(t.assignments||[]).map(a=>String(a.employeeId)).concat(t.assignedTo?[String(t.assignedTo)]:[])));
   const busyClass=batchBusyIds(batches,taskDate,startTime,endTime);
