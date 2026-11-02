@@ -56,10 +56,7 @@ export default function Login(){
         </button>
       </form>
 
-      <div className="login-help">
-        <strong>Employee login</strong>
-        <span>Use the exact mobile number saved in your employee account. You can change your password after signing in.</span>
-      </div>
+      
     </section>
   </main>;
 }
