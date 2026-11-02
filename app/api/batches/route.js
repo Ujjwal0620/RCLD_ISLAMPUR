@@ -156,7 +156,7 @@ async function validateSchedule({ series, facultyIds = [], scheduleFacultyAssign
   }
 
   const assignedSchedules=schedules.map(slot=>{
-    const explicit=String(scheduleFacultyAssignments[`${slot.day}|${slot.series}`]||"");
+    const explicit=getAssignedFacultyId(scheduleFacultyAssignments,slot);
     const id=explicit && facultyById.has(explicit) ? explicit : facultyForDay(slot.day);
     const emp=id?facultyById.get(id):null;
     return {...slot,facultyId:id||"",facultyName:emp?.name||""};
