@@ -7,6 +7,12 @@ const AssignmentSchema = new mongoose.Schema({
 
 const BackOfficeTaskSchema = new mongoose.Schema({
   title:{type:String,required:true,trim:true},
+  taskType:{type:String,enum:["Regular","BatchSubstitution"],default:"Regular"},
+  batchId:{type:String,default:""},
+  batchCode:{type:String,default:""},
+  batchName:{type:String,default:""},
+  scheduleDay:{type:String,default:""},
+  scheduleSeries:{type:String,default:""},
   assignments:{type:[AssignmentSchema],default:[]},
   assignedTo:{type:String,default:""},
   assignedToName:{type:String,default:""},
