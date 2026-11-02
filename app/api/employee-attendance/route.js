@@ -17,7 +17,15 @@ function hasOpenOut(record){return (record?.outTimes||[]).some(x=>!x.end);}
 
 export async function GET(req){
  const s=await getSession();if(!s)return NextResponse.json({error:"Unauthorized"},{status:401});
- try{await connectMongoDB();const q=new URL(req.url).searchParams,date=q.get("date")||nowDate(),target=canManageAttendance(s.role)&&q.get("employeeId")?q.get("employeeId"):s.sub;
+ try{await connectMongoDB();const q=new URL(req.url).searchParams,date=q.get("date")||nowDate();
+  if(canManageAttendance(s.role)&&!q.get("employeeId")){
+   const employees=await E.find({status:{$ne:"Inactive"}}).select("name employeeId offDays status designation department").sort({name:1}).lean();
+   const records=await Attendance.find({date,employeeId:{$in:employees.map(e=>e._id)}}).lean();
+   const byEmployee=new Map(records.map(r=>[String(r.employeeId),r]));
+   const teamAttendance=employees.map(employee=>{const record=byEmployee.get(String(employee._id))||null;return {employee,record:record?{...record,...calculateTimes(record)}:null,marked:!!record,status:record?.status||"Not Marked"};});
+   return NextResponse.json({date,teamAttendance,summary:{total:employees.length,marked:records.length,notMarked:employees.length-records.length,present:records.filter(r=>r.status==="Present"||r.status==="Half Day").length,absent:records.filter(r=>r.status==="Absent").length,leave:records.filter(r=>r.status==="Leave").length},session:s});
+  }
+  const target=canManageAttendance(s.role)&&q.get("employeeId")?q.get("employeeId"):s.sub;
   const employee=await E.findById(target).select("name employeeId offDays").lean(),record=await Attendance.findOne({employeeId:target,date}).lean();
   return NextResponse.json({date,employee,record:record?{...record,...calculateTimes(record)}:null,session:s});
  }catch(e){return NextResponse.json({error:"Unable to load attendance.",detail:e.message},{status:500});}
