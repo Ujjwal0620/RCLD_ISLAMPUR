@@ -87,8 +87,21 @@ export async function POST(request) {
     const body = await request.json();
     const missing = ["formNo", "applicantName", "mobileNumber", "email", "aadhaarNumber"].filter((key) => !String(body[key] || "").trim());
     if (missing.length) return NextResponse.json({ error: "Required fields: " + missing.join(", ") }, { status: 400 });
+    const email = String(body.email || "").trim().toLowerCase();
+    const aadhaarNumber = String(body.aadhaarNumber || "").replace(/\D/g, "");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
+    if (!/^\d{12}$/.test(aadhaarNumber)) return NextResponse.json({ error: "Aadhaar number must contain exactly 12 digits." }, { status: 400 });
+    let referralFields = { referralId: "", referralName: "", marketingEmployeeId: "", marketingEmployeeName: "" };
+    if (body.referralId) {
+      const referral = await Referral.findOne({ _id: body.referralId, status: "Active" }).lean();
+      if (!referral) return NextResponse.json({ error: "Selected referral is no longer active. Refresh the referral list." }, { status: 400 });
+      referralFields = { referralId: String(referral._id), referralName: referral.name, marketingEmployeeId: referral.marketingEmployeeId, marketingEmployeeName: referral.marketingEmployeeName };
+    }
     const student = await Student.create({
       ...body,
+      email,
+      aadhaarNumber,
+      ...referralFields,
       formNo: String(body.formNo).trim(),
       applicantName: String(body.applicantName).trim(),
       mobileNumber: String(body.mobileNumber).trim()
