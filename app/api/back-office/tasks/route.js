@@ -90,6 +90,7 @@ export async function GET(req){
      const parts=String(schedule.time||"").split(/\s*(?:-|–|to)\s*/i);
      return {
       type:"batch",
+      batchId:String(batch._id),
       day:schedule.day||"",
       time:schedule.time||"",
       startTime:parts.length>1?to24(parts[0]):"",
@@ -104,7 +105,8 @@ export async function GET(req){
      };
     }))
     .sort((a,b)=>["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].indexOf(a.day)-["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].indexOf(b.day)||a.startTime.localeCompare(b.startTime));
-   return NextResponse.json({tasks,weeklySchedule,availableEmployees:[],employeeAvailability:[],date,canAssign:false,attendanceRequired:!eligible});
+   const batchTasks=weeklySchedule.map((item,index)=>({_id:`batch-${item.batchId}-${item.series}-${date}-${index}`,title:`${item.batchCode} · ${item.courseName} class`,startTime:item.startTime,endTime:item.endTime,workArea:item.room||"",status:"Scheduled",batchId:item.batchId,batchCode:item.batchCode,taskType:"BatchClass"}));
+   return NextResponse.json({tasks:[...tasks,...batchTasks],weeklySchedule,availableEmployees:[],employeeAvailability:[],date,canAssign:false,attendanceRequired:!eligible});
   }
   const eligibleIds=new Set(eligibleRows.map(a=>String(a.employeeId)));
   const eligibleEmployees=employees.filter(e=>eligibleIds.has(String(e._id)));
@@ -113,15 +115,34 @@ export async function GET(req){
   const employeeAvailability=employeeAssignments(eligibleEmployees,batches,visibleTasks,date,startTime,endTime);
   const availableEmployees=employeeAvailability.filter(e=>e.available);
   const dayName=new Date(date+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",timeZone:"Asia/Kolkata"});
+  const availableBatchClasses=batches.flatMap(batch=>(batch.schedules||[]).filter(s=>s.day===dayName).map(s=>{
+   const parts=String(s.time||"").split(/\\s*(?:-|–|to)\\s*/i);
+   return {batchId:String(batch._id),batchCode:batch.batchCode||"",batchName:batch.name||"",courseName:batch.courseName||"",day:s.day,series:s.series||"",time:s.time||"",startTime:parts.length>1?to24(parts[0]):"",endTime:parts.length>1?to24(parts[1]):"",facultyId:s.facultyId||"",facultyName:s.facultyName||"",room:s.room||""};
+  }));
   const workRegister=eligibleEmployees.map(e=>{const id=String(e.employeeId),items=[];for(const b of batches){for(const s of b.schedules||[]){if(s.day!==dayName||String(s.facultyId)!==id)continue;const parts=String(s.time||"").split(/\s*(?:-|–|to)\s*/i);if(parts.length<2)continue;items.push({type:"batch",title:(b.batchCode||b.name||"Batch")+(b.courseName?" · "+b.courseName:""),startTime:to24(parts[0]),endTime:to24(parts[1]),room:s.room||"",workArea:s.room||""});}}for(const t of allTasks){for(const as of t.assignments||[]){if(String(as.employeeId)===id)items.push({type:"task",title:t.title,startTime:t.startTime,endTime:t.endTime,workArea:t.workArea,status:t.status});}if(String(t.assignedTo)===id&&!(t.assignments||[]).some(x=>String(x.employeeId)===id))items.push({type:"task",title:t.title,startTime:t.startTime,endTime:t.endTime,workArea:t.workArea,status:t.status});}items.sort((x,y)=>String(x.startTime).localeCompare(String(y.startTime)));return {...e,present:true,replacementNeeded:false,items};});
-  return NextResponse.json({tasks:visibleTasks,availableEmployees,employeeAvailability,workRegister,date,canAssign:true,attendanceRequired:false,excludedWithoutAttendance:employees.length-eligibleEmployees.length}); }catch(e){return NextResponse.json({error:"Unable to load Task Assignment.",detail:e.message},{status:500});}
+  return NextResponse.json({tasks:visibleTasks,availableEmployees,employeeAvailability,workRegister,availableBatchClasses,date,canAssign:true,attendanceRequired:false,excludedWithoutAttendance:employees.length-eligibleEmployees.length}); }catch(e){return NextResponse.json({error:"Unable to load Task Assignment.",detail:e.message},{status:500});}
 }
 export async function POST(req){
  const g=await guard(true);if(g.error)return g.error;
  try{
   await connectMongoDB();const b=await req.json();
-  const title=String(b.title||"").trim(),taskDate=String(b.taskDate||today()),startTime=String(b.startTime||""),endTime=String(b.endTime||"");
+  let title=String(b.title||"").trim();const taskDate=String(b.taskDate||today()),startTime=String(b.startTime||""),endTime=String(b.endTime||"");
   const ids=[...new Set(Array.isArray(b.employeeIds)?b.employeeIds.filter(Boolean).map(String):[])];
+  let batchSubstitution=null;
+  if(b.batchId){
+   const batch=await Batch.findById(b.batchId).lean();
+   if(!batch)return NextResponse.json({error:"Selected batch was not found."},{status:404});
+   const dayName=new Date(taskDate+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",timeZone:"Asia/Kolkata"});
+   const schedule=(batch.schedules||[]).find(s=>s.day===dayName&&String(s.series||"")===String(b.scheduleSeries||""));
+   if(!schedule)return NextResponse.json({error:"This batch has no matching class on the selected date."},{status:409});
+   const parts=String(schedule.time||"").split(/\\s*(?:-|–|to)\\s*/i);
+   if(parts.length<2||to24(parts[0])!==startTime||to24(parts[1])!==endTime)return NextResponse.json({error:"The selected time does not match the batch timetable."},{status:409});
+   const regular= schedule.facultyId ? await Employee.findOne({employeeId:String(schedule.facultyId)}).select("_id name employeeId").lean() : null;
+   const regularAttendance=regular?await Attendance.findOne({date:taskDate,employeeId:regular._id}).select("status punchOut").lean():null;
+   if(regularAttendance&&["Present","Half Day"].includes(regularAttendance.status)&&!regularAttendance.punchOut)return NextResponse.json({error:"The assigned faculty is marked present and has not punched out. A substitute is not required."},{status:409});
+   batchSubstitution={batchId:String(batch._id),batchCode:batch.batchCode,batchName:batch.name,scheduleDay:dayName,scheduleSeries:schedule.series||"",regularFacultyId:schedule.facultyId||""};
+   title=title||`Substitute class — ${batch.batchCode}`;
+  }
   if(!title)return NextResponse.json({error:"Task name is required."},{status:400});
   if(!ids.length)return NextResponse.json({error:"Select at least one employee."},{status:400});
   if(!AREAS.includes(b.workArea))return NextResponse.json({error:"Select a valid work area."},{status:400});
@@ -141,7 +162,7 @@ export async function POST(req){
   const blocked=employees.filter(e=>{const id=String(e.employeeId);return taskConflicts.has(id)||busyClass.has(id);});
   if(blocked.length)return NextResponse.json({error:"One or more selected employees already have another task or scheduled class during this time slot.",employees:blocked.map(e=>e.name)},{status:409});
   const assignments=employees.map(e=>({employeeId:e.employeeId,employeeName:e.name}));
-  const task=await BackOfficeTask.create({title,assignments,assignedTo:assignments[0]?.employeeId||"",assignedToName:assignments[0]?.employeeName||"",workArea:b.workArea,taskDate,startTime,endTime,status:"Open",createdBy:g.session.employeeId,createdByName:g.session.name||""});
+  const task=await BackOfficeTask.create({title,taskType:batchSubstitution?"BatchSubstitution":"Regular",batchId:batchSubstitution?.batchId||"",batchCode:batchSubstitution?.batchCode||"",batchName:batchSubstitution?.batchName||"",scheduleDay:batchSubstitution?.scheduleDay||"",scheduleSeries:batchSubstitution?.scheduleSeries||"",assignments,assignedTo:assignments[0]?.employeeId||"",assignedToName:assignments[0]?.employeeName||"",workArea:b.workArea,taskDate,startTime,endTime,status:"Open",createdBy:g.session.employeeId,createdByName:g.session.name||""});
   return NextResponse.json({task},{status:201});
  }catch(e){return NextResponse.json({error:"Unable to create task.",detail:e.message},{status:400});}
 }
