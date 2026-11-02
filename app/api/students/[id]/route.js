@@ -9,13 +9,13 @@ const StudentSchema = new mongoose.Schema({
   aecCode:String,regnNo:String,enrollmentNo:String,admissionDate:String,guardianContactNumber:String,dueAmount:mongoose.Schema.Types.Mixed,paymentStatus:mongoose.Schema.Types.Mixed,sourceCourseLabel:String,importSource:String,courseName:String,courseCode:String,batchId:{type:mongoose.Schema.Types.ObjectId,ref:"Batch",default:null},batchCode:String,
   applicantName:{type:String,required:true,trim:true},nationality:String,dateOfBirth:String,sex:String,
   fatherOrHusbandName:String,address:String,pin:String,whatsappNumber:String,
-  mobileNumber:{type:String,required:true,trim:true},
+  mobileNumber:{type:String,required:true,trim:true},\n  email:{type:String,required:true,trim:true,lowercase:true}, aadhaarNumber:{type:String,required:true,trim:true},\n  referralId:{type:String,default:""},referralName:{type:String,default:""},marketingEmployeeId:{type:String,default:""},marketingEmployeeName:{type:String,default:""},
   qualifications:[{examCourse:String,boardUniversity:String,collegeInstitute:String,year:String,percentage:String}],
   enclosures:{stampPhoto:Boolean,qualifyingCertificates:Boolean,matricAdmitCard:Boolean},
   declarationDate:String,declarationPlace:String,signatureApplicant:String,photoUrl:String,
   status:{type:String,default:"Registered"}
 },{timestamps:true});
-const Student=mongoose.models.Student||mongoose.model("Student",StudentSchema);
+const Student=mongoose.models.Student||mongoose.model("Student",StudentSchema);\nconst ReferralSchema=new mongoose.Schema({}, {strict:false});\nconst Referral=mongoose.models.Referral||mongoose.model("Referral",ReferralSchema);
 async function idOf(params){return (await params)?.id}
 
 export async function GET(req,{params}){
@@ -39,7 +39,7 @@ export async function PATCH(req,{params}){
     if(body.status!==undefined && String(body.status||"")!==String(current.status||"")) return NextResponse.json({error:"Use the Batch Movement workflow for status changes so every movement receives a remark and audit footprint."},{status:409});
     const allowed=[
       "formNo","aecCode","regnNo","enrollmentNo","admissionDate","guardianContactNumber","dueAmount","paymentStatus","sourceCourseLabel","importSource","courseName","courseCode","applicantName","nationality","dateOfBirth","sex","fatherOrHusbandName",
-      "address","pin","whatsappNumber","mobileNumber","qualifications","batchId","batchCode",
+      "address","pin","whatsappNumber","mobileNumber","email","aadhaarNumber","referralId","referralName","marketingEmployeeId","marketingEmployeeName","qualifications","batchId","batchCode",
       "enclosures","declarationDate","declarationPlace","signatureApplicant","photoUrl","status"
     ];
     const update={};
@@ -60,7 +60,7 @@ export async function PATCH(req,{params}){
     }
     if(update.formNo!==undefined)update.formNo=String(update.formNo).trim();
     if(update.applicantName!==undefined)update.applicantName=String(update.applicantName).trim();
-    if(update.mobileNumber!==undefined)update.mobileNumber=String(update.mobileNumber).trim();
+    if(update.mobileNumber!==undefined)update.mobileNumber=String(update.mobileNumber).trim();\n    const email=String(body.email ?? "").trim().toLowerCase();\n    const aadhaarNumber=String(body.aadhaarNumber ?? "").replace(/\\D/g, "");\n    if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))return NextResponse.json({error:"A valid email address is mandatory."},{status:400});\n    if(!/^\\d{12}$/.test(aadhaarNumber))return NextResponse.json({error:"Aadhaar number must contain exactly 12 digits."},{status:400});\n    update.email=email;update.aadhaarNumber=aadhaarNumber;\n    if(body.referralId!==undefined){\n      if(!body.referralId){update.referralId="";update.referralName="";update.marketingEmployeeId="";update.marketingEmployeeName="";}\n      else{const referral=await Referral.findOne({_id:body.referralId,status:"Active"}).lean();if(!referral)return NextResponse.json({error:"Selected referral is no longer active."},{status:400});update.referralId=String(referral._id);update.referralName=referral.name;update.marketingEmployeeId=referral.marketingEmployeeId;update.marketingEmployeeName=referral.marketingEmployeeName;}\n    }
     if(!String(update.applicantName ?? "existing").trim() || !String(update.mobileNumber ?? "existing").trim()){
       return NextResponse.json({error:"Applicant name and mobile are required."},{status:400});
     }
