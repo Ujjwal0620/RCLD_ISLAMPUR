@@ -7,7 +7,7 @@ import Attendance from "@/models/EmployeeAttendance";
 import { getSession } from "@/lib/auth";
 import mongoose from "mongoose";
 
-const EmployeeSchema=new mongoose.Schema({employeeId:String,name:String,designation:String,department:String,status:String},{timestamps:true});
+const EmployeeSchema=new mongoose.Schema({employeeId:String,name:String,designation:String,department:String,status:String,skills:[String]},{timestamps:true});
 const Employee=mongoose.models.Employee||mongoose.model("Employee",EmployeeSchema);
 const AREAS=["T1","T2","L1","L2","L3","L4","Back Office","Front Office"];
 const SLOTS=[
