@@ -116,7 +116,7 @@ export async function GET(req){
   const employeeAvailability=employeeAssignments(eligibleEmployees,batches,visibleTasks,date,startTime,endTime);
   const availableEmployees=employeeAvailability.filter(e=>e.available);
   const dayName=new Date(date+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",timeZone:"Asia/Kolkata"});
-  const availableBatchClasses=batches.flatMap(batch=>(batch.schedules||[]).filter(s=>s.day===dayName).map(s=>{
+  const availableBatchClasses=batches.flatMap(batch=>(batch.schedules||[]).filter(s=>s.day===dayName&&(!s.facultyId||!eligibleEmployeeIds.has(String(s.facultyId)))).map(s=>{
    const parts=String(s.time||"").split(/\s*(?:-|–|to)\s*/i);
    return {batchId:String(batch._id),batchCode:batch.batchCode||"",batchName:batch.name||"",courseName:batch.courseName||"",day:s.day,series:s.series||"",time:s.time||"",startTime:parts.length>1?to24(parts[0]):"",endTime:parts.length>1?to24(parts[1]):"",facultyId:s.facultyId||"",facultyName:s.facultyName||"",room:s.room||""};
   }));
