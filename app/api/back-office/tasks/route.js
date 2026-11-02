@@ -107,7 +107,7 @@ export async function GET(req){
     }))
     .sort((a,b)=>["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].indexOf(a.day)-["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].indexOf(b.day)||a.startTime.localeCompare(b.startTime));
    const batchTasks=weeklySchedule.map((item,index)=>({_id:`batch-${item.batchId}-${item.series}-${date}-${index}`,title:`${item.batchCode} · ${item.courseName} class`,startTime:item.startTime,endTime:item.endTime,workArea:item.room||"",status:"Scheduled",batchId:item.batchId,batchCode:item.batchCode,taskType:"BatchClass"}));
-   return NextResponse.json({tasks:[...tasks,...batchTasks],weeklySchedule,availableEmployees:[],employeeAvailability:[],date,canAssign:false,attendanceRequired:!eligible});
+   return NextResponse.json({tasks:[...tasks,...batchTasks].sort((a,b)=>String(a.startTime||"").localeCompare(String(b.startTime||""))),weeklySchedule,availableEmployees:[],employeeAvailability:[],date,canAssign:false,attendanceRequired:!eligible});
   }
   const eligibleIds=new Set(eligibleRows.map(a=>String(a.employeeId)));
   const eligibleEmployees=employees.filter(e=>eligibleIds.has(String(e._id)));
