@@ -10,10 +10,12 @@ const mins=(a,b)=>a&&b?Math.max(0,Math.round((new Date(b)-new Date(a))/60000)):0
 function calculateTimes(record,at=new Date()){
  const out=(record?.outTimes||[]).map(x=>({start:x.start,end:x.end,minutes:Number(x.minutes||0),reason:x.reason||"",type:x.type||"Personal"}));
  const total=record?.punchIn?(record.punchOut?mins(record.punchIn,record.punchOut):mins(record.punchIn,at)):0;
- const personal=out.reduce((n,x)=>n+(x.end?Number(x.minutes||0):mins(x.start,at)),0);
- return {totalMinutes:total,workMinutes:Math.max(0,total-personal)};
+ const outMinutes=out.reduce((n,x)=>n+(x.end?Number(x.minutes||0):mins(x.start,at)),0);
+ const breakMinutes=(record?.breaks||[]).reduce((n,x)=>n+(x.end?Number(x.minutes||0):mins(x.start,at)),0);
+ return {totalMinutes:total,outMinutes,breakMinutes,workMinutes:Math.max(0,total-outMinutes-breakMinutes)};
 }
 function hasOpenOut(record){return (record?.outTimes||[]).some(x=>!x.end);}
+function hasOpenBreak(record){return (record?.breaks||[]).some(x=>!x.end);}
 
 export async function GET(req){
  const s=await getSession();if(!s)return NextResponse.json({error:"Unauthorized"},{status:401});
@@ -39,12 +41,12 @@ export async function POST(req){
   }else if(action==="punchOut"){
    if(!record?.punchIn)return NextResponse.json({error:"Punch in is required first."},{status:400});
    if(record.punchOut)return NextResponse.json({error:"Punch out already recorded."},{status:409});
-   if(hasOpenOut(record))return NextResponse.json({error:"Please press Return and close the active out-time before punching out."},{status:409});
+   if(hasOpenOut(record)||hasOpenBreak(record))return NextResponse.json({error:"Close the active break or out-time before punching out."},{status:409});
    const punchOut=new Date(),times=calculateTimes(record,punchOut);
    record=await Attendance.findByIdAndUpdate(record._id,{$set:{punchOut,totalMinutes:times.totalMinutes,workMinutes:times.workMinutes,updatedBy:s.employeeId}},{new:true});
   }else if(action==="startOut"){
    if(!record?.punchIn||record.punchOut)return NextResponse.json({error:"You must be punched in and not punched out."},{status:400});
-   if(hasOpenOut(record))return NextResponse.json({error:"An out-time is already active. Press Return first."},{status:409});
+   if(hasOpenOut(record)||hasOpenBreak(record))return NextResponse.json({error:"Close the active break or out-time before starting another out-time."},{status:409});
    const reason=String(b.reason||"").trim();if(!reason)return NextResponse.json({error:"Reason is mandatory."},{status:400});
    record=await Attendance.findByIdAndUpdate(record._id,{$push:{outTimes:{start:new Date(),reason,type:b.type==="Official"?"Official":"Personal",minutes:0}},$set:{updatedBy:s.employeeId}},{new:true});
   }else if(action==="endOut"){
@@ -52,9 +54,20 @@ export async function POST(req){
    const activeIndex=(record.outTimes||[]).findIndex(x=>!x.end);if(activeIndex<0)return NextResponse.json({error:"No active out-time."},{status:400});
    const returnTime=new Date();record.outTimes[activeIndex].end=returnTime;record.outTimes[activeIndex].minutes=mins(record.outTimes[activeIndex].start,returnTime);
    const times=calculateTimes(record,returnTime);record.totalMinutes=times.totalMinutes;record.workMinutes=times.workMinutes;record.updatedBy=s.employeeId;record=await record.save();
+  }else if(action==="startBreak"){
+   if(!record?.punchIn||record.punchOut)return NextResponse.json({error:"You must be punched in and not punched out."},{status:400});
+   if(hasOpenBreak(record)||hasOpenOut(record))return NextResponse.json({error:"Close the active break or out-time before starting a break."},{status:409});
+   record=await Attendance.findByIdAndUpdate(record._id,{$push:{breaks:{start:new Date(),reason:"Break",minutes:0}},$set:{updatedBy:s.employeeId}},{new:true});
+  }else if(action==="endBreak"){
+   if(!record?.punchIn)return NextResponse.json({error:"Punch in is required."},{status:400});
+   const activeIndex=(record.breaks||[]).findIndex(x=>!x.end);
+   if(activeIndex<0)return NextResponse.json({error:"No active break."},{status:400});
+   const returnTime=new Date();record.breaks[activeIndex].end=returnTime;record.breaks[activeIndex].minutes=mins(record.breaks[activeIndex].start,returnTime);
+   const times=calculateTimes(record,returnTime);record.totalMinutes=times.totalMinutes;record.workMinutes=times.workMinutes;record.updatedBy=s.employeeId;record=await record.save();
   }else if(action==="setStatus"){
    if(!canManageAttendance(s.role))return NextResponse.json({error:"Access denied."},{status:403});
-   record=await Attendance.findOneAndUpdate({employeeId:target,date},{$set:{status:b.status,remarks:b.remarks||"",employeeId:target,date,updatedBy:s.employeeId},$setOnInsert:{createdBy:s.employeeId}},{upsert:true,new:true});
+   if(!["Present","Absent","Leave","Half Day","Holiday"].includes(b.status))return NextResponse.json({error:"Select a valid attendance status."},{status:400});
+   record=await Attendance.findOneAndUpdate({employeeId:target,date},{$set:{status:b.status,remarks:String(b.remarks||"").trim(),employeeId:target,date,updatedBy:s.employeeId},$setOnInsert:{createdBy:s.employeeId,outTimes:[],breaks:[]}},{upsert:true,new:true});
   }else return NextResponse.json({error:"Unsupported action."},{status:400});
   const fresh=await Attendance.findById(record._id).lean();return NextResponse.json({record:{...fresh,...calculateTimes(fresh)}});
  }catch(e){return NextResponse.json({error:"Attendance action failed.",detail:e.message},{status:500});}
