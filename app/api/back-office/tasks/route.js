@@ -85,8 +85,7 @@ export async function GET(req){
    ? await Attendance.find({date,employeeId:{$in:employees.map(e=>e._id)}}).select("employeeId status punchIn punchOut").lean()
    : await Attendance.findOne({date,employeeId:g.session.sub}).select("status punchIn punchOut").lean();
   const eligibleRows=(Array.isArray(attendanceRows)?attendanceRows:attendanceRows?[attendanceRows]:[])
-   .filter(a=>["Present","Half Day"].includes(a.status))
-   .filter(a=>a.status!=="Present"||!!a.punchIn);
+   .filter(a=>["Present","Half Day"].includes(a.status));
   if(!isManager){
    const eligible=eligibleRows.length>0;
    const tasks=eligible?allTasks.filter(t=>(t.assignments||[]).some(a=>a.employeeId===g.session.employeeId)||t.assignedTo===g.session.employeeId):[];
