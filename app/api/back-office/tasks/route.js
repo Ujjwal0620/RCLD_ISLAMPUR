@@ -83,8 +83,9 @@ export async function GET(req){
    const tasks=eligible?allTasks.filter(t=>(t.assignments||[]).some(a=>String(a.employeeId)===employeeId)||String(t.assignedTo)===employeeId):[];
    // Recurring batch classes are an employee's timetable, not ad-hoc tasks.
    // Keep them visible regardless of punch-in status so staff can plan their week.
+   const selectedDay=new Date(date+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",timeZone:"Asia/Kolkata"});
    const weeklySchedule=batches.flatMap(batch=>(batch.schedules||[])
-    .filter(schedule=>String(schedule.facultyId||"")===employeeId)
+    .filter(schedule=>String(schedule.facultyId||"")===employeeId && schedule.day===selectedDay)
     .map(schedule=>{
      const parts=String(schedule.time||"").split(/\s*(?:-|–|to)\s*/i);
      return {
