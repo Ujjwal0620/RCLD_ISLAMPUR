@@ -102,7 +102,7 @@ export async function GET(req){
       courseCode:batch.courseCode||"",
       series:schedule.series||"",
       slot:schedule.slot||"",
-      room:schedule.room||""
+      room:schedule.room||batch.room||schedule.workArea||""
      };
     }))
     .sort((a,b)=>["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].indexOf(a.day)-["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].indexOf(b.day)||a.startTime.localeCompare(b.startTime));
@@ -117,7 +117,7 @@ export async function GET(req){
   const employeeAvailability=employeeAssignments(eligibleEmployees,batches,visibleTasks,date,startTime,endTime);
   const availableEmployees=employeeAvailability.filter(e=>e.available);
   const dayName=new Date(date+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",timeZone:"Asia/Kolkata"});
-  const scheduledWorkAreas=batches.flatMap(batch=>(batch.schedules||[]).filter(s=>s.day===dayName&&String(s.room||"").trim()).map(s=>{const parts=String(s.time||"").split(/\s*(?:-|–|to)\s*/i);return parts.length>1?{workArea:String(s.room).trim(),startTime:to24(parts[0]),endTime:to24(parts[1]),batchCode:batch.batchCode||""}:null;}).filter(Boolean));
+  const scheduledWorkAreas=batches.flatMap(batch=>(batch.schedules||[]).filter(s=>s.day===dayName&&String(s.room||batch.room||s.workArea||"").trim()).map(s=>{const parts=String(s.time||"").split(/\s*(?:-|–|to)\s*/i);return parts.length>1?{workArea:String(s.room||batch.room||s.workArea).trim(),startTime:to24(parts[0]),endTime:to24(parts[1]),batchCode:batch.batchCode||""}:null;}).filter(Boolean));
   const availableBatchClasses=batches.flatMap(batch=>(batch.schedules||[]).filter(s=>s.day===dayName&&(!s.facultyId||!eligibleEmployeeIds.has(String(s.facultyId)))&&!allTasks.some(t=>String(t.batchId||"")===String(batch._id)&&String(t.scheduleSeries||"")===String(s.series||"")&&t.taskType==="BatchSubstitution"&&t.status!=="Completed")).map(s=>{
    const parts=String(s.time||"").split(/\s*(?:-|–|to)\s*/i);
    return {batchId:String(batch._id),batchCode:batch.batchCode||"",batchName:batch.name||"",courseName:batch.courseName||"",day:s.day,series:s.series||"",time:s.time||"",startTime:parts.length>1?to24(parts[0]):"",endTime:parts.length>1?to24(parts[1]):"",facultyId:s.facultyId||"",facultyName:s.facultyName||"",room:s.room||""};
@@ -145,7 +145,7 @@ export async function POST(req){
    if(regularAttendance&&["Present","Half Day"].includes(regularAttendance.status)&&!regularAttendance.punchOut)return NextResponse.json({error:"The assigned faculty is marked present and has not punched out. A substitute is not required."},{status:409});
    const alreadySubstituted=await BackOfficeTask.exists({batchId:String(batch._id),taskDate,scheduleSeries:String(schedule.series||""),taskType:"BatchSubstitution",status:{$ne:"Completed"}});
    if(alreadySubstituted)return NextResponse.json({error:"A substitute has already been assigned to this batch class for the selected date."},{status:409});
-   batchSubstitution={batchId:String(batch._id),batchCode:batch.batchCode,batchName:batch.name,courseId:String(batch.courseId),scheduleDay:dayName,scheduleSeries:schedule.series||"",regularFacultyId:schedule.facultyId||"",workArea:String(schedule.room||"").trim()};
+   batchSubstitution={batchId:String(batch._id),batchCode:batch.batchCode,batchName:batch.name,courseId:String(batch.courseId),scheduleDay:dayName,scheduleSeries:schedule.series||"",regularFacultyId:schedule.facultyId||"",workArea:String(schedule.room||batch.room||schedule.workArea||"").trim()};
    if(!batchSubstitution.workArea)return NextResponse.json({error:"This batch timetable slot has no work area. Update the batch room/work area before assigning a substitute."},{status:409});
    title=title||`Substitute class — ${batch.batchCode}`;
   }
