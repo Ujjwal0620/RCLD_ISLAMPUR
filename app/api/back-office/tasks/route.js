@@ -112,7 +112,8 @@ export async function GET(req){
   const eligibleIds=new Set(eligibleRows.map(a=>String(a.employeeId)));
   const eligibleEmployees=employees.filter(e=>e.status!=="Inactive"&&eligibleIds.has(String(e._id)));
   const eligibleEmployeeIds=new Set(eligibleEmployees.map(e=>String(e.employeeId)));
-  // Keep the manager record complete: attendance controls new assignment eligibility, not visibility of existing task records.\n  const visibleTasks=allTasks;
+  // Keep the manager record complete: attendance controls new assignment eligibility, not visibility of existing task records.
+  const visibleTasks=allTasks;
   const employeeAvailability=employeeAssignments(eligibleEmployees,batches,visibleTasks,date,startTime,endTime);
   const availableEmployees=employeeAvailability.filter(e=>e.available);
   const dayName=new Date(date+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",timeZone:"Asia/Kolkata"});
