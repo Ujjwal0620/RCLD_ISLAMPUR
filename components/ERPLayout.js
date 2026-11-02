@@ -5,7 +5,7 @@ import RAGAssistant from "@/components/RAGAssistant";
 import {
   LayoutDashboard, Users, UserRoundCog, Menu, X, ShieldCheck, Layers3, BookOpen,
   BarChart3, UserRoundX, Clock3, ClipboardList, LogOut, GraduationCap, BookMarked,
-  ChevronDown, Search, Bell, Settings2, Sparkles, PanelLeftClose
+  ChevronDown, Search, Bell, Settings2, Sparkles, PanelLeftClose, Megaphone, ContactRound
 } from "lucide-react";
 
 const navGroups = [
@@ -25,6 +25,13 @@ const navGroups = [
       { href: "/dashboard/course-content", label: "Course Content", icon: BookMarked },
       { href: "/dashboard/subjects", label: "Subjects", icon: GraduationCap },
       { href: "/dashboard/attendance", label: "Attendance", icon: Clock3 },
+    ],
+  },
+  {
+    label: "MARKETING",
+    items: [
+      { href: "/dashboard/marketing", label: "Marketing CRM", icon: Megaphone },
+      { href: "/dashboard/referrals", label: "Referrals", icon: ContactRound },
     ],
   },
   {
@@ -76,8 +83,10 @@ export default function ERPLayout({ active, children, hideAssistant = true }) {
         <nav className="erp-nav">
           {navGroups.map((group) => (
             <div className="nav-group" key={group.label}>
-              <div className="side-label">{group.label}</div>
-              {group.items.map(({ href, label, icon: Icon }) => (
+              <button type="button" className="side-label side-group-toggle" aria-expanded={!collapsedGroups[group.label]} onClick={() => setCollapsedGroups((current) => ({ ...current, [group.label]: !current[group.label] }))}>
+                <span>{group.label}</span><ChevronDown size={13} className={collapsedGroups[group.label] ? "group-chevron is-collapsed" : "group-chevron"}/>
+              </button>
+              {!collapsedGroups[group.label] && group.items.map(({ href, label, icon: Icon }) => (
                 <a key={href} className={`side-link ${active === href ? "active" : ""}`} href={href} onClick={() => setOpen(false)}>
                   <Icon size={17} strokeWidth={1.9} /><span>{label}</span>
                   {active === href && <i className="side-active-dot" />}
