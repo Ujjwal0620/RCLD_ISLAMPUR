@@ -24,21 +24,47 @@ export default function MarketingPage() {
   }
   useEffect(() => { load(); }, []);
 
-  const referralMap = useMemo(() => new Map(data.referrals.map((r) => [String(r._id), r])), [data.referrals]);
   const groups = useMemo(() => {
     const map = new Map();
-    data.marketingEmployees.forEach((e) => map.set(e.employeeId, { employee: e, referrals: [], students: [] }));
-    data.referrals.forEach((r) => {
-      if (!map.has(r.marketingEmployeeId)) map.set(r.marketingEmployeeId, { employee: { name: r.marketingEmployeeName, employeeId: r.marketingEmployeeId }, referrals: [], students: [] });
-      map.get(r.marketingEmployeeId).referrals.push(r);
+    data.marketingEmployees.forEach((employee) => {
+      map.set(employee.employeeId, { employee, referrals: [] });
     });
-    students.forEach((s) => {
-      const r = referralMap.get(String(s.referralId || ""));
-      const employeeId = s.marketingEmployeeId || r?.marketingEmployeeId;
-      if (employeeId && map.has(employeeId)) map.get(employeeId).students.push(s);
+
+    data.referrals.forEach((referral) => {
+      if (!map.has(referral.marketingEmployeeId)) {
+        map.set(referral.marketingEmployeeId, {
+          employee: {
+            name: referral.marketingEmployeeName,
+            employeeId: referral.marketingEmployeeId,
+            designation: "Marketing",
+          },
+          referrals: [],
+        });
+      }
+
+      const attributedStudents = students.filter(
+        (student) => String(student.referralId || "") === String(referral._id)
+      );
+      map.get(referral.marketingEmployeeId).referrals.push({
+        ...referral,
+        students: attributedStudents,
+      });
     });
-    return [...map.values()].filter((g) => !search || (g.employee.name + " " + g.referrals.map((r) => r.name).join(" ") + " " + g.students.map((s) => s.applicantName).join(" ")).toLowerCase().includes(search.toLowerCase()));
-  }, [data, students, referralMap, search]);
+
+    return [...map.values()]
+      .map((group) => ({
+        ...group,
+        studentCount: group.referrals.reduce((total, referral) => total + referral.students.length, 0),
+      }))
+      .filter((group) => {
+        const searchable = [
+          group.employee.name,
+          ...group.referrals.map((referral) => referral.name),
+          ...group.referrals.flatMap((referral) => referral.students.map((student) => student.applicantName)),
+        ].join(" ").toLowerCase();
+        return !search || searchable.includes(search.toLowerCase());
+      });
+  }, [data, students, search]);
 
   const referralCount = data.referrals.length;
   const referredStudents = students.filter((s) => s.referralId).length;
@@ -53,9 +79,24 @@ export default function MarketingPage() {
     <section className="panel marketing-directory">
       <div className="panel-head"><div><h3>Marketing team & referral pipeline</h3><p>Employee → Referral → Students</p></div><div className="marketing-search"><Search size={16}/><input value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="Search employees, referrals, students"/></div></div>
       {loading ? <div className="empty">Loading marketing CRM…</div> : groups.length ? <div className="marketing-groups">{groups.map((g) => <article className="marketing-employee-card" key={g.employee.employeeId}>
-        <div className="marketing-employee-head"><div className="marketing-avatar"><UserRound size={20}/></div><div><strong>{g.employee.name}</strong><span>{g.employee.employeeId} · {g.employee.designation || "Marketing"}</span></div><div className="marketing-employee-totals"><b>{g.referrals.length}</b><small>referrals</small><b>{g.students.length}</b><small>students</small></div></div>
-        <div className="marketing-referral-list">{g.referrals.map((r) => <div className="marketing-referral-row" key={r._id}><div><UserCheck size={15}/><strong>{r.name}</strong><span>{r.studentCount || 0} linked student(s)</span></div><span className={"marketing-status "+String(r.status).toLowerCase()}>{r.status}</span></div>)}{!g.referrals.length && <p className="marketing-empty">No referrals assigned yet.</p>}</div>
-        <div className="marketing-student-list"><strong>Referred students</strong>{g.students.slice(0,5).map((s)=><a href={"/dashboard/students/"+s._id} key={s._id}><span>{s.applicantName}</span><small>{s.courseCode || s.courseName || "Course"} · {s.formNo}</small></a>)}{g.students.length>5&&<span className="marketing-more">+{g.students.length-5} more students</span>}{!g.students.length&&<p className="marketing-empty">No students linked to this employee yet.</p>}</div>
+        <div className="marketing-employee-head"><div className="marketing-avatar"><UserRound size={20}/></div><div><strong>{g.employee.name}</strong><span>{g.employee.employeeId} · {g.employee.designation || "Marketing"}</span></div><div className="marketing-employee-totals"><b>{g.referrals.length}</b><small>referrals</small><b>{g.studentCount}</b><small>students</small></div></div>
+        <div className="marketing-referral-list">
+          {g.referrals.map((referral) => <section className="marketing-referral-block" key={referral._id}>
+            <div className="marketing-referral-row">
+              <div><UserCheck size={15}/><strong>{referral.name}</strong><span>{referral.students.length} linked student(s)</span></div>
+              <span className={"marketing-status "+String(referral.status).toLowerCase()}>{referral.status}</span>
+            </div>
+            <div className="marketing-student-list">
+              {referral.students.length ? referral.students.map((student) => (
+                <a href={"/dashboard/students/"+student._id} key={student._id}>
+                  <span>{student.applicantName}</span>
+                  <small>{student.courseCode || student.courseName || "Course"} · {student.formNo}</small>
+                </a>
+              )) : <p className="marketing-empty">No students attributed to this referral yet.</p>}
+            </div>
+          </section>)}
+          {!g.referrals.length && <p className="marketing-empty">No referrals assigned yet.</p>}
+        </div>
       </article>)}</div> : <div className="empty">No marketing employees found. Add employees with Marketing in their department or designation to begin.</div>}
     </section>
   </ERPLayout>;
