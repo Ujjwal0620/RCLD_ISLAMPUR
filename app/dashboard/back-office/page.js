@@ -33,6 +33,7 @@ function Metric({ icon: Icon, label, value, hint, tone = "blue" }) {
 
 export default function TaskAssignmentPage() {
   const [tasks, setTasks] = useState([]);
+  const [weeklySchedule, setWeeklySchedule] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [employeeAvailability, setEmployeeAvailability] = useState([]);
   const [workRegister, setWorkRegister] = useState([]);
@@ -54,6 +55,7 @@ export default function TaskAssignmentPage() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Unable to load task manager.");
       setTasks(data.tasks || []);
+      setWeeklySchedule(data.weeklySchedule || []);
       setEmployees(data.availableEmployees || []);
       setEmployeeAvailability(data.employeeAvailability || []);
       setWorkRegister(data.workRegister || []);
@@ -131,7 +133,7 @@ export default function TaskAssignmentPage() {
         <div className="task-hero-copy">
           <span className="task-eyebrow">RCLD · DAILY OPERATIONS</span>
           <h2>{canAssign ? "Plan the day. Assign the right people." : "Your workday, clearly organised."}</h2>
-          <p>{canAssign ? "Build a clear daily work plan using employees who have marked attendance and are free for the selected time." : "Your assigned tasks are available here after your attendance has been marked for the day."}</p>
+          <p>{canAssign ? "Build a clear daily work plan using employees who have marked attendance and are free for the selected time." : "See your recurring batch timetable for the week alongside any office tasks assigned to you."}</p>
           <div className="task-hero-meta"><span><ShieldCheck size={14}/> Attendance-gated assignments</span><span><CalendarClock size={14}/> {form.taskDate}</span></div>
         </div>
         <div className="task-hero-visual"><div className="task-hero-orbit"><ListTodo size={34}/></div><strong>{tasks.length}</strong><span>{canAssign ? "Tasks for selected date" : "Tasks assigned to you"}</span></div>
@@ -152,7 +154,23 @@ export default function TaskAssignmentPage() {
         <span className="task-hidden-count">{excludedWithoutAttendance} excluded</span>
       </section>}
 
-      {attendanceRequired && <section className="task-employee-gate"><LockKeyhole size={22}/><div><strong>Attendance not marked</strong><p>Your task list is hidden until your attendance is marked Present or Half Day for this date. Please punch in or contact the office administrator.</p></div></section>}
+      {attendanceRequired && <section className="task-employee-gate"><LockKeyhole size={22}/><div><strong>Attendance not marked</strong><p>New office task assignments are hidden until your attendance is marked Present or Half Day for this date. Your recurring batch timetable remains visible below.</p></div></section>}
+
+      {!canAssign && <section className="task-panel task-weekly-panel">
+        <div className="task-panel-heading"><div><span className="task-eyebrow">RECURRING ACADEMIC DUTIES</span><h3>My Batch Schedule</h3><p>Your assigned classes for the week, taken directly from the batch timetable.</p></div><span className="task-section-count">{weeklySchedule.length} classes / week</span></div>
+        <div className="task-weekly-grid">
+          {weeklySchedule.map((item, index) => <article className="task-weekly-card" key={item.batchCode + "-" + item.day + "-" + item.startTime + "-" + index}>
+            <div className="task-weekly-card-top"><span className="task-weekly-day">{item.day || "Day not set"}</span><span className="task-weekly-time"><Clock3 size={14}/>{showTime(item.startTime, item.endTime)}</span></div>
+            <strong className="task-weekly-batch">{item.batchCode || item.batchName || "Batch"}{item.courseName ? " · " + item.courseName : ""}</strong>
+            <div className="task-weekly-meta">
+              {item.series && <span><BookOpen size={13}/>Series {item.series}</span>}
+              {item.slot && <span>Slot {item.slot}</span>}
+              <span><MapPin size={13}/>{item.room || "Room not assigned"}</span>
+            </div>
+          </article>)}
+          {!weeklySchedule.length && <div className="task-empty"><CalendarDays size={24}/><strong>No batch classes assigned</strong><span>When an administrator assigns you as faculty to a batch schedule, your weekly classes will appear here.</span></div>}
+        </div>
+      </section>}
 
       {canAssign && <section className="task-panel task-create-panel">
         <div className="task-panel-heading"><div><span className="task-eyebrow">NEW WORK ITEM</span><h3>Create task assignment</h3><p>Choose a date and time. The employee list is filtered by attendance and existing commitments.</p></div><span className="task-panel-heading-icon"><Plus size={19}/></span></div>
