@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectMongoDB } from "@/lib/mongodb";
 import BackOfficeTask from "@/models/BackOfficeTask";
 import Batch from "@/models/Batch";
+import Attendance from "@/models/EmployeeAttendance";
 import { getSession } from "@/lib/auth";
 import mongoose from "mongoose";
 
@@ -79,13 +80,27 @@ export async function GET(req){
    isManager?Employee.find({status:{$ne:"Inactive"}}).select("employeeId name designation department").sort({name:1}).lean():Promise.resolve([]),
    isManager?Batch.find({status:{$in:["Draft","Active"]}}).select("batchCode name facultyId facultyIds facultyName facultyNames staffAssignments schedules").lean():Promise.resolve([])
   ]);
-  const tasks=isManager?allTasks:allTasks.filter(t=>(t.assignments||[]).some(a=>a.employeeId===g.session.employeeId)||t.assignedTo===g.session.employeeId);
-  if(!isManager)return NextResponse.json({tasks,availableEmployees:[],employeeAvailability:[],date,canAssign:false});
-  const employeeAvailability=employeeAssignments(employees,batches,allTasks,date,startTime,endTime);
+  // Attendance is the eligibility gate for the task manager.
+  const attendanceRows=isManager
+   ? await Attendance.find({date,employeeId:{$in:employees.map(e=>e._id)}}).select("employeeId status punchIn punchOut").lean()
+   : await Attendance.findOne({date,employeeId:g.session.sub}).select("status punchIn punchOut").lean();
+  const eligibleRows=(Array.isArray(attendanceRows)?attendanceRows:attendanceRows?[attendanceRows]:[])
+   .filter(a=>["Present","Half Day"].includes(a.status))
+   .filter(a=>a.status!=="Present"||!!a.punchIn);
+  if(!isManager){
+   const eligible=eligibleRows.length>0;
+   const tasks=eligible?allTasks.filter(t=>(t.assignments||[]).some(a=>a.employeeId===g.session.employeeId)||t.assignedTo===g.session.employeeId):[];
+   return NextResponse.json({tasks,availableEmployees:[],employeeAvailability:[],date,canAssign:false,attendanceRequired:!eligible});
+  }
+  const eligibleIds=new Set(eligibleRows.map(a=>String(a.employeeId)));
+  const eligibleEmployees=employees.filter(e=>eligibleIds.has(String(e._id)));
+  const eligibleEmployeeIds=new Set(eligibleEmployees.map(e=>String(e.employeeId)));
+  const visibleTasks=allTasks.filter(t=>(t.assignments||[]).some(a=>eligibleEmployeeIds.has(String(a.employeeId)))||eligibleEmployeeIds.has(String(t.assignedTo)));
+  const employeeAvailability=employeeAssignments(eligibleEmployees,batches,visibleTasks,date,startTime,endTime);
   const availableEmployees=employeeAvailability.filter(e=>e.available);
   const dayName=new Date(date+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",timeZone:"Asia/Kolkata"});
-  const workRegister=employees.map(e=>{const id=String(e.employeeId),items=[];for(const b of batches){for(const s of b.schedules||[]){if(s.day!==dayName||String(s.facultyId)!==id)continue;const parts=String(s.time||"").split(/\s*(?:-|–|to)\s*/i);if(parts.length<2)continue;items.push({type:"batch",title:(b.batchCode||b.name||"Batch")+(b.courseName?" · "+b.courseName:""),startTime:to24(parts[0]),endTime:to24(parts[1]),room:s.room||"",workArea:s.room||""});}}for(const t of allTasks){for(const as of t.assignments||[]){if(String(as.employeeId)===id)items.push({type:"task",title:t.title,startTime:t.startTime,endTime:t.endTime,workArea:t.workArea,status:t.status});}if(String(t.assignedTo)===id&&!(t.assignments||[]).some(x=>String(x.employeeId)===id))items.push({type:"task",title:t.title,startTime:t.startTime,endTime:t.endTime,workArea:t.workArea,status:t.status});}items.sort((x,y)=>String(x.startTime).localeCompare(String(y.startTime)));return {...e,present:true,replacementNeeded:false,items};});
-  return NextResponse.json({tasks,availableEmployees,employeeAvailability,workRegister,date,canAssign:true}); }catch(e){return NextResponse.json({error:"Unable to load Task Assignment.",detail:e.message},{status:500});}
+  const workRegister=eligibleEmployees.map(e=>{const id=String(e.employeeId),items=[];for(const b of batches){for(const s of b.schedules||[]){if(s.day!==dayName||String(s.facultyId)!==id)continue;const parts=String(s.time||"").split(/\s*(?:-|–|to)\s*/i);if(parts.length<2)continue;items.push({type:"batch",title:(b.batchCode||b.name||"Batch")+(b.courseName?" · "+b.courseName:""),startTime:to24(parts[0]),endTime:to24(parts[1]),room:s.room||"",workArea:s.room||""});}}for(const t of allTasks){for(const as of t.assignments||[]){if(String(as.employeeId)===id)items.push({type:"task",title:t.title,startTime:t.startTime,endTime:t.endTime,workArea:t.workArea,status:t.status});}if(String(t.assignedTo)===id&&!(t.assignments||[]).some(x=>String(x.employeeId)===id))items.push({type:"task",title:t.title,startTime:t.startTime,endTime:t.endTime,workArea:t.workArea,status:t.status});}items.sort((x,y)=>String(x.startTime).localeCompare(String(y.startTime)));return {...e,present:true,replacementNeeded:false,items};});
+  return NextResponse.json({tasks:visibleTasks,availableEmployees,employeeAvailability,workRegister,date,canAssign:true,attendanceRequired:false,excludedWithoutAttendance:employees.length-eligibleEmployees.length}); }catch(e){return NextResponse.json({error:"Unable to load Task Assignment.",detail:e.message},{status:500});}
 }
 export async function POST(req){
  const g=await guard(true);if(g.error)return g.error;
