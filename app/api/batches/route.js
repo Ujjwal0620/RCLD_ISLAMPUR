@@ -50,7 +50,7 @@ function uniqueConflicts(items) {
   ).values()];
 }
 
-async function validateSchedule({ series, facultyIds = [], course, excludeBatchId }) {
+async function validateSchedule({ series, facultyIds = [], scheduleFacultyAssignments = {}, course, excludeBatchId }) {
   const schedules = normalizeSlots(series);
   if (!schedules.length) throw new Error("The selected series have no valid timetable slots.");
   const selectedHours = uniqueHours(schedules);
@@ -101,15 +101,15 @@ async function validateSchedule({ series, facultyIds = [], course, excludeBatchI
     }
 
     const required = course.requiredSkills || [];
-    const missingSkills = required.filter(skill => !(employee.skills || []).includes(skill));
-    if (missingSkills.length) {
-      return {
-        ok:false,
-        response:NextResponse.json({
-          error:"Selected faculty does not meet the course skill requirements.",
-          missingSkills
-        },{status:409})
-      };
+    const missingByFaculty = employees.map(member => ({
+      employee:member,
+      missing:required.filter(skill => !(member.skills || []).includes(skill))
+    })).filter(x => x.missing.length);
+    if (missingByFaculty.length) {
+      return {ok:false,response:NextResponse.json({
+        error:"Every faculty member assigned to a batch day must meet the course skill requirements.",
+        faculty:missingByFaculty.map(x=>({employeeId:x.employee.employeeId,name:x.employee.name,missingSkills:x.missing}))
+      },{status:409})};
     }
 
     const facultyBatches = await Batch.find({
@@ -133,7 +133,6 @@ async function validateSchedule({ series, facultyIds = [], course, excludeBatchI
         }
       }
     }
-    for (const hour of selectedHours) { if (!facultyForDay(hour.day)) return {ok:false,response:NextResponse.json({error:`Both selected faculty are off on ${hour.day}. Select another faculty.`},{status:409})}; }
     if (facultyConflicts.length) {
       return {
         ok:false,
@@ -145,7 +144,17 @@ async function validateSchedule({ series, facultyIds = [], course, excludeBatchI
     }
   }
 
-  const assignedSchedules=schedules.map(slot=>{const id=facultyForDay(slot.day);const emp=id?facultyById.get(id):null;return {...slot,facultyId:id||"",facultyName:emp?.name||""};});
+  const assignedSchedules=schedules.map(slot=>{
+    const explicit=String(scheduleFacultyAssignments[`${slot.day}|${slot.series}`]||"");
+    const id=explicit && facultyById.has(explicit) ? explicit : facultyForDay(slot.day);
+    const emp=id?facultyById.get(id):null;
+    return {...slot,facultyId:id||"",facultyName:emp?.name||""};
+  });
+  const unassigned=assignedSchedules.filter(slot=>!slot.facultyId);
+  if(unassigned.length)return {ok:false,response:NextResponse.json({
+    error:"Assign an active faculty member to every selected batch day.",
+    unassignedDays:unassigned.map(slot=>({day:slot.day,series:slot.series,time:slot.time}))
+  },{status:400})};
   return {ok:true,schedules:assignedSchedules,selectedHours,employee,employees};
 }
 
@@ -178,8 +187,13 @@ export async function POST(req) {
       },{status:400});
     }
 
-    const facultyIds=[...new Set((b.facultyIds || (b.facultyId ? [b.facultyId] : [])).filter(Boolean).map(String))].slice(0,2);
-    const checked = await validateSchedule({series,facultyIds,course});
+    const scheduleFacultyAssignments=b.scheduleFacultyAssignments&&typeof b.scheduleFacultyAssignments==="object"?b.scheduleFacultyAssignments:{};
+    const facultyIds=[...new Set([
+      ...(Array.isArray(b.facultyIds)?b.facultyIds:[]),
+      ...Object.values(scheduleFacultyAssignments)
+    ].filter(Boolean).map(String))];
+    if(facultyIds.length>2)return NextResponse.json({error:"A batch can have maximum two faculty members."},{status:400});
+    const checked = await validateSchedule({series,facultyIds,scheduleFacultyAssignments,course});
     if (!checked.ok) return checked.response;
 
     const batch = await Batch.create({
