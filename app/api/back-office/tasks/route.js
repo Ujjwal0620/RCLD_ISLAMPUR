@@ -116,7 +116,7 @@ export async function GET(req){
   const availableEmployees=employeeAvailability.filter(e=>e.available);
   const dayName=new Date(date+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",timeZone:"Asia/Kolkata"});
   const availableBatchClasses=batches.flatMap(batch=>(batch.schedules||[]).filter(s=>s.day===dayName).map(s=>{
-   const parts=String(s.time||"").split(/\\s*(?:-|–|to)\\s*/i);
+   const parts=String(s.time||"").split(/\s*(?:-|–|to)\\s*/i);
    return {batchId:String(batch._id),batchCode:batch.batchCode||"",batchName:batch.name||"",courseName:batch.courseName||"",day:s.day,series:s.series||"",time:s.time||"",startTime:parts.length>1?to24(parts[0]):"",endTime:parts.length>1?to24(parts[1]):"",facultyId:s.facultyId||"",facultyName:s.facultyName||"",room:s.room||""};
   }));
   const workRegister=eligibleEmployees.map(e=>{const id=String(e.employeeId),items=[];for(const b of batches){for(const s of b.schedules||[]){if(s.day!==dayName||String(s.facultyId)!==id)continue;const parts=String(s.time||"").split(/\s*(?:-|–|to)\s*/i);if(parts.length<2)continue;items.push({type:"batch",title:(b.batchCode||b.name||"Batch")+(b.courseName?" · "+b.courseName:""),startTime:to24(parts[0]),endTime:to24(parts[1]),room:s.room||"",workArea:s.room||""});}}for(const t of allTasks){for(const as of t.assignments||[]){if(String(as.employeeId)===id)items.push({type:"task",title:t.title,startTime:t.startTime,endTime:t.endTime,workArea:t.workArea,status:t.status});}if(String(t.assignedTo)===id&&!(t.assignments||[]).some(x=>String(x.employeeId)===id))items.push({type:"task",title:t.title,startTime:t.startTime,endTime:t.endTime,workArea:t.workArea,status:t.status});}items.sort((x,y)=>String(x.startTime).localeCompare(String(y.startTime)));return {...e,present:true,replacementNeeded:false,items};});
@@ -135,7 +135,7 @@ export async function POST(req){
    const dayName=new Date(taskDate+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",timeZone:"Asia/Kolkata"});
    const schedule=(batch.schedules||[]).find(s=>s.day===dayName&&String(s.series||"")===String(b.scheduleSeries||""));
    if(!schedule)return NextResponse.json({error:"This batch has no matching class on the selected date."},{status:409});
-   const parts=String(schedule.time||"").split(/\\s*(?:-|–|to)\\s*/i);
+   const parts=String(schedule.time||"").split(/\s*(?:-|–|to)\\s*/i);
    if(parts.length<2||to24(parts[0])!==startTime||to24(parts[1])!==endTime)return NextResponse.json({error:"The selected time does not match the batch timetable."},{status:409});
    const regular= schedule.facultyId ? await Employee.findOne({employeeId:String(schedule.facultyId)}).select("_id name employeeId").lean() : null;
    const regularAttendance=regular?await Attendance.findOne({date:taskDate,employeeId:regular._id}).select("status punchOut").lean():null;
