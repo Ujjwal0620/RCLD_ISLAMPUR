@@ -55,7 +55,7 @@ export default function TaskAssignmentPage() {
       const response = await fetch("/api/back-office/tasks?" + params, { cache: "no-store" });
       if (response.status === 401) { window.location.href = "/dashboard/login"; return; }
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Unable to load task manager.");
+      if (!response.ok) throw new Error([data.error || "Unable to load task manager.", data.detail ? "Server detail: " + data.detail : "", data.code ? "Code: " + data.code : ""].filter(Boolean).join(" | "));
       setTasks(data.tasks || []);
       setWeeklySchedule(data.weeklySchedule || []);
       setEmployees(data.availableEmployees || []);
