@@ -141,7 +141,7 @@ export default function TaskAssignmentPage() {
         <Metric icon={ClipboardList} label="Tasks" value={tasks.length} hint="Selected date" tone="blue"/>
         {canAssign ? <>
           <Metric icon={UserCheck} label="Eligible employees" value={employeeAvailability.length} hint="Attendance marked" tone="green"/>
-          <Metric icon={CheckCircle2} label="Available now" value={employees.length} hint="Free for selected slot" tone="violet"/>
+          <Metric icon={CheckCircle2} label="Available employees" value={form.startTime ? employees.length : "—"} hint={form.startTime ? "Free for selected slot" : "Select a time slot"} tone="violet"/>
           <Metric icon={LockKeyhole} label="Hidden from manager" value={excludedWithoutAttendance} hint="No eligible attendance" tone="amber"/>
         </> : <Metric icon={CalendarClock} label="Work date" value={form.taskDate} hint="Asia / Kolkata" tone="green"/>}
       </section>
@@ -184,7 +184,7 @@ export default function TaskAssignmentPage() {
         <div className="task-panel-heading"><div><span className="task-eyebrow">WORKFORCE AVAILABILITY</span><h3>Employee availability</h3><p>Only employees with eligible attendance are displayed in this section.</p></div><span className="task-section-count">{employeeAvailability.length} employees</span></div>
         <div className="task-availability-grid">
           {employeeAvailability.map((employee) => <article className={"task-availability-card " + (employee.available ? "is-free" : "is-busy")} key={employee.employeeId}>
-            <div className="task-availability-head"><span className="task-employee-avatar">{String(employee.name || "E").split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase()}</span><div><strong>{employee.name}</strong><small>{employee.designation || employee.department || "Employee"}</small></div><span className={"task-availability-status " + (employee.available ? "free" : "busy")}>{employee.available ? "Available" : "Occupied"}</span></div>
+            <div className="task-availability-head"><span className="task-employee-avatar">{String(employee.name || "E").split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase()}</span><div><strong>{employee.name}</strong><small>{employee.designation || employee.department || "Employee"}</small></div><span className={"task-availability-status " + (!form.startTime ? "pending" : employee.available ? "free" : "busy")}>{form.startTime ? (employee.available ? "Available" : "Occupied") : "Select time"}</span></div>
             {employee.reasons.length ? <div className="task-reason-list">{employee.reasons.map((reason, index) => <span key={index}>{reason.startsWith("Batch") ? <BookOpen size={14}/> : reason.startsWith("Task") ? <ClipboardList size={14}/> : <AlertTriangle size={14}/>} {reason}</span>)}</div> : <div className="task-no-conflict"><CheckCircle2 size={14}/>No schedule conflict found</div>}
           </article>)}
           {!employeeAvailability.length && <div className="task-empty"><Users size={24}/><strong>No eligible employees</strong><span>Employees appear here only after Present or Half Day attendance is marked.</span></div>}
