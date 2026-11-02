@@ -13,7 +13,7 @@ const initial = {
   declarationDate: "", declarationPlace: "", signatureApplicant: ""
 };
 
-function Field({ label, name, value, onChange, required, type = "text", maxLength }) {
+function Field({ label, name, value, onChange, required, type = "text", maxLength, inputMode, pattern }) {
   return (
     <label className="form-field">
       <span>{label}{required ? " *" : ""}</span>
@@ -130,7 +130,7 @@ export default function RegisterStudentPage() {
             <Field label="WhatsApp Number" name="whatsappNumber" value={form.whatsappNumber} onChange={update} maxLength={15} />
             <Field label="Mobile Number" name="mobileNumber" value={form.mobileNumber} onChange={update} required maxLength={15} />
             <Field label="Email Address" name="email" value={form.email} onChange={update} required type="email" />
-            <Field label="Aadhaar Card Number (12 digits)" name="aadhaarNumber" value={form.aadhaarNumber} onChange={update} required maxLength={12} />
+            <Field label="Aadhaar Card Number (12 digits)" name="aadhaarNumber" value={form.aadhaarNumber} onChange={update} required maxLength={12} inputMode="numeric" pattern="[0-9]{12}" />
           </div>
           <label className="form-field"><span>Referral (optional)</span><select value={form.referralId} onChange={(e)=>update("referralId",e.target.value)}><option value="">Direct / No referral</option>{referrals.map((r)=><option key={r._id} value={r._id}>{r.name} — {r.marketingEmployeeName}</option>)}</select></label>
           <label className="form-field full"><span>Complete Address</span><textarea value={form.address} onChange={(e) => update("address", e.target.value)} rows="3" /></label>
