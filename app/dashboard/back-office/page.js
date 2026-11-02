@@ -79,7 +79,7 @@ export default function TaskAssignmentPage() {
 
   function chooseSlot(value) {
     const [startTime, endTime] = value ? value.split("|") : ["", ""];
-    setForm((current) => ({ ...current, startTime, endTime, employeeIds: [] }));
+    setForm((current) => ({ ...current, startTime, endTime, employeeIds: [], batchId: "", scheduleSeries: "" }));
   }
 
   function toggleEmployee(id) {
@@ -178,7 +178,7 @@ export default function TaskAssignmentPage() {
         <div className="task-panel-heading"><div><span className="task-eyebrow">NEW WORK ITEM</span><h3>Create task assignment</h3><p>Choose a date and time. The employee list is filtered by attendance and existing commitments.</p></div><span className="task-panel-heading-icon"><Plus size={19}/></span></div>
         <div className="task-form-grid">
           <label className="task-field task-field-wide"><span>Task name</span><input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="e.g. Prepare student admission files"/></label>
-          <label className="task-field"><span>Work date</span><input type="date" value={form.taskDate} onChange={(event) => setForm({ ...form, taskDate: event.target.value, employeeIds: [] })}/></label>
+          <label className="task-field"><span>Work date</span><input type="date" value={form.taskDate} onChange={(event) => setForm({ ...form, taskDate: event.target.value, employeeIds: [], batchId: "", scheduleSeries: "", title: "", startTime: "", endTime: "" })}/></label>
           <label className="task-field"><span>Batch substitution (optional)</span><select value={form.batchId && form.scheduleSeries ? form.batchId+"|"+form.scheduleSeries : ""} onChange={(event)=>{const selected=availableBatchClasses.find(x=>x.batchId+"|"+x.series===event.target.value);if(!selected){setForm(current=>({...current,batchId:"",scheduleSeries:"",title:"",startTime:"",endTime:"",employeeIds:[]}));return;}setForm(current=>({...current,batchId:selected.batchId,scheduleSeries:selected.series,title:"Substitute class — "+selected.batchCode,startTime:selected.startTime,endTime:selected.endTime,workArea:AREAS.includes(selected.room)?selected.room:"T1",employeeIds:[]}));}}><option value="">Regular task (no batch)</option>{availableBatchClasses.map(x=><option key={x.batchId+"|"+x.series} value={x.batchId+"|"+x.series}>{x.batchCode} · {x.day} · {x.time} · Regular faculty: {x.facultyName||"Not assigned"}</option>)}</select></label>
           <label className="task-field"><span>Time slot</span><select value={form.startTime ? form.startTime + "|" + form.endTime : ""} onChange={(event) => chooseSlot(event.target.value)}><option value="">Select time slot</option>{SLOTS.map((slot) => <option key={slot.value} value={slot.value}>{slot.label}</option>)}</select></label>
           <label className="task-field"><span>Work area</span><select value={form.workArea} onChange={(event) => setForm({ ...form, workArea: event.target.value })}><option value="">Select work area</option>{AREAS.map((area) => <option key={area} value={area}>{area}</option>)}</select></label>
