@@ -69,7 +69,7 @@ export async function GET(req){
   const isManager=["superadmin","office-admin"].includes(g.session.role);
   const [allTasks,employees,batches]=await Promise.all([
    BackOfficeTask.find({taskDate:date}).sort({startTime:1,createdAt:-1}).lean(),
-   isManager?Employee.find({status:{$ne:"Inactive"}}).select("employeeId name designation department").sort({name:1}).lean():Promise.resolve([]),
+   isManager?Employee.find({}).select("employeeId name designation department status").sort({name:1}).lean():Promise.resolve([]),
    Batch.find({status:{$in:["Draft","Active"]}}).select("batchCode name courseName courseCode facultyId facultyIds facultyName facultyNames staffAssignments schedules").lean()
   ]);
   // Attendance is the eligibility gate for the task manager.
@@ -110,7 +110,7 @@ export async function GET(req){
    return NextResponse.json({tasks:[...tasks,...batchTasks].sort((a,b)=>String(a.startTime||"").localeCompare(String(b.startTime||""))),weeklySchedule,availableEmployees:[],employeeAvailability:[],date,canAssign:false,attendanceRequired:!eligible});
   }
   const eligibleIds=new Set(eligibleRows.map(a=>String(a.employeeId)));
-  const eligibleEmployees=employees.filter(e=>eligibleIds.has(String(e._id)));
+  const eligibleEmployees=employees.filter(e=>e.status!=="Inactive"&&eligibleIds.has(String(e._id)));
   const eligibleEmployeeIds=new Set(eligibleEmployees.map(e=>String(e.employeeId)));
   // Keep the manager record complete: attendance controls new assignment eligibility, not visibility of existing task records.\n  const visibleTasks=allTasks;
   const employeeAvailability=employeeAssignments(eligibleEmployees,batches,visibleTasks,date,startTime,endTime);
