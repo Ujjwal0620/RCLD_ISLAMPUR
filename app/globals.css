@@ -1041,3 +1041,13 @@ td{font-size:11px}
 .task-weekly-meta span{display:flex;align-items:center;gap:5px;color:#8995a7;font-size:8px}
 .task-weekly-meta svg{color:#8796ad}
 @media(max-width:700px){.task-weekly-grid{grid-template-columns:1fr;padding:13px}}
+
+
+/* Batch topic resources */
+.progress-topic-wrapper{border-bottom:1px solid var(--border-color,#e7eaf0);padding:8px 0}
+.topic-note-tools{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:4px 12px 8px 42px;flex-wrap:wrap}
+.topic-note-list{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.topic-note-list a{display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border:1px solid var(--border-color,#e7eaf0);border-radius:8px;color:var(--text-color,#344054);font-size:12px;text-decoration:none;background:var(--card-bg,#fff)}
+.topic-note-list a:hover{border-color:var(--primary,#6c63ff);color:var(--primary,#6c63ff)}
+.topic-note-list small{color:var(--muted,#667085)}
+.topic-note-tools .ghost-btn{cursor:pointer}
