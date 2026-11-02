@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectMongoDB } from "@/lib/mongodb";
 import BackOfficeTask from "@/models/BackOfficeTask";
 import Batch from "@/models/Batch";
+import Course from "@/models/Course";
 import Attendance from "@/models/EmployeeAttendance";
 import { getSession } from "@/lib/auth";
 import mongoose from "mongoose";
@@ -140,7 +141,7 @@ export async function POST(req){
    const regular= schedule.facultyId ? await Employee.findOne({employeeId:String(schedule.facultyId)}).select("_id name employeeId").lean() : null;
    const regularAttendance=regular?await Attendance.findOne({date:taskDate,employeeId:regular._id}).select("status punchOut").lean():null;
    if(regularAttendance&&["Present","Half Day"].includes(regularAttendance.status)&&!regularAttendance.punchOut)return NextResponse.json({error:"The assigned faculty is marked present and has not punched out. A substitute is not required."},{status:409});
-   batchSubstitution={batchId:String(batch._id),batchCode:batch.batchCode,batchName:batch.name,scheduleDay:dayName,scheduleSeries:schedule.series||"",regularFacultyId:schedule.facultyId||""};
+   batchSubstitution={batchId:String(batch._id),batchCode:batch.batchCode,batchName:batch.name,courseId:String(batch.courseId),scheduleDay:dayName,scheduleSeries:schedule.series||"",regularFacultyId:schedule.facultyId||""};
    title=title||`Substitute class — ${batch.batchCode}`;
   }
   if(!title)return NextResponse.json({error:"Task name is required."},{status:400});
@@ -148,11 +149,17 @@ export async function POST(req){
   if(!AREAS.includes(b.workArea))return NextResponse.json({error:"Select a valid work area."},{status:400});
   if(!validSlot(startTime,endTime))return NextResponse.json({error:"Select one of the fixed hourly task slots."},{status:400});
   const [employees,batches,dayTasks]=await Promise.all([
-   Employee.find({employeeId:{$in:ids},status:{$ne:"Inactive"}}).select("employeeId name").lean(),
+   Employee.find({employeeId:{$in:ids},status:{$ne:"Inactive"}}).select("employeeId name skills").lean(),
    Batch.find({status:{$in:["Draft","Active"]}}).select("facultyId facultyIds staffAssignments schedules").lean(),
    BackOfficeTask.find({taskDate}).lean()
   ]);
   if(employees.length!==ids.length)return NextResponse.json({error:"One or more selected employees are unavailable."},{status:409});
+  if(batchSubstitution){
+   const course=await Course.findById(batchSubstitution.courseId).lean();
+   const required=course?.requiredSkills||[];
+   const unqualified=employees.map(e=>({name:e.name,missing:required.filter(skill=>!(e.skills||[]).includes(skill))})).filter(x=>x.missing.length);
+   if(unqualified.length)return NextResponse.json({error:"The substitute must have the skills required for this course.",employees:unqualified},{status:409});
+  }
   const attendanceRows=await Attendance.find({date:taskDate,employeeId:{$in:employees.map(e=>e._id)}}).select("employeeId status").lean();
   const eligibleIds=new Set(attendanceRows.filter(a=>["Present","Half Day"].includes(a.status)&&!a.punchOut).map(a=>String(a.employeeId)));
   const notMarked=employees.filter(e=>!eligibleIds.has(String(e._id)));
