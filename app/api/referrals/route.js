@@ -53,9 +53,9 @@ export async function POST(request) {
     if (!employee || !/market/i.test(String(employee.department || "") + " " + String(employee.designation || ""))) {
       return NextResponse.json({ error: "Select an active employee from the Marketing department/designation." }, { status: 400 });
     }
-    const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\    const employee = await Employee.findOne({ employeeId: marketingEmployeeId, status: { $ne: "Inactive" } }).lean();
-    if (!employee || !/market/i.test(String(employee.department || "") + " " + String(employee.designation || ""))) {
-      return NextResponse.json({ error: "Select an active employee from the Marketing department/designation." }, { status: 400 });
+    const existingReferrals = await Referral.find({ marketingEmployeeId: employee.employeeId }).select("name").lean();
+    if (existingReferrals.some((item) => String(item.name || "").trim().toLowerCase() === name.toLowerCase())) {
+      return NextResponse.json({ error: "This referral name is already assigned to this marketing employee." }, { status: 409 });
     }
     const referral = await Referral.create({");
     const duplicate = await Referral.findOne({
