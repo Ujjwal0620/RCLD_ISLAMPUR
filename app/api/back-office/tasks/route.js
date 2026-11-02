@@ -115,7 +115,7 @@ export async function POST(req){
   const taskConflicts=new Set(dayTasks.filter(t=>overlaps(String(t.startTime||""),String(t.endTime||""),startTime,endTime)).flatMap(t=>(t.assignments||[]).map(a=>String(a.employeeId)).concat(t.assignedTo?[String(t.assignedTo)]:[])));
   const busyClass=batchBusyIds(batches,taskDate,startTime,endTime);
   const blocked=employees.filter(e=>{const id=String(e.employeeId);return taskConflicts.has(id)||busyClass.has(id);});
-  if(blocked.length)return NextResponse.json({error:"One or more selected employees are already associated with a batch, already have a task today, or have a class in this time.",employees:blocked.map(e=>e.name)},{status:409});
+  if(blocked.length)return NextResponse.json({error:"One or more selected employees already have another task or scheduled class during this time slot.",employees:blocked.map(e=>e.name)},{status:409});
   const assignments=employees.map(e=>({employeeId:e.employeeId,employeeName:e.name}));
   const task=await BackOfficeTask.create({title,assignments,assignedTo:assignments[0]?.employeeId||"",assignedToName:assignments[0]?.employeeName||"",workArea:b.workArea,taskDate,startTime,endTime,status:"Open",createdBy:g.session.employeeId,createdByName:g.session.name||""});
   return NextResponse.json({task},{status:201});
