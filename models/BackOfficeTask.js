@@ -16,7 +16,7 @@ const BackOfficeTaskSchema = new mongoose.Schema({
   assignments:{type:[AssignmentSchema],default:[]},
   assignedTo:{type:String,default:""},
   assignedToName:{type:String,default:""},
-  workArea:{type:String,enum:["T1","T2","L1","L2","L3","L4","Back Office","Front Office"],required:true},
+  workArea:{type:String,enum:["T1","T2","L1/L2","L3/L4","L1","L2","L3","L4","Back Office","Front Office"],required:true},
   taskDate:{type:String,required:true},
   startTime:{type:String,required:true},
   endTime:{type:String,required:true},
