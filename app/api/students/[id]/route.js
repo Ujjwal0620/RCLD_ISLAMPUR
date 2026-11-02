@@ -66,8 +66,8 @@ export async function PATCH(req,{params}){
     if(update.applicantName!==undefined)update.applicantName=String(update.applicantName).trim();
     if(update.mobileNumber!==undefined)update.mobileNumber=String(update.mobileNumber).trim();
     const email=String(body.email ?? "").trim().toLowerCase();
-    const aadhaarNumber=String(body.aadhaarNumber ?? "").replace(/\\D/g, "");
-    if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))return NextResponse.json({error:"A valid email address is mandatory."},{status:400});
+    const aadhaarNumber=String(body.aadhaarNumber ?? "").replace(/\D/g, "");
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return NextResponse.json({error:"A valid email address is mandatory."},{status:400});
     if(!/^\\d{12}$/.test(aadhaarNumber))return NextResponse.json({error:"Aadhaar number must contain exactly 12 digits."},{status:400});
     update.email=email;update.aadhaarNumber=aadhaarNumber;
     if(body.referralId!==undefined){
