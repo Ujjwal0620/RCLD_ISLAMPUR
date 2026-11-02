@@ -34,7 +34,7 @@ export async function GET(req){
 }
 export async function POST(req){
  const s=await getSession();if(!s)return NextResponse.json({error:"Unauthorized"},{status:401});
- try{await connectMongoDB();const b=await req.json(),action=b.action,target=canManageAttendance(s.role)&&b.employeeId?b.employeeId:s.sub,date=b.date||nowDate();let record=await Attendance.findOne({employeeId:target,date});
+ try{await connectMongoDB();const b=await req.json(),action=b.action,target=canManageAttendance(s.role)&&b.employeeId?b.employeeId:s.sub,date=canManageAttendance(s.role)?(b.date||nowDate()):nowDate();let record=await Attendance.findOne({employeeId:target,date});
   if(action==="punchIn"){
    if(record?.punchIn)return NextResponse.json({error:"Punch in already recorded."},{status:409});
    record=await Attendance.findOneAndUpdate({employeeId:target,date},{$set:{punchIn:new Date(),status:"Present",updatedBy:s.employeeId},$setOnInsert:{employeeId:target,date,createdBy:s.employeeId,outTimes:[],breaks:[]}},{upsert:true,new:true});
