@@ -7,7 +7,7 @@ const DAYS=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunda
 
 export default function BatchDetailPage({params}){
   const [batch,setBatch]=useState(null),[batchId,setBatchId]=useState(""),[courses,setCourses]=useState([]),[series,setSeries]=useState([]),[faculty,setFaculty]=useState([]),[allBatches,setAllBatches]=useState([]),[batchStudents,setBatchStudents]=useState([]),[availableStudents,setAvailableStudents]=useState([]),[selectedStudents,setSelectedStudents]=useState([]),[studentLoading,setStudentLoading]=useState(false);
-  const [selectedSeries,setSelectedSeries]=useState([]),[facultyId,setFacultyId]=useState(""),[facultyId2,setFacultyId2]=useState(""),[editing,setEditing]=useState(false),[saving,setSaving]=useState(false),[loading,setLoading]=useState(true),[contentProgress,setContentProgress]=useState(null),[openModules,setOpenModules]=useState({});
+  const [selectedSeries,setSelectedSeries]=useState([]),[facultyId,setFacultyId]=useState(""),[facultyId2,setFacultyId2]=useState(""),[classDate,setClassDate]=useState(new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Kolkata"})),[editing,setEditing]=useState(false),[saving,setSaving]=useState(false),[loading,setLoading]=useState(true),[contentProgress,setContentProgress]=useState(null),[openModules,setOpenModules]=useState({});
 
   async function loadBatchStudents(id){const r=await fetch("/api/batches/"+id+"/students",{cache:"no-store"});const d=await r.json();if(r.ok){setBatchStudents(d.students||[]);setAvailableStudents(d.available||[]);}}
   async function assignSelectedStudents(){if(!selectedStudents.length)return alert("Select at least one student.");setStudentLoading(true);try{const r=await fetch("/api/batches/"+batchId+"/students",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({studentIds:selectedStudents})});const d=await r.json();if(!r.ok)return alert(d.error||"Unable to assign students.");setSelectedStudents([]);await loadBatchStudents(batchId);}finally{setStudentLoading(false)}}
@@ -29,7 +29,7 @@ export default function BatchDetailPage({params}){
     }catch(e){alert(e.message)}finally{setLoading(false)}
   }
 
-  useEffect(()=>{(async()=>{const {id}=await params;setBatchId(id);await load(id)})()},[params]);
+  useEffect(()=>{(async()=>{const {id}=await params;setBatchId(id);const requestedDate=new URLSearchParams(window.location.search).get("date");if(requestedDate)setClassDate(requestedDate);await load(id)})()},[params]);
 
   const course=useMemo(()=>courses.find(c=>String(c._id)===String(batch?.courseId)),[courses,batch]);
   useEffect(()=>{
@@ -59,13 +59,13 @@ export default function BatchDetailPage({params}){
   }
 
   async function updateTopic(topic,completed,date){
-    const r=await fetch("/api/batches/"+batchId+"/course-content",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({contentTopicId:topic.contentTopicId,completed,completedDate:date,date:new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Kolkata"})})});
+    const r=await fetch("/api/batches/"+batchId+"/course-content",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({contentTopicId:topic.contentTopicId,completed,completedDate:date,date:classDate})});
     const d=await r.json();if(!r.ok)return alert(d.error||"Unable to update topic.");setContentProgress(d.progress);
   }
 
   async function uploadTopicNote(topic,file){
     if(!file)return;
-    const formData=new FormData();formData.append("file",file);formData.append("topicId",String(topic.contentTopicId));formData.append("date",new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Kolkata"}));
+    const formData=new FormData();formData.append("file",file);formData.append("topicId",String(topic.contentTopicId));formData.append("date",classDate);
     const r=await fetch("/api/batches/"+batchId+"/notes",{method:"POST",body:formData});const d=await r.json();
     if(!r.ok)return alert(d.error||"Unable to upload notes.");
     setContentProgress(d.progress);alert("Notes uploaded successfully.");
