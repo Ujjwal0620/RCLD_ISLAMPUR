@@ -141,6 +141,8 @@ export async function POST(req){
    const regular= schedule.facultyId ? await Employee.findOne({employeeId:String(schedule.facultyId)}).select("_id name employeeId").lean() : null;
    const regularAttendance=regular?await Attendance.findOne({date:taskDate,employeeId:regular._id}).select("status punchOut").lean():null;
    if(regularAttendance&&["Present","Half Day"].includes(regularAttendance.status)&&!regularAttendance.punchOut)return NextResponse.json({error:"The assigned faculty is marked present and has not punched out. A substitute is not required."},{status:409});
+   const alreadySubstituted=await BackOfficeTask.exists({batchId:String(batch._id),taskDate,scheduleSeries:String(schedule.series||""),taskType:"BatchSubstitution",status:{$ne:"Completed"}});
+   if(alreadySubstituted)return NextResponse.json({error:"A substitute has already been assigned to this batch class for the selected date."},{status:409});
    batchSubstitution={batchId:String(batch._id),batchCode:batch.batchCode,batchName:batch.name,courseId:String(batch.courseId),scheduleDay:dayName,scheduleSeries:schedule.series||"",regularFacultyId:schedule.facultyId||""};
    title=title||`Substitute class — ${batch.batchCode}`;
   }
