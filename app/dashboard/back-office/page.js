@@ -37,6 +37,7 @@ export default function TaskAssignmentPage() {
   const [employees, setEmployees] = useState([]);
   const [employeeAvailability, setEmployeeAvailability] = useState([]);
   const [workRegister, setWorkRegister] = useState([]);
+  const [availableBatchClasses, setAvailableBatchClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [canAssign, setCanAssign] = useState(false);
@@ -44,7 +45,7 @@ export default function TaskAssignmentPage() {
   const [excludedWithoutAttendance, setExcludedWithoutAttendance] = useState(0);
   const [message, setMessage] = useState("");
   const [employeeSearch, setEmployeeSearch] = useState("");
-  const [form, setForm] = useState({ title: "", employeeIds: [], workArea: "", taskDate: localDate(), startTime: "", endTime: "" });
+  const [form, setForm] = useState({ title: "", employeeIds: [], workArea: "", taskDate: localDate(), startTime: "", endTime: "", batchId: "", scheduleSeries: "" });
 
   async function load(next = form) {
     setLoading(true);
@@ -59,6 +60,7 @@ export default function TaskAssignmentPage() {
       setEmployees(data.availableEmployees || []);
       setEmployeeAvailability(data.employeeAvailability || []);
       setWorkRegister(data.workRegister || []);
+      setAvailableBatchClasses(data.availableBatchClasses || []);
       setCanAssign(!!data.canAssign);
       setAttendanceRequired(!!data.attendanceRequired);
       setExcludedWithoutAttendance(Number(data.excludedWithoutAttendance || 0));
@@ -104,7 +106,7 @@ export default function TaskAssignmentPage() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error((data.error || "Unable to assign task.") + (data.employees?.length ? " " + data.employees.join(", ") : ""));
-      const next = { ...form, title: "", employeeIds: [], workArea: "" };
+      const next = { ...form, title: "", employeeIds: [], workArea: "", batchId: "", scheduleSeries: "" };
       setForm(next);
       setMessage("Task assigned successfully.");
       await load(next);
@@ -177,6 +179,7 @@ export default function TaskAssignmentPage() {
         <div className="task-form-grid">
           <label className="task-field task-field-wide"><span>Task name</span><input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="e.g. Prepare student admission files"/></label>
           <label className="task-field"><span>Work date</span><input type="date" value={form.taskDate} onChange={(event) => setForm({ ...form, taskDate: event.target.value, employeeIds: [] })}/></label>
+          <label className="task-field"><span>Batch substitution (optional)</span><select value={form.batchId && form.scheduleSeries ? form.batchId+"|"+form.scheduleSeries : ""} onChange={(event)=>{const selected=availableBatchClasses.find(x=>x.batchId+"|"+x.series===event.target.value);if(!selected){setForm(current=>({...current,batchId:"",scheduleSeries:"",title:"",startTime:"",endTime:"",employeeIds:[]}));return;}setForm(current=>({...current,batchId:selected.batchId,scheduleSeries:selected.series,title:"Substitute class — "+selected.batchCode,startTime:selected.startTime,endTime:selected.endTime,workArea:AREAS.includes(selected.room)?selected.room:"T1",employeeIds:[]}));}}><option value="">Regular task (no batch)</option>{availableBatchClasses.map(x=><option key={x.batchId+"|"+x.series} value={x.batchId+"|"+x.series}>{x.batchCode} · {x.day} · {x.time} · Regular faculty: {x.facultyName||"Not assigned"}</option>)}</select></label>
           <label className="task-field"><span>Time slot</span><select value={form.startTime ? form.startTime + "|" + form.endTime : ""} onChange={(event) => chooseSlot(event.target.value)}><option value="">Select time slot</option>{SLOTS.map((slot) => <option key={slot.value} value={slot.value}>{slot.label}</option>)}</select></label>
           <label className="task-field"><span>Work area</span><select value={form.workArea} onChange={(event) => setForm({ ...form, workArea: event.target.value })}><option value="">Select work area</option>{AREAS.map((area) => <option key={area} value={area}>{area}</option>)}</select></label>
         </div>
@@ -218,7 +221,7 @@ export default function TaskAssignmentPage() {
           </article>)}
           {!workRegister.length && <div className="task-empty"><CalendarDays size={24}/><strong>No eligible work register</strong><span>Mark attendance to make employees available for the daily register.</span></div>}
         </div> : <div className="task-personal-list">
-          {tasks.map((task) => <article className="task-personal-row" key={task._id}><span className="task-personal-time"><Clock3 size={15}/>{showTime(task.startTime, task.endTime)}</span><div><strong>{task.title}</strong><small><MapPin size={13}/>{task.workArea || "Work area not set"}</small></div><span className={"task-status " + String(task.status || "Open").toLowerCase().replace(/\s+/g, "-")}>{task.status || "Open"}</span><ArrowUpRight size={16}/></article>)}
+          {tasks.map((task) => <article className="task-personal-row" key={task._id}><span className="task-personal-time"><Clock3 size={15}/>{showTime(task.startTime, task.endTime)}</span><div><strong>{task.title}</strong><small><MapPin size={13}/>{task.workArea || "Work area not set"}</small></div>{task.batchId?<a className="ghost-btn" href={"/dashboard/batches/"+task.batchId+"/students"}>Open batch</a>:null}<span className={"task-status " + String(task.status || "Open").toLowerCase().replace(/\s+/g, "-")}>{task.status || "Open"}</span><ArrowUpRight size={16}/></article>)}
           {!tasks.length && !attendanceRequired && <div className="task-empty"><ClipboardList size={24}/><strong>No tasks assigned</strong><span>Your assigned work will appear here.</span></div>}
         </div>}
       </section>
