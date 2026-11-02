@@ -38,6 +38,7 @@ export default function TaskAssignmentPage() {
   const [employeeAvailability, setEmployeeAvailability] = useState([]);
   const [workRegister, setWorkRegister] = useState([]);
   const [availableBatchClasses, setAvailableBatchClasses] = useState([]);
+  const [scheduledWorkAreas, setScheduledWorkAreas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [canAssign, setCanAssign] = useState(false);
@@ -61,6 +62,7 @@ export default function TaskAssignmentPage() {
       setEmployeeAvailability(data.employeeAvailability || []);
       setWorkRegister(data.workRegister || []);
       setAvailableBatchClasses(data.availableBatchClasses || []);
+      setScheduledWorkAreas(data.scheduledWorkAreas || []);
       setCanAssign(!!data.canAssign);
       setAttendanceRequired(!!data.attendanceRequired);
       setExcludedWithoutAttendance(Number(data.excludedWithoutAttendance || 0));
@@ -79,7 +81,7 @@ export default function TaskAssignmentPage() {
 
   function chooseSlot(value) {
     const [startTime, endTime] = value ? value.split("|") : ["", ""];
-    setForm((current) => ({ ...current, startTime, endTime, employeeIds: [], title: current.batchId ? "" : current.title, batchId: "", scheduleSeries: "" }));
+    setForm((current) => { const matchingAreas = scheduledWorkAreas.filter((item) => item.startTime === startTime && item.endTime === endTime).map((item) => item.workArea); const uniqueAreas = [...new Set(matchingAreas)]; return { ...current, startTime, endTime, employeeIds: [], title: current.batchId ? "" : current.title, batchId: "", scheduleSeries: "", workArea: uniqueAreas.length === 1 ? uniqueAreas[0] : "" }; });
   }
 
   function toggleEmployee(id) {
@@ -165,7 +167,7 @@ export default function TaskAssignmentPage() {
           <label className="task-field"><span>Work date</span><input type="date" value={form.taskDate} onChange={(event) => setForm({ ...form, taskDate: event.target.value, employeeIds: [], batchId: "", scheduleSeries: "", title: "", startTime: "", endTime: "" })}/></label>
           <label className="task-field"><span>Batch substitution (optional)</span><select value={form.batchId && form.scheduleSeries ? form.batchId+"|"+form.scheduleSeries : ""} onChange={(event)=>{const selected=availableBatchClasses.find(x=>x.batchId+"|"+x.series===event.target.value);if(!selected){setForm(current=>({...current,batchId:"",scheduleSeries:"",title:"",startTime:"",endTime:"",employeeIds:[]}));return;}setForm(current=>({...current,batchId:selected.batchId,scheduleSeries:selected.series,title:"Substitute class — "+selected.batchCode,startTime:selected.startTime,endTime:selected.endTime,workArea:selected.room||"",employeeIds:[]}));}}><option value="">Regular task (no batch)</option>{availableBatchClasses.map(x=><option key={x.batchId+"|"+x.series} value={x.batchId+"|"+x.series}>{x.batchCode} · {x.day} · {x.time} · {x.room||"Work area not set"} · Regular faculty: {x.facultyName||"Not assigned"}</option>)}</select></label>
           <label className="task-field"><span>Time slot</span><select value={form.startTime ? form.startTime + "|" + form.endTime : ""} onChange={(event) => chooseSlot(event.target.value)}><option value="">Select time slot</option>{SLOTS.map((slot) => <option key={slot.value} value={slot.value}>{slot.label}</option>)}</select></label>
-          <label className="task-field"><span>{form.batchId ? "Work area · from batch timetable" : "Work area"}</span><select value={form.workArea} disabled={!!form.batchId} onChange={(event) => setForm({ ...form, workArea: event.target.value })}><option value="">Select work area</option>{AREAS.map((area) => <option key={area} value={area}>{area}</option>)}</select></label>
+          <label className="task-field"><span>{form.batchId ? "Work area · from batch timetable" : "Work area · mapped to selected time"}</span><select value={form.workArea} disabled={!!form.batchId} onChange={(event) => setForm({ ...form, workArea: event.target.value })}><option value="">{form.startTime && scheduledWorkAreas.some((item) => item.startTime === form.startTime && item.endTime === form.endTime) ? "Select area for this time" : "Select work area"}</option>{([...new Set(scheduledWorkAreas.filter((item) => item.startTime === form.startTime && item.endTime === form.endTime).map((item) => item.workArea))].length ? [...new Set(scheduledWorkAreas.filter((item) => item.startTime === form.startTime && item.endTime === form.endTime).map((item) => item.workArea))] : AREAS).map((area) => <option key={area} value={area}>{area}</option>)}</select>{form.startTime && <small>{scheduledWorkAreas.some((item) => item.startTime === form.startTime && item.endTime === form.endTime) ? "Areas scheduled for this time are shown automatically." : "No batch area is mapped to this time; choose an area manually."}</small>}</label>
         </div>
 
         <div className="task-employee-picker">
