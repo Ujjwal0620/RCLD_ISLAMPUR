@@ -8,14 +8,14 @@ const StudentSchema = new mongoose.Schema({
   aecCode: String, regnNo: String, enrollmentNo: String, admissionDate: String, guardianContactNumber: String, dueAmount: mongoose.Schema.Types.Mixed, paymentStatus: mongoose.Schema.Types.Mixed, sourceCourseLabel: String, importSource: String, courseName: String, courseCode: String, batchId: { type: mongoose.Schema.Types.ObjectId, ref: "Batch", default: null }, batchCode: String,
   applicantName: { type: String, required: true, trim: true }, nationality: String, dateOfBirth: String, sex: String,
   fatherOrHusbandName: String, address: String, pin: String, whatsappNumber: String,
-  mobileNumber: { type: String, required: true, trim: true },
+  mobileNumber: { type: String, required: true, trim: true },\n  email: { type: String, required: true, trim: true, lowercase: true },\n  aadhaarNumber: { type: String, required: true, trim: true },\n  referralId: { type: String, default: "" }, referralName: { type: String, default: "" }, marketingEmployeeId: { type: String, default: "" }, marketingEmployeeName: { type: String, default: "" },
   qualifications: [{ examCourse: String, boardUniversity: String, collegeInstitute: String, year: String, percentage: String }],
   enclosures: { stampPhoto: Boolean, qualifyingCertificates: Boolean, matricAdmitCard: Boolean },
   declarationDate: String, declarationPlace: String, signatureApplicant: String, photoUrl: String,
   status: { type: String, default: "Registered" }
 }, { timestamps: true });
 
-const Student = mongoose.models.Student || mongoose.model("Student", StudentSchema);
+const Student = mongoose.models.Student || mongoose.model("Student", StudentSchema);\nconst ReferralSchema = new mongoose.Schema({}, { strict: false });\nconst Referral = mongoose.models.Referral || mongoose.model("Referral", ReferralSchema);
 
 const DEFAULT_COURSES = ["CCA","DCA","ADCA","CCC","CAO","DWPD","DOM","DCST","DCAP","DHNT"];
 
@@ -37,7 +37,7 @@ export async function GET(request) {
     if (search) {
       const rx = new RegExp(search.replace(/[.*+?^{}()|[\]\\]/g, "\\$&"), "i");
       filter.$or = [
-        { applicantName: rx }, { formNo: rx }, { mobileNumber: rx },
+        { applicantName: rx }, { formNo: rx }, { mobileNumber: rx }, { email: rx }, { aadhaarNumber: rx },
         { courseName: rx }, { regnNo: rx }, { fatherOrHusbandName: rx },
         { aecCode: rx }, { whatsappNumber: rx }
       ];
@@ -80,7 +80,7 @@ export async function POST(request) {
   try {
     await connectMongoDB();
     const body = await request.json();
-    const missing = ["formNo", "applicantName", "mobileNumber"].filter((key) => !String(body[key] || "").trim());
+    const missing = ["formNo", "applicantName", "mobileNumber", "email", "aadhaarNumber"].filter((key) => !String(body[key] || "").trim());
     if (missing.length) return NextResponse.json({ error: "Required fields: " + missing.join(", ") }, { status: 400 });
     const student = await Student.create({
       ...body,
