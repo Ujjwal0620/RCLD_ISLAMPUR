@@ -57,14 +57,6 @@ export async function POST(request) {
     if (existingReferrals.some((item) => String(item.name || "").trim().toLowerCase() === name.toLowerCase())) {
       return NextResponse.json({ error: "This referral name is already assigned to this marketing employee." }, { status: 409 });
     }
-    const referral = await Referral.create({");
-    const duplicate = await Referral.findOne({
-      marketingEmployeeId: employee.employeeId,
-      name: { $regex: "^" + escapedName + "$", $options: "i" },
-    }).lean();
-    if (duplicate) {
-      return NextResponse.json({ error: "This referral name is already assigned to this marketing employee." }, { status: 409 });
-    }
     const referral = await Referral.create({
       name,
       marketingEmployeeId: employee.employeeId,
