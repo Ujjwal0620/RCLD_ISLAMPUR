@@ -9,7 +9,7 @@ import mongoose from "mongoose";
 
 const EmployeeSchema=new mongoose.Schema({employeeId:String,name:String,designation:String,department:String,status:String,skills:[String]},{timestamps:true});
 const Employee=mongoose.models.Employee||mongoose.model("Employee",EmployeeSchema);
-const AREAS=["T1","T2","L1","L2","L3","L4","Back Office","Front Office"];
+const AREAS=["T1","T2","L1/L2","L3/L4","L1","L2","L3","L4","Back Office","Front Office"];
 const SLOTS=[
  ["09:00","10:00"],["10:00","11:00"],["11:00","12:00"],["12:00","13:00"],["13:00","14:00"],
  ["14:00","15:00"],["15:00","16:00"],["16:00","17:00"],["17:00","18:00"],["18:00","19:00"]
@@ -143,12 +143,14 @@ export async function POST(req){
    if(regularAttendance&&["Present","Half Day"].includes(regularAttendance.status)&&!regularAttendance.punchOut)return NextResponse.json({error:"The assigned faculty is marked present and has not punched out. A substitute is not required."},{status:409});
    const alreadySubstituted=await BackOfficeTask.exists({batchId:String(batch._id),taskDate,scheduleSeries:String(schedule.series||""),taskType:"BatchSubstitution",status:{$ne:"Completed"}});
    if(alreadySubstituted)return NextResponse.json({error:"A substitute has already been assigned to this batch class for the selected date."},{status:409});
-   batchSubstitution={batchId:String(batch._id),batchCode:batch.batchCode,batchName:batch.name,courseId:String(batch.courseId),scheduleDay:dayName,scheduleSeries:schedule.series||"",regularFacultyId:schedule.facultyId||""};
+   batchSubstitution={batchId:String(batch._id),batchCode:batch.batchCode,batchName:batch.name,courseId:String(batch.courseId),scheduleDay:dayName,scheduleSeries:schedule.series||"",regularFacultyId:schedule.facultyId||"",workArea:String(schedule.room||"").trim()};
+   if(!batchSubstitution.workArea)return NextResponse.json({error:"This batch timetable slot has no work area. Update the batch room/work area before assigning a substitute."},{status:409});
    title=title||`Substitute class — ${batch.batchCode}`;
   }
   if(!title)return NextResponse.json({error:"Task name is required."},{status:400});
   if(!ids.length)return NextResponse.json({error:"Select at least one employee."},{status:400});
-  if(!AREAS.includes(b.workArea))return NextResponse.json({error:"Select a valid work area."},{status:400});
+  const workArea=batchSubstitution?.workArea||String(b.workArea||"").trim();
+  if(!AREAS.includes(workArea))return NextResponse.json({error:batchSubstitution?"The batch timetable contains an unsupported work area. Update the batch room/work area.":"Select a valid work area."},{status:400});
   if(!validSlot(startTime,endTime))return NextResponse.json({error:"Select one of the fixed hourly task slots."},{status:400});
   const [employees,batches,dayTasks]=await Promise.all([
    Employee.find({employeeId:{$in:ids},status:{$ne:"Inactive"}}).select("employeeId name skills").lean(),
@@ -171,7 +173,7 @@ export async function POST(req){
   const blocked=employees.filter(e=>{const id=String(e.employeeId);return taskConflicts.has(id)||busyClass.has(id);});
   if(blocked.length)return NextResponse.json({error:"One or more selected employees already have another task or scheduled class during this time slot.",employees:blocked.map(e=>e.name)},{status:409});
   const assignments=employees.map(e=>({employeeId:e.employeeId,employeeName:e.name}));
-  const task=await BackOfficeTask.create({title,taskType:batchSubstitution?"BatchSubstitution":"Regular",batchId:batchSubstitution?.batchId||"",batchCode:batchSubstitution?.batchCode||"",batchName:batchSubstitution?.batchName||"",scheduleDay:batchSubstitution?.scheduleDay||"",scheduleSeries:batchSubstitution?.scheduleSeries||"",assignments,assignedTo:assignments[0]?.employeeId||"",assignedToName:assignments[0]?.employeeName||"",workArea:b.workArea,taskDate,startTime,endTime,status:"Open",createdBy:g.session.employeeId,createdByName:g.session.name||""});
+  const task=await BackOfficeTask.create({title,taskType:batchSubstitution?"BatchSubstitution":"Regular",batchId:batchSubstitution?.batchId||"",batchCode:batchSubstitution?.batchCode||"",batchName:batchSubstitution?.batchName||"",scheduleDay:batchSubstitution?.scheduleDay||"",scheduleSeries:batchSubstitution?.scheduleSeries||"",assignments,assignedTo:assignments[0]?.employeeId||"",assignedToName:assignments[0]?.employeeName||"",workArea,taskDate,startTime,endTime,status:"Open",createdBy:g.session.employeeId,createdByName:g.session.name||""});
   return NextResponse.json({task},{status:201});
  }catch(e){return NextResponse.json({error:"Unable to create task.",detail:e.message},{status:400});}
 }
