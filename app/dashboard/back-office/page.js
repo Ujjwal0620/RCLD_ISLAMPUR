@@ -205,7 +205,7 @@ export default function TaskAssignmentPage() {
           </article>)}
           {!workRegister.length && <div className="task-empty"><CalendarDays size={24}/><strong>No eligible work register</strong><span>Mark attendance to make employees available for the daily register.</span></div>}
         </div> : <div className="task-personal-list">
-          {tasks.map((task) => <article className="task-personal-row" key={task._id}><span className="task-personal-time"><Clock3 size={15}/>{showTime(task.startTime, task.endTime)}</span><div><strong>{task.title}</strong><small><MapPin size={13}/>{task.workArea || "Work area not set"}</small></div>{task.batchId?<a className="ghost-btn" href={"/dashboard/batches/"+task.batchId+"/students"}>Open batch</a>:null}<span className={"task-status " + String(task.status || "Open").toLowerCase().replace(/\s+/g, "-")}>{task.status || "Open"}</span><ArrowUpRight size={16}/></article>)}
+          {tasks.map((task) => <article className="task-personal-row" key={task._id}><span className="task-personal-time"><Clock3 size={15}/>{showTime(task.startTime, task.endTime)}</span><div><strong>{task.title}</strong><small><MapPin size={13}/>{task.workArea || "Work area not set"}</small></div>{task.batchId?<a className="ghost-btn" href={"/dashboard/batches/"+task.batchId+"/students?date="+(task.taskDate||form.taskDate)}>Open batch</a>:null}<span className={"task-status " + String(task.status || "Open").toLowerCase().replace(/\s+/g, "-")}>{task.status || "Open"}</span><ArrowUpRight size={16}/></article>)}
           {!tasks.length && !attendanceRequired && <div className="task-empty"><ClipboardList size={24}/><strong>No tasks assigned</strong><span>Your assigned work will appear here.</span></div>}
         </div>}
       </section>
