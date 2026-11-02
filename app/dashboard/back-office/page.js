@@ -135,7 +135,7 @@ export default function TaskAssignmentPage() {
         <div className="task-hero-copy">
           <span className="task-eyebrow">RCLD · DAILY OPERATIONS</span>
           <h2>{canAssign ? "Plan the day. Assign the right people." : "Your workday, clearly organised."}</h2>
-          <p>{canAssign ? "Build a clear daily work plan using employees who have marked attendance and are free for the selected time." : "See your recurring batch timetable for the week alongside any office tasks assigned to you."}</p>
+          <p>{canAssign ? "Build a clear daily work plan using employees who have marked attendance and are free for the selected time." : "See the batch classes assigned to you for this day alongside any office tasks."}</p>
           <div className="task-hero-meta"><span><ShieldCheck size={14}/> Attendance-gated assignments</span><span><CalendarClock size={14}/> {form.taskDate}</span></div>
         </div>
         <div className="task-hero-visual"><div className="task-hero-orbit"><ListTodo size={34}/></div><strong>{tasks.length}</strong><span>{canAssign ? "Tasks for selected date" : "Tasks assigned to you"}</span></div>
@@ -156,23 +156,7 @@ export default function TaskAssignmentPage() {
         <span className="task-hidden-count">{excludedWithoutAttendance} excluded</span>
       </section>}
 
-      {attendanceRequired && <section className="task-employee-gate"><LockKeyhole size={22}/><div><strong>Attendance not marked</strong><p>New office task assignments are hidden until your attendance is marked Present or Half Day for this date. Your recurring batch timetable remains visible below.</p></div></section>}
-
-      {!canAssign && <section className="task-panel task-weekly-panel">
-        <div className="task-panel-heading"><div><span className="task-eyebrow">RECURRING ACADEMIC DUTIES</span><h3>My Batch Classes — {new Date(form.taskDate + "T12:00:00").toLocaleDateString("en-IN", { weekday: "long" })}</h3><p>Only your classes scheduled for the selected day are shown here.</p></div><span className="task-section-count">{weeklySchedule.length} classes on this day</span></div>
-        <div className="task-weekly-grid">
-          {weeklySchedule.map((item, index) => <article className="task-weekly-card" key={item.batchCode + "-" + item.day + "-" + item.startTime + "-" + index}>
-            <div className="task-weekly-card-top"><span className="task-weekly-day">{item.day || "Day not set"}</span><span className="task-weekly-time"><Clock3 size={14}/>{showTime(item.startTime, item.endTime)}</span></div>
-            <strong className="task-weekly-batch">{item.batchCode || item.batchName || "Batch"}{item.courseName ? " · " + item.courseName : ""}</strong>
-            <div className="task-weekly-meta">
-              {item.series && <span><BookOpen size={13}/>Series {item.series}</span>}
-              {item.slot && <span>Slot {item.slot}</span>}
-              <span><MapPin size={13}/>{item.room || "Room not assigned"}</span>
-            </div>
-          </article>)}
-          {!weeklySchedule.length && <div className="task-empty"><CalendarDays size={24}/><strong>No batch classes scheduled for this day</strong><span>There are no classes assigned to you for the selected day. Choose another date to view that day’s timetable.</span></div>}
-        </div>
-      </section>}
+      {attendanceRequired && <section className="task-employee-gate"><LockKeyhole size={22}/><div><strong>Attendance not marked</strong><p>New office task assignments are hidden until your attendance is marked Present or Half Day for this date. Your assigned batch classes remain visible in My assigned work below.</p></div></section>}
 
       {canAssign && <section className="task-panel task-create-panel">
         <div className="task-panel-heading"><div><span className="task-eyebrow">NEW WORK ITEM</span><h3>Create task assignment</h3><p>Choose a date and time. The employee list is filtered by attendance and existing commitments.</p></div><span className="task-panel-heading-icon"><Plus size={19}/></span></div>
@@ -213,7 +197,7 @@ export default function TaskAssignmentPage() {
       </section>}
 
       <section className="task-panel task-register-panel">
-        <div className="task-panel-heading"><div><span className="task-eyebrow">DAILY WORK PLAN</span><h3>{canAssign ? "Employee work register" : "My assigned work"}</h3><p>{canAssign ? "A separate timeline for each employee who is eligible for work on the selected date." : "Your assigned office tasks for the selected date are listed in time order."}</p></div><span className="task-section-count">{canAssign ? workRegister.length + " employees" : tasks.length + " tasks"}</span></div>
+        <div className="task-panel-heading"><div><span className="task-eyebrow">DAILY WORK PLAN</span><h3>{canAssign ? "Employee work register" : "My assigned work"}</h3><p>{canAssign ? "A separate timeline for each employee who is eligible for work on the selected date." : "Your office tasks and day-specific batch classes for the selected date are listed in time order."}</p></div><span className="task-section-count">{canAssign ? workRegister.length + " employees" : tasks.length + " tasks"}</span></div>
         {canAssign ? <div className="task-work-register">
           {workRegister.map((employee) => <article className="task-work-card" key={employee.employeeId}>
             <div className="task-work-card-head"><span className="task-employee-avatar">{String(employee.name || "E").split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase()}</span><div><strong>{employee.name}</strong><small>{employee.designation || employee.department || employee.employeeId}</small></div><span className="task-work-count">{employee.items.length} items</span></div>
