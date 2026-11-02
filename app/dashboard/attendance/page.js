@@ -1,47 +1,51 @@
 "use client";
 import{useEffect,useMemo,useState}from"react";
-import{Clock3,LogIn,LogOut,PauseCircle,PlayCircle,RefreshCw,CheckCircle2,TimerReset}from"lucide-react";
+import{Clock3,LogIn,LogOut,PauseCircle,PlayCircle,RefreshCw,CheckCircle2,TimerReset,Users,CalendarDays,Search,ShieldCheck,AlertCircle,ArrowUpRight,UserCheck,UserX,CalendarOff}from"lucide-react";
 import ERPLayout from"@/components/ERPLayout";
 
-const time=x=>x?new Date(x).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",second:"2-digit"}):"—";
+const time=x=>x?new Date(x).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"}):"—";
 const duration=n=>{n=Math.max(0,Number(n||0));return Math.floor(n/60)+"h "+String(n%60).padStart(2,"0")+"m"};
 const today=()=>new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata"}).format(new Date());
+const fmtDate=x=>x?new Date(x+"T12:00:00").toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"}):"";
+const statusClass=s=>String(s||"not-marked").toLowerCase().replace(/\s+/g,"-");
 
-function liveMinutes(record,now){
- if(!record?.punchIn)return 0;
- const total=record.punchOut?Number(record.totalMinutes||0):Math.max(0,Math.round((now-new Date(record.punchIn))/60000));
- const personal=(record.outTimes||[]).reduce((n,x)=>n+(x.end?Number(x.minutes||0):Math.max(0,Math.round((now-new Date(x.start))/60000))),0);
- return {total,work:Math.max(0,total-personal)};
+function EmployeeAttendanceCard({item,onMark,busy}){
+ const e=item.employee,r=item.record;
+ return <article className="att-employee-card">
+  <div className="att-employee-main"><div className="att-avatar">{String(e.name||"E").split(/\s+/).map(x=>x[0]).join("").slice(0,2).toUpperCase()}</div><div className="att-employee-identity"><strong>{e.name}</strong><span>{e.employeeId||"Employee ID pending"} · {e.designation||e.department||"Team member"}</span></div><span className={"att-status "+statusClass(item.status)}>{item.status}</span></div>
+  <div className="att-employee-stats"><div><span>Punch in</span><b>{time(r?.punchIn)}</b></div><div><span>Punch out</span><b>{time(r?.punchOut)}</b></div><div><span>Work time</span><b>{r?duration(r.workMinutes):"—"}</b></div><div><span>Out time</span><b>{r?(r.outTimes||[]).length:"—"}</b></div></div>
+  <div className="att-employee-actions">{["Present","Absent","Leave","Half Day"].map(s=><button key={s} disabled={busy||item.status===s} className={item.status===s?"selected":""} onClick={()=>onMark(e._id,s)}>{s}</button>)}</div>
+ </article>
 }
 
 export default function Attendance(){
- const[d,setD]=useState(null),[reason,setReason]=useState(""),[type,setType]=useState("Personal"),[error,setError]=useState(""),[busy,setBusy]=useState(false),[now,setNow]=useState(new Date());
- async function load(){const r=await fetch("/api/employee-attendance",{cache:"no-store"});if(r.status===401){location.href="/dashboard/login";return}setD(await r.json())}
- useEffect(()=>{load();const t=setInterval(()=>setNow(new Date()),1000);return()=>clearInterval(t)},[]);
- async function act(action){setBusy(true);setError("");try{const r=await fetch("/api/employee-attendance",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,reason,type})}),x=await r.json();if(!r.ok)setError(x.error||"Unable to complete action");else{setReason("");await load()}}finally{setBusy(false)}}
- const r=d?.record,calc=useMemo(()=>liveMinutes(r,now),[r,now]),activeOut=(r?.outTimes||[]).find(x=>!x.end);
+ const[d,setD]=useState(null),[team,setTeam]=useState([]),[summary,setSummary]=useState(null),[isManager,setIsManager]=useState(false),[reason,setReason]=useState(""),[type,setType]=useState("Personal"),[error,setError]=useState(""),[busy,setBusy]=useState(false),[now,setNow]=useState(new Date()),[date,setDate]=useState(today()),[query,setQuery]=useState(""),[filter,setFilter]=useState("All");
+ async function load(){const r=await fetch("/api/employee-attendance?date="+date,{cache:"no-store"});if(r.status===401){location.href="/dashboard/login";return}const x=await r.json();setD(x);if(x.teamAttendance){setIsManager(true);setTeam(x.teamAttendance);setSummary(x.summary)}else{setIsManager(false);setTeam([])}}
+ useEffect(()=>{load();const t=setInterval(()=>setNow(new Date()),1000);return()=>clearInterval(t)},[date]);
+ async function act(action,extra={}){setBusy(true);setError("");try{const r=await fetch("/api/employee-attendance",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,reason,type,...extra})}),x=await r.json();if(!r.ok)setError(x.error||"Unable to complete action");else{setReason("");await load()}}catch(e){setError("Network error. Please retry.")}finally{setBusy(false)}}
+ const r=d?.record,activeOut=(r?.outTimes||[]).find(x=>!x.end);
+ const elapsed=r?.punchIn?Math.max(0,Math.round((now-new Date(r.punchIn))/60000)):0;
+ const outMins=(r?.outTimes||[]).reduce((n,x)=>n+(x.end?Number(x.minutes||0):Math.max(0,Math.round((now-new Date(x.start))/60000))),0);
+ const work= r?.punchOut?Number(r.workMinutes||0):Math.max(0,elapsed-outMins);
+ const filtered=useMemo(()=>team.filter(x=>(x.employee.name+" "+x.employee.employeeId+" "+(x.employee.designation||"")).toLowerCase().includes(query.toLowerCase())&&(filter==="All"||x.status===filter)),[team,query,filter]);
+ if(isManager)return <ERPLayout active="/dashboard/attendance">
+  <header className="topbar att-topbar"><div><div className="crumb">People / Workforce operations</div><h1>Employee Attendance</h1></div><div className="att-head-actions"><label className="att-date-control"><CalendarDays size={16}/><input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label><button className="att-refresh" onClick={load}><RefreshCw size={16}/>Refresh</button></div></header>
+  <section className="att-management-hero"><div><span className="att-eyebrow">DAILY WORKFORCE CONTROL</span><h2>Attendance command center</h2><p>Review the daily attendance register, mark employee status and monitor punch times before assigning work.</p><div className="att-hero-date"><CalendarDays size={15}/>{fmtDate(date)} <span>·</span><ShieldCheck size={15}/> Management access</div></div><div className="att-hero-graphic"><div className="att-graphic-ring"><Users size={35}/></div><b>{summary?.marked||0}<small> / {summary?.total||0} marked</small></b><span>Today's attendance coverage</span></div></section>
+  <section className="att-summary-grid"><article><div className="att-summary-icon total"><Users/></div><span>Total employees</span><strong>{summary?.total??0}</strong><small>Active workforce</small></article><article><div className="att-summary-icon present"><UserCheck/></div><span>Present / Half day</span><strong>{summary?.present??0}</strong><small>Eligible for task allocation</small></article><article><div className="att-summary-icon absent"><UserX/></div><span>Absent</span><strong>{summary?.absent??0}</strong><small>Not eligible for new tasks</small></article><article><div className="att-summary-icon pending"><AlertCircle/></div><span>Not marked</span><strong>{summary?.notMarked??0}</strong><small>Excluded from Task Manager</small></article></section>
+  <section className="att-register-panel"><div className="att-register-heading"><div><span className="att-eyebrow">EMPLOYEE REGISTER</span><h3>Daily attendance records</h3><p>Mark attendance here. Employees without a marked Present or Half Day status are hidden from Task Assignment and their task list.</p></div><span className="att-coverage">{summary?.marked||0} / {summary?.total||0} marked</span></div>
+   <div className="att-register-tools"><div className="att-search"><Search size={16}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search employee name or ID"/></div><div className="att-filters">{["All","Present","Absent","Leave","Half Day","Not Marked"].map(s=><button key={s} className={filter===s?"active":""} onClick={()=>setFilter(s)}>{s}</button>)}</div></div>
+   <div className="att-team-grid">{filtered.map(x=><EmployeeAttendanceCard key={x.employee._id} item={x} busy={busy} onMark={(employeeId,status)=>act("setStatus",{employeeId,status})}/>)}{!filtered.length&&<div className="att-empty"><Users size={25}/><strong>No matching employee records</strong><span>Try another search or attendance filter.</span></div>}</div>
+  </section>
+  {error&&<div className="att-error"><AlertCircle size={16}/>{error}</div>}
+ </ERPLayout>;
+ const calc={total:elapsed,work};
  return <ERPLayout active="/dashboard/attendance">
-  <header className="topbar"><div><div className="crumb">Employee / Attendance</div><h1>My Attendance</h1></div><button className="icon-btn" onClick={load}><RefreshCw size={17}/></button></header>
-  <section className="attendance-hero"><div><span className="eyebrow">TODAY · {d?.date||today()}</span><h2>{d?.employee?.name||"Employee"}</h2><p>{d?.employee?.employeeId||""} · {r?.status||"Not marked"}</p></div><div className="live-clock"><Clock3 size={18}/><strong>{now.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}</strong></div></section>
-  <section className="attendance-punch-grid">
-   <div className="attendance-status-card"><span>Attendance status</span><strong>{r?.punchOut?"Completed":r?.punchIn?(activeOut?"Out / On return":"Working"):"Not punched in"}</strong><small>{r?.punchIn?"In "+time(r.punchIn)+(r.punchOut?" · Out "+time(r.punchOut):""):"Punch in to start your day"}</small></div>
-   <div className="attendance-status-card"><span>Effective work time</span><strong>{duration(calc.work)}</strong><small>Total elapsed {duration(calc.total)} · personal out-time deducted live</small></div>
-   <div className="attendance-status-card"><span>Current out-time</span><strong>{activeOut?duration(Math.max(0,Math.round((now-new Date(activeOut.start))/60000))):"None"}</strong><small>{activeOut?activeOut.type+" · "+activeOut.reason:"No active out-time"}</small></div>
-  </section>
-  <section className="attendance-actions">
-   <button disabled={busy||!!r?.punchIn} onClick={()=>act("punchIn")} className="punch-btn in"><LogIn/>Punch In</button>
-   <button disabled={busy||!r?.punchIn||!!r?.punchOut||!!activeOut} onClick={()=>act("punchOut")} className="punch-btn out"><LogOut/>Punch Out</button>
-  </section>
-  <section className="panel out-time-panel">
-   <div className="panel-head"><div><h3>Out Time / Return</h3><p>Start an official or personal out-time, then press Return when you come back. The timer stops immediately and the return time is saved.</p></div>{activeOut?<span className="badge"><TimerReset size={13}/> Active now</span>:<span className="badge"><CheckCircle2 size={13}/> Ready</span>}</div>
-   <div className="out-time-form">
-    <select value={type} onChange={x=>setType(x.target.value)} disabled={!!activeOut||!!r?.punchOut}><option>Personal</option><option>Official</option></select>
-    <input value={reason} onChange={x=>setReason(x.target.value)} placeholder="Reason for going out" disabled={!!activeOut||!!r?.punchOut}/>
-    <button disabled={busy||!r?.punchIn||!!r?.punchOut||!!activeOut||!reason.trim()} onClick={()=>act("startOut")}><PauseCircle size={16}/> Start Out</button>
-    <button disabled={busy||!activeOut||!!r?.punchOut} onClick={()=>act("endOut")}><PlayCircle size={16}/> Return</button>
-   </div>
-   {error&&<div className="error-msg">{error}</div>}
-   <div className="out-time-list">{(r?.outTimes||[]).map((x,i)=><div key={i}><strong>{x.type}</strong><span>{x.reason}</span><span>{time(x.start)} — {x.end?time(x.end):"Active now"}</span><b>{x.end?duration(x.minutes):duration(Math.max(0,Math.round((now-new Date(x.start))/60000)))}</b></div>)}{!(r?.outTimes||[]).length&&<div className="empty">No out-time records today.</div>}</div>
-  </section>
- </ERPLayout>
+  <header className="topbar att-topbar"><div><div className="crumb">My workspace / Time & attendance</div><h1>My Attendance</h1></div><button className="att-refresh" onClick={load}><RefreshCw size={16}/>Refresh</button></header>
+  <section className="att-personal-hero"><div><span className="att-eyebrow">PERSONAL TIMEKEEPING · {fmtDate(d?.date||date)}</span><h2>{d?.employee?.name||"Employee workspace"}</h2><p>{d?.employee?.employeeId||"Employee"} <span>·</span> {r?.status||"Attendance not marked"}</p><div className="att-live-indicator"><i/>Live attendance clock</div></div><div className="att-live-clock"><span>LOCAL TIME</span><strong>{now.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}</strong><small>Asia / Kolkata</small></div></section>
+  <section className="att-personal-metrics"><article><span>Attendance status</span><strong>{r?.punchOut?"Completed":r?.punchIn?(activeOut?"Out of office":"Working"):"Not punched in"}</strong><small>{r?.punchIn?"In "+time(r.punchIn)+(r.punchOut?" · Out "+time(r.punchOut):""):"Punch in to begin your workday"}</small></article><article><span>Effective work duration</span><strong>{duration(calc.work)}</strong><small>Excludes recorded out-time</small></article><article><span>Total elapsed time</span><strong>{duration(calc.total)}</strong><small>Since first punch in</small></article><article><span>Current out-time</span><strong>{activeOut?duration(Math.max(0,Math.round((now-new Date(activeOut.start))/60000))):"None"}</strong><small>{activeOut?activeOut.type+" · "+activeOut.reason:"No active out-time"}</small></article></section>
+  <section className="att-action-layout"><div className="att-action-card"><div className="att-card-title"><div><span className="att-eyebrow">TIME CLOCK</span><h3>Start or end your day</h3></div><Clock3/></div><div className="att-punch-actions"><button className="att-punch-in" disabled={busy||!!r?.punchIn} onClick={()=>act("punchIn")}><LogIn size={19}/><span><b>Punch In</b><small>Start work session</small></span></button><button className="att-punch-out" disabled={busy||!r?.punchIn||!!r?.punchOut||!!activeOut} onClick={()=>act("punchOut")}><LogOut size={19}/><span><b>Punch Out</b><small>End work session</small></span></button></div><div className="att-punch-foot"><CheckCircle2 size={15}/>Your work duration updates live and recorded out-time is deducted.</div></div>
+  <div className="att-action-card"><div className="att-card-title"><div><span className="att-eyebrow">BREAK & OUT-TIME</span><h3>Out of office / Return</h3></div><TimerReset/></div><div className="att-out-form"><select value={type} onChange={e=>setType(e.target.value)} disabled={!!activeOut||!!r?.punchOut}><option>Personal</option><option>Official</option></select><input value={reason} onChange={e=>setReason(e.target.value)} placeholder="Reason for going out" disabled={!!activeOut||!!r?.punchOut}/><button disabled={busy||!r?.punchIn||!!r?.punchOut||!!activeOut||!reason.trim()} onClick={()=>act("startOut")}><PauseCircle size={16}/>Start Out</button><button disabled={busy||!activeOut||!!r?.punchOut} onClick={()=>act("endOut")}><PlayCircle size={16}/>Return</button></div><div className="att-punch-foot">{activeOut?<><AlertCircle size={15}/> {activeOut.type} out-time is running. Return to stop it.</>:<><CheckCircle2 size={15}/>No active out-time session.</>}</div></div></section>
+  <section className="att-history-card"><div className="att-register-heading"><div><span className="att-eyebrow">TODAY'S ACTIVITY</span><h3>Out-time history</h3><p>Every departure and return is recorded against your attendance.</p></div><span className="att-coverage">{(r?.outTimes||[]).length} records</span></div><div className="att-history-list">{(r?.outTimes||[]).map((x,i)=><div className="att-history-row" key={i}><div className="att-history-icon"><ArrowUpRight size={17}/></div><div><strong>{x.reason||"Out-time"}</strong><span>{x.type} · {time(x.start)} to {x.end?time(x.end):"Active now"}</span></div><b>{x.end?duration(x.minutes):duration(Math.max(0,Math.round((now-new Date(x.start))/60000)))}</b></div>)}{!(r?.outTimes||[]).length&&<div className="att-empty">No out-time activity has been recorded today.</div>}</div></section>
+  {error&&<div className="att-error"><AlertCircle size={16}/>{error}</div>}
+ </ERPLayout>;
 }
