@@ -86,7 +86,7 @@ export async function GET(req){
    const weeklySchedule=batches.flatMap(batch=>(batch.schedules||[])
     .filter(schedule=>String(schedule.facultyId||"")===employeeId)
     .map(schedule=>{
-     const parts=String(schedule.time||"").split(/\\s*(?:-|–|to)\\s*/i);
+     const parts=String(schedule.time||"").split(/\s*(?:-|–|to)\s*/i);
      return {
       type:"batch",
       day:schedule.day||"",
