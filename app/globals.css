@@ -1025,3 +1025,5 @@ td{font-size:11px}
 .att-status.holiday{background:#eef3f8;color:#61758c}
 @media(max-width:760px){.registration-form{margin:16px 0 25px;border-radius:14px}.registration-form .form-intro{padding:23px}.registration-form .form-section{padding:20px}.registration-form .form-actions{padding:16px 20px}.registration-form .form-grid.four,.registration-form .form-grid.three{grid-template-columns:repeat(2,minmax(0,1fr))}.registration-form .qualification-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:520px){.registration-form .form-grid.four,.registration-form .form-grid.three,.registration-form .form-grid.two{grid-template-columns:1fr}.registration-form .form-actions{align-items:stretch;flex-direction:column}.registration-form .form-actions>*{justify-content:center}}
+
+.task-availability-status.pending{background:#f1f3f7;color:#78869a}
