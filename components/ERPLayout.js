@@ -39,7 +39,8 @@ const navGroups = [
 
 export default function ERPLayout({ active, children, hideAssistant = true }) {
   const [open, setOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);\n  const [collapsedGroups, setCollapsedGroups] = useState({});
+  const [collapsed, setCollapsed] = useState(false);
+  const [collapsedGroups, setCollapsedGroups] = useState({});
   const [user, setUser] = useState(null);
 
   useEffect(() => {
