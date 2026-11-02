@@ -119,18 +119,21 @@ async function validateSchedule({ series, facultyIds = [], scheduleFacultyAssign
         ? { _id:{ $ne:excludeBatchId } } : {})
     }).select("batchCode name schedules").lean();
 
+    const assignedIdForSlot = slot => {
+      const explicit=String(scheduleFacultyAssignments[`${slot.day}|${slot.series}`]||"");
+      return explicit&&facultyById.has(explicit)?explicit:facultyForDay(slot.day);
+    };
     const facultyConflicts = [];
     for (const batch of facultyBatches) {
       for (const existingSlot of batch.schedules || []) {
-        if (selectedHours.some(x => x.day === existingSlot.day && x.time === existingSlot.time && ids.includes(existingSlot.facultyId))) {
-          facultyConflicts.push({
-            batchCode:batch.batchCode,
-            batchName:batch.name,
-            day:existingSlot.day,
-            time:existingSlot.time,
-            series:existingSlot.series
-          });
-        }
+        const hit=schedules.find(slot=>slot.day===existingSlot.day&&slot.time===existingSlot.time&&assignedIdForSlot(slot)===String(existingSlot.facultyId||""));
+        if (hit) facultyConflicts.push({
+          batchCode:batch.batchCode,
+          batchName:batch.name,
+          day:existingSlot.day,
+          time:existingSlot.time,
+          series:existingSlot.series
+        });
       }
     }
     if (facultyConflicts.length) {
