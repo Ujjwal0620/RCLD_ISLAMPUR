@@ -1027,3 +1027,17 @@ td{font-size:11px}
 @media(max-width:520px){.registration-form .form-grid.four,.registration-form .form-grid.three,.registration-form .form-grid.two{grid-template-columns:1fr}.registration-form .form-actions{align-items:stretch;flex-direction:column}.registration-form .form-actions>*{justify-content:center}}
 
 .task-availability-status.pending{background:#f1f3f7;color:#78869a}
+
+
+/* Employee weekly batch timetable */
+.task-weekly-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:18px 21px 21px}
+.task-weekly-card{min-width:0;padding:15px;border:1px solid #e3eaf2;border-radius:13px;background:linear-gradient(135deg,#fbfcff,#fff)}
+.task-weekly-card-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.task-weekly-day{padding:6px 9px;border-radius:8px;background:#eaf7f1;color:#16885c;font-size:9px;font-weight:900}
+.task-weekly-time{display:flex;align-items:center;gap:6px;color:#536176;font-size:9px;font-weight:850}
+.task-weekly-time svg{color:#687de5}
+.task-weekly-batch{display:block;color:#29394f;font-size:11px;line-height:1.5}
+.task-weekly-meta{display:flex;align-items:center;flex-wrap:wrap;gap:8px 13px;margin-top:10px;padding-top:10px;border-top:1px solid #edf0f4}
+.task-weekly-meta span{display:flex;align-items:center;gap:5px;color:#8995a7;font-size:8px}
+.task-weekly-meta svg{color:#8796ad}
+@media(max-width:700px){.task-weekly-grid{grid-template-columns:1fr;padding:13px}}
