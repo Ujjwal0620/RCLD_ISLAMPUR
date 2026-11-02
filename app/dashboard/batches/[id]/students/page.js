@@ -5,7 +5,7 @@ import ERPLayout from "@/components/ERPLayout";
 
 export default function BatchStudentsPage({params}){
   const [batchId,setBatchId]=useState(""),[batch,setBatch]=useState(null),[students,setStudents]=useState([]),[allBatches,setAllBatches]=useState([]);
-  const [date,setDate]=useState(new Date().toISOString().slice(0,10)),[subject,setSubject]=useState(""),[markedBy,setMarkedBy]=useState(""),[viewer,setViewer]=useState(null),[stats,setStats]=useState({});
+  const [date,setDate]=useState(new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Kolkata"})),[subject,setSubject]=useState(""),[markedBy,setMarkedBy]=useState(""),[viewer,setViewer]=useState(null),[stats,setStats]=useState({});
   const [loading,setLoading]=useState(true),[savingAttendance,setSavingAttendance]=useState(false),[message,setMessage]=useState(""),[attendance,setAttendance]=useState({}),[payments,setPayments]=useState({}),[savingFee,setSavingFee]=useState({});
   const [contact,setContact]=useState({}),[savingContact,setSavingContact]=useState({});
   const [openMenu,setOpenMenu]=useState(""),[movement,setMovement]=useState(null),[movementRemark,setMovementRemark]=useState(""),[moving,setMoving]=useState(false);
@@ -19,7 +19,7 @@ export default function BatchStudentsPage({params}){
       const next={};(data.students||[]).forEach(s=>{next[s._id]=s.attendance?.status||""});setAttendance(next);
     }catch(e){setMessage(e.message)}finally{setLoading(false)}
   }
-  useEffect(()=>{(async()=>{const {id}=await params;setBatchId(id);const mr=await fetch("/api/auth/me",{cache:"no-store"});const md=await mr.json();if(mr.ok){setViewer(md.user);setMarkedBy(md.user.role);}const br=await fetch("/api/batches",{cache:"no-store"});const bd=await br.json();if(br.ok)setAllBatches(bd.batches||[]);await load(id)})()},[params]);
+  useEffect(()=>{(async()=>{const {id}=await params;setBatchId(id);const requestedDate=new URLSearchParams(window.location.search).get("date");const initialDate=requestedDate||date;if(requestedDate)setDate(requestedDate);const mr=await fetch("/api/auth/me",{cache:"no-store"});const md=await mr.json();if(mr.ok){setViewer(md.user);setMarkedBy(md.user.role);}const br=await fetch("/api/batches",{cache:"no-store"});const bd=await br.json();if(br.ok)setAllBatches(bd.batches||[]);await load(id,initialDate)})()},[params]);
   useEffect(()=>{if(batchId)load(batchId,date)},[date]);
   useEffect(()=>{const close=()=>setOpenMenu("");window.addEventListener("click",close);return()=>window.removeEventListener("click",close)},[]);
 
@@ -75,7 +75,7 @@ export default function BatchStudentsPage({params}){
   ];
 
   return <ERPLayout active="/dashboard/batches">
-    <header className="topbar"><div><div className="crumb">Batches / {batch?.batchCode||"Students"}</div><h1>{batch?.batchCode||"Batch Students"}</h1></div><div className="top-actions"><a className="ghost-btn" href={"/dashboard/batches/"+batchId}><ArrowLeft size={16}/> Back to Batch</a></div></header>
+    <header className="topbar"><div><div className="crumb">Batches / {batch?.batchCode||"Students"}</div><h1>{batch?.batchCode||"Batch Students"}</h1></div><div className="top-actions"><a className="ghost-btn" href={"/dashboard/batches/"+batchId+"?date="+date}><ArrowLeft size={16}/> Back to Batch</a></div></header>
     {loading?<section className="panel"><div className="empty">Loading batch students…</div></section>:<main>
       <section className="welcome"><div><span className="eyebrow">{batch?.batchCode}</span><h2>{batch?.courseCode} — {batch?.courseName}</h2><p>Batch Register · Attendance, student profile, contact follow-up, fees and controlled batch movement.</p><p><strong>Faculty today:</strong> {batch?.activeFaculty?.name||batch?.facultyName||"Unassigned"}{batch?.primaryFacultyOffDay?" · backup faculty shown because primary faculty has an off day":""}</p></div><div className="top-actions"><span className="badge">{students.length}/{batch?.capacity||50} students</span></div></section>
 
