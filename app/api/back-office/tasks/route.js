@@ -81,7 +81,7 @@ export async function GET(req){
   if(!isManager){
    const eligible=eligibleRows.length>0;
    const employeeId=String(g.session.employeeId);
-   const tasks=eligible?allTasks.filter(t=>(t.assignments||[]).some(a=>String(a.employeeId)===employeeId)||String(t.assignedTo)===employeeId):[];
+   const tasks=allTasks.filter(t=>(t.assignments||[]).some(a=>String(a.employeeId)===employeeId)||String(t.assignedTo)===employeeId);
    // Recurring batch classes are an employee's timetable, not ad-hoc tasks.
    // Keep them visible regardless of punch-in status so staff can plan their week.
    const selectedDay=new Date(date+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",timeZone:"Asia/Kolkata"});
@@ -112,7 +112,7 @@ export async function GET(req){
   const eligibleIds=new Set(eligibleRows.map(a=>String(a.employeeId)));
   const eligibleEmployees=employees.filter(e=>eligibleIds.has(String(e._id)));
   const eligibleEmployeeIds=new Set(eligibleEmployees.map(e=>String(e.employeeId)));
-  const visibleTasks=allTasks.filter(t=>(t.assignments||[]).some(a=>eligibleEmployeeIds.has(String(a.employeeId)))||eligibleEmployeeIds.has(String(t.assignedTo)));
+  // Keep the manager record complete: attendance controls new assignment eligibility, not visibility of existing task records.\n  const visibleTasks=allTasks;
   const employeeAvailability=employeeAssignments(eligibleEmployees,batches,visibleTasks,date,startTime,endTime);
   const availableEmployees=employeeAvailability.filter(e=>e.available);
   const dayName=new Date(date+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",timeZone:"Asia/Kolkata"});
@@ -121,7 +121,7 @@ export async function GET(req){
    const parts=String(s.time||"").split(/\s*(?:-|–|to)\s*/i);
    return {batchId:String(batch._id),batchCode:batch.batchCode||"",batchName:batch.name||"",courseName:batch.courseName||"",day:s.day,series:s.series||"",time:s.time||"",startTime:parts.length>1?to24(parts[0]):"",endTime:parts.length>1?to24(parts[1]):"",facultyId:s.facultyId||"",facultyName:s.facultyName||"",room:s.room||""};
   }));
-  const workRegister=eligibleEmployees.map(e=>{const id=String(e.employeeId),items=[];for(const b of batches){for(const s of b.schedules||[]){if(s.day!==dayName||String(s.facultyId)!==id)continue;const parts=String(s.time||"").split(/\s*(?:-|–|to)\s*/i);if(parts.length<2)continue;items.push({type:"batch",title:(b.batchCode||b.name||"Batch")+(b.courseName?" · "+b.courseName:""),startTime:to24(parts[0]),endTime:to24(parts[1]),room:s.room||"",workArea:s.room||""});}}for(const t of allTasks){for(const as of t.assignments||[]){if(String(as.employeeId)===id)items.push({type:"task",title:t.title,startTime:t.startTime,endTime:t.endTime,workArea:t.workArea,status:t.status});}if(String(t.assignedTo)===id&&!(t.assignments||[]).some(x=>String(x.employeeId)===id))items.push({type:"task",title:t.title,startTime:t.startTime,endTime:t.endTime,workArea:t.workArea,status:t.status});}items.sort((x,y)=>String(x.startTime).localeCompare(String(y.startTime)));return {...e,present:true,replacementNeeded:false,items};});
+  const workRegister=employees.map(e=>{const id=String(e.employeeId),items=[];for(const b of batches){for(const s of b.schedules||[]){if(s.day!==dayName||String(s.facultyId)!==id)continue;const parts=String(s.time||"").split(/\s*(?:-|–|to)\s*/i);if(parts.length<2)continue;items.push({type:"batch",title:(b.batchCode||b.name||"Batch")+(b.courseName?" · "+b.courseName:""),startTime:to24(parts[0]),endTime:to24(parts[1]),room:s.room||"",workArea:s.room||""});}}for(const t of allTasks){for(const as of t.assignments||[]){if(String(as.employeeId)===id)items.push({type:"task",title:t.title,startTime:t.startTime,endTime:t.endTime,workArea:t.workArea,status:t.status});}if(String(t.assignedTo)===id&&!(t.assignments||[]).some(x=>String(x.employeeId)===id))items.push({type:"task",title:t.title,startTime:t.startTime,endTime:t.endTime,workArea:t.workArea,status:t.status});}items.sort((x,y)=>String(x.startTime).localeCompare(String(y.startTime)));return {...e,present:eligibleIds.has(String(e._id)),replacementNeeded:false,items};});
   return NextResponse.json({tasks:visibleTasks,availableEmployees,employeeAvailability,workRegister,availableBatchClasses,scheduledWorkAreas,date,canAssign:true,attendanceRequired:false,excludedWithoutAttendance:employees.length-eligibleEmployees.length}); }catch(e){return NextResponse.json({error:"Unable to load Task Assignment.",detail:e.message},{status:500});}
 }
 export async function POST(req){
