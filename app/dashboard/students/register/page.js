@@ -23,6 +23,8 @@ function Field({ label, name, value, onChange, required, type = "text", maxLengt
         onChange={(e) => onChange(name, e.target.value)}
         required={required}
         maxLength={maxLength}
+        inputMode={inputMode}
+        pattern={pattern}
         autoComplete="off"
       />
     </label>
