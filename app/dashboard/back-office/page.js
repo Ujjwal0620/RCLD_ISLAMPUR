@@ -79,7 +79,7 @@ export default function TaskAssignmentPage() {
 
   function chooseSlot(value) {
     const [startTime, endTime] = value ? value.split("|") : ["", ""];
-    setForm((current) => ({ ...current, startTime, endTime, employeeIds: [], batchId: "", scheduleSeries: "" }));
+    setForm((current) => ({ ...current, startTime, endTime, employeeIds: [], title: current.batchId ? "" : current.title, batchId: "", scheduleSeries: "" }));
   }
 
   function toggleEmployee(id) {
