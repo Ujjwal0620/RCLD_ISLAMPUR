@@ -27,16 +27,6 @@ function to24(raw){
  if(m){let h=Number(m[1]);if(m[3].toLowerCase()==="pm"&&h!==12)h+=12;if(m[3].toLowerCase()==="am"&&h===12)h=0;return String(h).padStart(2,"0")+":"+m[2];}
  m=s.match(/(\d{1,2}):(\d{2})/);return m?String(Number(m[1])).padStart(2,"0")+":"+m[2]:"";
 }
-function batchAssociatedIds(batches){
- const ids=new Set();
- for(const batch of batches){
-  if(batch.facultyId)ids.add(String(batch.facultyId));
-  for(const id of batch.facultyIds||[])if(id)ids.add(String(id));
-  for(const a of batch.staffAssignments||[])if(a.employeeId)ids.add(String(a.employeeId));
-  for(const s of batch.schedules||[])if(s.facultyId)ids.add(String(s.facultyId));
- }
- return ids;
-}
 function batchBusyIds(batches,date,startTime,endTime){
  const day=new Date(date+"T12:00:00").toLocaleDateString("en-US",{weekday:"long",timeZone:"Asia/Kolkata"});
  const busy=new Set();
