@@ -69,7 +69,7 @@ export async function GET(req){
   const [allTasks,employees,batches]=await Promise.all([
    BackOfficeTask.find({taskDate:date}).sort({startTime:1,createdAt:-1}).lean(),
    isManager?Employee.find({status:{$ne:"Inactive"}}).select("employeeId name designation department").sort({name:1}).lean():Promise.resolve([]),
-   isManager?Batch.find({status:{$in:["Draft","Active"]}}).select("batchCode name facultyId facultyIds facultyName facultyNames staffAssignments schedules").lean():Promise.resolve([])
+   Batch.find({status:{$in:["Draft","Active"]}}).select("batchCode name courseName courseCode facultyId facultyIds facultyName facultyNames staffAssignments schedules").lean()
   ]);
   // Attendance is the eligibility gate for the task manager.
   const attendanceRows=isManager
@@ -79,8 +79,31 @@ export async function GET(req){
    .filter(a=>["Present","Half Day"].includes(a.status)&&!a.punchOut);
   if(!isManager){
    const eligible=eligibleRows.length>0;
-   const tasks=eligible?allTasks.filter(t=>(t.assignments||[]).some(a=>a.employeeId===g.session.employeeId)||t.assignedTo===g.session.employeeId):[];
-   return NextResponse.json({tasks,availableEmployees:[],employeeAvailability:[],date,canAssign:false,attendanceRequired:!eligible});
+   const employeeId=String(g.session.employeeId);
+   const tasks=eligible?allTasks.filter(t=>(t.assignments||[]).some(a=>String(a.employeeId)===employeeId)||String(t.assignedTo)===employeeId):[];
+   // Recurring batch classes are an employee's timetable, not ad-hoc tasks.
+   // Keep them visible regardless of punch-in status so staff can plan their week.
+   const weeklySchedule=batches.flatMap(batch=>(batch.schedules||[])
+    .filter(schedule=>String(schedule.facultyId||"")===employeeId)
+    .map(schedule=>{
+     const parts=String(schedule.time||"").split(/\\s*(?:-|–|to)\\s*/i);
+     return {
+      type:"batch",
+      day:schedule.day||"",
+      time:schedule.time||"",
+      startTime:parts.length>1?to24(parts[0]):"",
+      endTime:parts.length>1?to24(parts[1]):"",
+      batchCode:batch.batchCode||"",
+      batchName:batch.name||"",
+      courseName:batch.courseName||"",
+      courseCode:batch.courseCode||"",
+      series:schedule.series||"",
+      slot:schedule.slot||"",
+      room:schedule.room||""
+     };
+    }))
+    .sort((a,b)=>["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].indexOf(a.day)-["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].indexOf(b.day)||a.startTime.localeCompare(b.startTime));
+   return NextResponse.json({tasks,weeklySchedule,availableEmployees:[],employeeAvailability:[],date,canAssign:false,attendanceRequired:!eligible});
   }
   const eligibleIds=new Set(eligibleRows.map(a=>String(a.employeeId)));
   const eligibleEmployees=employees.filter(e=>eligibleIds.has(String(e._id)));
