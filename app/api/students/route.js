@@ -93,6 +93,7 @@ export async function POST(request) {
     if (!/^\d{12}$/.test(aadhaarNumber)) return NextResponse.json({ error: "Aadhaar number must contain exactly 12 digits." }, { status: 400 });
     let referralFields = { referralId: "", referralName: "", marketingEmployeeId: "", marketingEmployeeName: "" };
     if (body.referralId) {
+      if (!mongoose.Types.ObjectId.isValid(String(body.referralId))) return NextResponse.json({ error: "Invalid referral selection." }, { status: 400 });
       const referral = await Referral.findOne({ _id: body.referralId, status: "Active" }).lean();
       if (!referral) return NextResponse.json({ error: "Selected referral is no longer active. Refresh the referral list." }, { status: 400 });
       referralFields = { referralId: String(referral._id), referralName: referral.name, marketingEmployeeId: referral.marketingEmployeeId, marketingEmployeeName: referral.marketingEmployeeName };
