@@ -85,7 +85,7 @@ export async function GET(req){
    ? await Attendance.find({date,employeeId:{$in:employees.map(e=>e._id)}}).select("employeeId status punchIn punchOut").lean()
    : await Attendance.findOne({date,employeeId:g.session.sub}).select("status punchIn punchOut").lean();
   const eligibleRows=(Array.isArray(attendanceRows)?attendanceRows:attendanceRows?[attendanceRows]:[])
-   .filter(a=>["Present","Half Day"].includes(a.status));
+   .filter(a=>["Present","Half Day"].includes(a.status)&&!a.punchOut);
   if(!isManager){
    const eligible=eligibleRows.length>0;
    const tasks=eligible?allTasks.filter(t=>(t.assignments||[]).some(a=>a.employeeId===g.session.employeeId)||t.assignedTo===g.session.employeeId):[];
@@ -118,7 +118,7 @@ export async function POST(req){
   ]);
   if(employees.length!==ids.length)return NextResponse.json({error:"One or more selected employees are unavailable."},{status:409});
   const attendanceRows=await Attendance.find({date:taskDate,employeeId:{$in:employees.map(e=>e._id)}}).select("employeeId status").lean();
-  const eligibleIds=new Set(attendanceRows.filter(a=>["Present","Half Day"].includes(a.status)).map(a=>String(a.employeeId)));
+  const eligibleIds=new Set(attendanceRows.filter(a=>["Present","Half Day"].includes(a.status)&&!a.punchOut).map(a=>String(a.employeeId)));
   const notMarked=employees.filter(e=>!eligibleIds.has(String(e._id)));
   if(notMarked.length)return NextResponse.json({error:"Task assignment blocked. Mark attendance as Present or Half Day before assigning work.",employees:notMarked.map(e=>e.name)},{status:409});
   const batchAssociated=batchAssociatedIds(batches);
