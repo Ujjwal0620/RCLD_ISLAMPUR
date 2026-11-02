@@ -68,7 +68,7 @@ export async function PATCH(req,{params}){
     const email=String(body.email ?? "").trim().toLowerCase();
     const aadhaarNumber=String(body.aadhaarNumber ?? "").replace(/\D/g, "");
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return NextResponse.json({error:"A valid email address is mandatory."},{status:400});
-    if(!/^\\d{12}$/.test(aadhaarNumber))return NextResponse.json({error:"Aadhaar number must contain exactly 12 digits."},{status:400});
+    if(!/^\d{12}$/.test(aadhaarNumber))return NextResponse.json({error:"Aadhaar number must contain exactly 12 digits."},{status:400});
     update.email=email;update.aadhaarNumber=aadhaarNumber;
     if(body.referralId!==undefined){
       if(!body.referralId){update.referralId="";update.referralName="";update.marketingEmployeeId="";update.marketingEmployeeName="";}
