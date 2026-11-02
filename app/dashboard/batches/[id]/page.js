@@ -100,7 +100,7 @@ export default function BatchDetailPage({params}){
     </div>
 
     {editing&&<section className="panel">
-      <div className="panel-head"><div><h3>Edit Batch & Timetable</h3><p>Changing series or faculty is blocked when it conflicts with another active/draft batch or faculty schedule.</p></div><span className="badge">{selectedSeries.length}/{batch.classFrequency} series</span></div>
+      <div className="panel-head"><div><h3>Edit Batch Details</h3><p>Batch metadata can be updated here. Day-wise faculty assignments remain preserved; use Task Manager to assign a dated substitute.</p></div><span className="badge">{selectedSeries.length}/{batch.classFrequency} series</span></div>
       <div className="form-grid four" style={{padding:"18px 20px"}}>
         <label className="form-field"><span>Batch Name</span><input value={batch.name||""} onChange={e=>setBatch({...batch,name:e.target.value})}/></label>
         <label className="form-field"><span>Capacity</span><input type="number" min="1" value={batch.capacity||50} onChange={e=>setBatch({...batch,capacity:e.target.value})}/></label>
