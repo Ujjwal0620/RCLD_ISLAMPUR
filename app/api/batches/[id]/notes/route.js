@@ -20,6 +20,8 @@ export async function POST(req,{params}){
   const file=form.get("file"),topicId=String(form.get("topicId")||""),workDate=String(form.get("date")||new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Kolkata"}));
   if(!file||typeof file.arrayBuffer!=="function"||!topicId)return NextResponse.json({error:"Choose a notes file and topic."},{status:400});
   if(file.size>15*1024*1024)return NextResponse.json({error:"Notes file must be 15 MB or smaller."},{status:413});
+  const extension=String(file.name||"").split(".").pop().toLowerCase();
+  if(!["pdf","doc","docx","ppt","pptx","jpg","jpeg","png"].includes(extension))return NextResponse.json({error:"Upload PDF, Word, PowerPoint or image notes only."},{status:415});
   const batch=await Batch.findById(id).lean();
   if(!batch)return NextResponse.json({error:"Batch not found."},{status:404});
   const manager=["superadmin","office-admin"].includes(session.role);
