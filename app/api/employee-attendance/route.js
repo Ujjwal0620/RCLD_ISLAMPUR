@@ -30,7 +30,7 @@ export async function GET(req){
   const target=canManageAttendance(s.role)&&q.get("employeeId")?q.get("employeeId"):s.sub;
   if(q.get("history")==="1"){
    const month=String(q.get("month")||nowDate().slice(0,7));
-   if(!/^\\d{4}-\\d{2}$/.test(month))return NextResponse.json({error:"Month must use YYYY-MM format."},{status:400});
+   if(!/^\d{4}-\d{2}$/.test(month))return NextResponse.json({error:"Month must use YYYY-MM format."},{status:400});
    const history=await Attendance.find({employeeId:s.sub,date:new RegExp("^"+month)}).sort({date:-1}).lean();
    return NextResponse.json({month,history:history.map(record=>({...record,...calculateTimes(record)}))});
   }
