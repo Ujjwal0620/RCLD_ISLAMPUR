@@ -8,14 +8,14 @@ export default function BatchStudentsPage({params}){
   const [date,setDate]=useState(new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Kolkata"})),[subject,setSubject]=useState(""),[markedBy,setMarkedBy]=useState(""),[viewer,setViewer]=useState(null),[stats,setStats]=useState({});
   const [loading,setLoading]=useState(true),[savingAttendance,setSavingAttendance]=useState(false),[message,setMessage]=useState(""),[attendance,setAttendance]=useState({}),[payments,setPayments]=useState({}),[savingFee,setSavingFee]=useState({});
   const [contact,setContact]=useState({}),[savingContact,setSavingContact]=useState({});
-  const [openMenu,setOpenMenu]=useState(""),[movement,setMovement]=useState(null),[movementRemark,setMovementRemark]=useState(""),[moving,setMoving]=useState(false);
+  const [openMenu,setOpenMenu]=useState(""),[movement,setMovement]=useState(null),[movementRemark,setMovementRemark]=useState(""),[moving,setMoving]=useState(false),[selectedStudentIds,setSelectedStudentIds]=useState([]),[bulkTargetBatchId,setBulkTargetBatchId]=useState(""),[bulkTransferRemark,setBulkTransferRemark]=useState(""),[bulkMoving,setBulkMoving]=useState(false);
 
   async function load(id,d=date){
     setLoading(true);setMessage("");
     try{
       const r=await fetch("/api/batches/"+id+"/roster?date="+encodeURIComponent(d),{cache:"no-store"}),data=await r.json();
       if(!r.ok)throw new Error(data.error||"Unable to load batch students.");
-      setBatch(data.batch);setStudents(data.students||[]);setStats(data.stats||{});
+      setBatch(data.batch);setStudents(data.students||[]);setSelectedStudentIds([]);setStats(data.stats||{});
       const next={};(data.students||[]).forEach(s=>{next[s._id]=s.attendance?.status||""});setAttendance(next);
     }catch(e){setMessage(e.message)}finally{setLoading(false)}
   }
@@ -65,6 +65,18 @@ export default function BatchStudentsPage({params}){
       setMovement(null);setMovementRemark("");setOpenMenu("");setMessage(d.message||"Student movement saved.");await load(batchId,date);
     }catch(e){alert(e.message)}finally{setMoving(false)}
   }
+  async function transferSelectedStudents(){
+    if(!selectedStudentIds.length)return alert("Select at least one student.");
+    if(!bulkTargetBatchId)return alert("Select the destination batch.");
+    if(!bulkTransferRemark.trim())return alert("Enter a transfer remark.");
+    if(!confirm("Transfer "+selectedStudentIds.length+" selected student(s) to the chosen batch?"))return;
+    setBulkMoving(true);
+    try{
+      const r=await fetch("/api/batches/"+batchId+"/transfer-students",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({studentIds:selectedStudentIds,toBatchId:bulkTargetBatchId,remark:bulkTransferRemark})});
+      const d=await r.json();if(!r.ok)throw new Error(d.error||"Unable to transfer selected students.");
+      setSelectedStudentIds([]);setBulkTargetBatchId("");setBulkTransferRemark("");setMessage(d.message||"Selected students transferred.");await load(batchId,date);
+    }catch(e){alert(e.message)}finally{setBulkMoving(false)}
+  }
   const canManage=["superadmin","office-admin"].includes(viewer?.role);
   const shiftBatches=allBatches.filter(b=>String(b._id)!==String(batchId)&&["Draft","Active"].includes(b.status)&&((String(b.courseCode||"").toUpperCase()===String(batch?.courseCode||"").toUpperCase())||(String(b.courseName||"").trim()===String(batch?.courseName||"").trim())));
   const statCards=[
@@ -83,10 +95,19 @@ export default function BatchStudentsPage({params}){
 
       <section className="panel">
         <div className="panel-head"><div><h3>Batch Attendance Sheet</h3><p>Mark attendance for the selected date. Click a mobile number to start a call; call remark and general remarks are saved separately for follow-up history.</p></div><div className="top-actions"><label className="form-field" style={{margin:0}}><span>Date</span><input type="date" value={date} onChange={e=>setDate(e.target.value)}/></label><div className="badge">{viewer?.designation||"Employee"} · {viewer?.name||""}</div></div></div>
+        {canManage&&<div className="attendance-toolbar" style={{alignItems:"end",flexWrap:"wrap",gap:12,borderTop:"1px solid #e5e7eb",borderBottom:"1px solid #e5e7eb"}}>
+          <div><strong>{selectedStudentIds.length} student(s) selected</strong><span>Select students below, then choose their destination batch.</span></div>
+          <div className="top-actions" style={{flexWrap:"wrap",alignItems:"end"}}>
+            <label className="form-field" style={{margin:0,minWidth:220}}><span>Transfer selected to batch</span><select value={bulkTargetBatchId} onChange={e=>setBulkTargetBatchId(e.target.value)}><option value="">Select destination batch</option>{shiftBatches.map(b=><option key={b._id} value={b._id}>{b.batchCode} — {b.name}</option>)}</select></label>
+            <label className="form-field" style={{margin:0,minWidth:200}}><span>Transfer remark</span><input value={bulkTransferRemark} onChange={e=>setBulkTransferRemark(e.target.value)} placeholder="Reason for transfer"/></label>
+            <button className="primary-btn" disabled={bulkMoving||!selectedStudentIds.length} onClick={transferSelectedStudents}><ArrowRightLeft size={15}/>{bulkMoving?"Transferring…":"Transfer Selected"}</button>
+            <button className="ghost-btn" disabled={!selectedStudentIds.length} onClick={()=>setSelectedStudentIds([])}>Clear selection</button>
+          </div>
+        </div>}
         <div className="attendance-toolbar"><div><strong>{students.filter(s=>attendance[s._id]==="Present").length} Present</strong><span>{students.filter(s=>attendance[s._id]==="Absent").length} Absent · {students.filter(s=>attendance[s._id]==="Leave").length} Leave</span></div><div className="top-actions"><button className="ghost-btn" onClick={()=>setAll("Present")}>Mark All Present</button><button className="ghost-btn" onClick={()=>setAll("Absent")}>Mark All Absent</button><button className="primary-btn" disabled={savingAttendance} onClick={saveAttendance}><CheckCircle2 size={16}/>{savingAttendance?"Saving…":"Save Attendance"}</button></div></div>
         {message&&<div className="success-msg" style={{margin:"0 20px 16px"}}>{message}</div>}
-        {students.length===0?<div className="empty">No students have been assigned to this batch yet.</div>:<div className="table-wrap"><table className="batch-roster-table"><thead><tr><th>#</th><th>Student / Profile</th><th>Mobile / Call</th><th>Attendance</th><th>Call Remark</th><th>Remarks</th><th>Batch Movement</th><th>Total Fee</th><th>Paid</th><th>Due</th><th>Monthly Installment</th><th>Monthly Due</th><th>Fee Update</th></tr></thead><tbody>{students.map((s,i)=>{const p=payments[s._id]||{amount:"",method:"Cash",reference:""};const c=contact[s._id]||{callingRemark:"",remarks:""};return <tr key={s._id}>
-          <td>{i+1}</td>
+        {students.length===0?<div className="empty">No students have been assigned to this batch yet.</div>:<div className="table-wrap"><table className="batch-roster-table"><thead><tr>{canManage&&<th><input type="checkbox" aria-label="Select all students" checked={students.length>0&&students.every(s=>selectedStudentIds.includes(s._id))} onChange={e=>setSelectedStudentIds(e.target.checked?students.map(s=>s._id):[])}/></th>}<th>#</th><th>Student / Profile</th><th>Mobile / Call</th><th>Attendance</th><th>Call Remark</th><th>Remarks</th><th>Batch Movement</th><th>Total Fee</th><th>Paid</th><th>Due</th><th>Monthly Installment</th><th>Monthly Due</th><th>Fee Update</th></tr></thead><tbody>{students.map((s,i)=>{const p=payments[s._id]||{amount:"",method:"Cash",reference:""};const c=contact[s._id]||{callingRemark:"",remarks:""};return <tr key={s._id}>
+          {canManage&&<td><input type="checkbox" aria-label={"Select "+s.applicantName} checked={selectedStudentIds.includes(s._id)} onChange={e=>setSelectedStudentIds(v=>e.target.checked?[...v,s._id]:v.filter(id=>id!==s._id))}/></td>}<td>{i+1}</td>
           <td><strong>{s.applicantName}</strong><small>{s.formNo}</small><div style={{display:"flex",gap:6,marginTop:5}}><a className="ghost-btn" style={{padding:"5px 8px",fontSize:11}} href={"/dashboard/students/"+s._id}>Profile <ExternalLink size={12}/></a>{s.latestMovement&&<span className="badge" title={s.latestMovement.remark}>{s.latestMovement.action==="SHIFTED"?"Shifted":s.latestMovement.action==="DROPPED_OUT"?"Dropped Out":"Rejoined"}</span>}</div></td>
           <td><a href={s.mobileNumber?"tel:"+String(s.mobileNumber).replace(/\s+/g,""):"#"} className="phone-link" title="Start phone call"><Phone size={15}/>{s.mobileNumber||"—"}</a></td>
           <td><select value={attendance[s._id]||""} onChange={e=>setAttendance(v=>({...v,[s._id]:e.target.value}))}><option value="">Not marked</option><option>Present</option><option>Absent</option><option>Leave</option></select></td>
