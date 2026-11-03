@@ -134,14 +134,13 @@ export async function PATCH(req,{params}){
     const update={};
     for(const key of ["name","status","capacity","startDate","endDate","notes"]) if(body[key]!==undefined) update[key]=body[key];
     if(update.capacity!==undefined)update.capacity=Number(update.capacity);
-    if(body.room!==undefined){update.room=String(body.room||"").trim();update.schedules=(update.schedules||schedules).map(slot=>({...slot,room:update.room}));}
     if(scheduleChange){
       update.series=body.series!==undefined?normalizeSeries(body.series):batch.series;
       update.classFrequency=Number(body.classFrequency||batch.classFrequency);
       update.facultyId=facultyId;
       update.facultyName=facultyName;
       update.schedules=schedules.map(slot=>({
-        ...slot,facultyId,facultyName,room:body.room!==undefined?String(body.room||"").trim():(slot.room||batch.room||"")
+        ...slot,facultyId,facultyName
       }));
     }
 
