@@ -216,7 +216,6 @@ export async function POST(req) {
       series,
       classFrequency,
       capacity:Number(b.capacity)||50,
-      room:String(b.room||"").trim(),
       startDate:b.startDate||undefined,
       endDate:b.endDate||undefined,
       facultyIds,
@@ -228,7 +227,6 @@ export async function POST(req) {
         ...slot,
         facultyId:slot.facultyId||facultyIds[0]||"",
         facultyName:slot.facultyName||checked.employees?.[0]?.name||"",
-        room:String(b.room||"").trim()
       })),
       status:b.status||"Draft",
       notes:b.notes||"",
