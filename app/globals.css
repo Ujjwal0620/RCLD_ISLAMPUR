@@ -1051,3 +1051,48 @@ td{font-size:11px}
 .topic-note-list a:hover{border-color:var(--primary,#6c63ff);color:var(--primary,#6c63ff)}
 .topic-note-list small{color:var(--muted,#667085)}
 .topic-note-tools .ghost-btn{cursor:pointer}
+
+
+/* Batch register and attendance sheet: focused, responsive workspace */
+.batch-register-page{padding-bottom:28px}
+.batch-register-hero{position:relative;overflow:hidden;margin:18px 0 17px;padding:25px 27px;border:1px solid #e3e9f2;border-radius:17px;background:radial-gradient(circle at 92% 8%,rgba(104,126,231,.13),transparent 28%),linear-gradient(115deg,#fff 0%,#f8faff 68%,#f3f6ff 100%);box-shadow:0 8px 24px rgba(30,48,78,.045)}
+.batch-register-hero h2{color:#24364e;font-size:23px;letter-spacing:-.035em}
+.batch-register-hero p{margin:6px 0 0;color:#758399;font-size:11px;line-height:1.65}
+.batch-register-hero p strong{color:#45556c}
+.batch-attendance-panel{border-radius:16px;box-shadow:0 10px 30px rgba(26,42,68,.055)}
+.batch-attendance-head{align-items:flex-start;padding:22px 24px;background:linear-gradient(180deg,#fff,#fcfdff)}
+.batch-attendance-head h3{color:#24364e;font-size:17px;letter-spacing:-.025em}
+.batch-attendance-head p{max-width:760px;font-size:11px;line-height:1.7}
+.batch-attendance-head>.top-actions{align-items:flex-end;flex-wrap:wrap}
+.batch-attendance-head .form-field{min-width:155px}
+.batch-attendance-head .form-field input{min-height:40px;border-radius:9px;border-color:#dce4ef;color:#34445a}
+.batch-attendance-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:14px 22px;border-bottom:1px solid #edf1f6;background:#f9fbfe}
+.batch-attendance-toolbar>div:first-child{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.batch-attendance-toolbar>div:first-child strong{color:#263950;font-size:12px}
+.batch-attendance-toolbar>div:first-child span{color:#8793a5;font-size:10px}
+.batch-attendance-toolbar .top-actions{gap:8px;flex-wrap:wrap}
+.batch-attendance-toolbar .ghost-btn,.batch-attendance-toolbar .primary-btn{min-height:37px;border-radius:9px;font-size:10px}
+.batch-roster-wrap{max-height:calc(100vh - 310px);min-height:250px;overflow:auto;scrollbar-width:thin;scrollbar-color:#cbd5e1 transparent}
+.batch-roster-table{min-width:1450px;border-collapse:separate;border-spacing:0}
+.batch-roster-table thead{position:sticky;top:0;z-index:5}
+.batch-roster-table th{padding:13px 12px;background:#f4f7fb;color:#6d7b90;font-size:9px;letter-spacing:.065em;border-bottom:1px solid #e4eaf2}
+.batch-roster-table td{padding:13px 12px;border-bottom:1px solid #edf1f6;color:#425168;font-size:11px;vertical-align:middle}
+.batch-roster-table tbody tr{transition:background .15s ease}
+.batch-roster-table tbody tr:hover{background:#f8faff}
+.batch-roster-table td strong{color:#293a51}
+.batch-roster-table td small{display:block;margin-top:4px;color:#929daf;font-size:9px}
+.batch-roster-table td input,.batch-roster-table td select{min-height:35px;border:1px solid #e0e6ef;border-radius:8px;padding:0 9px;background:#fff;color:#405067;font-size:10px;outline:none}
+.batch-roster-table td input:focus,.batch-roster-table td select:focus{border-color:#9eacef;box-shadow:0 0 0 3px rgba(82,104,223,.08)}
+.batch-roster-table .phone-link{display:inline-flex;align-items:center;gap:6px;color:#536bd7;font-weight:700;font-size:10px}
+.batch-roster-table .phone-link svg{color:#7184df}
+.batch-roster-table .icon-btn{width:34px;min-width:34px;height:34px;min-height:34px;justify-content:center;padding:0;border-radius:9px;color:#64748b}
+.batch-roster-table .icon-btn:hover{border-color:#b9c5ef;background:#f3f5ff;color:#4f63cf}
+.batch-roster-table .fee-inline{display:flex;align-items:center;gap:5px}
+.batch-roster-table .fee-inline input{width:88px}
+.batch-roster-table .fee-inline select{min-width:94px}
+.batch-roster-table .fee-inline .ghost-btn{min-height:34px;padding:0 9px;border-radius:8px;font-size:9px}
+.batch-roster-table .fee-due{color:#b4533c}.batch-roster-table .fee-paid{color:#16885c}
+.batch-attendance-panel .success-msg{margin:12px 20px;padding:11px 14px;border-radius:9px;font-size:10px}
+.batch-attendance-panel .empty{padding:54px 20px;background:#fbfcfe;color:#8b98aa;font-size:12px}
+@media(max-width:850px){.batch-attendance-head{flex-direction:column}.batch-attendance-head>.top-actions{width:100%;justify-content:flex-start}.batch-roster-wrap{max-height:none}}
+@media(max-width:600px){.batch-register-hero{padding:20px 18px;margin-top:13px;border-radius:13px}.batch-register-hero h2{font-size:19px}.batch-attendance-head{padding:18px}.batch-attendance-head>.top-actions{align-items:stretch;flex-direction:column}.batch-attendance-head .form-field{width:100%}.batch-attendance-toolbar{padding:13px 15px;align-items:stretch}.batch-attendance-toolbar>div:first-child{align-items:flex-start;flex-direction:column;gap:4px}.batch-attendance-toolbar .top-actions{width:100%;display:grid;grid-template-columns:1fr}.batch-attendance-toolbar .top-actions>*{justify-content:center}.batch-roster-wrap{margin:0}.batch-roster-table{min-width:1380px}}
