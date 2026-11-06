@@ -1096,3 +1096,18 @@ td{font-size:11px}
 .batch-attendance-panel .empty{padding:54px 20px;background:#fbfcfe;color:#8b98aa;font-size:12px}
 @media(max-width:850px){.batch-attendance-head{flex-direction:column}.batch-attendance-head>.top-actions{width:100%;justify-content:flex-start}.batch-roster-wrap{max-height:none}}
 @media(max-width:600px){.batch-register-hero{padding:20px 18px;margin-top:13px;border-radius:13px}.batch-register-hero h2{font-size:19px}.batch-attendance-head{padding:18px}.batch-attendance-head>.top-actions{align-items:stretch;flex-direction:column}.batch-attendance-head .form-field{width:100%}.batch-attendance-toolbar{padding:13px 15px;align-items:stretch}.batch-attendance-toolbar>div:first-child{align-items:flex-start;flex-direction:column;gap:4px}.batch-attendance-toolbar .top-actions{width:100%;display:grid;grid-template-columns:1fr}.batch-attendance-toolbar .top-actions>*{justify-content:center}.batch-roster-wrap{margin:0}.batch-roster-table{min-width:1380px}}
+
+
+/* Compact batch movement column */
+.batch-roster-table th:nth-child(7),.batch-roster-table td:nth-child(7){width:132px;min-width:132px;max-width:150px}
+.batch-movement-cell{display:flex;align-items:center;gap:6px;min-width:0;white-space:nowrap}
+.batch-movement-summary{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0;cursor:help}
+.batch-movement-status{display:inline-flex;align-items:center;width:max-content;max-width:100%;padding:4px 7px;border:1px solid #e4eaf2;border-radius:6px;background:#f5f7fb;color:#64748b;font-size:9px;font-weight:750;line-height:1.2;white-space:nowrap}
+.batch-movement-status.is-shifted{border-color:#dbe4ff;background:#f0f4ff;color:#5267c9}
+.batch-movement-status.is-dropped{border-color:#f6dddd;background:#fff4f2;color:#b4534b}
+.batch-movement-status.is-current{border-color:#d8eee4;background:#f0faf5;color:#27835f}
+.batch-movement-route{display:inline-flex;align-items:center;gap:5px;color:#7a879a;font-size:9px;font-weight:650;line-height:1.2}
+.batch-movement-route svg{flex:none;color:#8b98ac}
+.batch-movement-cell>.icon-btn{flex:none;width:27px;min-width:27px;height:27px;min-height:27px;border-radius:7px}
+.batch-roster-table td:has(.batch-movement-cell){padding-left:8px;padding-right:8px}
+@media(max-width:600px){.batch-roster-table th:nth-child(7),.batch-roster-table td:nth-child(7){width:125px;min-width:125px;max-width:125px}}
