@@ -1111,3 +1111,51 @@ td{font-size:11px}
 .batch-movement-cell>.icon-btn{flex:none;width:27px;min-width:27px;height:27px;min-height:27px;border-radius:7px}
 .batch-roster-table td:has(.batch-movement-cell){padding-left:8px;padding-right:8px}
 @media(max-width:600px){.batch-roster-table th:nth-child(7),.batch-roster-table td:nth-child(7){width:125px;min-width:125px;max-width:125px}}
+
+/* Batch roster layout hardening: keep every control inside its own column */
+.batch-register-page,.batch-register-page *{box-sizing:border-box}
+.batch-register-page{width:100%;max-width:100%;min-width:0;overflow:hidden}
+.batch-register-page>.panel{min-width:0;max-width:100%;overflow:hidden}
+.batch-register-hero{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.batch-register-hero>div:first-child{min-width:0;flex:1}
+.batch-attendance-head{display:flex;justify-content:space-between;gap:20px;min-width:0}
+.batch-attendance-head>div:first-child{min-width:0;flex:1}
+.batch-attendance-head>.top-actions{display:flex;align-items:flex-end;justify-content:flex-end;gap:10px;max-width:45%;min-width:0}
+.batch-attendance-head>.top-actions>.badge{max-width:220px;white-space:normal;overflow-wrap:anywhere}
+.batch-attendance-actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap;min-width:0}
+.batch-attendance-actions>*{flex:0 0 auto;max-width:100%;white-space:nowrap}
+.batch-roster-wrap{width:100%;max-width:100%;overflow:auto;overscroll-behavior:contain}
+.batch-roster-table{width:100%;min-width:1840px;table-layout:fixed}
+.batch-roster-table th,.batch-roster-table td{min-width:0;overflow-wrap:anywhere}
+.batch-roster-table th:nth-child(1),.batch-roster-table td:nth-child(1){width:48px}
+.batch-roster-table th:nth-child(2),.batch-roster-table td:nth-child(2){width:190px}
+.batch-roster-table th:nth-child(3),.batch-roster-table td:nth-child(3){width:135px}
+.batch-roster-table th:nth-child(4),.batch-roster-table td:nth-child(4){width:130px}
+.batch-roster-table th:nth-child(5),.batch-roster-table td:nth-child(5),.batch-roster-table th:nth-child(6),.batch-roster-table td:nth-child(6){width:175px}
+.batch-roster-table th:nth-child(7),.batch-roster-table td:nth-child(7){width:155px;min-width:155px;max-width:155px}
+.batch-roster-table th:nth-child(8),.batch-roster-table td:nth-child(8),.batch-roster-table th:nth-child(9),.batch-roster-table td:nth-child(9),.batch-roster-table th:nth-child(10),.batch-roster-table td:nth-child(10){width:105px}
+.batch-roster-table th:nth-child(11),.batch-roster-table td:nth-child(11){width:145px}
+.batch-roster-table th:nth-child(12),.batch-roster-table td:nth-child(12){width:170px}
+.batch-roster-table th:nth-child(13),.batch-roster-table td:nth-child(13){width:230px}
+.batch-roster-table td input,.batch-roster-table td select{display:block;width:100%;min-width:0;max-width:100%;box-sizing:border-box}
+.batch-roster-table td button,.batch-roster-table td a.ghost-btn{max-width:100%;box-sizing:border-box}
+.batch-profile-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:7px;min-width:0}
+.batch-profile-actions .ghost-btn{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.batch-profile-actions .badge{max-width:100%;white-space:normal;overflow-wrap:anywhere}
+.batch-contact-actions{display:grid;grid-template-columns:minmax(0,1fr);gap:7px;min-width:0}
+.batch-contact-actions button{display:flex;justify-content:center;width:100%;min-height:32px;padding:5px 8px;font-size:10px;white-space:normal;line-height:1.25}
+.batch-roster-table .fee-inline.batch-fee-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:7px;min-width:0}
+.batch-roster-table .fee-inline.batch-fee-actions input{grid-column:1/-1;width:100%;min-width:0}
+.batch-roster-table .fee-inline.batch-fee-actions select{width:100%;min-width:0}
+.batch-roster-table .fee-inline.batch-fee-actions button{display:flex;align-items:center;justify-content:center;gap:5px;width:100%;min-width:0;min-height:35px;padding:5px 8px;white-space:nowrap}
+.batch-movement-cell{display:flex;align-items:center;justify-content:space-between;gap:5px;width:100%;min-width:0;white-space:normal}
+.batch-movement-summary{flex:1 1 auto;min-width:0;max-width:calc(100% - 32px)}
+.batch-movement-route{display:flex;flex-wrap:wrap;min-width:0;white-space:normal;overflow-wrap:anywhere}
+.batch-movement-menu-wrap{position:relative;display:flex;flex:0 0 28px;align-items:center;justify-content:center;min-width:28px}
+.batch-movement-menu-wrap>.icon-btn{display:flex;flex:0 0 28px;align-items:center;justify-content:center;width:28px;min-width:28px;height:28px;min-height:28px;padding:0}
+.batch-roster-table .monthly-due-cell{display:grid;gap:5px;min-width:0;line-height:1.35}
+.batch-roster-table .monthly-due-cell span,.batch-roster-table .monthly-due-cell strong{display:flex;justify-content:space-between;gap:5px;min-width:0;overflow-wrap:anywhere}
+.batch-roster-table .monthly-due-cell b{white-space:nowrap}
+.batch-register-page .form-actions{display:flex;justify-content:flex-end;align-items:center;gap:10px;flex-wrap:wrap}
+@media(max-width:850px){.batch-register-hero{align-items:flex-start;flex-direction:column}.batch-register-hero>.top-actions{width:100%;justify-content:flex-start}.batch-attendance-head{align-items:stretch;flex-direction:column}.batch-attendance-head>.top-actions{width:100%;max-width:none;align-items:flex-start;justify-content:flex-start}.batch-attendance-actions{justify-content:flex-start}}
+@media(max-width:600px){.batch-attendance-head>.top-actions{align-items:stretch;flex-direction:column}.batch-attendance-head>.top-actions>.badge{max-width:none}.batch-attendance-actions{display:grid;grid-template-columns:1fr;width:100%}.batch-attendance-actions>*{width:100%;justify-content:center}.batch-roster-table{min-width:1840px}}
