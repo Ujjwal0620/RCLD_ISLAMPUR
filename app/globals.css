@@ -1159,3 +1159,106 @@ td{font-size:11px}
 .batch-register-page .form-actions{display:flex;justify-content:flex-end;align-items:center;gap:10px;flex-wrap:wrap}
 @media(max-width:850px){.batch-register-hero{align-items:flex-start;flex-direction:column}.batch-register-hero>.top-actions{width:100%;justify-content:flex-start}.batch-attendance-head{align-items:stretch;flex-direction:column}.batch-attendance-head>.top-actions{width:100%;max-width:none;align-items:flex-start;justify-content:flex-start}.batch-attendance-actions{justify-content:flex-start}}
 @media(max-width:600px){.batch-attendance-head>.top-actions{align-items:stretch;flex-direction:column}.batch-attendance-head>.top-actions>.badge{max-width:none}.batch-attendance-actions{display:grid;grid-template-columns:1fr;width:100%}.batch-attendance-actions>*{width:100%;justify-content:center}.batch-roster-table{min-width:1840px}}
+
+
+/* Global workspace spacing and header collision fix — applies across ERP pages */
+.erp-shell{
+  min-height:100vh;
+  overflow-x:clip;
+}
+.erp-main{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+  width:auto;
+  max-width:100%;
+  padding:0 clamp(18px,2.1vw,30px) 42px;
+  overflow-x:clip;
+}
+.erp-user-bar{
+  position:sticky;
+  top:0;
+  z-index:120;
+  flex:0 0 auto;
+  width:calc(100% + clamp(36px,4.2vw,60px));
+  margin-left:calc(-1 * clamp(18px,2.1vw,30px));
+  margin-right:calc(-1 * clamp(18px,2.1vw,30px));
+  padding-left:clamp(18px,2.1vw,30px);
+  padding-right:clamp(18px,2.1vw,30px);
+}
+.erp-main > *{
+  min-width:0;
+  max-width:100%;
+}
+.erp-main > .topbar{
+  flex:0 0 auto;
+  width:100%;
+  margin-top:0;
+}
+.erp-main > .welcome,
+.erp-main > .metric-grid,
+.erp-main > .stats,
+.erp-main > .student-summary-grid,
+.erp-main > .panel,
+.erp-main > .registration-form,
+.erp-main > .student-details,
+.erp-main > .ai-shell,
+.erp-main > .batch-builder,
+.erp-main > .batch-register-page,
+.erp-main > .task-workspace,
+.erp-main > .task-page,
+.erp-main > .att-page{
+  width:100%;
+  max-width:none;
+  min-width:0;
+}
+.erp-main .panel,
+.erp-main .table-wrap,
+.erp-main .form-grid,
+.erp-main .filters,
+.erp-main .advanced-filters{
+  min-width:0;
+}
+.erp-main .panel,
+.erp-main .registration-form,
+.erp-main .student-details,
+.erp-main .ai-shell,
+.erp-main .batch-register-page{
+  margin-left:0;
+  margin-right:0;
+}
+@media(max-width:1100px){
+  .erp-main{padding-left:22px;padding-right:22px}
+  .erp-user-bar{
+    width:calc(100% + 44px);
+    margin-left:-22px;
+    margin-right:-22px;
+    padding-left:22px;
+    padding-right:22px;
+  }
+}
+@media(max-width:850px){
+  .erp-main,.erp-shell.sidebar-collapsed .erp-main{
+    margin-left:0;
+    width:100%;
+    padding:0 18px 34px;
+  }
+  .erp-user-bar{
+    width:calc(100% + 36px);
+    margin-left:-18px;
+    margin-right:-18px;
+    padding-left:18px;
+    padding-right:18px;
+  }
+}
+@media(max-width:600px){
+  .erp-main,.erp-shell.sidebar-collapsed .erp-main{padding:0 12px 28px}
+  .erp-user-bar{
+    width:calc(100% + 24px);
+    margin-left:-12px;
+    margin-right:-12px;
+    padding:0 12px;
+    min-height:62px;
+  }
+}
