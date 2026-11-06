@@ -92,7 +92,99 @@ export default function BatchStudentsPage({params}){
           <td><select value={attendance[s._id]||""} onChange={e=>setAttendance(v=>({...v,[s._id]:e.target.value}))}><option value="">Not marked</option><option>Present</option><option>Absent</option><option>Leave</option></select></td>
           <td><input value={c.callingRemark} onChange={e=>setContact(v=>({...v,[s._id]:{...c,callingRemark:e.target.value}}))} placeholder="Calling remark"/></td>
           <td><input value={c.remarks} onChange={e=>setContact(v=>({...v,[s._id]:{...c,remarks:e.target.value}}))} placeholder="Remarks"/><button className="ghost-btn" style={{marginTop:5,padding:"5px 8px",fontSize:11}} disabled={savingContact[s._id]} onClick={()=>saveContact(s)}>{savingContact[s._id]?"Saving…":"Save remark"}</button></td>
-          <td><div className="batch-movement-cell">{s.latestMovement?<div className="batch-movement-summary" title={[s.latestMovement.action==="SHIFTED"?"Shifted":"Dropped Out","From: "+(s.latestMovement.fromBatch?.batchCode||"—"),"From faculty: "+(s.latestMovement.fromBatch?.faculty?.map(f=>f.name).filter(Boolean).join(", ")||"—"),"To: "+(s.latestMovement.toBatch?.batchCode||"—"),"To faculty: "+(s.latestMovement.toBatch?.faculty?.map(f=>f.name).filter(Boolean).join(", ")||"—"),s.latestMovement.remark||""].filter(Boolean).join("\n")}><span className={"batch-movement-status "+(s.latestMovement.action==="SHIFTED"?"is-shifted":"is-dropped")}>{s.latestMovement.action==="SHIFTED"?"Shifted":"Dropped Out"}</span><span className="batch-movement-route">{s.latestMovement.fromBatch?.batchCode||"—"}{s.latestMovement.toBatch&&<><ArrowRightLeft size={11}/>{s.latestMovement.toBatch.batchCode}</>}</span></div>:<span className="batch-movement-status is-current">Current</span>}{canManage&&<div style={{position:"relative",display:"inline-block",marginLeft:4}}><button className="icon-btn" title="Student actions" onClick={e=>{e.stopPropagation();setOpenMenu(openMenu===s._id?"":s._id)}}><MoreVertical size={16}/></button>{openMenu===s._id&&<div onClick={e=>e.stopPropagation()} style={{position:"absolute",right:0,top:36,zIndex:20,minWidth:190,background:"white",border:"1px solid #e5e7eb",borderRadius:10,boxShadow:"0 12px 30px rgba(0,0,0,.14)",padding:6}}><button className="ghost-btn" style={{width:"100%",justifyContent:"flex-start",border:0}} onClick={()=>{setMovement({student:s,action:"SHIFTED",toBatchId:""});setMovementRemark("");setOpenMenu("")}}><ArrowRightLeft size={15}/> Shift Batch</button><button className="ghost-btn" style={{width:"100%",justifyContent:"flex-start",border:0,color:"#b42318"}} onClick={()=>{setMovement({student:s,action:"DROPPED_OUT"});setMovementRemark("");setOpenMenu("")}}><UserMinus size={15}/> Drop Out</button><a className="ghost-btn" style={{width:"100%",justifyContent:"flex-start",border:0}} href={"/dashboard/students/"+s._id}><History size={15}/> Student History</a></div>}</div>}</td>
+          <td>
+            <div className="batch-movement-cell">
+              {s.latestMovement ? (
+                <div
+                  className="batch-movement-summary"
+                  title={[
+                    s.latestMovement.action === "SHIFTED" ? "Shifted" : "Dropped Out",
+                    "From: " + (s.latestMovement.fromBatch?.batchCode || "—"),
+                    "From faculty: " + (s.latestMovement.fromBatch?.faculty?.map(f => f.name).filter(Boolean).join(", ") || "—"),
+                    "To: " + (s.latestMovement.toBatch?.batchCode || "—"),
+                    "To faculty: " + (s.latestMovement.toBatch?.faculty?.map(f => f.name).filter(Boolean).join(", ") || "—"),
+                    s.latestMovement.remark || ""
+                  ].filter(Boolean).join("\n")}
+                >
+                  <span className={"batch-movement-status " + (s.latestMovement.action === "SHIFTED" ? "is-shifted" : "is-dropped")}>
+                    {s.latestMovement.action === "SHIFTED" ? "Shifted" : "Dropped Out"}
+                  </span>
+                  <span className="batch-movement-route">
+                    {s.latestMovement.fromBatch?.batchCode || "—"}
+                    {s.latestMovement.toBatch && (
+                      <>
+                        <ArrowRightLeft size={11} />
+                        {s.latestMovement.toBatch.batchCode}
+                      </>
+                    )}
+                  </span>
+                </div>
+              ) : (
+                <span className="batch-movement-status is-current">Current</span>
+              )}
+              {canManage && (
+                <div style={{ position: "relative", display: "inline-block", marginLeft: 4 }}>
+                  <button
+                    className="icon-btn"
+                    title="Student actions"
+                    onClick={e => {
+                      e.stopPropagation();
+                      setOpenMenu(openMenu === s._id ? "" : s._id);
+                    }}
+                  >
+                    <MoreVertical size={16} />
+                  </button>
+                  {openMenu === s._id && (
+                    <div
+                      onClick={e => e.stopPropagation()}
+                      style={{
+                        position: "absolute",
+                        right: 0,
+                        top: 36,
+                        zIndex: 20,
+                        minWidth: 190,
+                        background: "white",
+                        border: "1px solid #e5e7eb",
+                        borderRadius: 10,
+                        boxShadow: "0 12px 30px rgba(0,0,0,.14)",
+                        padding: 6
+                      }}
+                    >
+                      <button
+                        className="ghost-btn"
+                        style={{ width: "100%", justifyContent: "flex-start", border: 0 }}
+                        onClick={() => {
+                          setMovement({ student: s, action: "SHIFTED", toBatchId: "" });
+                          setMovementRemark("");
+                          setOpenMenu("");
+                        }}
+                      >
+                        <ArrowRightLeft size={15} /> Shift Batch
+                      </button>
+                      <button
+                        className="ghost-btn"
+                        style={{ width: "100%", justifyContent: "flex-start", border: 0, color: "#b42318" }}
+                        onClick={() => {
+                          setMovement({ student: s, action: "DROPPED_OUT" });
+                          setMovementRemark("");
+                          setOpenMenu("");
+                        }}
+                      >
+                        <UserMinus size={15} /> Drop Out
+                      </button>
+                      <a
+                        className="ghost-btn"
+                        style={{ width: "100%", justifyContent: "flex-start", border: 0 }}
+                        href={"/dashboard/students/" + s._id}
+                      >
+                        <History size={15} /> Student History
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </td>
           <td>₹{(Number(s.fee?.totalFee||0)+Number(s.fee?.admissionFee||0)-Number(s.fee?.discount||0)).toLocaleString("en-IN")}</td>
           <td>₹{Number(s.fee?.paid||0).toLocaleString("en-IN")}</td>
           <td><strong className={Number(s.fee?.due||0)>0?"fee-due":"fee-paid"}>₹{Number(s.fee?.due||0).toLocaleString("en-IN")}</strong></td>
