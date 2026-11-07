@@ -14,11 +14,18 @@ const StudentSchema = new mongoose.Schema({
   referralId: { type: String, default: "" }, referralName: { type: String, default: "" }, marketingEmployeeId: { type: String, default: "" }, marketingEmployeeName: { type: String, default: "" },
   qualifications: [{ examCourse: String, boardUniversity: String, collegeInstitute: String, year: String, percentage: String }],
   enclosures: { stampPhoto: Boolean, qualifyingCertificates: Boolean, matricAdmitCard: Boolean },
-  declarationDate: String, declarationPlace: String, signatureApplicant: String, photoUrl: String,
+  declarationDate: String, declarationPlace: String, signatureApplicant: String, signatureUrl: String, photoUrl: String,
   status: { type: String, default: "Registered" }
 }, { timestamps: true });
 
+StudentSchema.index({ enrollmentNo: 1 }, { unique: true, partialFilterExpression: { enrollmentNo: { $type: "string", $gt: "" } } });
 const Student = mongoose.models.Student || mongoose.model("Student", StudentSchema);
+const CounterSchema = new mongoose.Schema({ _id: String, seq: { type: Number, default: 0 } }, { versionKey: false });
+const Counter = mongoose.models.StudentCounter || mongoose.model("StudentCounter", CounterSchema, "student_counters");
+async function nextStudentSequence(key) {
+  const counter = await Counter.findOneAndUpdate({ _id: key }, { $inc: { seq: 1 } }, { new: true, upsert: true, setDefaultsOnInsert: true });
+  return counter.seq;
+}
 const ReferralSchema = new mongoose.Schema({}, { strict: false });
 const Referral = mongoose.models.Referral || mongoose.model("Referral", ReferralSchema);
 
@@ -85,12 +92,19 @@ export async function POST(request) {
   try {
     await connectMongoDB();
     const body = await request.json();
-    const missing = ["formNo", "applicantName", "mobileNumber", "email", "aadhaarNumber"].filter((key) => !String(body[key] || "").trim());
+    const missing = ["applicantName", "mobileNumber", "email", "aadhaarNumber"].filter((key) => !String(body[key] || "").trim());
     if (missing.length) return NextResponse.json({ error: "Required fields: " + missing.join(", ") }, { status: 400 });
     const email = String(body.email || "").trim().toLowerCase();
     const aadhaarNumber = String(body.aadhaarNumber || "").replace(/\D/g, "");
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
     if (!/^\d{12}$/.test(aadhaarNumber)) return NextResponse.json({ error: "Aadhaar number must contain exactly 12 digits." }, { status: 400 });
+    const mobileNumber = String(body.mobileNumber || "").replace(/\D/g, "");
+    if (!/^\d{10}$/.test(mobileNumber)) return NextResponse.json({ error: "Mobile number must contain exactly 10 digits." }, { status: 400 });
+    if (!String(body.signatureUrl || "").startsWith("https://res.cloudinary.com/")) return NextResponse.json({ error: "Upload the student signature image before registering." }, { status: 400 });
+    const formSequence = await nextStudentSequence("student-form");
+    const enrollmentSequence = await nextStudentSequence("student-enrollment");
+    const formNo = "RCLD/ISL/FORM/" + String(formSequence).padStart(6, "0");
+    const enrollmentNo = "RCLD/ISL/" + String(enrollmentSequence).padStart(6, "0");
     let referralFields = { referralId: "", referralName: "", marketingEmployeeId: "", marketingEmployeeName: "" };
     if (body.referralId) {
       if (!mongoose.Types.ObjectId.isValid(String(body.referralId))) return NextResponse.json({ error: "Invalid referral selection." }, { status: 400 });
@@ -103,9 +117,11 @@ export async function POST(request) {
       email,
       aadhaarNumber,
       ...referralFields,
-      formNo: String(body.formNo).trim(),
+      formNo,
+      enrollmentNo,
+      aecCode: "RCLD/ISL-001",
       applicantName: String(body.applicantName).trim(),
-      mobileNumber: String(body.mobileNumber).trim()
+      mobileNumber
     });
     if (body.courseCode || body.courseName) {
       const conditions = [];
@@ -121,7 +137,7 @@ export async function POST(request) {
     return NextResponse.json({ student }, { status: 201 });
   } catch (error) {
     return NextResponse.json({
-      error: error?.code === 11000 ? "Form No. already exists." : "Unable to register student.",
+      error: error?.code === 11000 ? "A generated student number already exists. Please submit again." : "Unable to register student.",
       detail: error.message
     }, { status: error?.code === 11000 ? 409 : 500 });
   }
