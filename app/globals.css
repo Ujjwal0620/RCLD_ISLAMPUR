@@ -1882,3 +1882,76 @@ td{font-size:11px}
 @media(max-width:850px){.fee-modal-backdrop{padding:10px}.fee-workspace-modal{max-height:96vh;border-radius:14px}.fee-modal-body{padding:12px}.fee-modal-form .form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.student-profile-page .student-fee-overview{grid-template-columns:1fr 1fr}.student-profile-page .student-fee-overview .fee-due{grid-column:1/-1}}
 @media(max-width:560px){.student-profile-page>.detail-section{padding:14px;border-radius:13px}.student-profile-page .student-profile-hero{padding:15px;gap:12px;flex-wrap:wrap}.student-profile-page .student-fee-overview,.fee-modal-stats{grid-template-columns:1fr}.student-profile-page .student-fee-overview .fee-due{grid-column:auto}.student-profile-page .fee-overview-card>strong{font-size:22px}.student-profile-page .fee-workspace-action{font-size:0}.student-profile-page .fee-workspace-action svg{font-size:initial}.fee-modal-header{padding:15px}.fee-modal-header h2{font-size:17px}.fee-modal-body{padding:9px}.fee-modal-section{padding:12px}.fee-modal-form .form-grid{grid-template-columns:1fr}.fee-modal-footer{padding:10px;flex-wrap:wrap}.fee-history-table-wrap{max-height:300px}}
 @media print{.fee-modal-backdrop{display:none!important}}
+
+
+
+/* Compact ERP density pass: consistent spacing, cards, forms and tables */
+.erp-main{padding-left:22px;padding-right:22px;padding-bottom:26px}
+.erp-main>.topbar{min-height:68px;gap:12px}
+.erp-main>.topbar h1{font-size:21px;line-height:1.2}
+.erp-main>.topbar .top-actions{gap:7px;flex-wrap:wrap}
+.erp-main .panel,.erp-main .registration-form,.erp-main .student-details,.erp-main .batch-register-page{border-radius:11px}
+.erp-main .panel{margin-top:13px}
+.erp-main .panel-head,.erp-main .filter-title{padding:13px 15px}
+.erp-main .metric-grid{gap:11px}
+.erp-main .metric{padding:14px;border-radius:10px}
+.erp-main .metric strong{font-size:22px}
+.erp-main .form-section{padding:17px 18px}
+.erp-main .form-grid{gap:10px}
+.erp-main .form-field{gap:4px}
+.erp-main .form-field input,.erp-main .form-field select,.erp-main .form-field textarea{min-height:36px;padding:7px 9px}
+.erp-main .table-wrap th,.erp-main .table-wrap td{padding:9px 11px}
+.erp-main .primary-btn,.erp-main .ghost-btn,.erp-main .icon-btn{min-height:36px;padding-left:11px;padding-right:11px}
+.student-profile-page>.detail-section{padding:14px;margin:11px 0;border-radius:12px}
+.student-profile-page>.detail-section .detail-section-title{padding-bottom:9px;margin-bottom:10px;gap:8px}
+.student-profile-page>.detail-section .detail-section-title>svg{width:30px;height:30px;padding:7px;border-radius:9px}
+.student-profile-page .student-detail-grid{gap:7px}
+.student-profile-page .student-detail-field{padding:8px 9px;border-radius:8px}
+.student-profile-page .student-detail-field>span{font-size:9px}
+.student-profile-page .student-detail-field>strong{font-size:11px}
+.student-profile-page .student-summary-grid{gap:9px}
+.student-profile-page .student-summary-grid .summary-card{padding:11px;border-radius:10px}
+.student-profile-page .table-wrap{border-radius:9px}
+.student-profile-page .table-wrap thead th{padding:8px 9px;font-size:9px}
+.student-profile-page .table-wrap tbody td{padding:8px 9px;font-size:11px}
+.student-profile-page .student-fee-overview{gap:8px;margin:6px 0 10px}
+.student-profile-page .fee-overview-card{padding:12px 13px;border-radius:11px;gap:4px}
+.student-profile-page .fee-overview-card>strong{font-size:21px}
+.student-profile-page .fee-overview-card>span{font-size:9px}
+.student-profile-page .fee-overview-meta{padding:9px 11px;gap:8px 16px;margin-bottom:9px}
+.student-profile-page .fee-workspace-launch{padding:11px 13px;gap:10px;border-radius:10px}
+.student-profile-page .fee-workspace-icon{width:36px;height:36px;border-radius:9px}
+.student-profile-page .fee-workspace-launch strong{font-size:12px}
+.student-profile-page .fee-workspace-launch small{font-size:9px}
+.fee-modal-header{padding:15px 19px}
+.fee-modal-body{padding:13px 16px 17px}
+.fee-modal-section{padding:13px;margin:9px 0;border-radius:11px}
+.fee-modal-section-heading{margin-bottom:9px}
+.fee-modal-form .form-grid{gap:9px}
+.fee-modal-form .form-field input,.fee-modal-form .form-field select{min-height:35px}
+.fee-history-table-wrap{max-height:320px}
+.fee-history-table th,.fee-history-table td{padding:8px 9px}
+@media(min-width:901px){.mobile-menu-button,.sidebar-overlay,.sidebar-close{display:none!important}}
+@media(max-width:900px){
+  .mobile-menu-button{display:grid;place-items:center;position:fixed;top:11px;left:12px;width:38px;height:38px;z-index:120;border:1px solid #d9e2ef;border-radius:9px;background:#fff;color:#24436d;box-shadow:0 3px 10px rgba(16,24,40,.12);cursor:pointer}
+  .erp-main{padding-top:57px}
+  .erp-main>.erp-user-bar{min-height:56px}
+  .erp-main>.topbar{min-height:62px}
+}
+@media(max-width:600px){
+  .erp-main{padding-left:11px;padding-right:11px;padding-bottom:20px}
+  .erp-main>.topbar{align-items:flex-start;flex-direction:column;padding:10px 0}
+  .erp-main>.topbar h1{font-size:18px}
+  .erp-main>.topbar .top-actions{width:100%;gap:6px}
+  .erp-main>.topbar .top-actions .ghost-btn{min-height:33px;font-size:10px;padding:0 8px}
+  .student-profile-page>.detail-section{padding:10px;margin:8px 0}
+  .student-profile-page .student-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .student-profile-page .student-fee-overview{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .student-profile-page .fee-overview-card>strong{font-size:19px}
+  .fee-modal-backdrop{padding:5px}
+  .fee-workspace-modal{max-height:98vh;border-radius:11px}
+  .fee-modal-body{padding:8px}
+  .fee-modal-section{padding:9px}
+  .fee-modal-header{padding:11px 13px}
+  .fee-modal-footer{padding:8px 11px}
+}
