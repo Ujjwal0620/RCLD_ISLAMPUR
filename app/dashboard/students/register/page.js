@@ -33,6 +33,18 @@ function Field({ label, name, value, onChange, required, type = "text", maxLengt
   );
 }
 
+
+function DigitBoxes({ label, value = "", onChange, length = 10, required = false }) {
+  const digits = String(value || "").padEnd(length, " ").slice(0, length).split("");
+  function setDigits(start, text) {
+    const incoming = String(text || "").replace(/\\D/g, "").slice(0, length - start);
+    const next = digits.slice();
+    incoming.split("").forEach((digit, offset) => { next[start + offset] = digit; });
+    onChange(next.join("").replace(/\\s+$/, ""));
+  }
+  return <label className="form-field digit-box-field"><span>{label}{required ? " *" : ""}</span><div className="rcld-digit-boxes" role="group" aria-label={label}>{Array.from({ length }, (_, i) => <input key={i} aria-label={label + " digit " + (i + 1)} inputMode="numeric" pattern="[0-9]" maxLength={1} value={digits[i] === " " ? "" : digits[i]} required={required && i === 0} onChange={e => { setDigits(i, e.target.value.slice(-1)); if (e.target.value && i < length - 1) e.target.parentElement.children[i + 1]?.focus(); }} onKeyDown={e => { if (e.key === "Backspace" && !digits[i] && i > 0) e.currentTarget.parentElement.children[i - 1]?.focus(); if (e.key === "ArrowLeft" && i > 0) e.currentTarget.parentElement.children[i - 1]?.focus(); if (e.key === "ArrowRight" && i < length - 1) e.currentTarget.parentElement.children[i + 1]?.focus(); }} onPaste={e => { e.preventDefault(); setDigits(i, e.clipboardData.getData("text")); const target = Math.min(length - 1, i + e.clipboardData.getData("text").replace(/\\D/g, "").length); e.currentTarget.parentElement.children[target]?.focus(); }} />)}</div></label>;
+}
+
 export default function RegisterStudentPage() {
   const [form, setForm] = useState(initial);
   const [message, setMessage] = useState("");
@@ -108,6 +120,8 @@ export default function RegisterStudentPage() {
         presentAddress: (form.presentAddress || form.address).trim(),
         permanentAddress: form.sameAsPresentAddress ? (form.presentAddress || form.address).trim() : form.permanentAddress.trim()
       };
+
+      if (payload.mobileNumber.length !== 10 || payload.guardianContactNumber.length !== 10 || payload.whatsappNumber.length !== 10) throw new Error("Enter all three mobile numbers as exactly 10 digits.");
 
       const r = await fetch("/api/students", {
         method: "POST",
@@ -216,11 +230,11 @@ export default function RegisterStudentPage() {
         <section className="form-section rcld-form-section">
           <h3>Contact Details</h3>
           <div className="rcld-contact-grid">
-            <label className="form-field"><span>* Mobile No. (10 digits)</span><div className="rcld-digit-boxes">{Array.from({length:10},(_,i)=><input key={i} aria-label={"Mobile digit "+(i+1)} inputMode="numeric" maxLength={1} value={form.mobileNumber[i]||""} onChange={e=>{const digit=e.target.value.replace(/\D/g,"").slice(-1);const next=(form.mobileNumber||"").padEnd(10," ").split("");next[i]=digit;update("mobileNumber",next.join("").slice(0,10));if(digit&&i<9)e.target.nextElementSibling?.focus();}} onKeyDown={e=>{if(e.key==="Backspace"&&!form.mobileNumber[i]&&i>0)e.target.previousElementSibling?.focus();}} onPaste={e=>{if(i===0){e.preventDefault();update("mobileNumber",e.clipboardData.getData("text").replace(/\D/g,"").slice(0,10));}}}/>)}</div></label>
-            <Field label="* Mob. of Guardian" name="guardianContactNumber" value={form.guardianContactNumber} onChange={update} maxLength={15}/>
-            <Field label="* WhatsApp No." name="whatsappNumber" value={form.whatsappNumber} onChange={update} maxLength={15}/>
-            <Field label="* Email Id" name="email" value={form.email} onChange={update} required type="email"/>
-            <Field label="* Aadhaar No. (12 digits)" name="aadhaarNumber" value={form.aadhaarNumber} onChange={update} required maxLength={12} inputMode="numeric" pattern="[0-9]{12}"/>
+            <DigitBoxes label="Mobile No. (10 digits)" value={form.mobileNumber} onChange={v=>update("mobileNumber",v)} length={10} required/>
+            <DigitBoxes label="Mob. of Guardian (10 digits)" value={form.guardianContactNumber} onChange={v=>update("guardianContactNumber",v)} length={10} required/>
+            <DigitBoxes label="WhatsApp No. (10 digits)" value={form.whatsappNumber} onChange={v=>update("whatsappNumber",v)} length={10} required/>
+            <Field label="Email Id" name="email" value={form.email} onChange={update} required type="email"/>
+            <Field label="Aadhaar No. (12 digits)" name="aadhaarNumber" value={form.aadhaarNumber} onChange={update} required maxLength={12} inputMode="numeric" pattern="[0-9]{12}"/>
           </div>
         </section>
 
