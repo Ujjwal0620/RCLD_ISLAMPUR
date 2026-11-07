@@ -4,7 +4,7 @@ This file records source-code checkpoints that can be used to compare or recover
 
 ## Protected baseline — 7 November 2026
 
-<badge>Restore branch created</badge>
+**Restore branch created and verified.**
 
 | Item | Value |
 |---|---|
