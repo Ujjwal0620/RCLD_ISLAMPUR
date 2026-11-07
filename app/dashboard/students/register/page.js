@@ -37,13 +37,13 @@ function Field({ label, name, value, onChange, required, type = "text", maxLengt
 function DigitBoxes({ label, value = "", onChange, length = 10, required = false }) {
   const digits = String(value || "").padEnd(length, " ").slice(0, length).split("");
   function setDigits(start, text) {
-    const incoming = String(text || "").replace(/\\D/g, "").slice(0, length - start);
+    const incoming = String(text || "").replace(/\D/g, "").slice(0, length - start);
     const next = digits.slice();
     if (!String(text || "")) next[start] = " ";
     incoming.split("").forEach((digit, offset) => { next[start + offset] = digit; });
-    onChange(next.join("").replace(/\\s+$/, ""));
+    onChange(next.join("").replace(/\s+$/, ""));
   }
-  return <label className="form-field digit-box-field"><span>{label}{required ? " *" : ""}</span><div className="rcld-digit-boxes" role="group" aria-label={label}>{Array.from({ length }, (_, i) => <input key={i} aria-label={label + " digit " + (i + 1)} inputMode="numeric" pattern="[0-9]" maxLength={1} value={digits[i] === " " ? "" : digits[i]} required={required && i === 0} onChange={e => { setDigits(i, e.target.value.slice(-1)); if (e.target.value && i < length - 1) e.target.parentElement.children[i + 1]?.focus(); }} onKeyDown={e => { if (e.key === "Backspace" && !digits[i] && i > 0) e.currentTarget.parentElement.children[i - 1]?.focus(); if (e.key === "ArrowLeft" && i > 0) e.currentTarget.parentElement.children[i - 1]?.focus(); if (e.key === "ArrowRight" && i < length - 1) e.currentTarget.parentElement.children[i + 1]?.focus(); }} onPaste={e => { e.preventDefault(); setDigits(i, e.clipboardData.getData("text")); const target = Math.min(length - 1, i + e.clipboardData.getData("text").replace(/\\D/g, "").length); e.currentTarget.parentElement.children[target]?.focus(); }} />)}</div></label>;
+  return <label className="form-field digit-box-field"><span>{label}{required ? " *" : ""}</span><div className="rcld-digit-boxes" role="group" aria-label={label}>{Array.from({ length }, (_, i) => <input key={i} aria-label={label + " digit " + (i + 1)} inputMode="numeric" pattern="[0-9]" maxLength={1} value={digits[i] === " " ? "" : digits[i]} required={required && i === 0} onChange={e => { setDigits(i, e.target.value.slice(-1)); if (e.target.value && i < length - 1) e.target.parentElement.children[i + 1]?.focus(); }} onKeyDown={e => { if (e.key === "Backspace" && !digits[i] && i > 0) e.currentTarget.parentElement.children[i - 1]?.focus(); if (e.key === "ArrowLeft" && i > 0) e.currentTarget.parentElement.children[i - 1]?.focus(); if (e.key === "ArrowRight" && i < length - 1) e.currentTarget.parentElement.children[i + 1]?.focus(); }} onPaste={e => { e.preventDefault(); setDigits(i, e.clipboardData.getData("text")); const target = Math.min(length - 1, i + e.clipboardData.getData("text").replace(/\D/g, "").length); e.currentTarget.parentElement.children[target]?.focus(); }} />)}</div></label>;
 }
 
 export default function RegisterStudentPage() {
