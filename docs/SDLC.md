@@ -1,144 +1,101 @@
-# RCLD Islampur ERP — SDLC and Engineering Model
+# Engineering workflow
 
-## 1. Purpose
-Build a secure, maintainable, scalable and production-ready ERP for RCLD Islampur.
+This document describes how changes should be planned, implemented and released in the RCLD Islampur ERP repository. It is intended for day-to-day development, not as a theoretical SDLC description.
 
-This system is ERP-only. It does not include an LMS, course-video learning platform, online learning-content delivery system or public LMS experience.
+## Working model
 
-The ERP may expose limited student-facing operational pages when required for ERP processes, such as registration, fees, attendance, results and certificates.
+Use short, complete increments in a modular monolith. Each change should leave the application in a state another developer can understand and continue.
 
-## 2. Recommended development model
-There is no single universally best SDLC for every ERP. For this project, the strongest practical model is a hybrid Agile + incremental + risk-driven SDLC.
+Preferred sequence: Understand → Specify → Trace the data → Implement → Verify → Document → Commit.
 
-Agile provides short feedback cycles. Incremental delivery produces complete business capabilities in usable slices. Risk-driven planning addresses authentication, finance, data integrity and permissions early. Domain-first design prevents disconnected modules. Quality gates prevent unfinished features from being treated as complete.
+Do not start by changing a screen before understanding the API, schema and business rule behind it.
 
-Delivery loop: Discover → Specify → Model → Design → Build → Verify → Demonstrate → Accept → Release → Learn
+## Before changing a module
 
-Each iteration must produce a working, testable increment.
+1. Confirm the repository is Ujjwal0620/RCLD_ISLAMPUR and the working branch is main.
+2. Read the relevant section of docs/DEVELOPER_GUIDE.md.
+3. Inspect the page, its API route(s), Mongoose model(s) and shared utilities.
+4. Search for every other place that reads or writes the same collection.
+5. Identify existing records and backward-compatibility requirements.
+6. Write down expected behavior, permissions, business rules, edge cases and acceptance criteria.
+7. Create a restore branch before schema migrations, bulk data changes or broad refactors.
 
-## 3. Architecture model
-The recommended architecture is a modular monolith.
+## Implementation order
 
-RCLD Islampur is a focused single-institute ERP. Starting with microservices would add deployment, networking, observability and consistency complexity without a clear initial business benefit.
+For a normal feature, work through these layers:
 
-The application remains one Next.js deployable application while maintaining strong internal module boundaries.
+1. Data contract and schema/index changes.
+2. Server-side validation and normalization.
+3. Authentication and authorization.
+4. Business rules and persistence.
+5. API response and error contract.
+6. UI workflow and responsive states.
+7. Tests and regression checks.
+8. Documentation and changelog.
 
-Logical flow:
-UI Layer → Application/API Layer → Domain/Business Rules → Data Access Layer → MongoDB
+Keep the business rule on the server. Client-side validation is useful feedback, but it cannot protect stored data.
 
-Cross-cutting services: Authentication, Authorization, Validation, Audit Logging, File/Media Management, Notifications, Error Handling and Observability.
+## Definition of ready
 
-Services may be extracted later only when scale or operational requirements justify it.
+A task is ready when the developer knows who uses it and which role can perform each action; which records are created, updated or read; which existing data may be affected; the status transitions and business rules; how errors and conflicts should be reported; and what success looks like and how it will be verified.
 
-## 4. SDLC stages
-### Stage 0 — Project establishment
-Confirm repository, technology decisions, JavaScript-only policy, application structure, environment contract, MongoDB, Cloudinary, logging/error strategy and Git conventions.
-Gate: application foundation builds successfully.
+## Definition of done
 
-### Stage 1 — Requirements engineering
-For every module define actors, roles, permissions, business objectives, inputs, outputs, business rules, validation, status transitions, relationships, reports, audit requirements, edge cases and acceptance criteria.
-Gate: module specification approved before implementation.
+A change is done when the requested workflow works end to end; the database schema and indexes are compatible with existing data; every protected API action checks session and authorization; validation, empty, loading, success and failure states are handled; desktop and mobile behavior are checked; relevant regression checks pass; lint and production build pass or blockers are recorded; documentation is updated; the commit is pushed to the intended branch; and a restore point exists for major milestones.
 
-### Stage 2 — Domain and data modeling
-Identify entities, ownership, relationships, lifecycle/status, references versus embedded data, unique constraints, indexes, audit requirements and financial/data integrity rules.
-Gate: domain model and MongoDB model reviewed before UI implementation.
+A successful commit is not proof that a feature is tested. Report exactly what was run.
 
-### Stage 3 — Application/API design
-Define endpoints/server actions, request/response contracts, validation schemas, authentication, authorization, error contracts, pagination/filter/sort behavior and consistency strategy.
-Gate: API/business contract is clear enough for UI and testing.
+## Verification commands
 
-### Stage 4 — UI/UX design
-Create a shared ERP design system: app shell, sidebar, header, breadcrumbs, dashboard cards, data tables, advanced filters, search, pagination, forms, drawers/modals, confirmation dialogs, status badges, toasts, empty states, error states, loading states and responsive behavior.
+Run from the repository root: npm run lint and npm run build. For local manual verification, run npm run dev.
 
-The visual direction should be modern, professional and information-dense, using Lexa Node as a reference rather than copying its implementation.
-Gate: the business workflow can be completed through the designed UI.
+Check the actual workflow in a browser with representative records. For finance, test partial payments, multiple payments, zero/negative values, discounts, late fines, payment edits and receipt printing. For batches, test duplicate slots, faculty unavailability, missing skills, edits and student transfers. For access control, test both permitted and forbidden users.
 
-### Stage 5 — Vertical implementation
-Implement a feature completely instead of building only its screen:
-Model → Data Access → Business Logic → API → Authorization → UI → Validation → Tests
+## Git conventions
 
-Example: course creation is not complete when the form exists. Persistence, validation, permissions, listing, editing, deactivation, relationships and error handling must work together.
+- main is the integration branch.
+- Keep commits small enough to review and revert.
+- Use clear messages such as feat(students): preserve batch movement history, fix(fees): calculate remaining balance after receipt and docs: update developer guide.
+- Do not commit secrets, local environment files, private student data or database dumps.
+- Do not force-push main.
+- Before a risky change, create a restore branch from the current main commit.
+- After a release-worthy change, record the commit SHA, purpose and verification result in docs/RESTORE_POINTS.md.
 
-### Stage 6 — Verification
-Run JavaScript/ESLint checks, production build, unit tests for important business rules, API/integration tests, permission tests, CRUD tests, workflow tests, financial calculation tests, regression tests, responsive UI checks and database relationship checks.
+## Database and migration discipline
 
-### Stage 7 — User Acceptance Testing
-Test realistic RCLD scenarios for Superadmin, Admin, Employee, Faculty, Admission/Fee Operator and Student.
-UAT must test complete workflows, not merely individual pages.
+MongoDB schema changes need a migration plan even when Mongoose is schema-flexible.
 
-### Stage 8 — Release
-Verify environment variables, database indexes, authentication, permissions, Cloudinary, production build, smoke tests and restore point before deployment.
+- Identify existing documents that lack the new field.
+- Decide whether the field is optional, defaulted or backfilled.
+- Make migration scripts safe to re-run where possible.
+- Avoid destructive migrations.
+- Take a database backup before bulk updates.
+- Verify counts and sample documents before and after migration.
+- Keep a rollback or repair plan.
+- Never run a cleanup script against production without an explicit dry-run and reviewed filter.
 
-### Stage 9 — Maintenance
-Bug triage, security updates, performance monitoring, database maintenance, backup/recovery, audit review, regression testing and incremental improvements.
+## Financial workflow discipline
 
-## 5. ERP module implementation order
-### Phase A — Foundation
-Authentication; Users; Roles; Permissions; Settings; Audit Logs; File/Document abstraction; Error handling and observability.
+Fees and payments are business records, not just editable profile fields.
 
-### Phase B — Master Data
-Students; Employees; Faculty profiles; Skills; Courses; Subjects; Course-subject mapping; Subject-skill requirements.
+- Preserve each payment as a separate history entry.
+- Never derive the paid amount from a browser-provided total.
+- Recalculate totals on the server from persisted fee/payment data.
+- Use unique receipt numbers and prevent duplicate processing.
+- Keep payment method, reference/UTR, proof URL, date, note, recorder and authorizer where applicable.
+- Gateway callbacks must be authenticated and idempotent.
+- Do not activate an enrollment based only on a client redirect; use verified payment status.
 
-### Phase C — Admissions and Enrollment
-RCLD registration; Admission; Course selection; Enrollment; Admission status; Student lifecycle; Document collection.
+## UI conventions
 
-### Phase D — Finance
-Fee structures; Admission fee; Discounts; Installments; Payment records; Receipts; Outstanding dues; Refund/cancellation rules; Payment gateway integration; Financial reports.
+The target is a compact, professional ERP interface inspired by Lexa Node. Keep the visual language consistent across pages. Prefer shared components and existing CSS conventions over one-off styles.
 
-Financial rules receive additional verification because incorrect financial records can affect real business operations.
+Every data-heavy page should be considered at desktop, tablet and narrow mobile widths. Use hamburger navigation on small screens and avoid forcing wide tables beyond the viewport without a deliberate scroll or responsive treatment.
 
-### Phase E — Batch and Academic Operations
-Batch; Batch series; Schedule; Timetable; Faculty assignment; Skill-based faculty eligibility; Student-to-batch mapping; Attendance; Exams; Results; Certificates.
+Print layouts need their own acceptance checks. Browser print preview is the source of truth for pagination, margins, clipping and page size; CSS dimensions alone do not prove a receipt fits.
 
-Critical hierarchy: Course → Batch → Batch Series → Schedule
+## Documentation maintenance
 
-Example: DCA → Main Batch → A1 / A5
+Update the relevant docs in the same change that alters behavior: schema/relationship changes → DATA_MODEL.md; new routes or folder conventions → DEVELOPER_GUIDE.md; new roles/permissions → ACCESS_CONTROL.md; feature status → ERP_COMPLETENESS_AUDIT.md; environment, release or recovery changes → OPERATIONS_RUNBOOK.md and RESTORE_POINTS.md.
 
-### Phase F — Employee and Operations
-Employee attendance; Office in/out; Break tracking; Personal/official out-time classification; Tasks; Task assignment; Task status; Employee performance; Performance reports.
-
-### Phase G — CRM and Reporting
-Enquiries; Leads; Follow-ups; Admission conversion; Communication history; Operational dashboards; Financial dashboards; Student reports; Employee reports; Batch reports; Attendance reports; Management reports.
-
-### Phase H — ERP student operational portal
-This is not an LMS.
-
-Only ERP functions are exposed: profile, registration/admission information, enrollment, fees, installments, receipts, attendance, exam/results, certificate status and necessary notices/documents.
-
-No LMS course player, learning-content platform, online teaching system or LMS progress tracking is included.
-
-## 6. Domain boundaries
-Identity & Access; Student Management; Employee Management; Course Management; Admission & Enrollment; Finance; Batch & Scheduling; Attendance; Examination & Results; Certificates; CRM; Tasks & Performance; Reports; Documents; Notifications; Settings; Audit.
-
-Modules should reference each other through stable IDs and application services. Avoid uncontrolled direct coupling between unrelated modules.
-
-## 7. Data integrity
-1. MongoDB is the system of record.
-2. Business data is never hard-coded in React components.
-3. Financial records retain audit history.
-4. Important lifecycle changes are traceable.
-5. Destructive operations require authorization.
-6. Prefer soft deactivation where historical records must remain valid.
-7. Enforce unique identifiers at database level where appropriate.
-8. Design indexes around real query patterns.
-9. Dummy records must be identifiable and removable independently.
-10. Secrets must never be committed to Git.
-
-## 8. Security
-Security is part of the design, not a final-stage feature.
-
-Required controls: secure authentication, server-side authorization, role-based access control, permission checks, password hashing, session/token protection, input validation, file upload validation, rate limiting where appropriate, audit logging, secure environment variables, protection against unauthorized record access and privilege escalation.
-
-## 9. Definition of Ready
-A feature enters implementation only when its requirement, actors, permissions, business rules, entity relationships, acceptance criteria, dependencies and edge cases are defined.
-
-## 10. Definition of Done
-A feature is DONE only when requirements, database model, server/business logic, authorization, UI, validation, state handling and integration are complete; automated verification passes where applicable; production build passes; critical workflow passes; documentation is updated; and major milestones have a restore point.
-
-## 11. Git strategy
-The project uses main as the controlled integration branch.
-
-Rules: small feature-focused commits; conventional commit messages; no secrets; no unrelated refactoring inside feature commits; keep main buildable; create restore points before major milestones; verify after significant changes.
-
-## 12. M0 — ERP Foundation acceptance criteria
-JavaScript Next.js foundation; MongoDB connection; Cloudinary abstraction; environment contract; application shell; ERP login shell; dashboard shell; health endpoint; SDLC documentation; architecture documentation; no TypeScript; no LMS functionality.
+Avoid aspirational language. Distinguish current behavior from planned behavior and record unverified assumptions.
