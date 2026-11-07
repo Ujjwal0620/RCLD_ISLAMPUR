@@ -1794,3 +1794,91 @@ td{font-size:11px}
   .student-profile-page .fee-summary-three{grid-template-columns:1fr}
   .student-profile-page .fee-payment-detail-grid{grid-template-columns:1fr}
 }
+
+
+
+/* Modern student profile cards, data tables and floating fee workspace */
+.student-profile-page{--profile-ink:#172b4d;--profile-muted:#718198;--profile-line:#e4eaf3}
+.student-profile-page .student-profile-hero{border:1px solid #dbe6f5;border-radius:18px;background:linear-gradient(115deg,#eef5ff 0%,#fff 58%,#f1f7ff 100%);box-shadow:0 12px 32px rgba(34,74,130,.08);padding:22px 24px}
+.student-profile-page .student-profile-hero h2{color:#173b70;letter-spacing:-.025em}
+.student-profile-page .student-profile-hero .student-avatar{width:76px;height:76px;border:3px solid #fff;box-shadow:0 5px 18px rgba(34,74,130,.16);background:linear-gradient(145deg,#d9eaff,#b9d5ff)}
+.student-profile-page .student-profile-hero .profile-status{margin-left:auto;padding:7px 13px;border-radius:999px;background:#e3f8ee;color:#14784d;font-weight:800}
+.student-profile-page>.detail-section{border:1px solid #e5ebf4;border-radius:16px;background:#fff;box-shadow:0 6px 22px rgba(28,52,84,.045);padding:20px;margin:16px 0}
+.student-profile-page>.detail-section .detail-section-title{display:flex;align-items:center;gap:11px;padding-bottom:14px;margin-bottom:15px;border-bottom:1px solid #edf1f7}
+.student-profile-page>.detail-section .detail-section-title>svg{width:36px;height:36px;padding:9px;border-radius:11px;background:#eaf2ff;color:#3169bd}
+.student-profile-page .student-detail-grid{gap:10px}
+.student-profile-page .student-detail-field{padding:11px 12px;border:1px solid #e8edf5;border-radius:10px;background:#f9fbfe;min-width:0}
+.student-profile-page .student-detail-field:nth-child(4n+1){border-left:3px solid #4e83d1}
+.student-profile-page .student-detail-field:nth-child(4n+2){border-left:3px solid #16a085}
+.student-profile-page .student-detail-field:nth-child(4n+3){border-left:3px solid #d69a36}
+.student-profile-page .student-detail-field:nth-child(4n){border-left:3px solid #8b72ca}
+.student-profile-page .student-detail-field>span{font-size:10px;color:#77869b;letter-spacing:.025em}
+.student-profile-page .student-detail-field>strong{font-size:12px;color:#263a58;overflow-wrap:anywhere}
+.student-profile-page .student-summary-grid .summary-card{border:1px solid #e4ebf5;border-radius:14px;background:linear-gradient(145deg,#fff,#f7faff);padding:15px;box-shadow:0 4px 12px rgba(28,52,84,.035)}
+.student-profile-page .student-summary-grid .summary-card:nth-child(4n+1){border-top:3px solid #4381d5}
+.student-profile-page .student-summary-grid .summary-card:nth-child(4n+2){border-top:3px solid #1aa17a}
+.student-profile-page .student-summary-grid .summary-card:nth-child(4n+3){border-top:3px solid #d59b36}
+.student-profile-page .student-summary-grid .summary-card:nth-child(4n){border-top:3px solid #8a72c5}
+.student-profile-page .table-wrap{overflow-x:auto;border:1px solid #e3eaf3;border-radius:12px}
+.student-profile-page .table-wrap table{width:100%;border-collapse:separate;border-spacing:0;font-size:12px}
+.student-profile-page .table-wrap thead th{position:sticky;top:0;background:#edf4ff;color:#244a7c;font-size:10px;font-weight:850;letter-spacing:.035em;text-transform:uppercase;padding:12px 13px;border:0;border-bottom:1px solid #dce7f5;white-space:nowrap}
+.student-profile-page .table-wrap tbody td{padding:11px 13px;border:0;border-bottom:1px solid #edf1f6;color:#43536b;vertical-align:middle}
+.student-profile-page .table-wrap tbody tr:nth-child(even){background:#fafcff}
+.student-profile-page .table-wrap tbody tr:hover{background:#f0f6ff}
+.student-profile-page .table-wrap tbody tr:last-child td{border-bottom:0}
+.student-profile-page .student-address{border:1px solid #dfe9f6;border-radius:12px;background:#f6faff;padding:15px;margin-top:14px}
+.student-profile-page .fee-overview-card{border-radius:15px;padding:17px 18px;display:flex;flex-direction:column;gap:6px;min-width:0;border:1px solid transparent}
+.student-profile-page .student-fee-overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:8px 0 14px}
+.student-profile-page .fee-overview-card>span{font-size:11px;font-weight:800;letter-spacing:.03em;text-transform:uppercase}
+.student-profile-page .fee-overview-card>strong{font-size:25px;line-height:1.2;letter-spacing:-.025em}
+.student-profile-page .fee-overview-card>small{font-size:10px;opacity:.8}
+.student-profile-page .fee-total{background:#edf4ff;color:#25569a;border-color:#d5e5fb}
+.student-profile-page .fee-paid{background:#eaf8f1;color:#14734f;border-color:#cceedd}
+.student-profile-page .fee-due{background:#fff2ed;color:#b94d36;border-color:#f7d9d0}
+.student-profile-page .fee-overview-meta{display:flex;flex-wrap:wrap;gap:10px 24px;padding:12px 14px;border:1px solid #e7edf5;border-radius:11px;background:#fbfcfe;margin-bottom:13px}
+.student-profile-page .fee-overview-meta>span{display:flex;align-items:center;gap:7px;color:#53647b;font-size:11px}
+.student-profile-page .fee-overview-meta b{color:#8290a2;font-size:10px;text-transform:uppercase}
+.student-profile-page .fee-overview-meta em{font-style:normal;font-weight:800}
+.student-profile-page .fee-status-paid{color:#168052}.student-profile-page .fee-status-due{color:#c15b42}
+.student-profile-page .fee-workspace-launch{width:100%;display:flex;align-items:center;gap:14px;padding:16px 18px;border:1px solid #d6e4f7;border-radius:13px;background:linear-gradient(100deg,#f4f8ff,#fff);color:#24436d;text-align:left;cursor:pointer;transition:.18s ease}
+.student-profile-page .fee-workspace-launch:hover{border-color:#8eb4e8;box-shadow:0 8px 22px rgba(48,100,170,.1);transform:translateY(-1px)}
+.student-profile-page .fee-workspace-icon{width:44px;height:44px;display:grid;place-items:center;border-radius:12px;background:#e2edff;color:#3169bd;flex:none}
+.student-profile-page .fee-workspace-launch>span:nth-child(2){display:grid;gap:4px;min-width:0}
+.student-profile-page .fee-workspace-launch strong{font-size:13px}.student-profile-page .fee-workspace-launch small{font-size:10px;color:#7b899c}
+.student-profile-page .fee-workspace-action{margin-left:auto;display:flex;align-items:center;gap:7px;color:#3269b8;font-size:11px;font-weight:800;white-space:nowrap}
+.student-profile-page .fee-workspace-action svg{transform:rotate(180deg)}
+.fee-modal-backdrop{position:fixed;inset:0;z-index:10000;background:rgba(12,25,46,.58);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:22px}
+.fee-workspace-modal{width:min(1180px,100%);max-height:min(92vh,980px);display:flex;flex-direction:column;background:#f7f9fc;border:1px solid rgba(255,255,255,.7);border-radius:20px;box-shadow:0 30px 100px rgba(5,20,44,.35);overflow:hidden}
+.fee-modal-header{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:20px 25px;background:linear-gradient(110deg,#123e78,#2869b5);color:#fff}
+.fee-modal-header .eyebrow{font-size:9px;font-weight:850;letter-spacing:.15em;opacity:.75}
+.fee-modal-header h2{margin:4px 0;font-size:21px;color:#fff}.fee-modal-header p{margin:0;font-size:11px;color:#dbeaff}
+.fee-modal-close{width:36px;height:36px;border:1px solid rgba(255,255,255,.35);border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:25px;line-height:1;cursor:pointer}
+.fee-modal-body{padding:18px 22px 24px;overflow:auto}
+.fee-modal-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px;margin-bottom:16px}
+.fee-modal-stats>div{display:grid;gap:5px;padding:13px 15px;border:1px solid #e3eaf3;border-radius:12px;background:#fff}
+.fee-modal-stats small{color:#8190a4;font-size:10px}.fee-modal-stats strong{font-size:19px;color:#29456b}
+.fee-modal-stats .fee-green{color:#158054}.fee-modal-stats .fee-red{color:#c0523c}
+.fee-modal-section{margin:13px 0;padding:17px;border:1px solid #e2e9f2;border-radius:14px;background:#fff;box-shadow:0 3px 12px rgba(28,52,84,.025)}
+.fee-modal-section-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:13px}
+.fee-modal-section-heading h3{margin:0;color:#263e60;font-size:14px}.fee-modal-section-heading p{margin:4px 0 0;color:#8793a5;font-size:10px}
+.fee-section-tag{padding:5px 8px;border-radius:20px;background:#eef3fb;color:#5a6f8c;font-size:9px;font-weight:850;white-space:nowrap}
+.fee-tag-blue{background:#e9f2ff;color:#3268ad}
+.fee-modal-form{margin:0;padding:0;border:0;background:transparent}
+.fee-modal-form .form-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.fee-modal-form .form-field input,.fee-modal-form .form-field select{min-height:39px}
+.fee-plan-total{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:13px;padding:10px 12px;border-radius:9px;background:#f3f7fd;color:#66778f;font-size:10px}
+.fee-plan-total strong{color:#254f87;font-size:14px}.fee-plan-total span:last-child{margin-left:auto}
+.fee-modal-actions{display:flex;justify-content:flex-end;margin-top:13px}
+.fee-history-table-wrap{max-height:360px;overflow:auto}
+.fee-history-table{min-width:920px}
+.fee-history-table td small{display:block;margin-top:4px;color:#8492a5;font-size:9px}
+.fee-history-table .fee-history-amount{font-weight:850;color:#167b55;white-space:nowrap}
+.fee-print-row{display:inline-flex;align-items:center;gap:5px;border:1px solid #d8e5f5;border-radius:7px;background:#f3f7ff;color:#2d64aa;padding:6px 9px;font-size:10px;font-weight:800;cursor:pointer}
+.fee-history-total{display:flex;align-items:center;justify-content:flex-end;gap:16px;padding:12px 4px 0;color:#687991;font-size:11px}
+.fee-history-total strong{font-size:16px;color:#168052}
+.fee-modal-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 22px;border-top:1px solid #e5eaf1;background:#fff;color:#8290a3;font-size:10px}
+.student-profile-page .fee-side{display:flex;flex-direction:column;justify-content:center;gap:1mm}
+.student-profile-page .fee-side p{margin:0 0 1mm}
+@media(max-width:850px){.fee-modal-backdrop{padding:10px}.fee-workspace-modal{max-height:96vh;border-radius:14px}.fee-modal-body{padding:12px}.fee-modal-form .form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.student-profile-page .student-fee-overview{grid-template-columns:1fr 1fr}.student-profile-page .student-fee-overview .fee-due{grid-column:1/-1}}
+@media(max-width:560px){.student-profile-page>.detail-section{padding:14px;border-radius:13px}.student-profile-page .student-profile-hero{padding:15px;gap:12px;flex-wrap:wrap}.student-profile-page .student-fee-overview,.fee-modal-stats{grid-template-columns:1fr}.student-profile-page .student-fee-overview .fee-due{grid-column:auto}.student-profile-page .fee-overview-card>strong{font-size:22px}.student-profile-page .fee-workspace-action{font-size:0}.student-profile-page .fee-workspace-action svg{font-size:initial}.fee-modal-header{padding:15px}.fee-modal-header h2{font-size:17px}.fee-modal-body{padding:9px}.fee-modal-section{padding:12px}.fee-modal-form .form-grid{grid-template-columns:1fr}.fee-modal-footer{padding:10px;flex-wrap:wrap}.fee-history-table-wrap{max-height:300px}}
+@media print{.fee-modal-backdrop{display:none!important}}
