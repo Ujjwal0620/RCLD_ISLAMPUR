@@ -2150,3 +2150,7 @@ tbody tr:hover{background:#fafbff}
 @media(prefers-reduced-motion:reduce){
  *,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}
 }
+
+/* Keyboard access to the main workspace */
+.erp-skip-link{position:fixed;top:8px;left:8px;z-index:20000;transform:translateY(-160%);padding:9px 13px;border-radius:8px;background:#17243a;color:#fff;font-size:12px;font-weight:750;box-shadow:0 5px 18px rgba(10,20,38,.2)}
+.erp-skip-link:focus{transform:translateY(0);outline:3px solid #9eacff;outline-offset:2px}
