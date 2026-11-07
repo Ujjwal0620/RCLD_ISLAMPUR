@@ -81,7 +81,7 @@ export default function RegisterStudentPage() {
       const data = new FormData(); data.append("file", file);
       const response = await fetch("/api/uploads/student-photo", { method: "POST", body: data });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Unable to upload photo.");
+      if (!response.ok) throw new Error([result.error, result.detail].filter(Boolean).join(" — ") || "Unable to upload photo.");
       update("photoUrl", result.url);
     } catch (error) { setMessage(error.message); }
     finally { setPhotoUploading(false); }
@@ -96,7 +96,7 @@ export default function RegisterStudentPage() {
       const data = new FormData(); data.append("file", file); data.append("purpose", "signature");
       const response = await fetch("/api/uploads/student-photo", { method: "POST", body: data });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Unable to upload signature.");
+      if (!response.ok) throw new Error([result.error, result.detail].filter(Boolean).join(" — ") || "Unable to upload signature.");
       update("signatureUrl", result.url);
     } catch (error) { setMessage(error.message); }
     finally { setSignatureUploading(false); }
