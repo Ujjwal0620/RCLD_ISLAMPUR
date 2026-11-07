@@ -42,6 +42,7 @@ export default function RegisterStudentPage() {
   const [referrals, setReferrals] = useState([]);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [signatureUploading, setSignatureUploading] = useState(false);
+  const [signatureInputKey, setSignatureInputKey] = useState(0);
 
   useEffect(() => { fetch("/api/courses",{cache:"no-store"}).then(r=>r.json()).then(d=>setCourses(d.courses||[])).catch(()=>{}); fetch("/api/referrals",{cache:"no-store"}).then(r=>r.json()).then(d=>setReferrals((d.referrals||[]).filter(x=>x.status==="Active"))).catch(()=>{}); }, []);
 
@@ -119,6 +120,7 @@ export default function RegisterStudentPage() {
 
       setMessage("Student registered successfully. Form No: " + j.student.formNo + " · Enrollment No: " + j.student.enrollmentNo);
       setForm({ ...initial, formNo: j.student.formNo, enrollmentNo: j.student.enrollmentNo, aecCode: "RCLD/ISL-001" });
+      setSignatureInputKey(key => key + 1);
       setSelectedCourse(null);
     } catch (error) {
       setMessage(error.message || "Unable to connect to the local ERP server.");
@@ -246,7 +248,7 @@ export default function RegisterStudentPage() {
           <div className="rcld-declaration-grid">
             <Field label="Date" name="declarationDate" type="date" value={form.declarationDate} onChange={update}/>
             <Field label="Place" name="declarationPlace" value={form.declarationPlace} onChange={update}/>
-            <label className="form-field"><span>Student Signature Image *</span><input type="file" accept="image/*" disabled={signatureUploading} onChange={e=>uploadSignature(e.target.files?.[0])} required={!form.signatureUrl}/><small>{signatureUploading?"Uploading signature to Cloudinary…":"PNG/JPG image · Maximum 3 MB"}</small>{form.signatureUrl&&<img src={form.signatureUrl} alt="Uploaded student signature" style={{maxWidth:220,maxHeight:80,objectFit:"contain",background:"#fff",padding:8,border:"1px solid #d5dce7",borderRadius:8}}/>}</label>
+            <label className="form-field"><span>Student Signature Image *</span><input key={signatureInputKey} type="file" accept="image/*" disabled={signatureUploading} onChange={e=>uploadSignature(e.target.files?.[0])} required={!form.signatureUrl}/><small>{signatureUploading?"Uploading signature to Cloudinary…":"PNG/JPG image · Maximum 3 MB"}</small>{form.signatureUrl&&<img src={form.signatureUrl} alt="Uploaded student signature" style={{maxWidth:220,maxHeight:80,objectFit:"contain",background:"#fff",padding:8,border:"1px solid #d5dce7",borderRadius:8}}/>}</label>
           </div>
         </section>
 
