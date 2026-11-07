@@ -13,6 +13,19 @@ const initial = {
   declarationDate: "", declarationPlace: "", signatureApplicant: ""
 };
 
+
+const INDIA_STATES = ["Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal","Andaman and Nicobar Islands","Chandigarh","Dadra and Nagar Haveli and Daman and Diu","Delhi","Jammu and Kashmir","Ladakh","Lakshadweep","Puducherry"];
+const DISTRICTS_BY_STATE = {
+  "West Bengal":["Alipurduar","Bankura","Birbhum","Cooch Behar","Dakshin Dinajpur","Darjeeling","Hooghly","Howrah","Jalpaiguri","Jhargram","Kalimpong","Kolkata","Malda","Murshidabad","Nadia","North 24 Parganas","Paschim Bardhaman","Paschim Medinipur","Purba Bardhaman","Purba Medinipur","Purulia","South 24 Parganas","Uttar Dinajpur"],
+  "Bihar":["Araria","Arwal","Aurangabad","Banka","Begusarai","Bhagalpur","Bhojpur","Buxar","Darbhanga","East Champaran","Gaya","Gopalganj","Jamui","Jehanabad","Kaimur","Katihar","Khagaria","Kishanganj","Lakhisarai","Madhepura","Madhubani","Munger","Muzaffarpur","Nalanda","Nawada","Patna","Purnia","Rohtas","Saharsa","Samastipur","Saran","Sheikhpura","Sheohar","Sitamarhi","Siwan","Supaul","Vaishali","West Champaran"],
+  "Jharkhand":["Bokaro","Chatra","Deoghar","Dhanbad","Dumka","East Singhbhum","Garhwa","Giridih","Godda","Gumla","Hazaribagh","Jamtara","Khunti","Koderma","Latehar","Lohardaga","Pakur","Palamu","Ramgarh","Ranchi","Sahebganj","Seraikela Kharsawan","Simdega","West Singhbhum"],
+  "Odisha":["Angul","Balangir","Balasore","Bargarh","Bhadrak","Boudh","Cuttack","Deogarh","Dhenkanal","Gajapati","Ganjam","Jagatsinghpur","Jajpur","Jharsuguda","Kalahandi","Kandhamal","Kendrapara","Kendujhar","Khordha","Koraput","Malkangiri","Mayurbhanj","Nabarangpur","Nayagarh","Nuapada","Puri","Rayagada","Sambalpur","Subarnapur","Sundargarh"],
+  "Assam":["Baksa","Barpeta","Biswanath","Bongaigaon","Cachar","Charaideo","Chirang","Darrang","Dhemaji","Dhubri","Dibrugarh","Dima Hasao","Goalpara","Golaghat","Hailakandi","Hojai","Jorhat","Kamrup","Kamrup Metropolitan","Karbi Anglong","Karimganj","Kokrajhar","Lakhimpur","Majuli","Morigaon","Nagaon","Nalbari","Sivasagar","Sonitpur","South Salmara-Mankachar","Tinsukia","Udalguri","West Karbi Anglong"],
+  "Delhi":["Central Delhi","East Delhi","New Delhi","North Delhi","North East Delhi","North West Delhi","Shahdara","South Delhi","South East Delhi","South West Delhi","West Delhi"],
+  "Uttar Pradesh":["Agra","Aligarh","Ambedkar Nagar","Amethi","Amroha","Auraiya","Ayodhya","Azamgarh","Baghpat","Bahraich","Ballia","Balrampur","Banda","Barabanki","Bareilly","Basti","Bhadohi","Bijnor","Budaun","Bulandshahr","Chandauli","Chitrakoot","Deoria","Etah","Etawah","Farrukhabad","Fatehpur","Firozabad","Gautam Buddha Nagar","Ghaziabad","Ghazipur","Gonda","Gorakhpur","Hamirpur","Hapur","Hardoi","Hathras","Jalaun","Jaunpur","Jhansi","Kannauj","Kanpur Dehat","Kanpur Nagar","Kasganj","Kaushambi","Kheri","Kushinagar","Lalitpur","Lucknow","Maharajganj","Mahoba","Mainpuri","Mathura","Mau","Meerut","Mirzapur","Moradabad","Muzaffarnagar","Pilibhit","Pratapgarh","Prayagraj","Raebareli","Rampur","Saharanpur","Sambhal","Sant Kabir Nagar","Shahjahanpur","Shamli","Shravasti","Siddharthnagar","Sitapur","Sonbhadra","Sultanpur","Unnao","Varanasi"],
+  "Maharashtra":["Ahmednagar","Akola","Amravati","Aurangabad","Beed","Bhandara","Buldhana","Chandrapur","Dhule","Gadchiroli","Gondia","Hingoli","Jalgaon","Jalna","Kolhapur","Latur","Mumbai City","Mumbai Suburban","Nagpur","Nanded","Nandurbar","Nashik","Osmanabad","Palghar","Parbhani","Pune","Raigad","Ratnagiri","Sangli","Satara","Sindhudurg","Solapur","Thane","Wardha","Washim","Yavatmal"]
+};
+
 function Field({ label, name, value, onChange, required, type = "text", maxLength, inputMode, pattern }) {
   return (
     <label className="form-field">
@@ -185,8 +198,8 @@ export default function RegisterStudentPage() {
               <div className="form-grid two">
                 <Field label="P.O." name="postOffice" value={form.postOffice} onChange={update}/>
                 <Field label="P.S." name="policeStation" value={form.policeStation} onChange={update}/>
-                <Field label="State" name="state" value={form.state} onChange={update}/>
-                <Field label="District" name="district" value={form.district} onChange={update}/>
+                <label className="form-field"><span>State</span><select value={form.state} onChange={e=>{update("state",e.target.value);update("district","");}}><option value="">Select state</option>{INDIA_STATES.map(st=><option key={st} value={st}>{st}</option>)}</select></label>
+                <label className="form-field"><span>District</span><select value={form.district} disabled={!form.state} onChange={e=>update("district",e.target.value)}><option value="">Select district</option>{(DISTRICTS_BY_STATE[form.state]||[]).map(d=><option key={d} value={d}>{d}</option>)}</select></label>
                 <Field label="PIN" name="pin" value={form.pin} onChange={update} maxLength={10}/>
                 <Field label="Nearest Landmark" name="nearestLandmark" value={form.nearestLandmark} onChange={update}/>
               </div>
@@ -198,8 +211,8 @@ export default function RegisterStudentPage() {
                 <label className="form-field"><span>Ward No. / Village / Town</span><textarea value={form.permanentAddress} onChange={e=>update("permanentAddress",e.target.value)} rows="2"/></label>
                 <div className="form-grid two">
                   <Field label="P.O." name="permanentPostOffice" value={form.permanentPostOffice} onChange={update}/>
-                  <Field label="District" name="permanentDistrict" value={form.permanentDistrict} onChange={update}/>
-                  <Field label="State" name="permanentState" value={form.permanentState} onChange={update}/>
+                  <label className="form-field"><span>State</span><select value={form.permanentState} onChange={e=>{update("permanentState",e.target.value);update("permanentDistrict","");}}><option value="">Select state</option>{INDIA_STATES.map(st=><option key={st} value={st}>{st}</option>)}</select></label>
+                  <label className="form-field"><span>District</span><select value={form.permanentDistrict} disabled={!form.permanentState} onChange={e=>update("permanentDistrict",e.target.value)}><option value="">Select district</option>{(DISTRICTS_BY_STATE[form.permanentState]||[]).map(d=><option key={d} value={d}>{d}</option>)}</select></label>
                   <Field label="PIN" name="permanentPin" value={form.permanentPin} onChange={update}/>
                   <Field label="Nearest Landmark" name="permanentNearestLandmark" value={form.permanentNearestLandmark} onChange={update}/>
                 </div>
