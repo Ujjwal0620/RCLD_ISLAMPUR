@@ -74,7 +74,7 @@ export async function PATCH(req,{params}){
     const mobileNumber=String(body.mobileNumber ?? "").replace(/\D/g,"");
     if(body.mobileNumber!==undefined && !/^\d{10}$/.test(mobileNumber))return NextResponse.json({error:"Mobile number must contain exactly 10 digits."},{status:400});
     if(body.mobileNumber!==undefined)update.mobileNumber=mobileNumber;
-    if(body.signatureUrl!==undefined && !String(body.signatureUrl||"").startsWith("https://res.cloudinary.com/"))return NextResponse.json({error:"Student signature must be uploaded to Cloudinary."},{status:400});
+    if(body.signatureUrl && !String(body.signatureUrl).startsWith("https://res.cloudinary.com/"))return NextResponse.json({error:"Student signature must be uploaded to Cloudinary."},{status:400});
     update.email=email;update.aadhaarNumber=aadhaarNumber;
     if(body.referralId!==undefined){
       if(!body.referralId){update.referralId="";update.referralName="";update.marketingEmployeeId="";update.marketingEmployeeName="";}
