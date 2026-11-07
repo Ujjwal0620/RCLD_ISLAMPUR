@@ -45,6 +45,21 @@ Neither branch is a copy of the database, local environment files or Cloudinary 
 | Branch URL | https://github.com/Ujjwal0620/RCLD_ISLAMPUR/tree/restore/2026-11-07-before-hando-ui |
 | Commit URL | https://github.com/Ujjwal0620/RCLD_ISLAMPUR/commit/bb3027f1afbe7ad4ae88f6abe0ae376604037d04 |
 
+
+## Hando UI refresh checkpoint
+
+**Checkpoint branch created after the Hando-inspired UI/UX refresh and design guide were committed on 7 November 2026.**
+
+| Item | Value |
+|---|---|
+| Branch | checkpoint/2026-11-07-hando-ui-refresh |
+| Source commit | 2330ca0e61ed2ad8ab34fac39cf19241dbe0535e |
+| Purpose | Preserve the Hando-inspired UI layer, shared ERP shell refinements and UI/UX design guide |
+| Branch URL | https://github.com/Ujjwal0620/RCLD_ISLAMPUR/tree/checkpoint/2026-11-07-hando-ui-refresh |
+| Commit URL | https://github.com/Ujjwal0620/RCLD_ISLAMPUR/commit/2330ca0e61ed2ad8ab34fac39cf19241dbe0535e |
+
+The checkpoint is a source-code snapshot. It does not include a MongoDB backup, local secrets or Cloudinary assets.
+
 ## Checkpoint policy
 
 Create a named restore branch before:
