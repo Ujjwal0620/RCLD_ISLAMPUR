@@ -7,7 +7,7 @@ const StudentSchema = new mongoose.Schema({
   formNo: { type: String, required: true, unique: true, trim: true },
   aecCode: String, regnNo: String, enrollmentNo: String, admissionDate: String, guardianContactNumber: String, dueAmount: mongoose.Schema.Types.Mixed, paymentStatus: mongoose.Schema.Types.Mixed, sourceCourseLabel: String, importSource: String, courseName: String, courseCode: String, batchId: { type: mongoose.Schema.Types.ObjectId, ref: "Batch", default: null }, batchCode: String,
   applicantName: { type: String, required: true, trim: true }, nationality: String, dateOfBirth: String, sex: String,
-  fatherOrHusbandName: String, address: String, pin: String, whatsappNumber: String,
+  fatherOrHusbandName: String, address: String, presentAddress: String, permanentAddress: String, sameAsPresentAddress: Boolean, postOffice: String, policeStation: String, district: String, state: String, permanentPin: String, permanentDistrict: String, permanentState: String, pin: String, whatsappNumber: String, guardianContactNumber: String,
   mobileNumber: { type: String, required: true, trim: true },
   email: { type: String, required: true, trim: true, lowercase: true },
   aadhaarNumber: { type: String, required: true, trim: true },
