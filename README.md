@@ -16,6 +16,7 @@ This repository is the working application—not a mock-up or a generic college 
 | Run, verify, release or recover the app | docs/OPERATIONS_RUNBOOK.md |
 | Follow the engineering process | docs/SDLC.md |
 | Find the protected baseline | docs/RESTORE_POINTS.md |
+| Follow the shared visual language and UI rules | docs/UI_UX_GUIDE.md |
 
 ## Technology
 
@@ -71,7 +72,7 @@ Local development has a MongoDB fallback at mongodb://127.0.0.1:27017/rcld_islam
 
 ## Product and UI direction
 
-The interface is a compact, professional ERP. The visual reference is https://themesbrand.com/lexa-node/layouts/index.html; use it as a design reference, not as code to copy. Keep tables, forms, student profiles, receipts and timetable views information-dense but readable on desktop and small screens.
+The interface is a compact, professional ERP. The current workspace direction is inspired by https://zoyothemes.com/hando/html/; the earlier Lexa reference remains part of the project's design history. Use these as visual references, not as code to copy. Follow docs/UI_UX_GUIDE.md for shared shell, component, responsive and accessibility conventions. Keep tables, forms, student profiles, receipts and timetable views information-dense but readable on desktop and small screens.
 
 The public root page and student-facing operational pages should be treated as separate experiences from the authenticated staff workspace. Do not add an LMS course player or learning-content engine unless the product scope is explicitly revised.
 
