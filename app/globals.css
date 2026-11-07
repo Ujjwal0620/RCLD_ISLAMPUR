@@ -1592,3 +1592,132 @@ td{font-size:11px}
 .student-profile-page .top-actions .ghost-btn{white-space:nowrap}
 @media(max-width:900px){.student-profile-page .top-actions{justify-content:flex-start}.student-profile-page .student-address-edit-grid{grid-template-columns:1fr}}
 @media(max-width:600px){.student-profile-page .top-actions .ghost-btn{flex:1 1 calc(50% - 8px);justify-content:center}.student-profile-page .student-address-edit-grid>.form-grid{grid-template-columns:1fr}}
+
+
+/* RCLD registration form - screen layout based on the official paper form */
+.rcld-registration-sheet{
+  width:100%;
+  max-width:1120px;
+  margin:18px auto 32px;
+  border:1px solid #c8d9ef;
+  border-radius:14px;
+  overflow:hidden;
+  background:linear-gradient(180deg,#fbfdff 0%,#f0f7ff 100%);
+  box-shadow:0 12px 34px rgba(20,55,105,.09);
+}
+.rcld-registration-brand{
+  display:grid;
+  grid-template-columns:90px minmax(0,1fr) 90px;
+  align-items:center;
+  gap:18px;
+  padding:20px 24px 16px;
+  border-bottom:6px solid #168bd0;
+  background:linear-gradient(180deg,#fff,#f5faff);
+  position:relative;
+}
+.rcld-registration-brand:after{
+  content:"";
+  position:absolute;
+  left:0;right:0;bottom:-9px;height:3px;
+  background:#0a3e88;
+}
+.rcld-brand-seal{
+  width:76px;height:76px;
+  border:4px double #0b4a91;border-radius:50%;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:#fff;color:#0b438a;font-size:19px;font-weight:950;
+  box-shadow:0 3px 10px rgba(16,55,105,.1);
+}
+.rcld-brand-seal span{font-size:9px;letter-spacing:.08em}
+.rcld-brand-title{text-align:center;min-width:0}
+.rcld-brand-title h2{
+  margin:0;color:#073b80;font-family:Georgia,serif;
+  font-size:clamp(20px,2.6vw,31px);line-height:1.02;
+  letter-spacing:.015em;font-weight:900;
+}
+.rcld-brand-title span{display:block;margin-top:8px;color:#164a85;font-size:10px;font-weight:850;letter-spacing:.1em}
+.rcld-brand-book{text-align:center;color:#0b438a;font-size:24px;font-weight:950;border-left:1px solid #c9d9ee;padding-left:12px}
+.rcld-brand-book small{display:block;font-size:11px}
+.rcld-registration-meta{
+  display:grid;grid-template-columns:1fr 1fr;gap:16px;
+  padding:14px 20px;background:#e5f1ff;border-bottom:1px solid #c9dcf3;
+}
+.rcld-registration-meta .form-field{display:grid;grid-template-columns:105px minmax(0,1fr);align-items:center;gap:9px}
+.rcld-registration-meta .form-field span{color:#173f78;font-size:12px;font-weight:850}
+.rcld-registration-meta input{min-height:39px;border:1px solid #9cb7d9;border-radius:7px;background:#fff}
+.rcld-registration-sheet .rcld-form-section{padding:16px 20px;border-bottom:1px solid #dce8f7}
+.rcld-registration-sheet .rcld-form-section>h3{
+  margin:0 0 12px;padding:8px 13px;
+  color:#fff;font-size:14px;font-weight:850;letter-spacing:.01em;
+  border-radius:8px;background:linear-gradient(90deg,#073c86 0%,#0c5aa6 70%,#dcecff 70%,#dcecff 100%);
+}
+.rcld-office-layout{display:grid;grid-template-columns:minmax(0,1fr) 165px;gap:18px;align-items:stretch}
+.rcld-office-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px;align-content:start}
+.rcld-registration-sheet .form-field{min-width:0}
+.rcld-registration-sheet .form-field span{font-size:11px;color:#143c73;font-weight:800}
+.rcld-registration-sheet .form-field input,
+.rcld-registration-sheet .form-field select,
+.rcld-registration-sheet .form-field textarea{
+  min-width:0;min-height:38px;padding:8px 10px;
+  border:1px solid #a9c1df;border-radius:7px;
+  color:#1d3558;background:#fff;font-size:12px;
+}
+.rcld-registration-sheet .form-field textarea{min-height:58px}
+.rcld-photo-card{
+  min-height:180px;padding:12px 10px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  border:1px solid #5279ad;border-radius:10px;background:#f4f9ff;text-align:center;
+}
+.rcld-photo-card strong{font-size:12px;color:#123d79}
+.rcld-photo-card .registration-photo-preview{width:100px;height:100px;border:1px solid #9db8dc;border-radius:5px;background:#fff;display:grid;place-items:center;overflow:hidden;color:#0d4c91}
+.rcld-photo-card .registration-photo-preview img{width:100%;height:100%;object-fit:cover}
+.rcld-photo-card .ghost-btn{position:relative;overflow:hidden;min-height:32px;padding:6px 10px;font-size:10px}
+.rcld-photo-card input[type=file]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.rcld-photo-card small{font-size:9px;color:#71829b}
+.rcld-registration-sheet .course-fee-summary{margin-top:12px}
+.rcld-applicant-grid{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;gap:10px 14px;align-items:end}
+.rcld-applicant-wide{grid-column:1/-1}
+.rcld-applicant-wide .form-field{display:grid;grid-template-columns:205px minmax(0,1fr);align-items:center}
+.rcld-address-grid{grid-template-columns:1fr 1fr;gap:14px}
+.rcld-address-grid .registration-address-card{min-width:0;padding:13px;border:1px solid #b9cde6;border-radius:9px;background:#f8fbff}
+.rcld-address-grid .registration-address-card h4{margin:0 0 10px;color:#0b438a;font-size:12px;font-weight:850}
+.rcld-address-grid .form-grid.two{gap:9px 10px}
+.rcld-address-grid .registration-same-address{display:flex;align-items:center;gap:8px;margin:0 0 10px;color:#163f78;font-size:11px;font-weight:750}
+.rcld-address-grid .registration-same-address input{width:16px;height:16px;accent-color:#0b58a5}
+.rcld-contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
+.rcld-qualification-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px}
+.rcld-enclosures{gap:10px 24px}
+.rcld-enclosures label{font-size:11px;color:#1b3d6c;font-weight:650}
+.rcld-enclosures input{accent-color:#0c4e97}
+.rcld-declaration-grid{display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:12px}
+.rcld-registration-sheet .declaration{margin:0 0 12px;background:#eaf3ff;border:1px solid #d1e1f5;color:#345577}
+.rcld-registration-sheet .form-actions{margin:0;padding:16px 20px;background:#eaf3ff}
+@media(max-width:900px){
+  .rcld-applicant-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rcld-applicant-wide{grid-column:1/-1}
+}
+@media(max-width:650px){
+  .rcld-registration-brand{grid-template-columns:54px minmax(0,1fr);gap:10px;padding:14px}
+  .rcld-brand-seal{width:50px;height:50px;font-size:13px;border-width:3px}
+  .rcld-brand-seal span{font-size:7px}
+  .rcld-brand-title h2{font-size:17px}
+  .rcld-brand-title span{font-size:7px;letter-spacing:.04em}
+  .rcld-brand-book{display:none}
+  .rcld-registration-meta{grid-template-columns:1fr;padding:12px;gap:9px}
+  .rcld-registration-meta .form-field{grid-template-columns:92px minmax(0,1fr)}
+  .rcld-registration-sheet .rcld-form-section{padding:13px 12px}
+  .rcld-office-layout{grid-template-columns:minmax(0,1fr) 112px;gap:9px}
+  .rcld-office-fields{grid-template-columns:1fr;gap:8px}
+  .rcld-photo-card{min-height:150px;padding:8px}
+  .rcld-photo-card .registration-photo-preview{width:78px;height:85px}
+  .rcld-applicant-grid,.rcld-address-grid,.rcld-contact-grid,.rcld-qualification-grid,.rcld-declaration-grid{grid-template-columns:1fr}
+  .rcld-applicant-wide{grid-column:auto}
+  .rcld-applicant-wide .form-field{grid-template-columns:1fr}
+  .rcld-address-grid .form-grid.two{grid-template-columns:1fr 1fr}
+}
+@media(max-width:390px){
+  .rcld-office-layout{grid-template-columns:1fr}
+  .rcld-photo-card{min-height:0}
+  .rcld-photo-card .registration-photo-preview{width:90px;height:95px}
+  .rcld-address-grid .form-grid.two{grid-template-columns:1fr}
+}
