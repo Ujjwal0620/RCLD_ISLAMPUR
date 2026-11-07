@@ -5,8 +5,8 @@ import { ArrowLeft, Save, Camera, ImagePlus } from "lucide-react";
 import ERPLayout from "@/components/ERPLayout";
 
 const initial = {
-  formNo: "", aecCode: "", regnNo: "", admissionDate: new Date().toISOString().slice(0,10), courseName: "", courseCode: "", applicantName: "", email: "", aadhaarNumber: "", referralId: "",
-  nationality: "", dateOfBirth: "", sex: "", fatherOrHusbandName: "", address: "", presentAddress: "", permanentAddress: "", sameAsPresentAddress: true, district: "", state: "", postOffice: "", policeStation: "", nearestLandmark: "", permanentPin: "", permanentDistrict: "", permanentState: "", permanentPostOffice: "", permanentNearestLandmark: "", guardianContactNumber: "", photoUrl: "",
+  formNo: "", aecCode: "RCLD/ISL-001", regnNo: "", enrollmentNo: "", admissionDate: new Date().toISOString().slice(0,10), courseName: "", courseCode: "", applicantName: "", email: "", aadhaarNumber: "", referralId: "",
+  nationality: "", dateOfBirth: "", sex: "", fatherOrHusbandName: "", address: "", presentAddress: "", permanentAddress: "", sameAsPresentAddress: true, district: "", state: "", postOffice: "", policeStation: "", nearestLandmark: "", permanentPin: "", permanentDistrict: "", permanentState: "", permanentPostOffice: "", permanentNearestLandmark: "", guardianContactNumber: "", photoUrl: "", signatureUrl: "",
   pin: "", whatsappNumber: "", mobileNumber: "",
   qualifications: [{ examCourse: "", boardUniversity: "", collegeInstitute: "", year: "", percentage: "" }],
   enclosures: { stampPhoto: false, qualifyingCertificates: false, matricAdmitCard: false },
@@ -39,6 +39,7 @@ export default function RegisterStudentPage() {
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [referrals, setReferrals] = useState([]);
   const [photoUploading, setPhotoUploading] = useState(false);
+  const [signatureUploading, setSignatureUploading] = useState(false);
 
   useEffect(() => { fetch("/api/courses",{cache:"no-store"}).then(r=>r.json()).then(d=>setCourses(d.courses||[])).catch(()=>{}); fetch("/api/referrals",{cache:"no-store"}).then(r=>r.json()).then(d=>setReferrals((d.referrals||[]).filter(x=>x.status==="Active"))).catch(()=>{}); }, []);
 
@@ -70,6 +71,21 @@ export default function RegisterStudentPage() {
     finally { setPhotoUploading(false); }
   }
 
+  async function uploadSignature(file) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { setMessage("Please select a signature image."); return; }
+    if (file.size > 3 * 1024 * 1024) { setMessage("Signature image must be smaller than 3 MB."); return; }
+    setSignatureUploading(true); setMessage("");
+    try {
+      const data = new FormData(); data.append("file", file); data.append("purpose", "signature");
+      const response = await fetch("/api/uploads/student-photo", { method: "POST", body: data });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Unable to upload signature.");
+      update("signatureUrl", result.url);
+    } catch (error) { setMessage(error.message); }
+    finally { setSignatureUploading(false); }
+  }
+
   async function submit(e) {
     e.preventDefault();
     if (saving) return;
@@ -80,11 +96,11 @@ export default function RegisterStudentPage() {
     try {
       const payload = {
         ...form,
-        formNo: form.formNo.trim(),
         applicantName: form.applicantName.trim(),
-        mobileNumber: form.mobileNumber.trim(),
+        mobileNumber: form.mobileNumber.replace(/\D/g, "").slice(0, 10),
         email: form.email.trim().toLowerCase(),
-        aadhaarNumber: form.aadhaarNumber.replace(/\D/g, ""),
+        aadhaarNumber: form.aadhaarNumber.replace(/\D/g, "").slice(0, 12),
+        aecCode: "RCLD/ISL-001",
         address: (form.presentAddress || form.address).trim(),
         presentAddress: (form.presentAddress || form.address).trim(),
         permanentAddress: form.sameAsPresentAddress ? (form.presentAddress || form.address).trim() : form.permanentAddress.trim()
@@ -131,8 +147,9 @@ export default function RegisterStudentPage() {
           <h3>Office / Registration Details</h3>
           <div className="rcld-office-layout">
             <div className="rcld-office-fields">
-              <Field label="AEC Code" name="aecCode" value={form.aecCode} onChange={update}/>
-              <Field label="Form No." name="formNo" value={form.formNo} onChange={update} required/>
+              <label className="form-field"><span>AEC Code</span><input value="RCLD/ISL-001" readOnly/></label>
+              <label className="form-field"><span>Form No. (Auto Generated)</span><input value={form.formNo || "Generated automatically after registration"} readOnly/></label>
+              <label className="form-field"><span>Enrollment No. (Auto Generated)</span><input value={form.enrollmentNo || "Generated automatically after registration"} readOnly/></label>
               <label className="form-field"><span>Course *</span><select value={form.courseCode} onChange={e=>selectCourse(e.target.value)} required><option value="">Select course</option>{courses.map(c=><option key={c._id} value={c.code}>{c.code} — {c.name}</option>)}</select></label>
               <Field label="Course Code" name="courseCode" value={form.courseCode} onChange={update}/>
               <Field label="Course Name" name="courseName" value={form.courseName} onChange={update}/>
@@ -194,7 +211,7 @@ export default function RegisterStudentPage() {
         <section className="form-section rcld-form-section">
           <h3>Contact Details</h3>
           <div className="rcld-contact-grid">
-            <Field label="* Mobile No." name="mobileNumber" value={form.mobileNumber} onChange={update} required maxLength={15}/>
+            <label className="form-field"><span>* Mobile No. (10 digits)</span><div className="rcld-digit-boxes">{Array.from({length:10},(_,i)=><input key={i} aria-label={"Mobile digit "+(i+1)} inputMode="numeric" maxLength={1} value={form.mobileNumber[i]||""} onChange={e=>{const digit=e.target.value.replace(/\D/g,"").slice(-1);const next=(form.mobileNumber||"").padEnd(10," ").split("");next[i]=digit;update("mobileNumber",next.join("").replace(/ /g,"").slice(0,10));if(digit&&i<9)e.target.nextElementSibling?.focus();}} onKeyDown={e=>{if(e.key==="Backspace"&&!form.mobileNumber[i]&&i>0)e.target.previousElementSibling?.focus();}} onPaste={e=>{if(i===0){e.preventDefault();update("mobileNumber",e.clipboardData.getData("text").replace(/\D/g,"").slice(0,10));}}}/>)}</div></label>
             <Field label="* Mob. of Guardian" name="guardianContactNumber" value={form.guardianContactNumber} onChange={update} maxLength={15}/>
             <Field label="* WhatsApp No." name="whatsappNumber" value={form.whatsappNumber} onChange={update} maxLength={15}/>
             <Field label="* Email Id" name="email" value={form.email} onChange={update} required type="email"/>
@@ -226,12 +243,12 @@ export default function RegisterStudentPage() {
           <div className="rcld-declaration-grid">
             <Field label="Date" name="declarationDate" type="date" value={form.declarationDate} onChange={update}/>
             <Field label="Place" name="declarationPlace" value={form.declarationPlace} onChange={update}/>
-            <Field label="Signature of Applicant" name="signatureApplicant" value={form.signatureApplicant} onChange={update}/>
+            <label className="form-field"><span>Student Signature Image *</span><input type="file" accept="image/*" disabled={signatureUploading} onChange={e=>uploadSignature(e.target.files?.[0])} required={!form.signatureUrl}/><small>{signatureUploading?"Uploading signature to Cloudinary…":"PNG/JPG image · Maximum 3 MB"}</small>{form.signatureUrl&&<img src={form.signatureUrl} alt="Uploaded student signature" style={{maxWidth:220,maxHeight:80,objectFit:"contain",background:"#fff",padding:8,border:"1px solid #d5dce7",borderRadius:8}}/>}</label>
           </div>
         </section>
 
         {message&&<div className={message.includes("successfully")?"success-msg":"error-msg"}>{message}</div>}
-        <div className="form-actions"><a className="ghost-btn" href="/dashboard/students">Cancel</a><button className="primary-btn" disabled={saving}><Save size={17}/>{saving?"Saving…":"Register Student"}</button></div>
+        <div className="form-actions"><a className="ghost-btn" href="/dashboard/students">Cancel</a><button className="primary-btn" disabled={saving||photoUploading||signatureUploading}><Save size={17}/>{saving?"Saving…":"Register Student"}</button></div>
       </form>
     </ERPLayout>
   );
