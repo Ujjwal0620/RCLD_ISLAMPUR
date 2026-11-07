@@ -129,9 +129,9 @@ export default function StudentDetailsPage({params}){
     const duration=student.courseDuration||course?.duration||course?.durationText||"—";
     const receiptNo=latest?.receiptNo||"Receipt number not generated";
     let runningPaid=0;
-    const history=payments.map(p=>{
+    const history=(latest?[latest]:[]).map(p=>{
       runningPaid+=Number(p.amount||0);
-      const remaining=Math.max(0,payable-runningPaid);
+      const remaining=Math.max(0,Number(fee.due??(payable-runningPaid)));
       return '<tr><td>'+esc(p.paymentType||"Course Fee")+'</td><td>'+money(fee.totalFee)+'</td><td>'+money(p.amount)+'</td><td>'+money(remaining)+'</td><td>'+esc(p.dueDate||p.installmentMonth||"—")+'</td></tr>';
     }).join("")||'<tr><td colspan="5" class="empty-row">No payment history recorded</td></tr>';
     const method=String(latest?.method||"").toLowerCase();
@@ -213,7 +213,7 @@ export default function StudentDetailsPage({params}){
       {editing&&<section className="detail-section student-edit-panel"><div className="detail-section-title"><Pencil size={17}/><div><h3>Edit Student Profile</h3><span>Complete student master data. Imported Excel values are preserved; synthetic values are marked as demo data in the source import.</span></div></div><form onSubmit={saveStudent}><div className="student-edit-grid">
 <div className="edit-card"><h4>Identity & Registration</h4><div className="form-grid two">{[["formNo","Form No."],["enrollmentNo","Enrollment No."],["applicantName","Applicant Name"],["aecCode","AEC Code"],["regnNo","Registration No."],["admissionDate","Admission Date"]].map(([k,l])=><label className="form-field" key={k}><span>{l}</span><input type={k==="admissionDate"?"date":"text"} value={editForm[k]||""} readOnly={["formNo","enrollmentNo","aecCode"].includes(k)} onChange={e=>setEditForm(f=>({...f,[k]:e.target.value}))}/></label>)}</div></div>
 <div className="edit-card"><h4>Course & Fee</h4><div className="form-grid two">
-<label className="form-field"><span>Course</span><select value={editForm.courseCode||""} onChange={e=>{const selected=courses.find(x=>x.code===e.target.value);setEditForm(f=>({...f,courseCode:selected?.code||"",courseName:selected?.name||"",sourceCourseLabel:selected?.code||""}));if(selected)setFeeForm(f=>({...f,totalFee:selected.fee||0,admissionFee:selected.admissionFee||0}));}} required><option value="">Select course</option>{courses.map(x=><option key={x._id} value={x.code}>{x.code} — {x.name}</option>)}</select></label>
+<label className="form-field"><span>Course</span><select value={editForm.courseCode||""} onChange={e=>{const selected=courses.find(x=>x.code===e.target.value);setEditForm(f=>({...f,courseCode:selected?.code||"",courseName:selected?.name||"",sourceCourseLabel:selected?.code||""}));if(selected)setFeeForm(f=>({...f,totalFee:selected.fee||0,admissionFee:selected.admissionFee||0,registrationFee:selected.registrationFee||f.registrationFee||0}));}} required><option value="">Select course</option>{courses.map(x=><option key={x._id} value={x.code}>{x.code} — {x.name}</option>)}</select></label>
 <label className="form-field"><span>Course Code</span><input value={editForm.courseCode??""} readOnly/></label>
 <label className="form-field"><span>Course Fee (₹)</span><input value={feeForm.totalFee??0} readOnly/></label>
 <label className="form-field"><span>Admission Fee (₹)</span><input value={feeForm.admissionFee??0} readOnly/></label>
@@ -283,14 +283,14 @@ export default function StudentDetailsPage({params}){
         <div className="fee-breakdown-strip">
           <span>Course fee: ₹{Number(fee?.totalFee||0).toLocaleString("en-IN")}</span><span>Admission fee (one-time): ₹{Number(fee?.admissionFee||0).toLocaleString("en-IN")}</span><span>Registration fee (one-time): ₹{Number(fee?.registrationFee||0).toLocaleString("en-IN")}</span><span>Discount: ₹{Number(fee?.discount||0).toLocaleString("en-IN")}</span><span>Late fine: ₹{Number(fee?.lateFine||0).toLocaleString("en-IN")}</span>
         </div>
-        <details className="fee-entry-expander" open><summary><strong>Fee setup & record a payment</strong><span>Expand to update fee plan or add payment</span></summary>
+        <details className="fee-entry-expander"><summary><strong>Fee setup & record a payment</strong><span>Expand to update fee plan or add payment</span></summary>
           <form className="inline-operation-form" onSubmit={saveFees}><h4>Fee Plan</h4><div className="form-grid four">
             <label className="form-field"><span>Course Fee</span><input type="number" min="0" value={feeForm.totalFee} onChange={e=>setFeeForm(f=>({...f,totalFee:e.target.value}))}/></label>
             <label className="form-field"><span>Discount</span><input type="number" min="0" value={feeForm.discount} onChange={e=>setFeeForm(f=>({...f,discount:e.target.value}))}/></label>
             <label className="form-field"><span>Admission Fee (one-time)</span><input type="number" min="0" value={feeForm.admissionFee} onChange={e=>setFeeForm(f=>({...f,admissionFee:e.target.value}))}/></label>
             <label className="form-field"><span>Registration Fee (one-time)</span><input type="number" min="0" value={feeForm.registrationFee} onChange={e=>setFeeForm(f=>({...f,registrationFee:e.target.value}))}/></label>
           </div><h4 className="fee-payment-subheading">New Payment Entry</h4><div className="form-grid four">
-            <label className="form-field"><span>Payment Amount</span><input type="number" min="1" value={feeForm.amount} onChange={e=>setFeeForm(f=>({...f,amount:e.target.value}))} required/></label>
+            <label className="form-field"><span>Payment Amount</span><input type="number" min="1" value={feeForm.amount} onChange={e=>setFeeForm(f=>({...f,amount:e.target.value}))}/></label>
             <label className="form-field"><span>Payment Date</span><input type="date" value={feeForm.date} onChange={e=>setFeeForm(f=>({...f,date:e.target.value}))}/></label>
             <label className="form-field"><span>Payment Type</span><select value={feeForm.paymentType} onChange={e=>setFeeForm(f=>({...f,paymentType:e.target.value}))}><option value="Admission Fee">Admission Fee</option><option value="Registration Fee">Registration Fee</option><option value="Installment">Installment</option><option value="Course Fee">Course Fee</option><option value="Other">Other</option></select></label>
             <label className="form-field"><span>Installment Month</span><input type="month" value={feeForm.installmentMonth} onChange={e=>setFeeForm(f=>({...f,installmentMonth:e.target.value}))}/></label>
