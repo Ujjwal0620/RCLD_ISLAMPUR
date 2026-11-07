@@ -1581,3 +1581,14 @@ td{font-size:11px}
   .registration-form .form-section{padding:12px}
   .registration-form .form-section h3{margin:-12px -12px 11px}
 }
+
+.student-profile-page .student-address-edit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px;margin-top:12px}
+.student-profile-page .student-address-edit-grid>.form-grid{grid-column:1/-1}
+.student-profile-page .student-address-edit-grid textarea{width:100%;min-height:76px;box-sizing:border-box;border:1px solid #dfe4ec;border-radius:8px;padding:10px;font:inherit;resize:vertical}
+.student-profile-page .student-address-edit-grid textarea:focus{outline:0;border-color:#8999eb;box-shadow:0 0 0 3px rgba(93,111,220,.09)}
+.student-profile-page .student-address small{display:block;margin-top:7px;color:#718096;font-size:10px}
+.student-profile-page .student-address strong{margin-bottom:3px}
+.student-profile-page .top-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.student-profile-page .top-actions .ghost-btn{white-space:nowrap}
+@media(max-width:900px){.student-profile-page .top-actions{justify-content:flex-start}.student-profile-page .student-address-edit-grid{grid-template-columns:1fr}}
+@media(max-width:600px){.student-profile-page .top-actions .ghost-btn{flex:1 1 calc(50% - 8px);justify-content:center}.student-profile-page .student-address-edit-grid>.form-grid{grid-template-columns:1fr}}
