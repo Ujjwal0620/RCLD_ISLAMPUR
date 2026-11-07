@@ -63,6 +63,7 @@ export async function PATCH(req,{params}){
       }
     }
     if(update.formNo!==undefined) delete update.formNo;
+    if(update.enrollmentNo!==undefined) delete update.enrollmentNo;
     update.aecCode = "RCLD/ISL-001";
     if(update.applicantName!==undefined)update.applicantName=String(update.applicantName).trim();
     if(update.mobileNumber!==undefined)update.mobileNumber=String(update.mobileNumber).trim();
