@@ -117,14 +117,14 @@ export default function StudentDetailsPage({params}){
     w.document.write(html);w.document.close();
   }
 
-  function printBill(){
+  function printBill(selectedPayment=null){
     if(!student||!fee)return;
     const esc=v=>String(v??"—").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
     const money=v=>"₹"+Number(v||0).toLocaleString("en-IN");
     const payable=Math.max(0,Number(fee.totalFee||0)+Number(fee.admissionFee||0)+Number(fee.registrationFee||0)-Number(fee.discount||0));
     const paid=Number(fee.paid||0),due=Math.max(0,Number(fee.due??(payable-paid)));
     const payments=(fee.payments||[]).slice().sort((x,y)=>String(x.date||"").localeCompare(String(y.date||"")));
-    const latest=payments[payments.length-1]||null;
+    const latest=selectedPayment||payments[payments.length-1]||null;
     const course=courses.find(x=>String(x.code||"").toUpperCase()===String(student.courseCode||"").toUpperCase());
     const duration=student.courseDuration||course?.duration||course?.durationText||"—";
     const receiptNo=latest?.receiptNo||"Receipt number not generated";
@@ -301,7 +301,7 @@ export default function StudentDetailsPage({params}){
             <button className="primary-btn operation-btn" disabled={proofUploading}><Save size={16}/>{proofUploading?"Uploading…":"Save Fee & Payment"}</button>
           </div></form>
         </details>
-        {(fee?.payments||[]).length>0&&<div className="fee-payment-history"><h4>Payment History</h4>{fee.payments.slice().reverse().map(p=><details className="fee-payment-item" key={p._id}><summary><span><b>{p.receiptNo||"Receipt pending"}</b><small>{p.date} · {p.method}</small></span><strong>₹{Number(p.amount||0).toLocaleString("en-IN")}</strong><span className="fee-expand-label">View details</span></summary><div className="fee-payment-detail-grid"><div><small>Payment Type</small><b>{p.paymentType||"General"}</b></div><div><small>Installment Month</small><b>{p.installmentMonth||"—"}</b></div><div><small>UTR Number</small><b>{p.utrNumber||p.reference||"—"}</b></div><div><small>Other Reference</small><b>{p.reference||"—"}</b></div><div><small>Recorded By</small><b>{p.recordedBy||"—"}</b></div><div><small>Receipt Number</small><b>{p.receiptNo||"—"}</b></div><div><small>AEC Authorisation</small><b>{p.authorisedBy||"Pending AEC representative authorisation"}</b></div>{p.screenshotUrl&&<div><small>Payment Screenshot</small><a href={p.screenshotUrl} target="_blank" rel="noreferrer">Open screenshot</a></div>}</div><button type="button" className="ghost-btn" onClick={printBill}>Print latest receipt</button></details>)}</div>}
+        {(fee?.payments||[]).length>0&&<div className="fee-payment-history"><h4>Payment History</h4>{fee.payments.slice().reverse().map(p=><details className="fee-payment-item" key={p._id}><summary><span><b>{p.receiptNo||"Receipt pending"}</b><small>{p.date} · {p.method}</small></span><strong>₹{Number(p.amount||0).toLocaleString("en-IN")}</strong><span className="fee-expand-label">View details</span></summary><div className="fee-payment-detail-grid"><div><small>Payment Type</small><b>{p.paymentType||"General"}</b></div><div><small>Installment Month</small><b>{p.installmentMonth||"—"}</b></div><div><small>UTR Number</small><b>{p.utrNumber||p.reference||"—"}</b></div><div><small>Other Reference</small><b>{p.reference||"—"}</b></div><div><small>Recorded By</small><b>{p.recordedBy||"—"}</b></div><div><small>Receipt Number</small><b>{p.receiptNo||"—"}</b></div><div><small>AEC Authorisation</small><b>{p.authorisedBy||"Pending AEC representative authorisation"}</b></div>{p.screenshotUrl&&<div><small>Payment Screenshot</small><a href={p.screenshotUrl} target="_blank" rel="noreferrer">Open screenshot</a></div>}</div><button type="button" className="ghost-btn" onClick={()=>printBill(p)}>Print this receipt</button></details>)}</div>}
       </section>
 
       <section className="detail-section"><div className="detail-section-title"><ClipboardCheck size={17}/><h3>Attendance</h3></div>
