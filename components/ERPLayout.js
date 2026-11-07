@@ -106,8 +106,9 @@ export default function ERPLayout({ active, children, hideAssistant = true }) {
       </aside>
 
       <button type="button" className="mobile-menu-button" onClick={() => setOpen(true)} aria-label="Open navigation" aria-expanded={open} aria-controls="rcld-mobile-navigation"><Menu size={20} /></button>
-      <section className="erp-main">
-        <div className="erp-user-bar">
+      <a className="erp-skip-link" href="#erp-page-content">Skip to main content</a>
+      <main className="erp-main" id="erp-page-content">
+        <header className="erp-user-bar">
           <div className="erp-command-search">
             <Search size={16}/><input aria-label="Search ERP" placeholder="Search students, batches, employees..." />
             <kbd>⌘ K</kbd>
@@ -122,9 +123,9 @@ export default function ERPLayout({ active, children, hideAssistant = true }) {
               <ChevronDown size={14} className="user-chevron" />
             </div>
           </div>
-        </div>
+        </header>
         {children}
-      </section>
+      </main>
       {!hideAssistant && <RAGAssistant />}
     </div>
   );
