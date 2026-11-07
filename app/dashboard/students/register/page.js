@@ -117,8 +117,9 @@ export default function RegisterStudentPage() {
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || "Unable to register.");
 
-      setMessage("Student registered successfully.");
-      setForm(initial);
+      setMessage("Student registered successfully. Form No: " + j.student.formNo + " · Enrollment No: " + j.student.enrollmentNo);
+      setForm({ ...initial, formNo: j.student.formNo, enrollmentNo: j.student.enrollmentNo, aecCode: "RCLD/ISL-001" });
+      setSelectedCourse(null);
     } catch (error) {
       setMessage(error.message || "Unable to connect to the local ERP server.");
     } finally {
@@ -213,7 +214,7 @@ export default function RegisterStudentPage() {
         <section className="form-section rcld-form-section">
           <h3>Contact Details</h3>
           <div className="rcld-contact-grid">
-            <label className="form-field"><span>* Mobile No. (10 digits)</span><div className="rcld-digit-boxes">{Array.from({length:10},(_,i)=><input key={i} aria-label={"Mobile digit "+(i+1)} inputMode="numeric" maxLength={1} value={form.mobileNumber[i]||""} onChange={e=>{const digit=e.target.value.replace(/\D/g,"").slice(-1);const next=(form.mobileNumber||"").padEnd(10," ").split("");next[i]=digit;update("mobileNumber",next.join("").replace(/ /g,"").slice(0,10));if(digit&&i<9)e.target.nextElementSibling?.focus();}} onKeyDown={e=>{if(e.key==="Backspace"&&!form.mobileNumber[i]&&i>0)e.target.previousElementSibling?.focus();}} onPaste={e=>{if(i===0){e.preventDefault();update("mobileNumber",e.clipboardData.getData("text").replace(/\D/g,"").slice(0,10));}}}/>)}</div></label>
+            <label className="form-field"><span>* Mobile No. (10 digits)</span><div className="rcld-digit-boxes">{Array.from({length:10},(_,i)=><input key={i} aria-label={"Mobile digit "+(i+1)} inputMode="numeric" maxLength={1} value={form.mobileNumber[i]||""} onChange={e=>{const digit=e.target.value.replace(/\D/g,"").slice(-1);const next=(form.mobileNumber||"").padEnd(10," ").split("");next[i]=digit;update("mobileNumber",next.join("").slice(0,10));if(digit&&i<9)e.target.nextElementSibling?.focus();}} onKeyDown={e=>{if(e.key==="Backspace"&&!form.mobileNumber[i]&&i>0)e.target.previousElementSibling?.focus();}} onPaste={e=>{if(i===0){e.preventDefault();update("mobileNumber",e.clipboardData.getData("text").replace(/\D/g,"").slice(0,10));}}}/>)}</div></label>
             <Field label="* Mob. of Guardian" name="guardianContactNumber" value={form.guardianContactNumber} onChange={update} maxLength={15}/>
             <Field label="* WhatsApp No." name="whatsappNumber" value={form.whatsappNumber} onChange={update} maxLength={15}/>
             <Field label="* Email Id" name="email" value={form.email} onChange={update} required type="email"/>
