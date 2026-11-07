@@ -32,6 +32,19 @@ The checkpoint branch points to the main commit at the end of the documentation 
 
 Neither branch is a copy of the database, local environment files or Cloudinary assets.
 
+
+## Pre-Hando UI restore point
+
+**Restore branch created before the Hando-inspired workspace refresh on 7 November 2026.**
+
+| Item | Value |
+|---|---|
+| Branch | restore/2026-11-07-before-hando-ui |
+| Baseline commit | bb3027f1afbe7ad4ae88f6abe0ae376604037d04 |
+| Purpose | Preserve the complete application and documentation before the UI/UX-only redesign |
+| Branch URL | https://github.com/Ujjwal0620/RCLD_ISLAMPUR/tree/restore/2026-11-07-before-hando-ui |
+| Commit URL | https://github.com/Ujjwal0620/RCLD_ISLAMPUR/commit/bb3027f1afbe7ad4ae88f6abe0ae376604037d04 |
+
 ## Checkpoint policy
 
 Create a named restore branch before:
