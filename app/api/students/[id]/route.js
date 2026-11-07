@@ -73,6 +73,8 @@ export async function PATCH(req,{params}){
     if(!/^\d{12}$/.test(aadhaarNumber))return NextResponse.json({error:"Aadhaar number must contain exactly 12 digits."},{status:400});
     const mobileNumber=String(body.mobileNumber ?? "").replace(/\D/g,"");
     if(body.mobileNumber!==undefined && !/^\d{10}$/.test(mobileNumber))return NextResponse.json({error:"Mobile number must contain exactly 10 digits."},{status:400});
+    if(body.guardianContactNumber!==undefined && !/^\d{10}$/.test(String(body.guardianContactNumber||"").replace(/\D/g,"")))return NextResponse.json({error:"Guardian mobile number must contain exactly 10 digits."},{status:400});
+    if(body.whatsappNumber!==undefined && !/^\d{10}$/.test(String(body.whatsappNumber||"").replace(/\D/g,"")))return NextResponse.json({error:"WhatsApp number must contain exactly 10 digits."},{status:400});
     if(body.mobileNumber!==undefined)update.mobileNumber=mobileNumber;
     if(body.signatureUrl && !String(body.signatureUrl).startsWith("https://res.cloudinary.com/"))return NextResponse.json({error:"Student signature must be uploaded to Cloudinary."},{status:400});
     update.email=email;update.aadhaarNumber=aadhaarNumber;
@@ -91,9 +93,9 @@ export async function PATCH(req,{params}){
       if(conditions.length){
         const course=await Course.findOne({$or:conditions}).lean();
         if(course){
-          const FeeSchema=new mongoose.Schema({studentId:{type:mongoose.Schema.Types.ObjectId,unique:true,index:true,ref:"Student"},totalFee:{type:Number,default:0},discount:{type:Number,default:0},admissionFee:{type:Number,default:0},payments:Array,updatedBy:String},{timestamps:true});
+          const FeeSchema=new mongoose.Schema({studentId:{type:mongoose.Schema.Types.ObjectId,unique:true,index:true,ref:"Student"},totalFee:{type:Number,default:0},discount:{type:Number,default:0},admissionFee:{type:Number,default:0},registrationFee:{type:Number,default:0},admissionDate:String,payments:Array,updatedBy:String},{timestamps:true});
           const StudentFee=mongoose.models.StudentFee||mongoose.model("StudentFee",FeeSchema);
-          await StudentFee.findOneAndUpdate({studentId:student._id},{$set:{totalFee:Number(course.fee||0),admissionFee:Number(course.admissionFee||0)}},{upsert:true,new:true,setDefaultsOnInsert:true});
+          await StudentFee.findOneAndUpdate({studentId:student._id},{$set:{totalFee:Number(course.fee||0),admissionFee:Number(course.admissionFee||0),registrationFee:Number(course.registrationFee||0),admissionDate:student.admissionDate||new Date().toISOString().slice(0,10)}},{upsert:true,new:true,setDefaultsOnInsert:true});
         }
       }
     }
