@@ -15,6 +15,97 @@ const initial = {
 
 function Field({ label, name, value, onChange, required, type = "text", maxLength, inputMode, pattern }) {
   return (
+    <label className="form-field">
+      <span>{label}{required ? " *" : ""}</span>
+      <input
+        type={type}
+        value={value ?? ""}
+        onChange={(e) => onChange(name, e.target.value)}
+        required={required}
+        maxLength={maxLength}
+        inputMode={inputMode}
+        pattern={pattern}
+        autoComplete="off"
+      />
+    </label>
+  );
+}
+
+export default function RegisterStudentPage() {
+  const [form, setForm] = useState(initial);
+  const [message, setMessage] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [courses, setCourses] = useState([]);
+  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [referrals, setReferrals] = useState([]);\n  const [photoUploading, setPhotoUploading] = useState(false);
+
+  useEffect(() => { fetch("/api/courses",{cache:"no-store"}).then(r=>r.json()).then(d=>setCourses(d.courses||[])).catch(()=>{}); fetch("/api/referrals",{cache:"no-store"}).then(r=>r.json()).then(d=>setReferrals((d.referrals||[]).filter(x=>x.status==="Active"))).catch(()=>{}); }, []);
+
+  const selectCourse = (code) => { const c = courses.find(x=>x.code===code); setSelectedCourse(c||null); setForm(current=>({...current,courseCode:c?.code||"",courseName:c?.name||""})); };
+
+  const update = (key, value) => {
+    setForm((current) => ({ ...current, [key]: value }));
+  };
+
+  const updateQ = (key, value) => {
+    setForm((current) => ({
+      ...current,
+      qualifications: [{ ...current.qualifications[0], [key]: value }]
+    }));
+  };
+
+  async function uploadPhoto(file) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { setMessage("Please select an image file."); return; }
+    if (file.size > 5 * 1024 * 1024) { setMessage("Student photo must be smaller than 5 MB."); return; }
+    setPhotoUploading(true); setMessage("");
+    try {
+      const data = new FormData(); data.append("file", file);
+      const response = await fetch("/api/uploads/student-photo", { method: "POST", body: data });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Unable to upload photo.");
+      update("photoUrl", result.url);
+    } catch (error) { setMessage(error.message); }
+    finally { setPhotoUploading(false); }
+  }
+
+  async function submit(e) {
+    e.preventDefault();
+    if (saving) return;
+
+    setSaving(true);
+    setMessage("");
+
+    try {
+      const payload = {
+        ...form,
+        formNo: form.formNo.trim(),
+        applicantName: form.applicantName.trim(),
+        mobileNumber: form.mobileNumber.trim(),
+        email: form.email.trim().toLowerCase(),
+        aadhaarNumber: form.aadhaarNumber.replace(/\D/g, ""),
+        address: (form.presentAddress || form.address).trim(),\n        presentAddress: (form.presentAddress || form.address).trim(),\n        permanentAddress: form.sameAsPresentAddress ? (form.presentAddress || form.address).trim() : form.permanentAddress.trim()
+      };
+
+      const r = await fetch("/api/students", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || "Unable to register.");
+
+      setMessage("Student registered successfully.");
+      setForm(initial);
+    } catch (error) {
+      setMessage(error.message || "Unable to connect to the local ERP server.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
     <ERPLayout active="/dashboard/students/register">
       <header className="topbar">
         <div><div className="crumb">Students / Registration</div><h1>RCLD Registration Form</h1></div>
