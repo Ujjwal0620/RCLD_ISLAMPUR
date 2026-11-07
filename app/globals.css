@@ -1721,3 +1721,22 @@ td{font-size:11px}
   .rcld-photo-card .registration-photo-preview{width:90px;height:95px}
   .rcld-address-grid .form-grid.two{grid-template-columns:1fr}
 }
+
+
+/* Student profile address editor additions and print actions */
+.student-edit-grid .student-address-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+.student-edit-grid .student-address-edit-grid>.form-grid{grid-column:1/-1;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.student-edit-grid .student-address-edit-grid .registration-same-address{display:flex;align-items:center;gap:8px;min-height:40px;color:#405675;font-size:11px;font-weight:750}
+.student-edit-grid .student-address-edit-grid .registration-same-address input{width:16px;height:16px;accent-color:#3459b8}
+.student-profile-page .student-address small{display:block;margin-top:5px;color:#718096;font-size:10px;line-height:1.6;overflow-wrap:anywhere}
+.student-profile-page .student-profile-hero+.student-transition-panel{margin-top:0}
+.student-profile-page .student-fees-section .inline-operation-form .form-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+.student-profile-page .student-fees-section .table-wrap{margin-top:0}
+@media(max-width:900px){
+  .student-edit-grid .student-address-edit-grid>.form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:650px){
+  .student-edit-grid .student-address-edit-grid{grid-template-columns:1fr}
+  .student-edit-grid .student-address-edit-grid>.form-grid{grid-template-columns:1fr 1fr}
+  .student-profile-page .student-fees-section .inline-operation-form .form-grid{grid-template-columns:1fr}
+}
