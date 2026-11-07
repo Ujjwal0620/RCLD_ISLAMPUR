@@ -2,9 +2,9 @@
 
 This file records source-code checkpoints that can be used to compare or recover application changes. It does not replace MongoDB backups or Cloudinary asset retention.
 
-## Protected baseline — 7 November 2026
+## Protected baseline — before documentation overhaul
 
-**Restore branch created and verified.**
+**Restore branch created and verified on 7 November 2026.**
 
 | Item | Value |
 |---|---|
@@ -16,7 +16,21 @@ This file records source-code checkpoints that can be used to compare or recover
 | Source URL | https://github.com/Ujjwal0620/RCLD_ISLAMPUR/tree/restore/2026-11-07-pre-documentation |
 | Commit URL | https://github.com/Ujjwal0620/RCLD_ISLAMPUR/commit/6823ea161e00a404e825605688dc9014ed8bfe3b |
 
-The restore branch was created from the exact main commit listed above. It is not a copy of the database and it does not contain a separate backup of environment files or Cloudinary assets.
+## Documentation completion checkpoint
+
+**Checkpoint branch created after the documentation overhaul on 7 November 2026.**
+
+| Item | Value |
+|---|---|
+| Branch | checkpoint/2026-11-07-documentation-complete |
+| Source commit | a44fc9f5ec0a65a914829064314102d909674814 |
+| Purpose | Preserve the completed documentation set |
+| Branch URL | https://github.com/Ujjwal0620/RCLD_ISLAMPUR/tree/checkpoint/2026-11-07-documentation-complete |
+| Commit URL | https://github.com/Ujjwal0620/RCLD_ISLAMPUR/commit/a44fc9f5ec0a65a914829064314102d909674814 |
+
+The checkpoint branch points to the main commit at the end of the documentation work. The restore branch above remains at the pre-documentation baseline.
+
+Neither branch is a copy of the database, local environment files or Cloudinary assets.
 
 ## Checkpoint policy
 
@@ -30,7 +44,7 @@ Create a named restore branch before:
 
 Use a descriptive name such as restore/YYYY-MM-DD-before-fee-migration. Record the branch, source commit, reason and verification status in this file.
 
-## What a restore point protects
+## What a Git checkpoint protects
 
 | Asset | Protected by Git branch? |
 |---|---|
