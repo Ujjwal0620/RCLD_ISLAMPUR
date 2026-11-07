@@ -2260,3 +2260,173 @@ html[data-theme="dark"] .erp-fullscreen-toggle[aria-pressed="true"]{color:#9eaff
 @media print{
   .erp-theme-toggle,.erp-fullscreen-toggle{display:none!important}
 }
+
+
+/* =========================================================
+   Compact Hando-style ERP density pass — November 2026
+   ========================================================= */
+:root{
+  --rcld-radius:10px;
+  --rcld-shadow:0 2px 9px rgba(24,39,66,.035);
+}
+.erp-main{padding-left:22px;padding-right:22px}
+.erp-main>.topbar{min-height:58px;padding:9px 0 10px}
+.erp-main>.topbar h1{font-size:19px;line-height:1.2;margin:2px 0 0;letter-spacing:-.025em}
+.erp-main>.topbar .crumb{font-size:9px;line-height:1.3}
+.erp-main>.topbar .top-actions{gap:6px}
+.erp-user-bar{min-height:58px}
+.erp-command-search{height:34px;min-height:34px}
+.erp-command-search input{font-size:10px}
+.erp-top-icon,.erp-sidebar-toggle{width:33px;height:33px;border-radius:8px}
+.erp-user-avatar{width:31px;height:31px;border-radius:9px}
+.erp-user-identity{gap:7px;padding-left:9px}
+.erp-user-identity strong{font-size:10px}
+.erp-user-identity span{font-size:9px}
+.erp-sidebar{width:236px}
+.erp-main{margin-left:236px}
+.erp-sidebar .side-link{min-height:34px;padding:7px 10px;font-size:10px;gap:9px;border-radius:7px}
+.erp-sidebar .side-label{padding:10px 10px 5px;font-size:8px;letter-spacing:.11em}
+.erp-sidebar .brand{min-height:56px;padding:10px 13px}
+.erp-sidebar .brand-mark{width:30px;height:30px;border-radius:9px}
+.erp-sidebar .brand-copy strong{font-size:14px}
+.erp-sidebar .brand-copy span{font-size:9px}
+.erp-sidebar .workspace-switcher{margin:8px 10px;padding:8px;border-radius:9px}
+.erp-sidebar .workspace-switcher strong{font-size:10px}
+.erp-sidebar .workspace-switcher span{font-size:9px}
+.dashboard-hero{min-height:0;padding:13px 17px;border-radius:11px;box-shadow:0 2px 9px rgba(24,39,66,.035)}
+.dashboard-hero h2{font-size:17px;line-height:1.25;margin:4px 0}
+.dashboard-hero p{font-size:10px;line-height:1.45;margin:3px 0 8px}
+.dashboard-hero .eyebrow{font-size:8px;letter-spacing:.1em}
+.dashboard-hero .hero-orbit{transform:scale(.72);transform-origin:center right}
+.dashboard-hero .hero-actions{gap:6px;margin-top:8px}
+.dashboard-hero .hero-light-btn,.dashboard-hero .hero-ghost-btn{min-height:29px;padding:0 9px;font-size:9px;border-radius:7px}
+.dashboard-kpis{grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-top:10px}
+.dash-kpi{min-height:67px;padding:9px 10px;gap:8px;border-radius:9px;box-shadow:none}
+.dash-kpi-icon{width:29px;height:29px;min-width:29px;border-radius:8px}
+.dash-kpi-icon svg{width:15px;height:15px}
+.dash-kpi span{font-size:9px;line-height:1.25}
+.dash-kpi strong{font-size:16px;line-height:1.2;letter-spacing:-.025em}
+.dash-kpi small{font-size:8px;line-height:1.25;margin-top:2px}
+.dashboard-activity-panel{margin-top:10px;border-radius:10px}
+.activity-header{padding:11px 13px;gap:10px}
+.activity-header h3{font-size:12px;line-height:1.3;margin:2px 0}
+.activity-header p{font-size:9px;line-height:1.35;margin:2px 0}
+.activity-header .eyebrow{font-size:8px}
+.activity-controls{gap:5px}
+.activity-controls input,.activity-controls select{height:30px;min-height:30px;padding:0 8px;font-size:9px}
+.segmented{padding:2px;border-radius:7px}
+.segmented button{min-height:25px;padding:0 9px;font-size:9px}
+.ops-kpis{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;padding:8px 12px}
+.ops-kpis>div{padding:7px 8px;border-radius:8px;gap:5px}
+.ops-kpis>div svg{width:13px;height:13px}
+.ops-kpis>div span{font-size:8px}
+.ops-kpis>div strong{font-size:14px;line-height:1.2}
+.operations-grid{gap:9px;padding:0 12px 10px}
+.operations-grid>.panel{border-radius:9px}
+.inner-panel .panel-head{padding:9px 11px}
+.inner-panel .panel-head h3{font-size:11px}
+.inner-panel .panel-head p{font-size:8px;line-height:1.3}
+.chart-total,.capacity-pill{padding:4px 7px;font-size:8px}
+.dash-donut{width:112px;height:112px;min-width:112px}
+.dash-donut:after{width:75px;height:75px}
+.dash-donut strong{font-size:18px}
+.dash-donut span{font-size:8px}
+.attendance-ring-row{gap:12px;padding:10px 13px}
+.attendance-stat-list{gap:7px}
+.attendance-stat-list>div{font-size:9px}
+.attendance-stat-list b{font-size:10px}
+.trend-chart{padding:5px 12px 10px}
+.trend-chart svg{height:132px}
+.trend-labels{font-size:8px}
+.daily-collection-card{min-height:130px;padding:12px}
+.daily-collection-card strong{font-size:20px}
+.daily-collection-card span{font-size:9px}
+.faculty-dashboard-table,.class-list{max-height:220px;overflow:auto}
+.faculty-row{padding:7px 10px;gap:7px}
+.faculty-avatar{width:25px;height:25px;font-size:10px}
+.faculty-row strong,.class-row strong{font-size:9px}
+.faculty-row span,.faculty-row small,.class-row span{font-size:8px}
+.faculty-row b,.class-row>b{font-size:9px}
+.class-row{padding:7px 10px;gap:8px}
+.class-time{font-size:8px;gap:3px}
+.dashboard-grid-main{grid-template-columns:minmax(0,1.35fr) minmax(280px,.8fr);gap:9px;margin-top:10px}
+.dashboard-chart-panel,.dashboard-bottom-grid>.panel{border-radius:10px}
+.panel{margin-top:9px;border-radius:10px}
+.panel-head,.filter-title{padding:10px 13px}
+.panel-head h3,.filter-title h3{font-size:11px}
+.panel-head p,.filter-title p{font-size:8px;line-height:1.35}
+.mini-bars{height:158px;gap:8px;padding:10px 13px 9px}
+.mini-bar-col{min-width:38px;gap:4px}
+.mini-bar-track{width:25px;height:115px;border-radius:6px}
+.mini-bar-col span{font-size:8px}
+.mini-bar-col b{font-size:8px}
+.batch-bars{padding:10px 13px;gap:10px}
+.batch-bar-row>div:first-child{font-size:9px;margin-bottom:4px}
+.batch-track{height:6px}
+.dashboard-bottom-grid{gap:9px;margin-top:10px}
+.finance-cards{gap:6px;padding:3px 12px 10px}
+.finance-cards>div{padding:8px;border-radius:8px}
+.finance-cards span{font-size:8px}
+.finance-cards strong{font-size:13px}
+.finance-progress{padding:0 12px 11px}
+.finance-progress span,.finance-progress b{font-size:9px}
+.recent-list a{padding:7px 11px;gap:7px}
+.recent-avatar{width:25px;height:25px;font-size:9px}
+.recent-list strong{font-size:9px}
+.recent-list span{font-size:8px}
+.dashboard-quick-grid{gap:7px;margin-top:9px}
+.quick-card{min-height:52px;padding:8px 10px;border-radius:9px;gap:8px}
+.quick-card svg{width:15px;height:15px}
+.quick-card strong{font-size:9px}
+.quick-card span{font-size:8px}
+.quick-card:hover,.dash-kpi:hover,.panel:hover{transition:box-shadow .16s ease,border-color .16s ease,transform .16s ease}
+.quick-card:hover{transform:translateY(-1px);box-shadow:0 5px 15px rgba(30,48,80,.07)}
+.panel-head a,.panel-head button{font-size:9px}
+table{font-size:10px}
+th{padding:8px 9px;font-size:8px}
+td{padding:7px 9px;font-size:9px}
+.badge{padding:3px 6px;font-size:8px}
+.primary-btn,.ghost-btn,.icon-btn,.search-action,.filter-toggle,.clear-btn{min-height:30px;padding:0 9px;border-radius:7px;font-size:9px}
+.form-field input,.form-field select,.form-field textarea,.qualification-grid input{min-height:35px;padding:7px 9px;font-size:10px}
+.form-section{padding:16px 18px}
+.form-section h3{font-size:11px}
+.form-grid{gap:10px}
+.detail-section{padding:13px}
+.summary-card{padding:10px}
+.summary-card strong{font-size:15px}
+.empty{padding:15px;font-size:10px}
+@media(max-width:1350px){
+ .dashboard-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .ops-kpis{grid-template-columns:repeat(5,minmax(0,1fr))}
+}
+@media(max-width:1000px){
+ .erp-main{padding-left:16px;padding-right:16px}
+ .dashboard-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .dashboard-grid-main{grid-template-columns:1fr 1fr}
+}
+@media(max-width:700px){
+ .erp-main{padding-left:11px;padding-right:11px}
+ .dashboard-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .ops-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .dashboard-grid-main,.dashboard-bottom-grid{grid-template-columns:1fr}
+ .dashboard-hero .hero-orbit{display:none}
+ .dashboard-hero{padding:12px}
+ .dashboard-hero h2{font-size:15px}
+ .activity-header{align-items:flex-start}
+ .activity-controls{width:100%;flex-wrap:wrap}
+}
+@media(max-width:420px){
+ .dashboard-kpis{gap:6px}
+ .dash-kpi{padding:8px}
+ .dash-kpi strong{font-size:14px}
+ .dashboard-hero .hero-actions{flex-wrap:wrap}
+}
+html[data-theme="dark"] .dash-donut:after{background:#1b2638}
+html[data-theme="dark"] .mini-bar-track{background:#2a3850}
+html[data-theme="dark"] .trend-labels{color:#9aa8bc}
+html[data-theme="dark"] .daily-collection-card{background:#202d41;color:#e5eaf3}
+html[data-theme="dark"] .finance-cards>div{background:#202d41;border-color:#344156}
+html[data-theme="dark"] .batch-track{background:#2a3850}
+@media(prefers-reduced-motion:reduce){
+ .quick-card:hover,.dash-kpi:hover{transform:none}
+}
