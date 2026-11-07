@@ -32,37 +32,71 @@ export default function StudentDetailsPage({params}){
   function printStudentForm(){
     if(!student)return;
     const esc=v=>String(v??"—").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
-    const q=(student.qualifications||[]).map(x=>'<tr><td>'+esc(x.examCourse)+'</td><td>'+esc(x.collegeInstitute)+'</td><td>'+esc(x.boardUniversity)+'</td><td>'+esc(x.year)+'</td><td>'+esc(x.percentage)+'</td></tr>').join("")||'<tr><td colspan="5">Not provided</td></tr>';
-    const photo=student.photoUrl?'<img class="photo" src="'+esc(student.photoUrl)+'" />':'<div class="photo placeholder">PHOTO</div>';
+    const field=(label,v)=>'<div class="data-field"><b>'+esc(label)+'</b><span>'+esc(v)+'</span></div>';
+    const present=[student.presentAddress||student.address,student.postOffice&&("P.O. "+student.postOffice),student.policeStation&&("P.S. "+student.policeStation),student.district,student.state,student.pin&&("PIN "+student.pin),student.nearestLandmark&&("Landmark: "+student.nearestLandmark)].filter(Boolean).join(", ");
+    const permanent=student.sameAsPresentAddress?"Same as present address":[student.permanentAddress,student.permanentPostOffice&&("P.O. "+student.permanentPostOffice),student.permanentDistrict,student.permanentState,student.permanentPin&&("PIN "+student.permanentPin),student.permanentNearestLandmark&&("Landmark: "+student.permanentNearestLandmark)].filter(Boolean).join(", ");
+    const qualifications=(student.qualifications||[]).map(q=>'<tr><td>'+esc(q.examCourse)+'</td><td>'+esc(q.collegeInstitute)+'</td><td>'+esc(q.boardUniversity)+'</td><td>'+esc(q.year)+'</td><td>'+esc(q.percentage)+'</td></tr>').join("")||'<tr><td colspan="5">Not provided</td></tr>';
+    const photo=student.photoUrl?'<img class="student-photo" src="'+esc(student.photoUrl)+'" alt="Student photo"/>':'<div class="student-photo photo-empty">PHOTO</div>';
     const w=window.open("","_blank");
     if(!w){setMessage("Please allow pop-ups to print the student form.");return;}
-    const present=student.presentAddress||student.address||"—";
-    const permanent=student.permanentAddress||"Same as present address / Not separately recorded";
-    const css=['@page{size:A4 portrait;margin:7mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#092b61;margin:0;font-size:7.5pt;line-height:1.2}',
-      '.sheet{width:100%;height:282mm;position:relative;border:1px solid #174b91;padding:5mm 5mm 4mm;background:linear-gradient(180deg,#f9fcff,#edf6ff)}',
-      '.brand{display:grid;grid-template-columns:24mm 1fr 24mm;align-items:center;text-align:center;border-bottom:2mm solid #178bd4;padding:0 0 3mm;margin-bottom:2mm}',
-      '.brand-mark{height:19mm;display:flex;align-items:center;justify-content:center;font-weight:900;color:#0b438a;border:1px solid #c3d8f2;border-radius:50%;font-size:8pt}',
-      '.brand h1{font-family:Georgia,serif;font-size:17pt;line-height:1.02;margin:0;color:#073b80}.brand small{display:block;margin-top:2px;font-size:7pt;font-weight:700;color:#164a85}',
-      '.regline{display:grid;grid-template-columns:1fr 1fr 27mm;gap:3mm;align-items:center;background:#dceeff;padding:2mm;margin-bottom:2mm}',
-      '.field{display:flex;align-items:center;gap:2mm;min-width:0}.field b{white-space:nowrap;font-size:7pt}.value{border:1px solid #7799c5;background:#fff;min-height:6mm;padding:1.1mm 1.5mm;flex:1;min-width:0;overflow-wrap:anywhere}',
-      '.photo{width:24mm;height:27mm;object-fit:cover;border:1px solid #174b91;background:white;display:flex;align-items:center;justify-content:center;font-weight:bold}',
-      '.section{margin-top:1.8mm}.section h2{font-size:8.5pt;color:#fff;background:linear-gradient(90deg,#073c86,#0b5ca9);padding:1.2mm 2mm;margin:0 0 1.4mm;border-radius:2px}',
-      '.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.5mm 3mm}.address-grid{display:grid;grid-template-columns:1fr 1fr;gap:3mm}.address-box{border:1px solid #b4cbe8;padding:2mm;background:#f7fbff}.address-box h3{font-size:7.5pt;margin:0 0 1mm;color:#0a4388}',
-      '.wide{grid-column:1/-1}.value.multiline{min-height:9mm}.checks{display:flex;gap:5mm;flex-wrap:wrap;padding:1mm 0}.check{display:inline-flex;gap:1mm;align-items:center}.square{width:3mm;height:3mm;border:1px solid #174b91;display:inline-block}',
-      'table{width:100%;border-collapse:collapse;font-size:6.7pt}th,td{border:1px solid #9eb8da;padding:1.3mm;text-align:left}th{background:#dcecff;color:#083b7b}',
-      '.bottom{display:grid;grid-template-columns:1fr 1fr 1.1fr;gap:3mm;margin-top:3mm}.signbox{height:15mm;border:1px solid #174b91;border-radius:2mm;background:#fff;display:flex;flex-direction:column;justify-content:space-between;text-align:center}.signbox b{background:#0b438a;color:#fff;padding:1mm}.signline{border-top:1px solid #9eb8da;margin:0 2mm;padding:1mm}.declaration{font-size:6.5pt;color:#17385f;margin:1mm 0 2mm}.footer{position:absolute;bottom:0;left:0;right:0;height:3mm;background:linear-gradient(90deg,#0b3d86,#168ed4,#0b3d86)}',
-      '@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}.sheet{break-inside:avoid}}'].join("");
-    const html='<!doctype html><html><head><title>RCLD Registration Form - '+esc(student.applicantName)+'</title><style>'+css+'</style></head><body><main class="sheet">'+
-      '<header class="brand"><div class="brand-mark">RCLD<br/>ISLAMPUR</div><div><h1>RASHTRIYA COMPUTER<br/>LITERACY DRIVE</h1><small>RCLD ISLAMPUR · STUDENT REGISTRATION FORM</small></div><div class="brand-mark">RCLD<br/>EDUCATION</div></header>'+
-      '<div class="regline"><div class="field"><b>Reg. No.:</b><span class="value">'+esc(student.regnNo||student.enrollmentNo)+'</span></div><div class="field"><b>Date:</b><span class="value">'+esc(student.admissionDate||student.createdAt?.slice?.(0,10))+'</span></div>'+photo+'</div>'+
-      '<section class="section"><h2>Office / Registration Details</h2><div class="grid2"><div class="field"><b>AEC Code:</b><span class="value">'+esc(student.aecCode)+'</span></div><div class="field"><b>Course:</b><span class="value">'+esc(student.courseName)+'</span></div><div class="field"><b>Form No.:</b><span class="value">'+esc(student.formNo)+'</span></div><div class="field"><b>Course Code:</b><span class="value">'+esc(student.courseCode)+'</span></div><div class="field"><b>Enrollment No.:</b><span class="value">'+esc(student.enrollmentNo||student.regnNo)+'</span></div><div class="field"><b>Batch:</b><span class="value">'+esc(student.batchCode||"Not assigned")+'</span></div><div class="field"><b>Referral:</b><span class="value">'+esc(student.referralName)+'</span></div><div class="field"><b>Status:</b><span class="value">'+esc(student.status)+'</span></div></div></section>'+
-      '<section class="section"><h2>Applicant Details</h2><div class="grid2"><div class="field"><b>① Name:</b><span class="value">'+esc(student.applicantName)+'</span></div><div class="field"><b>② DOB:</b><span class="value">'+esc(student.dateOfBirth)+'</span></div><div class="field"><b>③ Sex:</b><span class="value">'+esc(student.sex==="M"?"Male":student.sex==="F"?"Female":student.sex)+'</span></div><div class="field"><b>④ Nationality:</b><span class="value">'+esc(student.nationality)+'</span></div><div class="field wide"><b>⑤ Father / Mother / Husband:</b><span class="value">'+esc(student.fatherOrHusbandName)+'</span></div></div></section>'+
-      '<section class="section"><h2>Address</h2><div class="address-grid"><div class="address-box"><h3>◉ Present Address</h3><div class="value multiline">'+esc(present)+'</div><div class="field" style="margin-top:1mm"><b>PIN:</b><span class="value">'+esc(student.pin)+'</span></div></div><div class="address-box"><h3>□ Permanent Address</h3><div class="value multiline">'+esc(permanent)+'</div><div class="field" style="margin-top:1mm"><b>PIN:</b><span class="value">'+esc(student.permanentPin||student.pin)+'</span></div></div></div></section>'+
-      '<section class="section"><h2>Contact Details</h2><div class="grid2"><div class="field"><b>Mobile No.:</b><span class="value">'+esc(student.mobileNumber)+'</span></div><div class="field"><b>Mob. of Guardian:</b><span class="value">'+esc(student.guardianContactNumber)+'</span></div><div class="field"><b>WhatsApp No.:</b><span class="value">'+esc(student.whatsappNumber)+'</span></div><div class="field"><b>Email Id:</b><span class="value">'+esc(student.email)+'</span></div><div class="field"><b>Aadhaar No.:</b><span class="value">'+esc(student.aadhaarNumber)+'</span></div><div class="field"><b>Marketing Employee:</b><span class="value">'+esc(student.marketingEmployeeName)+'</span></div></div></section>'+
-      '<section class="section"><h2>Qualifications</h2><table><thead><tr><th>Class / Sem / Course</th><th>Institute</th><th>Board / Council / University</th><th>Year</th><th>Percentage</th></tr></thead><tbody>'+q+'</tbody></table></section>'+
-      '<section class="section"><h2>Enclosure</h2><div class="checks"><span class="check"><i class="square">'+(student.enclosures?.stampPhoto?"✓":"")+'</i> 2 Passport size photo</span><span class="check"><i class="square">'+(student.enclosures?.qualifyingCertificates?"✓":"")+'</i> Aadhar / Qualifying certificate</span><span class="check"><i class="square">'+(student.enclosures?.matricAdmitCard?"✓":"")+'</i> Admit / Cast worksheet</span></div></section>'+
-      '<p class="declaration">I hereby declare that the information furnished above is true and correct to the best of my knowledge. I agree to abide by the rules and regulations of RCLD.</p>'+
-      '<div class="bottom"><div class="signbox"><b>Date</b><span>'+esc(student.declarationDate)+'</span></div><div class="signbox"><b>Place</b><span>'+esc(student.declarationPlace)+'</span></div><div class="signbox"><b>Browse Image / Signature</b><span class="signline">'+esc(student.signatureApplicant)+'</span><b>Signature</b></div></div><div class="footer"></div></main><script>window.onload=()=>setTimeout(()=>window.print(),250);</script></body></html>';
+    const css=`
+      @page{size:A4 portrait;margin:5mm}
+      *{box-sizing:border-box}
+      html,body{margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;color:#092d63}
+      body{font-size:7.1pt;line-height:1.15;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      .sheet{width:200mm;height:287mm;margin:0 auto;padding:3.5mm 4mm 4mm;border:1px solid #0d4a91;background:linear-gradient(180deg,#fbfdff 0%,#edf6ff 100%);position:relative;overflow:hidden}
+      .brand{height:24mm;display:grid;grid-template-columns:24mm 1fr 24mm;align-items:center;gap:3mm;border-bottom:2.4mm solid #168bd0;padding-bottom:2.5mm;margin-bottom:2mm;position:relative}
+      .brand:after{content:"";position:absolute;bottom:-3.5mm;left:0;right:0;height:1mm;background:#073d87}
+      .seal{height:20mm;width:20mm;border:1.2mm double #0c4b8e;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:9pt;font-weight:900;color:#0a3f81;background:#fff}
+      .seal small{font-size:5.5pt;letter-spacing:.08em}
+      .brand-title{text-align:center}
+      .brand-title h1{font-family:Georgia,serif;font-size:18pt;line-height:.98;letter-spacing:.015em;margin:0;color:#073b80}
+      .brand-title p{font-size:6.6pt;font-weight:800;margin:2mm 0 0;letter-spacing:.08em}
+      .brand-right{text-align:center;font-weight:900;font-size:11pt;color:#0b438a}
+      .brand-right small{display:block;font-size:6pt}
+      .meta{display:grid;grid-template-columns:1fr 1fr;gap:3mm;background:#dceeff;border-radius:2mm;padding:2mm 2.5mm;margin-bottom:2mm}
+      .data-field{display:flex;align-items:center;gap:2mm;min-width:0;margin:0 0 1.1mm}
+      .data-field b{flex:0 0 34mm;font-size:6.8pt;color:#0c326b}
+      .data-field span{display:block;flex:1;min-width:0;min-height:5.2mm;padding:1mm 1.4mm;border:1px solid #91add1;border-radius:1mm;background:#fff;overflow-wrap:anywhere}
+      .section{margin-top:1.7mm}
+      .section h2{font-size:8pt;line-height:1.2;color:#fff;background:linear-gradient(90deg,#063b85,#0d5ba9);padding:1.2mm 2mm;margin:0 0 1.3mm;border-radius:1.2mm}
+      .office{display:grid;grid-template-columns:1fr 30mm;gap:3mm;align-items:start}
+      .office-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 3mm}
+      .student-photo{width:27mm;height:30mm;object-fit:cover;border:1px solid #0d4a91;background:#fff}
+      .photo-empty{display:flex;align-items:center;justify-content:center;font-weight:900;color:#6d85a8}
+      .applicant{display:grid;grid-template-columns:1.4fr 1fr;gap:0 3mm}
+      .wide{grid-column:1/-1}
+      .address{display:grid;grid-template-columns:1fr 1fr;gap:3mm}
+      .address-box{border:1px solid #aac3e2;border-radius:1.5mm;padding:2mm;background:#f8fbff;min-width:0}
+      .address-box h3{font-size:7pt;color:#0a4388;margin:0 0 1.2mm}
+      .address-box p{min-height:12mm;margin:0;padding:1.5mm;border:1px solid #c2d3e8;background:#fff;overflow-wrap:anywhere}
+      .contact{display:grid;grid-template-columns:1fr 1fr;gap:0 3mm}
+      table{width:100%;border-collapse:collapse;font-size:6.4pt}
+      th,td{border:1px solid #9eb8da;padding:1.2mm 1.5mm;text-align:left;overflow-wrap:anywhere}
+      th{background:#dcecff;color:#083b7b;font-weight:800}
+      .checks{display:flex;align-items:center;flex-wrap:wrap;gap:2mm 6mm;padding:1mm 1.5mm}
+      .check{display:flex;align-items:center;gap:1.2mm;font-size:6.6pt}
+      .square{width:3.2mm;height:3.2mm;border:1px solid #174b91;display:inline-flex;align-items:center;justify-content:center;background:#fff;font-weight:bold}
+      .declaration{font-size:6.1pt;line-height:1.25;color:#193c67;margin:1.5mm 0}
+      .signatures{display:grid;grid-template-columns:1fr 1fr 1.15fr;gap:3mm;margin-top:2mm}
+      .signbox{height:15mm;border:1px solid #174b91;border-radius:1.5mm;background:#fff;display:flex;flex-direction:column;justify-content:space-between;text-align:center;overflow:hidden}
+      .signbox b{background:#0b438a;color:#fff;padding:1mm;font-size:6.4pt}
+      .signbox span{padding:1mm;font-size:7pt;overflow-wrap:anywhere}
+      .signline{border-top:1px solid #9eb8da;margin:0 2mm;padding:1mm}
+      .footer{position:absolute;bottom:0;left:0;right:0;height:2.5mm;background:linear-gradient(90deg,#0b3d86,#168ed4,#0b3d86)}
+      @media print{.sheet{break-inside:avoid;page-break-inside:avoid}}
+    `;
+    const html='<!doctype html><html><head><meta charset="utf-8"/><title>RCLD Registration Form - '+esc(student.applicantName)+'</title><style>'+css+'</style></head><body><main class="sheet">'+
+      '<header class="brand"><div class="seal">RCLD<small>ISLAMPUR</small></div><div class="brand-title"><h1>RASHTRIYA COMPUTER<br/>LITERACY DRIVE</h1><p>STUDENT REGISTRATION FORM · RCLD ISLAMPUR</p></div><div class="brand-right">RCLD<small>Islampur</small></div></header>'+
+      '<div class="meta">'+field("Reg. No.",student.regnNo||student.enrollmentNo)+field("Date",student.admissionDate||student.createdAt?.slice?.(0,10))+'</div>'+
+      '<section class="section"><h2>Office / Registration Details</h2><div class="office"><div class="office-grid">'+field("AEC Code",student.aecCode)+field("Form No.",student.formNo)+field("Course",student.courseName)+field("Course Code",student.courseCode)+field("Enrollment No.",student.enrollmentNo||student.regnNo)+field("Referral",student.referralName)+'</div>'+photo+'</div></section>'+
+      '<section class="section"><h2>Applicant Details</h2><div class="applicant">'+field("① Name",student.applicantName)+field("② DOB",student.dateOfBirth)+field("③ Sex",student.sex==="M"?"M":student.sex==="F"?"F":student.sex)+field("④ Nationality",student.nationality)+'<div class="wide">'+field("⑤ Father / Mother / Husband",student.fatherOrHusbandName)+'</div></div></section>'+
+      '<section class="section"><h2>Address</h2><div class="address"><div class="address-box"><h3>◉ Present Address</h3><p>'+esc(present||"—")+'</p></div><div class="address-box"><h3>□ Permanent Address</h3><p>'+esc(permanent||"—")+'</p></div></div></section>'+
+      '<section class="section"><h2>Contact Details</h2><div class="contact">'+field("＊ Mobile No.",student.mobileNumber)+field("＊ Mob. of Guardian",student.guardianContactNumber)+field("＊ WhatsApp No.",student.whatsappNumber)+field("＊ Email Id",student.email)+field("＊ Aadhaar No.",student.aadhaarNumber)+'</div></section>'+
+      '<section class="section"><h2>Qualifications</h2><table><thead><tr><th>Class / Sem / Course</th><th>Institute</th><th>Board / Council / University</th><th>Year</th><th>Percentage of Marks</th></tr></thead><tbody>'+qualifications+'</tbody></table></section>'+
+      '<section class="section"><h2>Enclosure</h2><div class="checks"><span class="check"><i class="square">'+(student.enclosures?.stampPhoto?"✓":"")+'</i> 2 Passport size photo</span><span class="check"><i class="square">'+(student.enclosures?.qualifyingCertificates?"✓":"")+'</i> Aadhaar / Qualifying certificates</span><span class="check"><i class="square">'+(student.enclosures?.matricAdmitCard?"✓":"")+'</i> Admit / Caste worksheet</span></div></section>'+
+      '<p class="declaration">I do hereby declare that all the information stated in this application form is true to the best of my knowledge. I have read and understood the rules and regulations and agree to abide by them.</p>'+
+      '<div class="signatures"><div class="signbox"><b>Date</b><span>'+esc(student.declarationDate)+'</span></div><div class="signbox"><b>Place</b><span>'+esc(student.declarationPlace)+'</span></div><div class="signbox"><b>Browse Image / Signature</b><span class="signline">'+esc(student.signatureApplicant)+'</span><b>Signature</b></div></div><div class="footer"></div></main><script>window.onload=()=>setTimeout(()=>window.print(),350);</script></body></html>';
     w.document.write(html);w.document.close();
   }
 
@@ -70,28 +104,90 @@ export default function StudentDetailsPage({params}){
     if(!student||!fee)return;
     const esc=v=>String(v??"—").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
     const money=v=>"₹"+Number(v||0).toLocaleString("en-IN");
-    const paid=Number(fee.paid||0),due=Number(fee.due||0),payable=Number(fee.payable??(Number(fee.totalFee||0)+Number(fee.admissionFee||0)-Number(fee.discount||0)));
-    const payments=(fee.payments||[]).slice().reverse(),lastPayment=payments[0];
-    const rows=payments.map((p,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(p.date)+'</td><td>'+esc(p.paymentType||"Course Fee")+'</td><td>'+money(p.amount)+'</td><td>'+esc(p.method)+'</td><td>'+esc(p.reference)+'</td></tr>').join("")||'<tr><td colspan="6" style="text-align:center">No payment recorded</td></tr>';
-    const receiptNo=lastPayment?String(lastPayment._id||"").slice(-8).toUpperCase():"RCLD-"+String(student.formNo||"").replace(/[^A-Za-z0-9]/g,"");
-    const history=payments.map((p,i)=>'<tr><td>'+esc(p.date)+'</td><td>'+money(payable)+'</td><td>'+money(p.amount)+'</td><td>'+money(Math.max(0,payable-payments.slice(0,i+1).reduce((s,x)=>s+Number(x.amount||0),0)))+'</td></tr>').join("")||'<tr><td colspan="4" style="text-align:center">No payment history</td></tr>';
-    const w=window.open("","_blank");if(!w){setMessage("Please allow pop-ups to print the fee receipt.");return;}
-    const css=['@page{size:A4 portrait;margin:12mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#172b4d;margin:0;font-size:10pt}',
-      '.receipt{border:1px solid #9bb5d5;border-radius:3mm;overflow:hidden;padding:7mm;background:#fff}.head{text-align:center;border-bottom:2px solid #0d4a91;padding-bottom:4mm}.head h1{font-family:Georgia,serif;font-size:20pt;line-height:1.05;color:#0b438a;margin:0}.head h2{font-size:11pt;margin:2mm 0 1mm;color:#111}.head p{margin:0;font-size:8pt;color:#3e5878}',
-      '.branch{background:#dcecff;color:#143c70;text-align:center;font-size:8pt;font-weight:bold;padding:2mm;margin:3mm -7mm 4mm}.topgrid{display:grid;grid-template-columns:1fr 1fr;gap:4mm}.panel{border:1px solid #9fb8d8;border-radius:2mm;padding:3mm;background:#f8fbff}.panel h3{font-size:10pt;margin:0 0 2mm;color:#0c4388;background:#e1edfb;padding:1.5mm}',
-      '.row{display:grid;grid-template-columns:32mm 1fr;gap:2mm;margin:1.5mm 0;font-size:8.5pt}.row b{color:#354b68}.line{border:1px solid #c1d0e2;background:#fff;min-height:6mm;padding:1mm 1.5mm;overflow-wrap:anywhere}',
-      'table{width:100%;border-collapse:collapse;font-size:8pt;margin-top:2mm}th,td{border:1px solid #9fb5d2;padding:2mm;text-align:left}th{background:#dcecff;color:#0b3d7c}.fees{margin-top:4mm}.feegrid{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #9fb5d2;background:#f4f8fe}.feeitem{display:grid;grid-template-columns:1fr 35mm;border-bottom:1px solid #c8d7e9;padding:2mm 3mm;font-size:9pt}.feeitem:nth-child(odd){border-right:1px solid #c8d7e9}.feeitem strong{text-align:right;background:#fff;border:1px solid #bdcde0;padding:1mm 2mm}.feeitem.total{grid-column:1/-1;background:#e1edfb;font-weight:bold}',
-      '.words{margin-top:2mm;display:grid;grid-template-columns:25mm 1fr;gap:2mm;font-size:8pt}.words strong{border:1px solid #bdcde0;background:#fff;padding:2mm}.bottom{display:grid;grid-template-columns:1fr 1fr;gap:8mm;margin-top:6mm;align-items:end}.payment-method{font-size:9pt;line-height:2}.signature{text-align:center;padding-top:12mm;border-top:1px dotted #536a88;font-size:8pt;font-weight:bold}.utr{margin-top:3mm;font-size:8pt}.footnote{font-size:7pt;color:#64748b;margin-top:4mm}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}.receipt{break-inside:avoid}}'].join("");
-    const html='<!doctype html><html><head><title>RCLD Fee Receipt - '+esc(student.applicantName)+'</title><style>'+css+'</style></head><body><main class="receipt">'+
-      '<header class="head"><h1>Rashtriya Computer Literacy Drive</h1><h2>Student Fee Receipt</h2><p>Admission organised by Sunita Services Pvt. Ltd.</p></header><div class="branch">RCLD Islampur · ASC: Cyberworld, Deshbandhu Road · ASC Code: RCLD/011</div>'+
+    const payable=Math.max(0,Number(fee.totalFee||0)+Number(fee.admissionFee||0)-Number(fee.discount||0));
+    const paid=Number(fee.paid||0),due=Math.max(0,payable-paid);
+    const payments=(fee.payments||[]).slice().sort((x,y)=>String(x.date||"").localeCompare(String(y.date||"")));
+    const latest=payments[payments.length-1]||null;
+    const course=courses.find(x=>String(x.code||"").toUpperCase()===String(student.courseCode||"").toUpperCase());
+    const duration=student.courseDuration||course?.duration||course?.durationText||"—";
+    const receiptNo=latest?.receiptNo||("RCLD-"+String(latest?._id||student.formNo||student._id).slice(-8).toUpperCase());
+    let runningPaid=0;
+    const history=payments.map(p=>{
+      runningPaid+=Number(p.amount||0);
+      const remaining=Math.max(0,payable-runningPaid);
+      return '<tr><td>'+esc(p.paymentType||"Course Fee")+'</td><td>'+money(fee.totalFee)+'</td><td>'+money(p.amount)+'</td><td>'+money(remaining)+'</td><td>'+esc(p.dueDate||p.installmentMonth||"—")+'</td></tr>';
+    }).join("")||'<tr><td colspan="5" class="empty-row">No payment history recorded</td></tr>';
+    const method=String(latest?.method||"").toLowerCase();
+    const cashChecked=method==="cash"?"☑":"☐";
+    const onlineChecked=method&&method!=="cash"?"☑":"☐";
+    const w=window.open("","_blank");
+    if(!w){setMessage("Please allow pop-ups to print the fee receipt.");return;}
+    const css=`
+      @page{size:A4 portrait;margin:8mm}
+      *{box-sizing:border-box}
+      html,body{margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;color:#172b4d}
+      body{font-size:8pt;line-height:1.2;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      .receipt{width:194mm;min-height:275mm;margin:0 auto;border:1px solid #9bb5d5;background:#fff;padding:5mm 6mm;position:relative;overflow:hidden}
+      .receipt-title{text-align:center;font-size:12pt;font-weight:800;color:#26384f;margin:0 0 4mm}
+      .head{display:grid;grid-template-columns:24mm 1fr;gap:3mm;align-items:center;border-bottom:1px solid #9fb8d8;padding-bottom:2.5mm}
+      .logo{height:18mm;width:22mm;border:1px solid #a8bfdc;border-radius:1mm;display:flex;align-items:center;justify-content:center;text-align:center;color:#0b438a;font-weight:900;font-size:9pt}
+      .head h1{font-family:Arial,sans-serif;font-size:17pt;line-height:1.02;color:#174f91;margin:0;font-weight:900}
+      .head p{font-size:8pt;margin:1.5mm 0 0;color:#1e293b}
+      .branch{background:#dce8f7;color:#1e3d65;text-align:center;font-size:7pt;font-weight:700;padding:1.6mm;margin:1.5mm -6mm 3mm}
+      .topgrid{display:grid;grid-template-columns:1fr 1fr;gap:3mm}
+      .panel{border:1px solid #9fb8d8;border-radius:1.5mm;padding:2.5mm;background:#f8fbff;min-width:0}
+      .panel h3{font-size:8.5pt;margin:0 0 1.5mm;color:#152d4c;background:#dfeafa;padding:1.4mm}
+      .row{display:grid;grid-template-columns:27mm 1fr;gap:1.5mm;margin:1.1mm 0;font-size:7.3pt}
+      .row b{font-weight:700;color:#354b68}
+      .line{border:1px solid #c1d0e2;background:#fff;min-height:5.2mm;padding:1mm;overflow-wrap:anywhere}
+      table{width:100%;border-collapse:collapse;font-size:6.2pt}
+      th,td{border:1px solid #9fb5d2;padding:1.1mm .8mm;text-align:left;overflow-wrap:anywhere}
+      th{background:#dcecff;color:#0b3d7c;font-weight:800}
+      .purpose{height:15mm;background:#fff;border:1px solid #c1d0e2;padding:2mm;overflow-wrap:anywhere}
+      .fees{margin-top:3mm}
+      .fee-layout{display:grid;grid-template-columns:1fr 1fr;gap:2mm}
+      .fee-list{display:grid;grid-template-columns:1fr 24mm;border:1px solid #aabed8;background:#f4f8fe}
+      .fee-list div{padding:1.35mm 2mm;border-bottom:1px solid #c8d7e9;font-size:7.2pt}
+      .fee-list .amount{text-align:right;background:#fff;border-left:1px solid #c8d7e9;font-weight:700}
+      .fee-list .total{background:#dcecff;font-weight:900}
+      .fee-list .total.amount{background:#dcecff}
+      .fee-side{border:1px solid #aabed8;background:#eaf2fc;min-height:100%;padding:2mm}
+      .fee-side h4{margin:0 0 2mm;color:#183e71;font-size:7.5pt}
+      .fee-side p{font-size:7pt;margin:0 0 2mm;line-height:1.35}
+      .words{display:grid;grid-template-columns:18mm 1fr;gap:1.5mm;margin-top:2mm;font-size:7pt}
+      .words strong{border:1px solid #bdcde0;background:#fff;padding:1.6mm;min-height:6mm}
+      .bottom{display:grid;grid-template-columns:1fr 1fr;gap:8mm;margin-top:5mm;align-items:end}
+      .payment-method{font-size:7.5pt;line-height:1.9}
+      .utr{margin-top:2mm;font-size:7.2pt}
+      .signature{text-align:center;padding-top:10mm;border-top:1px dotted #536a88;font-size:7.5pt;font-weight:700}
+      .footnote{font-size:6.3pt;color:#64748b;margin-top:3mm}
+      .empty-row{text-align:center;padding:3mm;color:#697b91}
+      @media print{.receipt{break-inside:avoid;page-break-inside:avoid}}
+    `;
+    const html='<!doctype html><html><head><meta charset="utf-8"/><title>RCLD Student Receipt - '+esc(student.applicantName)+'</title><style>'+css+'</style></head><body><main class="receipt">'+
+      '<div class="receipt-title">Student Receipt</div>'+
+      '<header class="head"><div class="logo">RCLD<br/>ISLAMPUR</div><div><h1>Rashtriya Computer Literacy Drive</h1><p>Admission organised by <b>Sunita Services Pvt. Ltd.</b></p></div></header>'+
+      '<div class="branch">RCLD Islampur, ASC: Cyberworld, Deshbandhu Road, O/H, B/D · ASC Code: RCLD/011</div>'+
       '<div class="topgrid"><section class="panel"><h3>Receipt Details</h3>'+
-      '<div class="row"><b>Receipt No.</b><span class="line">'+esc(receiptNo)+'</span></div><div class="row"><b>Date</b><span class="line">'+esc(lastPayment?.date||new Date().toLocaleDateString("en-IN"))+'</span></div><div class="row"><b>Enrolment No.</b><span class="line">'+esc(student.enrollmentNo||student.regnNo)+'</span></div><div class="row"><b>Student Name</b><span class="line">'+esc(student.applicantName)+'</span></div><div class="row"><b>Course</b><span class="line">'+esc(student.courseCode||student.courseName)+'</span></div><div class="row"><b>Duration</b><span class="line">'+esc(student.courseDuration||"—")+'</span></div></section>'+
-      '<section class="panel"><h3>Payment History</h3><table><thead><tr><th>Date</th><th>C/Fee</th><th>Paid</th><th>Due</th></tr></thead><tbody>'+history+'</tbody></table><h3 style="margin-top:3mm">Purpose</h3><div class="line" style="height:16mm">'+esc(lastPayment?.note||lastPayment?.paymentType||"Course fee payment")+'</div></section></div>'+
-      '<section class="panel fees"><h3>Fees Details</h3><div class="feegrid"><div class="feeitem"><span>Admission Fee</span><strong>'+money(fee.admissionFee)+'</strong></div><div class="feeitem"><span>Course / Installment Fee</span><strong>'+money(fee.totalFee)+'</strong></div>'+
-      '<div class="feeitem"><span>Registration Fee</span><strong>—</strong></div><div class="feeitem"><span>Lab Charge</span><strong>—</strong></div><div class="feeitem"><span>Late Fee</span><strong>—</strong></div><div class="feeitem"><span>ID-Card</span><strong>—</strong></div><div class="feeitem"><span>Examination</span><strong>—</strong></div><div class="feeitem"><span>Others</span><strong>—</strong></div><div class="feeitem"><span>Discount</span><strong>− '+money(fee.discount)+'</strong></div><div class="feeitem total"><span>Total Payable</span><strong>'+money(payable)+'</strong></div><div class="feeitem"><span>Total Paid</span><strong>'+money(paid)+'</strong></div><div class="feeitem"><span>Balance Due</span><strong>'+money(due)+'</strong></div></div><div class="words"><b>In Words</b><strong>'+esc(numberToIndianWords(payable))+'</strong></div></section>'+
-      '<div class="bottom"><div><div class="payment-method">Payment Mode: '+esc(lastPayment?.method||"—")+'<br/>☐ Cash &nbsp;&nbsp; ☐ Online</div><div class="utr">UTR No. / Reference: '+esc(lastPayment?.reference||"—")+'</div></div><div class="signature">For RCLD - Islampur<br/><br/>Authorized Signatory with Office Seal</div></div><p class="footnote">This is a computer-generated fee statement. Please retain this receipt for your records.</p></main><script>window.onload=()=>setTimeout(()=>window.print(),250);</script></body></html>';
+      '<div class="row"><b>Receipt No.</b><span class="line">'+esc(receiptNo)+'</span></div><div class="row"><b>Date</b><span class="line">'+esc(latest?.date||new Date().toLocaleDateString("en-IN"))+'</span></div><div class="row"><b>Enrolment No.</b><span class="line">'+esc(student.enrollmentNo||student.regnNo)+'</span></div><div class="row"><b>Student Name</b><span class="line">'+esc(student.applicantName)+'</span></div><div class="row"><b>Course</b><span class="line">'+esc(student.courseName||student.courseCode)+'</span></div><div class="row"><b>Duration</b><span class="line">'+esc(duration)+'</span></div></section>'+
+      '<section class="panel"><h3>Payment History</h3><table><thead><tr><th>History</th><th>C/Fee</th><th>Paid</th><th>Due</th><th>Due Date</th></tr></thead><tbody>'+history+'</tbody></table><h3 style="margin-top:2mm">Purpose</h3><div class="purpose">'+esc(latest?.note||latest?.paymentType||"Course fee payment")+'</div></section></div>'+
+      '<section class="panel fees"><h3>Fees Details</h3><div class="fee-layout"><div class="fee-list">'+
+      '<div>Admn. Fee</div><div class="amount">'+money(fee.admissionFee)+'</div>'+
+      '<div>Installment Fee</div><div class="amount">'+money(fee.totalFee)+'</div>'+
+      '<div>Registration Fee</div><div class="amount">—</div>'+
+      '<div>Lab Charge</div><div class="amount">—</div>'+
+      '<div>Late Fee</div><div class="amount">—</div>'+
+      '<div>ID-Card</div><div class="amount">—</div>'+
+      '<div>Examination</div><div class="amount">—</div>'+
+      '<div>Others</div><div class="amount">—</div>'+
+      '<div>Discount</div><div class="amount">− '+money(fee.discount)+'</div>'+
+      '<div class="total">Total</div><div class="amount total">'+money(payable)+'</div>'+
+      '</div><aside class="fee-side"><h4>Payment / Fee Summary</h4><p><b>Student:</b> '+esc(student.applicantName)+'</p><p><b>Course:</b> '+esc(student.courseCode||student.courseName)+'</p><p><b>Total Paid:</b> '+money(paid)+'</p><p><b>Balance Due:</b> '+money(due)+'</p><p><b>Payment Count:</b> '+payments.length+'</p></aside></div><div class="words"><b>In Words</b><strong>'+esc(numberToIndianWords(payable))+'</strong></div></section>'+
+      '<div class="bottom"><div><div class="payment-method">'+(method==="cash"?"☑":"☐")+' Cash &nbsp;&nbsp; '+(method&&method!=="cash"?"☑":"☐")+' Online</div><div class="utr">UTR NO. / UPLOAD: '+esc(latest?.reference||"—")+'</div></div><div class="signature">For RCLD - Islampur<br/><br/>Authorized Signatory with Office Seal</div></div>'+
+      '<p class="footnote">Computer-generated receipt · Please retain this document for your records.</p></main><script>window.onload=()=>setTimeout(()=>window.print(),350);</script></body></html>';
     w.document.write(html);w.document.close();
   }
+
   async function saveAttendance(e){e.preventDefault();setMessage("");if(!student)return;const r=await fetch("/api/students/"+student._id+"/attendance",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(attForm)});const d=await r.json();if(!r.ok){setMessage(d.error||"Unable to save attendance.");return}const ar=await fetch("/api/students/"+student._id+"/attendance",{cache:"no-store"});setAttendance(await ar.json());setMessage("Attendance saved.");}
 
   return <ERPLayout active="/dashboard/students">
