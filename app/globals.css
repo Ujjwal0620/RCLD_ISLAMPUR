@@ -1740,3 +1740,10 @@ td{font-size:11px}
   .student-edit-grid .student-address-edit-grid>.form-grid{grid-template-columns:1fr 1fr}
   .student-profile-page .student-fees-section .inline-operation-form .form-grid{grid-template-columns:1fr}
 }
+
+
+/* RCLD student registration mobile digit input */
+.rcld-digit-boxes{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:6px;width:100%}
+.rcld-digit-boxes input{width:100%;min-width:0;height:44px;padding:0;text-align:center;font-size:17px;font-weight:700;border:1px solid #b8c7da;border-radius:7px;background:#fff;color:#17365f}
+.rcld-digit-boxes input:focus{outline:2px solid #3287d5;outline-offset:1px;border-color:#3287d5}
+@media(max-width:640px){.rcld-digit-boxes{gap:3px}.rcld-digit-boxes input{height:40px;font-size:14px;border-radius:5px}}
