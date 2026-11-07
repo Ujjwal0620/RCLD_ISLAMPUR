@@ -5,7 +5,8 @@ import RAGAssistant from "@/components/RAGAssistant";
 import {
   LayoutDashboard, Users, UserRoundCog, Menu, X, ShieldCheck, Layers3, BookOpen,
   BarChart3, UserRoundX, Clock3, ClipboardList, LogOut, GraduationCap, BookMarked,
-  ChevronDown, Search, Bell, Settings2, Sparkles, PanelLeftClose, Megaphone, ContactRound
+  ChevronDown, Search, Bell, Settings2, Sparkles, PanelLeftClose, Megaphone, ContactRound,
+  Sun, Moon, Maximize2, Minimize2
 } from "lucide-react";
 
 const navGroups = [
@@ -49,6 +50,39 @@ export default function ERPLayout({ active, children, hideAssistant = true }) {
   const [collapsed, setCollapsed] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState({});
   const [user, setUser] = useState(null);
+  const [theme, setTheme] = useState("light");
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const savedTheme = window.localStorage.getItem("rcld-erp-theme");
+    const nextTheme = savedTheme === "dark" ? "dark" : "light";
+    setTheme(nextTheme);
+    document.documentElement.dataset.theme = nextTheme;
+
+    const syncFullscreen = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener("fullscreenchange", syncFullscreen);
+    syncFullscreen();
+    return () => document.removeEventListener("fullscreenchange", syncFullscreen);
+  }, []);
+
+  const toggleTheme = () => {
+    const nextTheme = theme === "dark" ? "light" : "dark";
+    setTheme(nextTheme);
+    document.documentElement.dataset.theme = nextTheme;
+    window.localStorage.setItem("rcld-erp-theme", nextTheme);
+  };
+
+  const toggleFullscreen = async () => {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else if (document.documentElement.requestFullscreen) {
+        await document.documentElement.requestFullscreen();
+      }
+    } catch {
+      // Fullscreen may be blocked by the browser or device policy.
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -114,7 +148,9 @@ export default function ERPLayout({ active, children, hideAssistant = true }) {
             <kbd>⌘ K</kbd>
           </div>
           <div className="erp-top-actions">
-            <button className="erp-top-icon" title="Settings"><Settings2 size={17}/></button>
+            <button type="button" className="erp-top-icon erp-theme-toggle" title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"} aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"} aria-pressed={theme === "dark"} onClick={toggleTheme}>{theme === "dark" ? <Sun size={17}/> : <Moon size={17}/>}</button>
+            <button type="button" className="erp-top-icon erp-fullscreen-toggle" title={isFullscreen ? "Exit full screen" : "Enter full screen"} aria-label={isFullscreen ? "Exit full screen" : "Enter full screen"} aria-pressed={isFullscreen} onClick={toggleFullscreen}>{isFullscreen ? <Minimize2 size={17}/> : <Maximize2 size={17}/>}</button>
+            <button type="button" className="erp-top-icon" title="Settings" aria-label="Settings"><Settings2 size={17}/></button>
             <button className="erp-top-icon" title="Notifications"><Bell size={17}/><i/></button>
             <button className="erp-sidebar-toggle" title={collapsed ? "Expand sidebar" : "Collapse sidebar"} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} aria-pressed={collapsed} onClick={() => setCollapsed((v) => !v)}><PanelLeftClose size={17}/></button>
             <div className="erp-user-identity">

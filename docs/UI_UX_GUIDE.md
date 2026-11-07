@@ -88,6 +88,14 @@ Preserve the existing Course → Batch → Series → Schedule model, Excel-like
 ### Print layouts
 Screen styling and print styling are separate concerns. Do not allow workspace shadows, sticky headers, sidebar elements or responsive rules to leak into printed documents. Verify receipts in browser print preview at their intended page size. CSS dimensions alone are not proof of correct pagination.
 
+## Appearance and workspace controls
+
+The shared utility bar includes:
+- **Theme switch:** toggles between light and dark palettes and remembers the choice in browser local storage for that device.
+- **Full-screen mode:** uses the browser Fullscreen API to expand the ERP workspace; the same control exits full-screen mode. Browser/device policy may prevent this action.
+
+The theme is presentation-only. It must not change stored ERP data, user roles, permissions, routes or API behavior. New components should use theme-aware surfaces and readable contrast in both modes.
+
 ## Responsive behavior
 
 Use the existing breakpoints in app/globals.css as the baseline. Test at a wide desktop, a medium tablet, a narrow mobile and a small mobile viewport.
