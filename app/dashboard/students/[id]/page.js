@@ -140,7 +140,7 @@ export default function StudentDetailsPage({params}){
     const address=[student.presentAddress||student.address,student.postOffice&&("P.O. "+student.postOffice),student.policeStation&&("P.S. "+student.policeStation),student.district,student.state,student.pin&&("PIN "+student.pin)].filter(Boolean).join(", ");
     const w=window.open("","_blank");
     if(!w){setMessage("Please allow pop-ups to print the fee receipt.");return;}
-    const css=\`
+    const css=`
       @page{size:A4 portrait;margin:5mm}
       *{box-sizing:border-box}
       html,body{margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;color:#172b4d}
@@ -191,7 +191,7 @@ export default function StudentDetailsPage({params}){
       .terms{font-size:4.3pt;line-height:1.1;color:#66758a;margin-top:.6mm;border-top:1px solid #e0e7f0;padding-top:.5mm}
       .footnote{font-size:4.3pt;color:#718096;text-align:center;margin:.4mm 0 0}
       @media print{.receipt{break-inside:avoid;page-break-inside:avoid}}
-    \`;
+    `;
     const d=(label,val,cls="")=>'<div class="detail '+cls+'"><b>'+esc(label)+'</b><span>'+esc(val)+'</span></div>';
     const feeRows=[
       ["Course / Tuition Fee",money(fee.totalFee)],
