@@ -71,7 +71,7 @@ export default function ERPLayout({ active, children, hideAssistant = true }) {
         <div className="brand">
           <div className="brand-mark"><span>R</span></div>
           <div className="brand-copy"><strong>RCLD</strong><span>Islampur Education ERP</span></div>
-          <button className="sidebar-close" onClick={() => setOpen(false)} aria-label="Close menu"><X size={18} /></button>
+          <button type="button" className="sidebar-close" onClick={() => setOpen(false)} aria-label="Close menu"><X size={18} /></button>
         </div>
 
         <div className="workspace-switcher">
@@ -80,14 +80,14 @@ export default function ERPLayout({ active, children, hideAssistant = true }) {
           <ChevronDown size={15}/>
         </div>
 
-        <nav className="erp-nav">
+        <nav className="erp-nav" aria-label="Main navigation">
           {navGroups.map((group) => (
             <div className="nav-group" key={group.label}>
               <button type="button" className="side-label side-group-toggle" aria-expanded={!collapsedGroups[group.label]} onClick={() => setCollapsedGroups((current) => ({ ...current, [group.label]: !current[group.label] }))}>
                 <span>{group.label}</span><ChevronDown size={13} className={collapsedGroups[group.label] ? "group-chevron is-collapsed" : "group-chevron"}/>
               </button>
               {!collapsedGroups[group.label] && group.items.map(({ href, label, icon: Icon }) => (
-                <a key={href} className={`side-link ${active === href ? "active" : ""}`} href={href} title={collapsed ? label : undefined} aria-label={label} onClick={() => setOpen(false)}>
+                <a key={href} className={`side-link ${active === href ? "active" : ""}`} href={href} title={collapsed ? label : undefined} aria-label={label} aria-current={active === href ? "page" : undefined} onClick={() => setOpen(false)}>
                   <Icon size={17} strokeWidth={1.9} /><span>{label}</span>
                   {active === href && <i className="side-active-dot" />}
                 </a>
@@ -105,7 +105,7 @@ export default function ERPLayout({ active, children, hideAssistant = true }) {
         </div>
       </aside>
 
-      <button className="mobile-menu-button" onClick={() => setOpen(true)} aria-label="Open navigation" aria-expanded={open} aria-controls="rcld-mobile-navigation"><Menu size={20} /></button>
+      <button type="button" className="mobile-menu-button" onClick={() => setOpen(true)} aria-label="Open navigation" aria-expanded={open} aria-controls="rcld-mobile-navigation"><Menu size={20} /></button>
       <section className="erp-main">
         <div className="erp-user-bar">
           <div className="erp-command-search">
