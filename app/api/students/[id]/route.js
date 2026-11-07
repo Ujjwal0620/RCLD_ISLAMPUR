@@ -14,7 +14,7 @@ const StudentSchema = new mongoose.Schema({
   referralId:{type:String,default:""},referralName:{type:String,default:""},marketingEmployeeId:{type:String,default:""},marketingEmployeeName:{type:String,default:""},
   qualifications:[{examCourse:String,boardUniversity:String,collegeInstitute:String,year:String,percentage:String}],
   enclosures:{stampPhoto:Boolean,qualifyingCertificates:Boolean,matricAdmitCard:Boolean},
-  declarationDate:String,declarationPlace:String,signatureApplicant:String,photoUrl:String,
+  declarationDate:String,declarationPlace:String,signatureApplicant:String,signatureUrl:String,photoUrl:String,
   status:{type:String,default:"Registered"}
 },{timestamps:true});
 const Student=mongoose.models.Student||mongoose.model("Student",StudentSchema);
@@ -44,7 +44,7 @@ export async function PATCH(req,{params}){
     const allowed=[
       "formNo","aecCode","regnNo","enrollmentNo","admissionDate","guardianContactNumber","dueAmount","paymentStatus","sourceCourseLabel","importSource","courseName","courseCode","applicantName","nationality","dateOfBirth","sex","fatherOrHusbandName",
       "address","presentAddress","permanentAddress","sameAsPresentAddress","postOffice","policeStation","nearestLandmark","district","state","permanentPostOffice","permanentNearestLandmark","permanentPin","permanentDistrict","permanentState","pin","whatsappNumber","guardianContactNumber","mobileNumber","email","aadhaarNumber","referralId","referralName","marketingEmployeeId","marketingEmployeeName","qualifications","batchId","batchCode",
-      "enclosures","declarationDate","declarationPlace","signatureApplicant","photoUrl","status"
+      "enclosures","declarationDate","declarationPlace","signatureApplicant","signatureUrl","photoUrl","status"
     ];
     const update={};
     for(const k of allowed)if(body[k]!==undefined)update[k]=body[k];
@@ -62,13 +62,17 @@ export async function PATCH(req,{params}){
         update.batchId=targetBatch._id; update.batchCode=targetBatch.batchCode;
       }
     }
-    if(update.formNo!==undefined)update.formNo=String(update.formNo).trim();
+    if(update.formNo!==undefined) delete update.formNo;
+    update.aecCode = "RCLD/ISL-001";
     if(update.applicantName!==undefined)update.applicantName=String(update.applicantName).trim();
     if(update.mobileNumber!==undefined)update.mobileNumber=String(update.mobileNumber).trim();
     const email=String(body.email ?? "").trim().toLowerCase();
     const aadhaarNumber=String(body.aadhaarNumber ?? "").replace(/\D/g, "");
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return NextResponse.json({error:"A valid email address is mandatory."},{status:400});
     if(!/^\d{12}$/.test(aadhaarNumber))return NextResponse.json({error:"Aadhaar number must contain exactly 12 digits."},{status:400});
+    const mobileNumber=String(body.mobileNumber ?? "").replace(/\D/g,"");
+    if(body.mobileNumber!==undefined && !/^\d{10}$/.test(mobileNumber))return NextResponse.json({error:"Mobile number must contain exactly 10 digits."},{status:400});
+    if(body.mobileNumber!==undefined)update.mobileNumber=mobileNumber;
     update.email=email;update.aadhaarNumber=aadhaarNumber;
     if(body.referralId!==undefined){
       if(!body.referralId){update.referralId="";update.referralName="";update.marketingEmployeeId="";update.marketingEmployeeName="";}
