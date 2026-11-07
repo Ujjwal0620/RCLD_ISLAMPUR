@@ -13,7 +13,7 @@ export async function POST(request) {
     const form = await request.formData();
     const file = form.get("file");
     const purpose = String(form.get("purpose") || "photo");
-    if (!["photo", "signature"].includes(purpose)) return NextResponse.json({ error: "Invalid upload purpose." }, { status: 400 });
+    if (!["photo", "signature", "payment-proof"].includes(purpose)) return NextResponse.json({ error: "Invalid upload purpose." }, { status: 400 });
     if (!file || typeof file.arrayBuffer !== "function") return NextResponse.json({ error: "Choose a photo to upload." }, { status: 400 });
     if (!String(file.type || "").startsWith("image/")) return NextResponse.json({ error: "Only image files are allowed." }, { status: 400 });
     const maxSize = purpose === "signature" ? 3 * 1024 * 1024 : 5 * 1024 * 1024;
@@ -22,9 +22,9 @@ export async function POST(request) {
     const buffer = Buffer.from(await file.arrayBuffer());
     const result = await new Promise((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream({
-        folder: purpose === "signature" ? "rcld-islampur/student-signatures" : "rcld-islampur/students",
+        folder: purpose === "signature" ? "rcld-islampur/student-signatures" : purpose === "payment-proof" ? "rcld-islampur/payment-proofs" : "rcld-islampur/students",
         resource_type: "image",
-        transformation: purpose === "signature" ? [{ width: 1400, height: 500, crop: "limit", quality: "auto", fetch_format: "auto" }] : [{ width: 700, height: 900, crop: "limit", quality: "auto", fetch_format: "auto" }],
+        transformation: purpose === "signature" ? [{ width: 1400, height: 500, crop: "limit", quality: "auto", fetch_format: "auto" }] : purpose === "payment-proof" ? [{ width: 1600, height: 1600, crop: "limit", quality: "auto", fetch_format: "auto" }] : [{ width: 700, height: 900, crop: "limit", quality: "auto", fetch_format: "auto" }],
       }, (error, uploaded) => error ? reject(error) : resolve(uploaded));
       stream.end(buffer);
     });
