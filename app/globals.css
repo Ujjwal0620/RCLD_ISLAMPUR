@@ -1456,3 +1456,128 @@ td{font-size:11px}
   .student-profile-page .student-detail-grid{grid-template-columns:1fr}
   .student-profile-page .student-profile-hero{align-items:flex-start;flex-wrap:wrap}
 }
+
+
+/* RCLD registration form - blue printed-form inspired workspace */
+.registration-form{
+  width:min(1120px,100%);
+  margin:18px auto 36px;
+  padding:22px;
+  border:1px solid #cbdcf2;
+  border-radius:18px;
+  background:linear-gradient(180deg,#f9fcff 0%,#edf5ff 100%);
+  box-shadow:0 14px 36px rgba(18,55,104,.09);
+}
+.registration-form .form-intro{
+  margin:-22px -22px 18px;
+  padding:23px 25px 19px;
+  border-radius:18px 18px 0 0;
+  border-bottom:5px solid #168bd3;
+  background:linear-gradient(110deg,#fff 0%,#eef6ff 70%,#dcecff 100%);
+  text-align:center;
+}
+.registration-form .rcld-title{
+  color:#0b4388;
+  font-family:Georgia,serif;
+  font-size:clamp(20px,2.5vw,29px);
+  font-weight:900;
+  letter-spacing:.025em;
+  line-height:1.15;
+}
+.registration-form .form-intro strong{display:block;margin-top:7px;color:#173f78;font-size:15px;font-weight:850}
+.registration-form .form-intro span{display:block;margin-top:5px;color:#667b98;font-size:11px}
+.registration-photo-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 180px;
+  gap:14px;
+  align-items:stretch;
+  margin:0 0 15px;
+  padding:12px;
+  border:1px solid #c5d9f1;
+  border-radius:13px;
+  background:#e6f2ff;
+}
+.registration-office-intro{align-self:center;padding:10px 12px}
+.registration-mini-label{color:#3975b6;font-size:9px;font-weight:900;letter-spacing:.12em}
+.registration-office-intro h2{margin:5px 0;color:#0b4388;font-size:17px;font-weight:850}
+.registration-office-intro p{margin:0;color:#657b99;font-size:11px}
+.registration-photo-card{
+  position:relative;
+  display:flex;
+  min-height:150px;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  overflow:hidden;
+  border:1px solid #8eadd4;
+  border-radius:11px;
+  background:#f9fcff;
+  color:#103f7e;
+  text-align:center;
+  cursor:pointer;
+}
+.registration-photo-preview{display:grid;width:68px;height:78px;place-items:center;overflow:hidden;border:1px solid #a9c2e1;border-radius:6px;background:#e8f2ff;color:#2d65a4}
+.registration-photo-preview img{width:100%;height:100%;object-fit:cover}
+.registration-photo-card>strong{font-size:11px;font-weight:850}
+.registration-photo-card .ghost-btn{position:relative;min-height:29px;padding:5px 9px;font-size:10px}
+.registration-photo-card input[type=file]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.registration-photo-card small{color:#8191a8;font-size:9px}
+.registration-form .form-section{
+  margin:13px 0 0;
+  padding:14px 15px 16px;
+  border:1px solid #c6d9f1;
+  border-radius:12px;
+  background:rgba(255,255,255,.78);
+}
+.registration-form .form-section h3{
+  margin:-14px -15px 13px;
+  padding:8px 13px;
+  border-radius:11px 11px 5px 5px;
+  background:linear-gradient(90deg,#0b4388,#0c5ca8);
+  color:#fff;
+  font-size:12px;
+  font-weight:850;
+  letter-spacing:.01em;
+}
+.registration-form .form-field span{color:#244a7c;font-size:10px;font-weight:800}
+.registration-form .form-field input,
+.registration-form .form-field select,
+.registration-form .form-field textarea{
+  border:1px solid #a9c3e2;
+  border-radius:7px;
+  background:#fff;
+  color:#183a67;
+  min-height:37px;
+  font-size:11px;
+}
+.registration-form .form-field input:focus,
+.registration-form .form-field select:focus,
+.registration-form .form-field textarea:focus{border-color:#3187ce;box-shadow:0 0 0 3px rgba(49,135,206,.12);outline:0}
+.registration-address-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:13px}
+.registration-address-card{min-width:0;padding:12px;border:1px solid #c5d9f1;border-radius:10px;background:#f6faff}
+.registration-address-card h4{margin:0 0 10px;color:#0b4388;font-size:11px;font-weight:850}
+.registration-same-address{display:flex;align-items:center;gap:7px;margin:0 0 9px;color:#294d7b;font-size:10px;font-weight:750}
+.registration-same-address input{width:15px;height:15px}
+.registration-form .qualification-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.registration-form .qualification-grid input{width:100%;min-width:0;min-height:37px;padding:8px;border:1px solid #a9c3e2;border-radius:7px;background:#fff;font-size:10px}
+.registration-form .checks{display:flex;gap:12px;flex-wrap:wrap}
+.registration-form .checks label{display:flex;align-items:center;gap:7px;padding:8px 10px;border:1px solid #c5d9f1;border-radius:8px;background:#f7fbff;color:#294d7b;font-size:10px}
+.registration-form .declaration{color:#526b8b;font-size:10px;line-height:1.6}
+.registration-form .form-actions{padding-top:15px;border-top:1px solid #d5e3f3}
+.registration-form .course-fee-summary{margin-top:12px;border:1px solid #c6d9f1;border-radius:9px;background:#f5faff}
+@media(max-width:760px){
+  .registration-form{padding:14px;margin:12px auto 24px;border-radius:13px}
+  .registration-form .form-intro{margin:-14px -14px 13px;padding:18px 14px;border-radius:13px 13px 0 0}
+  .registration-photo-row{grid-template-columns:1fr 130px;gap:8px;padding:8px}
+  .registration-photo-card{min-height:135px}
+  .registration-address-grid{grid-template-columns:1fr}
+  .registration-form .qualification-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:480px){
+  .registration-photo-row{grid-template-columns:1fr}
+  .registration-photo-card{min-height:120px}
+  .registration-form .qualification-grid{grid-template-columns:1fr}
+  .registration-form .form-section{padding:12px}
+  .registration-form .form-section h3{margin:-12px -12px 11px}
+}
