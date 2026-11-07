@@ -99,7 +99,11 @@ export async function POST(request) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
     if (!/^\d{12}$/.test(aadhaarNumber)) return NextResponse.json({ error: "Aadhaar number must contain exactly 12 digits." }, { status: 400 });
     const mobileNumber = String(body.mobileNumber || "").replace(/\D/g, "");
+    const guardianContactNumber = String(body.guardianContactNumber || "").replace(/\D/g, "");
+    const whatsappNumber = String(body.whatsappNumber || "").replace(/\D/g, "");
     if (!/^\d{10}$/.test(mobileNumber)) return NextResponse.json({ error: "Mobile number must contain exactly 10 digits." }, { status: 400 });
+    if (!/^\d{10}$/.test(guardianContactNumber)) return NextResponse.json({ error: "Guardian mobile number must contain exactly 10 digits." }, { status: 400 });
+    if (!/^\d{10}$/.test(whatsappNumber)) return NextResponse.json({ error: "WhatsApp number must contain exactly 10 digits." }, { status: 400 });
     if (!String(body.signatureUrl || "").startsWith("https://res.cloudinary.com/")) return NextResponse.json({ error: "Upload the student signature image before registering." }, { status: 400 });
     const formSequence = await nextStudentSequence("student-form");
     const enrollmentSequence = await nextStudentSequence("student-enrollment");
@@ -121,7 +125,9 @@ export async function POST(request) {
       enrollmentNo,
       aecCode: "RCLD/ISL-001",
       applicantName: String(body.applicantName).trim(),
-      mobileNumber
+      mobileNumber,
+      guardianContactNumber,
+      whatsappNumber
     });
     if (body.courseCode || body.courseName) {
       const conditions = [];
@@ -129,9 +135,9 @@ export async function POST(request) {
       if (body.courseName) conditions.push({ name: String(body.courseName).trim() });
       const course = await Course.findOne({ $or: conditions }).lean();
       if (course) {
-        const FeeSchema = new mongoose.Schema({ studentId:{type:mongoose.Schema.Types.ObjectId,unique:true,index:true,ref:"Student"}, totalFee:{type:Number,default:0}, discount:{type:Number,default:0}, admissionFee:{type:Number,default:0}, payments:Array, updatedBy:String }, {timestamps:true});
+        const FeeSchema = new mongoose.Schema({ studentId:{type:mongoose.Schema.Types.ObjectId,unique:true,index:true,ref:"Student"}, totalFee:{type:Number,default:0}, discount:{type:Number,default:0}, admissionFee:{type:Number,default:0}, registrationFee:{type:Number,default:0}, admissionDate:String, payments:Array, updatedBy:String }, {timestamps:true});
         const StudentFee = mongoose.models.StudentFee || mongoose.model("StudentFee", FeeSchema);
-        await StudentFee.findOneAndUpdate({studentId:student._id}, {$set:{totalFee:Number(course.fee||0),admissionFee:Number(course.admissionFee||0)}}, {upsert:true,new:true,setDefaultsOnInsert:true});
+        await StudentFee.findOneAndUpdate({studentId:student._id}, {$set:{totalFee:Number(course.fee||0),admissionFee:Number(course.admissionFee||0),registrationFee:Number(course.registrationFee||0),admissionDate:body.admissionDate||new Date().toISOString().slice(0,10)}}, {upsert:true,new:true,setDefaultsOnInsert:true});
       }
     }
     return NextResponse.json({ student }, { status: 201 });
