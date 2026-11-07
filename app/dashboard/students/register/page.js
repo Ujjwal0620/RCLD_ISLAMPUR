@@ -39,6 +39,7 @@ function DigitBoxes({ label, value = "", onChange, length = 10, required = false
   function setDigits(start, text) {
     const incoming = String(text || "").replace(/\\D/g, "").slice(0, length - start);
     const next = digits.slice();
+    if (!String(text || "")) next[start] = " ";
     incoming.split("").forEach((digit, offset) => { next[start + offset] = digit; });
     onChange(next.join("").replace(/\\s+$/, ""));
   }
