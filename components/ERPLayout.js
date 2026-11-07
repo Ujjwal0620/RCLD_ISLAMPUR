@@ -67,7 +67,7 @@ export default function ERPLayout({ active, children, hideAssistant = true }) {
   return (
     <div className={`erp-shell ${collapsed ? "sidebar-collapsed" : ""}`}>
       <div className={`sidebar-overlay ${open ? "show" : ""}`} onClick={() => setOpen(false)} />
-      <aside className={`erp-sidebar ${open ? "open" : ""}`}>
+      <aside id="rcld-mobile-navigation" className={`erp-sidebar ${open ? "open" : ""}`}>
         <div className="brand">
           <div className="brand-mark"><span>R</span></div>
           <div className="brand-copy"><strong>RCLD</strong><span>Islampur Education ERP</span></div>
@@ -105,7 +105,7 @@ export default function ERPLayout({ active, children, hideAssistant = true }) {
         </div>
       </aside>
 
-      <button className="mobile-menu-button" onClick={() => setOpen(true)} aria-label="Open navigation"><Menu size={20} /></button>
+      <button className="mobile-menu-button" onClick={() => setOpen(true)} aria-label="Open navigation" aria-expanded={open} aria-controls="rcld-mobile-navigation"><Menu size={20} /></button>
       <section className="erp-main">
         <div className="erp-user-bar">
           <div className="erp-command-search">
