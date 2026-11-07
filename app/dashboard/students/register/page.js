@@ -37,7 +37,8 @@ export default function RegisterStudentPage() {
   const [saving, setSaving] = useState(false);
   const [courses, setCourses] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState(null);
-  const [referrals, setReferrals] = useState([]);\n  const [photoUploading, setPhotoUploading] = useState(false);
+  const [referrals, setReferrals] = useState([]);
+  const [photoUploading, setPhotoUploading] = useState(false);
 
   useEffect(() => { fetch("/api/courses",{cache:"no-store"}).then(r=>r.json()).then(d=>setCourses(d.courses||[])).catch(()=>{}); fetch("/api/referrals",{cache:"no-store"}).then(r=>r.json()).then(d=>setReferrals((d.referrals||[]).filter(x=>x.status==="Active"))).catch(()=>{}); }, []);
 
@@ -84,7 +85,9 @@ export default function RegisterStudentPage() {
         mobileNumber: form.mobileNumber.trim(),
         email: form.email.trim().toLowerCase(),
         aadhaarNumber: form.aadhaarNumber.replace(/\D/g, ""),
-        address: (form.presentAddress || form.address).trim(),\n        presentAddress: (form.presentAddress || form.address).trim(),\n        permanentAddress: form.sameAsPresentAddress ? (form.presentAddress || form.address).trim() : form.permanentAddress.trim()
+        address: (form.presentAddress || form.address).trim(),
+        presentAddress: (form.presentAddress || form.address).trim(),
+        permanentAddress: form.sameAsPresentAddress ? (form.presentAddress || form.address).trim() : form.permanentAddress.trim()
       };
 
       const r = await fetch("/api/students", {
