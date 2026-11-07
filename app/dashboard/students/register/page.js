@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Camera, ImagePlus } from "lucide-react";
 import ERPLayout from "@/components/ERPLayout";
 
 const initial = {
   formNo: "", aecCode: "", regnNo: "", courseName: "", courseCode: "", applicantName: "", email: "", aadhaarNumber: "", referralId: "",
-  nationality: "", dateOfBirth: "", sex: "", fatherOrHusbandName: "", address: "",
+  nationality: "", dateOfBirth: "", sex: "", fatherOrHusbandName: "", address: "", presentAddress: "", permanentAddress: "", sameAsPresentAddress: true, district: "", state: "", permanentPin: "", permanentDistrict: "", permanentState: "", guardianContactNumber: "", photoUrl: "",
   pin: "", whatsappNumber: "", mobileNumber: "",
   qualifications: [{ examCourse: "", boardUniversity: "", collegeInstitute: "", year: "", percentage: "" }],
   enclosures: { stampPhoto: false, qualifyingCertificates: false, matricAdmitCard: false },
@@ -37,7 +37,7 @@ export default function RegisterStudentPage() {
   const [saving, setSaving] = useState(false);
   const [courses, setCourses] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState(null);
-  const [referrals, setReferrals] = useState([]);
+  const [referrals, setReferrals] = useState([]);\n  const [photoUploading, setPhotoUploading] = useState(false);
 
   useEffect(() => { fetch("/api/courses",{cache:"no-store"}).then(r=>r.json()).then(d=>setCourses(d.courses||[])).catch(()=>{}); fetch("/api/referrals",{cache:"no-store"}).then(r=>r.json()).then(d=>setReferrals((d.referrals||[]).filter(x=>x.status==="Active"))).catch(()=>{}); }, []);
 
@@ -54,6 +54,21 @@ export default function RegisterStudentPage() {
     }));
   };
 
+  async function uploadPhoto(file) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { setMessage("Please select an image file."); return; }
+    if (file.size > 5 * 1024 * 1024) { setMessage("Student photo must be smaller than 5 MB."); return; }
+    setPhotoUploading(true); setMessage("");
+    try {
+      const data = new FormData(); data.append("file", file);
+      const response = await fetch("/api/uploads/student-photo", { method: "POST", body: data });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Unable to upload photo.");
+      update("photoUrl", result.url);
+    } catch (error) { setMessage(error.message); }
+    finally { setPhotoUploading(false); }
+  }
+
   async function submit(e) {
     e.preventDefault();
     if (saving) return;
@@ -69,7 +84,7 @@ export default function RegisterStudentPage() {
         mobileNumber: form.mobileNumber.trim(),
         email: form.email.trim().toLowerCase(),
         aadhaarNumber: form.aadhaarNumber.replace(/\D/g, ""),
-        address: form.address.trim()
+        address: (form.presentAddress || form.address).trim(),\n        presentAddress: (form.presentAddress || form.address).trim(),\n        permanentAddress: form.sameAsPresentAddress ? (form.presentAddress || form.address).trim() : form.permanentAddress.trim()
       };
 
       const r = await fetch("/api/students", {
@@ -103,10 +118,11 @@ export default function RegisterStudentPage() {
       <form className="registration-form" onSubmit={submit}>
         <div className="form-intro">
           <div className="rcld-title">RASHTRIYA COMPUTER LITERACY DRIVE</div>
-          <strong>Registration Form</strong>
-          <span>All information to be filled in CAPITAL LETTERS only using Blue/Black Roller pen.</span>
+          <strong>RCLD ISLAMPUR · STUDENT REGISTRATION FORM</strong>
+          <span>Complete all applicant, address, contact and academic details. Fields marked * are mandatory.</span>
         </div>
 
+        <div className="registration-photo-row"><div className="registration-office-intro"><span className="registration-mini-label">REGISTRATION DESK</span><h2>Office / Registration Details</h2><p>Enter the student registration number and choose the applicable computer course.</p></div><label className="registration-photo-card"><span className="registration-photo-preview">{form.photoUrl ? <img src={form.photoUrl} alt="Student" /> : <Camera size={27}/>}</span><strong>{photoUploading ? "Uploading photo…" : "Photo Selection Option"}</strong><span className="ghost-btn"><ImagePlus size={14}/> Choose Photo<input type="file" accept="image/*" disabled={photoUploading} onChange={e=>uploadPhoto(e.target.files?.[0])}/></span><small>JPG / PNG · Max 5 MB</small></label></div>
         <section className="form-section">
           <h3>Office / Registration Details</h3>
           <div className="form-grid four">
@@ -128,14 +144,14 @@ export default function RegisterStudentPage() {
             <Field label="Date of Birth" name="dateOfBirth" type="date" value={form.dateOfBirth} onChange={update} />
             <label className="form-field"><span>Sex</span><select value={form.sex} onChange={(e) => update("sex", e.target.value)}><option value="">Select</option><option value="M">M - Male</option><option value="F">F - Female</option></select></label>
             <Field label="Father / Husband Name" name="fatherOrHusbandName" value={form.fatherOrHusbandName} onChange={update} />
-            <Field label="PIN" name="pin" value={form.pin} onChange={update} maxLength={10} />
             <Field label="WhatsApp Number" name="whatsappNumber" value={form.whatsappNumber} onChange={update} maxLength={15} />
+            <Field label="Guardian Mobile Number" name="guardianContactNumber" value={form.guardianContactNumber} onChange={update} maxLength={15} />
             <Field label="Mobile Number" name="mobileNumber" value={form.mobileNumber} onChange={update} required maxLength={15} />
             <Field label="Email Address" name="email" value={form.email} onChange={update} required type="email" />
             <Field label="Aadhaar Card Number (12 digits)" name="aadhaarNumber" value={form.aadhaarNumber} onChange={update} required maxLength={12} inputMode="numeric" pattern="[0-9]{12}" />
           </div>
           <label className="form-field"><span>Referral (optional)</span><select value={form.referralId} onChange={(e)=>update("referralId",e.target.value)}><option value="">Direct / No referral</option>{referrals.map((r)=><option key={r._id} value={r._id}>{r.name} — {r.marketingEmployeeName}</option>)}</select></label>
-          <label className="form-field full"><span>Complete Address</span><textarea value={form.address} onChange={(e) => update("address", e.target.value)} rows="3" /></label>
+          <div className="registration-address-grid"><div className="registration-address-card"><h4>◉ Present Address</h4><label className="form-field"><span>Ward No. / Village / Town</span><textarea value={form.presentAddress || form.address} onChange={e=>{update("presentAddress",e.target.value);update("address",e.target.value);}} rows="2"/></label><div className="form-grid two"><Field label="P.O. / Post Office" name="postOffice" value={form.postOffice} onChange={update}/><Field label="P.S. / Police Station" name="policeStation" value={form.policeStation} onChange={update}/><Field label="District" name="district" value={form.district} onChange={update}/><Field label="PIN" name="pin" value={form.pin} onChange={update} maxLength={10}/><Field label="State" name="state" value={form.state} onChange={update}/></div></div><div className="registration-address-card"><h4>Permanent Address</h4><label className="registration-same-address"><input type="checkbox" checked={!!form.sameAsPresentAddress} onChange={e=>update("sameAsPresentAddress",e.target.checked)}/> Same as Present Address</label>{!form.sameAsPresentAddress&&<><label className="form-field"><span>Ward No. / Village / Town</span><textarea value={form.permanentAddress} onChange={e=>update("permanentAddress",e.target.value)} rows="2"/></label><div className="form-grid two"><Field label="District" name="permanentDistrict" value={form.permanentDistrict} onChange={update}/><Field label="P.O. / PIN" name="permanentPin" value={form.permanentPin} onChange={update}/><Field label="State" name="permanentState" value={form.permanentState} onChange={update}/></div></>}</div></div>
         </section>
 
         <section className="form-section">
