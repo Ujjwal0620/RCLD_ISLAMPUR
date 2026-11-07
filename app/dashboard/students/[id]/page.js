@@ -89,7 +89,7 @@ export default function StudentDetailsPage({params}){
     const html='<!doctype html><html><head><meta charset="utf-8"/><title>RCLD Registration Form - '+esc(student.applicantName)+'</title><style>'+css+'</style></head><body><main class="sheet">'+
       '<header class="brand"><div class="seal">RCLD<small>ISLAMPUR</small></div><div class="brand-title"><h1>RASHTRIYA COMPUTER<br/>LITERACY DRIVE</h1><p>STUDENT REGISTRATION FORM · RCLD ISLAMPUR</p></div><div class="brand-right">RCLD<small>Islampur</small></div></header>'+
       '<div class="meta">'+field("Reg. No.",student.regnNo||student.enrollmentNo)+field("Date",student.admissionDate||student.createdAt?.slice?.(0,10))+'</div>'+
-      '<section class="section"><h2>Office / Registration Details</h2><div class="office"><div class="office-grid">'+field("AEC Code",student.aecCode)+field("Form No.",student.formNo)+field("Course",student.courseName)+field("Course Code",student.courseCode)+field("Enrollment No.",student.enrollmentNo||student.regnNo)+field("Referral",student.referralName)+'</div>'+photo+'</div></section>'+
+      '<section class="section"><h2>Office / Registration Details</h2><div class="office"><div class="office-grid">'+field("AEC Code",student.aecCode)+field("Form No.",student.formNo)+field("Course",student.courseName)+field("Course Code",student.courseCode)+field("Enrollment No.",student.enrollmentNo||student.regnNo)+field("Referral",student.referralName)+field("Marketing Employee",student.marketingEmployeeName)+field("Student Status",student.status)+'</div>'+photo+'</div></section>'+
       '<section class="section"><h2>Applicant Details</h2><div class="applicant">'+field("① Name",student.applicantName)+field("② DOB",student.dateOfBirth)+field("③ Sex",student.sex==="M"?"M":student.sex==="F"?"F":student.sex)+field("④ Nationality",student.nationality)+'<div class="wide">'+field("⑤ Father / Mother / Husband",student.fatherOrHusbandName)+'</div></div></section>'+
       '<section class="section"><h2>Address</h2><div class="address"><div class="address-box"><h3>◉ Present Address</h3><p>'+esc(present||"—")+'</p></div><div class="address-box"><h3>□ Permanent Address</h3><p>'+esc(permanent||"—")+'</p></div></div></section>'+
       '<section class="section"><h2>Contact Details</h2><div class="contact">'+field("＊ Mobile No.",student.mobileNumber)+field("＊ Mob. of Guardian",student.guardianContactNumber)+field("＊ WhatsApp No.",student.whatsappNumber)+field("＊ Email Id",student.email)+field("＊ Aadhaar No.",student.aadhaarNumber)+'</div></section>'+
@@ -118,8 +118,6 @@ export default function StudentDetailsPage({params}){
       return '<tr><td>'+esc(p.paymentType||"Course Fee")+'</td><td>'+money(fee.totalFee)+'</td><td>'+money(p.amount)+'</td><td>'+money(remaining)+'</td><td>'+esc(p.dueDate||p.installmentMonth||"—")+'</td></tr>';
     }).join("")||'<tr><td colspan="5" class="empty-row">No payment history recorded</td></tr>';
     const method=String(latest?.method||"").toLowerCase();
-    const cashChecked=method==="cash"?"☑":"☐";
-    const onlineChecked=method&&method!=="cash"?"☑":"☐";
     const w=window.open("","_blank");
     if(!w){setMessage("Please allow pop-ups to print the fee receipt.");return;}
     const css=`
