@@ -49,7 +49,7 @@ export async function GET(request) {
     if (search) {
       const rx = new RegExp(search.replace(/[.*+?^{}()|[\]\\]/g, "\\$&"), "i");
       filter.$or = [
-        { applicantName: rx }, { formNo: rx }, { mobileNumber: rx }, { email: rx }, { aadhaarNumber: rx },
+        { applicantName: rx }, { formNo: rx }, { enrollmentNo: rx }, { mobileNumber: rx }, { email: rx }, { aadhaarNumber: rx },
         { courseName: rx }, { regnNo: rx }, { fatherOrHusbandName: rx },
         { aecCode: rx }, { whatsappNumber: rx }
       ];
