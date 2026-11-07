@@ -8,7 +8,7 @@ const StudentSchema = new mongoose.Schema({
   formNo:{type:String,required:true,unique:true,trim:true},
   aecCode:String,regnNo:String,enrollmentNo:String,admissionDate:String,guardianContactNumber:String,dueAmount:mongoose.Schema.Types.Mixed,paymentStatus:mongoose.Schema.Types.Mixed,sourceCourseLabel:String,importSource:String,courseName:String,courseCode:String,batchId:{type:mongoose.Schema.Types.ObjectId,ref:"Batch",default:null},batchCode:String,
   applicantName:{type:String,required:true,trim:true},nationality:String,dateOfBirth:String,sex:String,
-  fatherOrHusbandName:String,address:String,presentAddress:String,permanentAddress:String,sameAsPresentAddress:Boolean,postOffice:String,policeStation:String,district:String,state:String,permanentPin:String,permanentDistrict:String,permanentState:String,pin:String,whatsappNumber:String,
+  fatherOrHusbandName:String,address:String,presentAddress:String,permanentAddress:String,sameAsPresentAddress:Boolean,postOffice:String,policeStation:String,nearestLandmark:String,district:String,state:String,permanentPostOffice:String,permanentNearestLandmark:String,permanentPin:String,permanentDistrict:String,permanentState:String,pin:String,whatsappNumber:String,
   mobileNumber:{type:String,required:true,trim:true},
   email:{type:String,required:true,trim:true,lowercase:true}, aadhaarNumber:{type:String,required:true,trim:true},
   referralId:{type:String,default:""},referralName:{type:String,default:""},marketingEmployeeId:{type:String,default:""},marketingEmployeeName:{type:String,default:""},
@@ -43,7 +43,7 @@ export async function PATCH(req,{params}){
     if(body.status!==undefined && String(body.status||"")!==String(current.status||"")) return NextResponse.json({error:"Use the Batch Movement workflow for status changes so every movement receives a remark and audit footprint."},{status:409});
     const allowed=[
       "formNo","aecCode","regnNo","enrollmentNo","admissionDate","guardianContactNumber","dueAmount","paymentStatus","sourceCourseLabel","importSource","courseName","courseCode","applicantName","nationality","dateOfBirth","sex","fatherOrHusbandName",
-      "address","presentAddress","permanentAddress","sameAsPresentAddress","postOffice","policeStation","district","state","permanentPin","permanentDistrict","permanentState","pin","whatsappNumber","guardianContactNumber","mobileNumber","email","aadhaarNumber","referralId","referralName","marketingEmployeeId","marketingEmployeeName","qualifications","batchId","batchCode",
+      "address","presentAddress","permanentAddress","sameAsPresentAddress","postOffice","policeStation","nearestLandmark","district","state","permanentPostOffice","permanentNearestLandmark","permanentPin","permanentDistrict","permanentState","pin","whatsappNumber","guardianContactNumber","mobileNumber","email","aadhaarNumber","referralId","referralName","marketingEmployeeId","marketingEmployeeName","qualifications","batchId","batchCode",
       "enclosures","declarationDate","declarationPlace","signatureApplicant","photoUrl","status"
     ];
     const update={};
