@@ -22,6 +22,7 @@ export default function StudentDetailsPage({params}){
   const [fee,setFee]=useState(null),[courses,setCourses]=useState([]),[batches,setBatches]=useState([]),[referrals,setReferrals]=useState([]),[attendance,setAttendance]=useState({records:[],summary:{total:0,present:0,absent:0,leave:0,percentage:0}});
   const [feeForm,setFeeForm]=useState({totalFee:"",discount:"",admissionFee:"",registrationFee:"",amount:"",date:new Date().toISOString().slice(0,10),method:"Cash",reference:"",utrNumber:"",screenshotUrl:"",paymentType:"Installment",installmentMonth:""});
   const [proofUploading,setProofUploading]=useState(false);
+  const [feeWorkspaceOpen,setFeeWorkspaceOpen]=useState(false);
   const [attForm,setAttForm]=useState({date:new Date().toISOString().slice(0,10),status:"Present",subject:"",batch:"",note:""});
   const [message,setMessage]=useState(""); const [editing,setEditing]=useState(false); const [editForm,setEditForm]=useState({});
   const [history,setHistory]=useState([]),[contactLogs,setContactLogs]=useState([]); const [transition,setTransition]=useState({action:"",batchId:"",remark:""}); const [transitioning,setTransitioning]=useState(false);
@@ -204,7 +205,7 @@ export default function StudentDetailsPage({params}){
       '<div>Others</div><div class="amount">—</div>'+
       '<div>Discount</div><div class="amount">− '+money(fee.discount)+'</div>'+
       '<div class="total">Total</div><div class="amount total">'+money(payable)+'</div>'+
-      '</div><aside class="fee-side"><h4>Fee Notes</h4><p><b>Student:</b> '+esc(student.applicantName)+'</p><p><b>Course:</b> '+esc(student.courseCode||student.courseName)+'</p><p><b>Fee Status:</b> '+(due<=0?"Paid":"Payment Due")+'</p><p><b>Receipt:</b> '+esc(receiptNo)+'</p></aside></div><div class="words"><b>In Words</b><strong>'+esc(numberToIndianWords(payable))+'</strong></div></section>'+
+      '</div><aside class="fee-side"><h4>Payment Snapshot</h4><p><b>Student:</b> '+esc(student.applicantName)+'</p><p><b>Course / Duration:</b> '+esc(student.courseCode||student.courseName)+' · '+esc(duration)+'</p><p><b>Enrollment:</b> '+esc(student.enrollmentNo||student.regnNo)+'</p><p><b>Current Status:</b> (due<=0?"Paid":"Payment Due")</p><p><b>Total Paid:</b> '+money(paid)+'</p><p><b>Balance Due:</b> '+money(due)+'</p><p><b>Receipt No.:</b> '+esc(receiptNo)+'</p></aside></div><div class="words"><b>In Words</b><strong>'+esc(numberToIndianWords(payable))+'</strong></div></section>'+
       '<div class="bottom"><div class="receipt-confirmation"><b>Payment recorded against:</b><br/>'+esc(student.applicantName)+' · '+esc(student.enrollmentNo||"")+'</div><div class="signature">For RCLD - Islampur<br/><br/>Authorized Signatory with Office Seal</div></div>'+
       '<div class="receipt-terms"><b>Terms & Conditions:</b> 1. A receipt is valid only after being authorised by an AEC representative. 2. Late fee of ₹50 per month applies after the 10th of every month while dues remain unpaid. 3. Admission fee includes nominal charges towards ID-Card, course module, terminal & final Diploma Examination, and certification.</div><p class="footnote">Computer-generated receipt · Please retain this document for your records.</p></main><script>window.onload=()=>{const page=document.querySelector(".receipt");if(page&&page.scrollHeight>page.clientHeight){page.style.transformOrigin="top center";page.style.transform="scaleY("+Math.max(.55,page.clientHeight/page.scrollHeight)+")";}setTimeout(()=>window.print(),350);};</script></body></html>';
     w.document.write(html);w.document.close();
@@ -281,34 +282,67 @@ export default function StudentDetailsPage({params}){
         <Detail label="Course Name">{student.courseName}</Detail><Detail label="Course Code">{student.courseCode}</Detail><Detail label="Original Course / Series">{student.sourceCourseLabel}</Detail><Detail label="Batch">{student.batchCode||"Not assigned"}</Detail><Detail label="Admission Date">{student.admissionDate}</Detail><Detail label="Imported Due Amount">{student.dueAmount}</Detail><Detail label="Imported Payment Status">{student.paymentStatus}</Detail><Detail label="AEC Code">RCLD/ISL-001</Detail><Detail label="Registered On">{student.createdAt?new Date(student.createdAt).toLocaleString():""}</Detail><Detail label="Last Updated">{student.updatedAt?new Date(student.updatedAt).toLocaleString():""}</Detail>
       </div><div className="operational-placeholder"><strong>Course Content Progress</strong><span>Course content and batch-wise topic completion will be shown here after this student is assigned to a batch.</span></div></section>
 
-      <section className="detail-section student-fees-section"><div className="detail-section-title"><CreditCard size={17}/><div><h3>Fees & Payments</h3><span>Fee summary and payment entries for this student</span></div></div>
-        <div className="student-summary-grid compact fee-summary-three">
-          <div className="summary-card"><span>Total Fee</span><strong>₹{Number(fee?.payable||0).toLocaleString("en-IN")}</strong></div>
-          <div className="summary-card"><span>Fee Paid</span><strong>₹{Number(fee?.paid||0).toLocaleString("en-IN")}</strong></div>
-          <div className="summary-card danger"><span>Total Due (incl. late fine)</span><strong>₹{Number(fee?.due||0).toLocaleString("en-IN")}</strong></div>
+      <section className="detail-section student-fees-section">
+        <div className="detail-section-title"><CreditCard size={17}/><div><h3>Fees & Payments</h3><span>Live fee position · lifetime payment ledger · receipt workspace</span></div></div>
+        <div className="student-fee-overview">
+          <div className="fee-overview-card fee-total"><span>Total Payable</span><strong>₹{Number(fee?.payable||0).toLocaleString("en-IN")}</strong><small>Course + admission + registration − discount</small></div>
+          <div className="fee-overview-card fee-paid"><span>Total Collected</span><strong>₹{Number(fee?.paid||0).toLocaleString("en-IN")}</strong><small>{(fee?.payments||[]).length} payment entries recorded</small></div>
+          <div className="fee-overview-card fee-due"><span>Outstanding Due</span><strong>₹{Number(fee?.due||0).toLocaleString("en-IN")}</strong><small>Including applicable late fine</small></div>
         </div>
-        <div className="fee-breakdown-strip">
-          <span>Course fee: ₹{Number(fee?.totalFee||0).toLocaleString("en-IN")}</span><span>Admission fee (one-time): ₹{Number(fee?.admissionFee||0).toLocaleString("en-IN")}</span><span>Registration fee (one-time): ₹{Number(fee?.registrationFee||0).toLocaleString("en-IN")}</span><span>Discount: ₹{Number(fee?.discount||0).toLocaleString("en-IN")}</span><span>Late fine: ₹{Number(fee?.lateFine||0).toLocaleString("en-IN")}</span>
+        <div className="fee-overview-meta">
+          <span><b>Course</b>{value(student.courseName)}</span>
+          <span><b>Enrollment</b>{value(student.enrollmentNo)}</span>
+          <span><b>Fee status</b><em className={Number(fee?.due||0)<=0?"fee-status-paid":"fee-status-due"}>{Number(fee?.due||0)<=0?"Paid":"Payment Due"}</em></span>
         </div>
-        <details className="fee-entry-expander"><summary><strong>Fee setup & record a payment</strong><span>Expand to update fee plan or add payment</span></summary>
-          <form className="inline-operation-form" onSubmit={saveFees}><h4>Fee Plan</h4><div className="form-grid four">
-            <label className="form-field"><span>Course Fee</span><input type="number" min="0" value={feeForm.totalFee} onChange={e=>setFeeForm(f=>({...f,totalFee:e.target.value}))}/></label>
-            <label className="form-field"><span>Discount</span><input type="number" min="0" value={feeForm.discount} onChange={e=>setFeeForm(f=>({...f,discount:e.target.value}))}/></label>
-            <label className="form-field"><span>Admission Fee (one-time)</span><input type="number" min="0" value={feeForm.admissionFee} onChange={e=>setFeeForm(f=>({...f,admissionFee:e.target.value}))}/></label>
-            <label className="form-field"><span>Registration Fee (one-time)</span><input type="number" min="0" value={feeForm.registrationFee} onChange={e=>setFeeForm(f=>({...f,registrationFee:e.target.value}))}/></label>
-          </div><h4 className="fee-payment-subheading">New Payment Entry</h4><div className="form-grid four">
-            <label className="form-field"><span>Payment Amount</span><input type="number" min="1" value={feeForm.amount} onChange={e=>setFeeForm(f=>({...f,amount:e.target.value}))}/></label>
-            <label className="form-field"><span>Payment Date</span><input type="date" value={feeForm.date} onChange={e=>setFeeForm(f=>({...f,date:e.target.value}))}/></label>
-            <label className="form-field"><span>Payment Type</span><select value={feeForm.paymentType} onChange={e=>setFeeForm(f=>({...f,paymentType:e.target.value}))}><option value="Admission Fee">Admission Fee</option><option value="Registration Fee">Registration Fee</option><option value="Installment">Installment</option><option value="Course Fee">Course Fee</option><option value="Other">Other</option></select></label>
-            <label className="form-field"><span>Installment Month</span><input type="month" value={feeForm.installmentMonth} onChange={e=>setFeeForm(f=>({...f,installmentMonth:e.target.value}))}/></label>
-            <label className="form-field"><span>Payment Method</span><select value={feeForm.method} onChange={e=>setFeeForm(f=>({...f,method:e.target.value}))}><option>Cash</option><option>UPI</option><option>Bank Transfer</option><option>Card</option><option>PhonePe</option></select></label>
-            <label className="form-field"><span>UTR / Transaction No.</span><input value={feeForm.utrNumber} onChange={e=>setFeeForm(f=>({...f,utrNumber:e.target.value}))} placeholder="Enter UTR number"/></label>
-            <label className="form-field"><span>Other Reference</span><input value={feeForm.reference} onChange={e=>setFeeForm(f=>({...f,reference:e.target.value}))}/></label>
-            <label className="form-field"><span>Payment Screenshot</span><input type="file" accept="image/*" disabled={proofUploading} onChange={async e=>{const file=e.target.files?.[0];if(!file)return;if(file.size>5*1024*1024){setMessage("Payment screenshot must be smaller than 5 MB.");return;}setProofUploading(true);try{const fd=new FormData();fd.append("file",file);fd.append("purpose","payment-proof");const up=await fetch("/api/uploads/student-photo",{method:"POST",body:fd});const ud=await up.json();if(!up.ok)throw new Error(ud.error||"Unable to upload screenshot.");setFeeForm(f=>({...f,screenshotUrl:ud.url}));setMessage("Payment screenshot uploaded.");}catch(err){setMessage(err.message);}finally{setProofUploading(false);}}}/>{feeForm.screenshotUrl&&<a href={feeForm.screenshotUrl} target="_blank" rel="noreferrer">View uploaded screenshot</a>}</label>
-            <button className="primary-btn operation-btn" disabled={proofUploading}><Save size={16}/>{proofUploading?"Uploading…":"Save Fee & Payment"}</button>
-          </div></form>
-        </details>
-        {(fee?.payments||[]).length>0&&<div className="fee-payment-history"><h4>Payment History</h4>{fee.payments.slice().reverse().map(p=><details className="fee-payment-item" key={p._id}><summary><span><b>{p.receiptNo||"Receipt pending"}</b><small>{p.date} · {p.method}</small></span><strong>₹{Number(p.amount||0).toLocaleString("en-IN")}</strong><span className="fee-expand-label">View details</span></summary><div className="fee-payment-detail-grid"><div><small>Payment Type</small><b>{p.paymentType||"General"}</b></div><div><small>Installment Month</small><b>{p.installmentMonth||"—"}</b></div><div><small>UTR Number</small><b>{p.utrNumber||p.reference||"—"}</b></div><div><small>Other Reference</small><b>{p.reference||"—"}</b></div><div><small>Recorded By</small><b>{p.recordedBy||"—"}</b></div><div><small>Receipt Number</small><b>{p.receiptNo||"—"}</b></div><div><small>AEC Authorisation</small><b>{p.authorisedBy||"Pending AEC representative authorisation"}</b></div>{p.screenshotUrl&&<div><small>Payment Screenshot</small><a href={p.screenshotUrl} target="_blank" rel="noreferrer">Open screenshot</a></div>}</div><button type="button" className="ghost-btn" onClick={()=>printBill(p)}>Print this receipt</button></details>)}</div>}
+        <button type="button" className="fee-workspace-launch" onClick={()=>setFeeWorkspaceOpen(true)}>
+          <span className="fee-workspace-icon"><WalletCards size={22}/></span>
+          <span><strong>Open Fee & Receipt Workspace</strong><small>Manage fee plan, record payments and review the complete payment history</small></span>
+          <span className="fee-workspace-action">Open workspace <ArrowLeft size={15}/></span>
+        </button>
+        {feeWorkspaceOpen&&<div className="fee-modal-backdrop" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setFeeWorkspaceOpen(false);}}>
+          <section className="fee-workspace-modal" role="dialog" aria-modal="true" aria-labelledby="fee-workspace-title">
+            <header className="fee-modal-header"><div><div className="eyebrow">STUDENT FINANCE</div><h2 id="fee-workspace-title">Fee & Receipt Workspace</h2><p>{student.applicantName} · {student.enrollmentNo||student.formNo}</p></div><button type="button" className="fee-modal-close" onClick={()=>setFeeWorkspaceOpen(false)} aria-label="Close fee workspace">×</button></header>
+            <div className="fee-modal-body">
+              <div className="fee-modal-stats">
+                <div><small>Total payable</small><strong>₹{Number(fee?.payable||0).toLocaleString("en-IN")}</strong></div>
+                <div><small>Paid till date</small><strong className="fee-green">₹{Number(fee?.paid||0).toLocaleString("en-IN")}</strong></div>
+                <div><small>Balance due</small><strong className="fee-red">₹{Number(fee?.due||0).toLocaleString("en-IN")}</strong></div>
+              </div>
+              <section className="fee-modal-section"><div className="fee-modal-section-heading"><div><h3>Fee Plan & Breakdown</h3><p>Update the approved student fee structure</p></div><span className="fee-section-tag">FEE SETUP</span></div>
+                <form className="inline-operation-form fee-modal-form" onSubmit={saveFees}>
+                  <div className="form-grid four">
+                    <label className="form-field"><span>Course Fee (₹)</span><input type="number" min="0" value={feeForm.totalFee} onChange={e=>setFeeForm(f=>({...f,totalFee:e.target.value}))}/></label>
+                    <label className="form-field"><span>Discount (₹)</span><input type="number" min="0" value={feeForm.discount} onChange={e=>setFeeForm(f=>({...f,discount:e.target.value}))}/></label>
+                    <label className="form-field"><span>Admission Fee (₹)</span><input type="number" min="0" value={feeForm.admissionFee} onChange={e=>setFeeForm(f=>({...f,admissionFee:e.target.value}))}/></label>
+                    <label className="form-field"><span>Registration Fee (₹)</span><input type="number" min="0" value={feeForm.registrationFee} onChange={e=>setFeeForm(f=>({...f,registrationFee:e.target.value}))}/></label>
+                  </div>
+                  <div className="fee-plan-total"><span>Current payable amount</span><strong>₹{Number(fee?.payable||0).toLocaleString("en-IN")}</strong><span>Late fine: ₹{Number(fee?.lateFine||0).toLocaleString("en-IN")}</span></div>
+                  <div className="fee-modal-actions"><button className="primary-btn operation-btn"><Save size={16}/> Save Fee Plan</button></div>
+                </form>
+              </section>
+              <section className="fee-modal-section"><div className="fee-modal-section-heading"><div><h3>Record New Payment</h3><p>Capture every transaction detail for the student ledger</p></div><span className="fee-section-tag fee-tag-blue">NEW ENTRY</span></div>
+                <form className="inline-operation-form fee-modal-form" onSubmit={saveFees}>
+                  <div className="form-grid four">
+                    <label className="form-field"><span>Payment Amount (₹) *</span><input type="number" min="1" required value={feeForm.amount} onChange={e=>setFeeForm(f=>({...f,amount:e.target.value}))}/></label>
+                    <label className="form-field"><span>Payment Date *</span><input type="date" required value={feeForm.date} onChange={e=>setFeeForm(f=>({...f,date:e.target.value}))}/></label>
+                    <label className="form-field"><span>Payment Type</span><select value={feeForm.paymentType} onChange={e=>setFeeForm(f=>({...f,paymentType:e.target.value}))}><option value="Admission Fee">Admission Fee</option><option value="Registration Fee">Registration Fee</option><option value="Installment">Installment</option><option value="Course Fee">Course Fee</option><option value="Other">Other</option></select></label>
+                    <label className="form-field"><span>Installment Month</span><input type="month" value={feeForm.installmentMonth} onChange={e=>setFeeForm(f=>({...f,installmentMonth:e.target.value}))}/></label>
+                    <label className="form-field"><span>Payment Method</span><select value={feeForm.method} onChange={e=>setFeeForm(f=>({...f,method:e.target.value}))}><option>Cash</option><option>UPI</option><option>Bank Transfer</option><option>Card</option><option>PhonePe</option></select></label>
+                    <label className="form-field"><span>UTR / Transaction No.</span><input value={feeForm.utrNumber} onChange={e=>setFeeForm(f=>({...f,utrNumber:e.target.value}))} placeholder="Enter UTR number"/></label>
+                    <label className="form-field"><span>Other Reference</span><input value={feeForm.reference} onChange={e=>setFeeForm(f=>({...f,reference:e.target.value}))} placeholder="Receipt / bank reference"/></label>
+                    <label className="form-field"><span>Payment Screenshot</span><input type="file" accept="image/*" disabled={proofUploading} onChange={async e=>{const file=e.target.files?.[0];if(!file)return;if(file.size>5*1024*1024){setMessage("Payment screenshot must be smaller than 5 MB.");return;}setProofUploading(true);try{const fd=new FormData();fd.append("file",file);fd.append("purpose","payment-proof");const up=await fetch("/api/uploads/student-photo",{method:"POST",body:fd});const ud=await up.json();if(!up.ok)throw new Error(ud.error||"Unable to upload screenshot.");setFeeForm(f=>({...f,screenshotUrl:ud.url}));setMessage("Payment screenshot uploaded.");}catch(err){setMessage(err.message);}finally{setProofUploading(false);}}}/>{feeForm.screenshotUrl&&<a href={feeForm.screenshotUrl} target="_blank" rel="noreferrer">View uploaded screenshot</a>}</label>
+                  </div>
+                  <div className="fee-modal-actions"><button className="primary-btn operation-btn" disabled={proofUploading}><Save size={16}/>{proofUploading?"Uploading…":"Save Payment Entry"}</button></div>
+                </form>
+              </section>
+              <section className="fee-modal-section fee-history-section"><div className="fee-modal-section-heading"><div><h3>Complete Payment History</h3><p>All payment records available for this student, newest first</p></div><span className="fee-section-tag">{(fee?.payments||[]).length} RECORDS</span></div>
+                {(fee?.payments||[]).length===0?<div className="empty">No payment history recorded yet.</div>:<div className="table-wrap fee-history-table-wrap"><table className="fee-history-table"><thead><tr><th>Receipt No.</th><th>Date</th><th>Type / Installment</th><th>Method</th><th>UTR / Reference</th><th>Amount</th><th>Recorded By</th><th>Receipt</th></tr></thead><tbody>{fee.payments.slice().sort((a,b)=>String(b.date||"").localeCompare(String(a.date||""))).map((p,i)=><tr key={p._id||p.receiptNo||i}><td><strong>{p.receiptNo||"Pending"}</strong></td><td>{p.date||"—"}</td><td>{p.paymentType||"General"}<small>{p.installmentMonth||p.dueDate||"—"}</small></td><td>{p.method||"—"}</td><td>{p.utrNumber||p.reference||"—"}</td><td className="fee-history-amount">₹{Number(p.amount||0).toLocaleString("en-IN")}</td><td>{p.recordedBy||"—"}</td><td><button type="button" className="fee-print-row" onClick={()=>printBill(p)}><Printer size={14}/> Print</button></td></tr>)}</tbody></table></div>}
+                {(fee?.payments||[]).length>0&&<div className="fee-history-total"><span>Lifetime collections</span><strong>₹{Number(fee?.paid||0).toLocaleString("en-IN")}</strong></div>}
+              </section>
+            </div>
+            <footer className="fee-modal-footer"><span>Print format remains a compact half-page receipt.</span><button type="button" className="ghost-btn" onClick={()=>setFeeWorkspaceOpen(false)}>Close workspace</button></footer>
+          </section>
+        </div>}
       </section>
 
       <section className="detail-section"><div className="detail-section-title"><ClipboardCheck size={17}/><h3>Attendance</h3></div>
