@@ -1,75 +1,84 @@
 # RCLD Islampur ERP
 
-A web-based ERP system only for RCLD Islampur, an education institute focused on computer-related courses.
+RCLD Islampur ERP is the internal operations system for a single computer-training institute in Islampur, West Bengal. It brings student records, courses, batches, timetable planning, employee operations, fee collection and management reporting into one application.
 
-This project is intentionally not an LMS. It manages administrative, academic-operation, financial, employee and reporting workflows. Student-facing access is limited to ERP functions such as registration, admission, fees, attendance, results and certificates where required.
+This repository is the working application—not a mock-up or a generic college ERP template. When changing a workflow, preserve the institute's operating rules documented in the docs folder.
 
-## Fixed technology decisions
-- Next.js
-- JavaScript only — no TypeScript
-- MongoDB with Mongoose
-- Cloudinary for images and files
-- Modern responsive ERP UI inspired by the information architecture and visual patterns of Lexa Node
-- Next.js server/API routes for application logic
+## Start here
 
-## Engineering model
+| Need | Read |
+|---|---|
+| Understand the application and its boundaries | docs/ARCHITECTURE.md |
+| Find folders, routes and development conventions | docs/DEVELOPER_GUIDE.md |
+| Understand entities and relationships | docs/DATA_MODEL.md |
+| Change roles or protect an API | docs/ACCESS_CONTROL.md |
+| Check what is implemented and what remains | docs/ERP_COMPLETENESS_AUDIT.md |
+| Run, verify, release or recover the app | docs/OPERATIONS_RUNBOOK.md |
+| Follow the engineering process | docs/SDLC.md |
+| Find the protected baseline | docs/RESTORE_POINTS.md |
 
-The project uses a hybrid Agile + incremental + risk-driven SDLC with a modular monolith architecture.
+## Technology
 
-Engineering flow: Requirements → Domain Model → Data Model → API/Business Logic → UI → Integration → Automated Verification → UAT → Release
+- Next.js 16 App Router
+- React 19
+- JavaScript (ES modules); TypeScript is not part of this project
+- MongoDB with Mongoose 8
+- Cloudinary for uploaded images and documents
+- jose for signed session tokens and bcryptjs for password hashing
+- Zod is available for request validation
+- Lucide React for interface icons
 
-The ERP is divided into business modules with clear boundaries. We will not build isolated screens first and connect them later.
+The application is a modular monolith. Pages, React components and route handlers live in the same deployable Next.js application. MongoDB is the source of truth for operational records.
 
-## Core ERP domains
-1. Authentication, users, roles and permissions
-2. Students
-3. Employees and faculty
-4. Courses and subjects
-5. Admissions and registration
-6. Enrollments
-7. Fees, discounts, installments and payments
-8. Batches, batch series and schedules
-9. Faculty/subject skill mapping
-10. Attendance
-11. Exams and results
-12. Certificates
-13. CRM and enquiries
-14. Employee attendance and break/out-time
-15. Tasks and employee performance
-16. Reports and dashboards
-17. Notifications
-18. Documents/files
-19. Settings
-20. Audit logs
+## Repository and branch policy
 
-## Core principle
-The database is the source of truth. UI components consume validated server-side data. Business rules, permissions, financial calculations and status transitions must not be trusted to browser code.
-
-## Quality gates
-- Requirements and acceptance criteria documented
-- Database relationships defined
-- Server-side validation
-- Authorization/permission checks
-- CRUD/workflow implementation
-- Loading, empty, error and success states
-- Automated verification where practical
-- Production build passes
-- Regression checks pass
-- Documentation updated
-- Major milestones have a restore point
-
-## Test data
-Dummy/demo data must be explicitly identifiable and removable without affecting real production records. It must be stored in MongoDB and must never be hard-coded as the application's source of truth.
-
-## Repository
 - Repository: Ujjwal0620/RCLD_ISLAMPUR
-- Primary branch: main
+- Integration branch: main
+- Do not confuse this repository with the older, similarly named RCLD_ISLAMPUR_ERP repository.
+- Keep changes focused and commit them to main unless a task explicitly calls for a feature branch.
+- Create a named restore branch before risky structural, data or workflow changes.
+- Never commit .env.local, credentials, private database dumps or uploaded private documents.
 
-## Local setup
-1. Copy .env.example to .env.local.
-2. Add MongoDB and Cloudinary credentials.
-3. Run npm install.
-4. Run npm run dev.
-5. Open http://localhost:3000.
+## Local development
 
-Do not add TypeScript files or migrate this project to TypeScript.
+Requirements: a compatible Node.js release, npm and a reachable MongoDB instance.
+
+1. Clone the repository and enter its directory.
+2. Run npm install.
+3. Copy .env.example to .env.local.
+4. Set the required values described in docs/OPERATIONS_RUNBOOK.md.
+5. Run npm run dev.
+6. Open http://localhost:3000.
+
+Useful commands: npm run dev, npm run lint, npm run build and npm run start.
+
+Local development has a MongoDB fallback at mongodb://127.0.0.1:27017/rcld_islampur. Production must provide MONGODB_URI. NEXT_PUBLIC_APP_URL is not required for the database connection or normal local startup.
+
+## Business rules that must not be casually changed
+
+1. RCLD Islampur is a single physical institute branch.
+2. Academic structure: Course → Subject → Chapter.
+3. Timetable structure: Course → Batch → Batch Series → Schedule.
+4. A student belongs to the main batch. Series are timetable groups; do not create duplicate student populations for each series.
+5. A-series and B-series use the institute's configured room/slot pattern. Check data/batchSchedule.js before changing it.
+6. Draft and active batches reserve timetable hours. Conflicting hours must be rejected.
+7. Faculty assignment must respect course skills, availability and schedule conflicts.
+8. Batch movement must preserve the student's movement history.
+9. Fee records and receipts are financial history. Do not silently overwrite or discard payment entries.
+10. Course discounts are a privileged business decision; keep approval authority restricted to Super Admin.
+11. Demo records must be identifiable and removable without touching real institute data.
+12. A visible navigation item is not proof that its API is secure. Authorization belongs on the server.
+
+## Product and UI direction
+
+The interface is a compact, professional ERP. The visual reference is https://themesbrand.com/lexa-node/layouts/index.html; use it as a design reference, not as code to copy. Keep tables, forms, student profiles, receipts and timetable views information-dense but readable on desktop and small screens.
+
+The public root page and student-facing operational pages should be treated as separate experiences from the authenticated staff workspace. Do not add an LMS course player or learning-content engine unless the product scope is explicitly revised.
+
+## Engineering expectations
+
+Before changing a module, read its route handlers, Mongoose schemas and existing UI together. A page is not complete just because its form renders. Follow the full path: validation → authorization → business rules → persistence → response → UI states.
+
+For every meaningful change, preserve existing data and history, handle loading/empty/error/success states, verify server-side authorization, check desktop and mobile layouts, run lint and build when possible, update documentation and record tests that could not be run.
+
+See docs/DEVELOPER_GUIDE.md for the practical workflow.
