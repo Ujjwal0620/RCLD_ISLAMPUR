@@ -2487,7 +2487,7 @@ html[data-theme="dark"] .batch-track{background:#2a3850}
  @page{size:A4 portrait;margin:7mm}
  html,body{background:#fff!important;color:#111!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
  body{font-family:Georgia,"Times New Roman",serif}
- .erp-shell,.erp-sidebar,.erp-user-bar,.erp-main>.topbar,.mobile-menu-button,.rcld-registration-sheet{display:none!important}
+ .erp-sidebar,.erp-user-bar,.erp-main>.topbar,.mobile-menu-button,.rcld-registration-sheet{display:none!important}
  .erp-main{margin:0!important;padding:0!important;width:100%!important;max-width:none!important}
  .rcld-print-document{display:block!important;width:100%;color:#111;background:#fff}
  .rcld-print-section,.rcld-print-header,.rcld-print-footer{break-inside:avoid}
