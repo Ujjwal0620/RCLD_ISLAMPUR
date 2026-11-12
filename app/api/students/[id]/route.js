@@ -5,7 +5,7 @@ import Course from "@/models/Course";
 import Batch from "@/models/Batch";
 
 const StudentSchema = new mongoose.Schema({
-  formNo:{type:String,required:true,unique:true,trim:true},
+  formNo:{type:String,default:"",trim:true},
   aecCode:String,regnNo:String,enrollmentNo:String,admissionDate:String,guardianContactNumber:String,dueAmount:mongoose.Schema.Types.Mixed,paymentStatus:mongoose.Schema.Types.Mixed,sourceCourseLabel:String,importSource:String,courseName:String,courseCode:String,batchId:{type:mongoose.Schema.Types.ObjectId,ref:"Batch",default:null},batchCode:String,
   applicantName:{type:String,default:"",trim:true},nationality:String,dateOfBirth:String,sex:String,
   fatherOrHusbandName:String,address:String,presentAddress:String,permanentAddress:String,sameAsPresentAddress:Boolean,postOffice:String,policeStation:String,nearestLandmark:String,district:String,state:String,permanentPostOffice:String,permanentNearestLandmark:String,permanentPin:String,permanentDistrict:String,permanentState:String,pin:String,whatsappNumber:String,
