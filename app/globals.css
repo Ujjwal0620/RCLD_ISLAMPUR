@@ -2976,3 +2976,14 @@ table tbody tr:hover{background:#f8faff}
     text-align: center !important;
   }
 }
+
+/* Force the exact address-box border color in the registration print document.
+   This targets both Present Address and Permanent Address boxes. */
+@media print {
+  html body .rcld-print-document .rcld-print-address,
+  html body .rcld-print-document .rcld-print-address-grid > .rcld-print-address {
+    border: 1mm solid #8493BD !important;
+    border-color: #8493BD !important;
+    box-shadow: none !important;
+  }
+}
