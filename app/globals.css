@@ -2869,3 +2869,37 @@ html[data-theme="dark"] .batch-track{background:#2a3850}
  .rcld-registration-sheet .rcld-form-section>h3{font-size:14px!important}
  .rcld-input-qualification-table{min-width:650px!important}
 }
+
+
+/* Student profile refresh: official RCLD registration-paper visual language. */
+.student-profile-page .student-profile-hero{
+  display:grid!important;grid-template-columns:1fr auto auto;grid-template-areas:"brand brand brand" "avatar identity status";
+  align-items:center!important;gap:14px 18px!important;padding:18px 22px!important;
+  border:1px solid #cbd8e9!important;border-radius:12px!important;
+  background:linear-gradient(115deg,#f4f8ff 0%,#fff 62%,#edf5ff 100%)!important;
+  color:#17365f!important;box-shadow:0 5px 18px rgba(25,55,95,.07)!important;overflow:visible!important;
+}
+.student-profile-page .student-profile-brand{grid-area:brand;display:flex;align-items:center;gap:14px;padding-bottom:12px;border-bottom:2px solid #1c4c83;min-width:0}
+.student-profile-page .student-profile-logo{display:block!important;width:76px!important;height:76px!important;min-width:76px!important;object-fit:contain!important;object-position:center!important;background:#fff!important;border:1px solid #dce5f1;border-radius:8px;padding:3px;flex:none}
+.student-profile-page .student-profile-brand>div{display:grid;gap:3px;min-width:0}
+.student-profile-page .student-profile-brand span{font-size:10px;letter-spacing:.09em;font-weight:800;color:#24618f}
+.student-profile-page .student-profile-brand strong{font:700 21px/1.1 Georgia,"Times New Roman",serif;color:#173d70;letter-spacing:.02em}
+.student-profile-page .student-profile-brand small{font-size:9px;letter-spacing:.13em;color:#718198;font-weight:700}
+.student-profile-page .student-profile-hero .student-avatar{grid-area:avatar;width:72px;height:84px;border-radius:5px;border:1px solid #9eacc0;background:#fff;box-shadow:none}
+.student-profile-page .student-profile-hero .student-avatar img{object-fit:cover}
+.student-profile-page .student-profile-identity{grid-area:identity;min-width:0}
+.student-profile-page .student-profile-identity .eyebrow{color:#55759c;font-size:9px;letter-spacing:.1em}
+.student-profile-page .student-profile-identity h2{margin:4px 0;color:#183d6c;font:700 22px/1.15 Georgia,"Times New Roman",serif}
+.student-profile-page .student-profile-identity p{margin:0;color:#52657e;font-size:11px;line-height:1.5}
+.student-profile-page .student-profile-hero .profile-status{grid-area:status;align-self:center;margin:0!important;white-space:nowrap}
+.student-profile-page>.detail-section{border:1px solid #dce5f0!important;border-radius:9px!important;box-shadow:0 3px 12px rgba(25,55,95,.035)!important}
+.student-profile-page>.detail-section .detail-section-title{border-bottom:1px solid #dfe7f1!important}
+.student-profile-page>.detail-section .detail-section-title>svg{background:#eaf2fb!important;color:#245b91!important}
+.student-profile-page .student-detail-field{background:#fff!important;border:1px solid #e5eaf1!important;border-radius:5px!important}
+.student-profile-page .student-detail-field:nth-child(n){border-left:2px solid #7d9cbe!important}
+@media(max-width:650px){
+ .student-profile-page .student-profile-hero{grid-template-columns:auto 1fr!important;grid-template-areas:"brand brand" "avatar identity" "status status";padding:13px!important;gap:10px!important}
+ .student-profile-page .student-profile-logo{width:58px!important;height:58px!important;min-width:58px!important}
+ .student-profile-page .student-profile-brand strong{font-size:16px}
+ .student-profile-page .student-profile-hero .profile-status{justify-self:start}
+}
