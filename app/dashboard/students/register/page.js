@@ -123,7 +123,7 @@ export default function RegisterStudentPage() {
         permanentAddress: form.sameAsPresentAddress ? (form.presentAddress || form.address).trim() : form.permanentAddress.trim()
       };
 
-      if (payload.mobileNumber.length !== 10 || payload.guardianContactNumber.length !== 10 || payload.whatsappNumber.length !== 10) throw new Error("Enter all three mobile numbers as exactly 10 digits.");
+      if ([payload.mobileNumber,payload.guardianContactNumber,payload.whatsappNumber].some(v => v && v.length !== 10)) throw new Error("Any entered mobile number must contain exactly 10 digits.");
 
       const r = await fetch("/api/students", {
         method: "POST",
@@ -184,7 +184,7 @@ export default function RegisterStudentPage() {
           <h3>Applicant Details</h3>
           <div className="rcld-applicant-template-grid">
             <div className="rcld-applicant-template-fields">
-              <Field label="Name" name="applicantName" value={form.applicantName} onChange={update} required/>
+              <Field label="Name" name="applicantName" value={form.applicantName} onChange={update}/>
               <Field label="Father/Mother/Husband Name" name="fatherOrHusbandName" value={form.fatherOrHusbandName} onChange={update}/>
               <Field label="DOB" name="dateOfBirth" type="date" value={form.dateOfBirth} onChange={update}/>
               <label className="form-field"><span>Sex</span><select value={form.sex} onChange={e=>update("sex",e.target.value)}><option value="">Select</option><option value="M">M - Male</option><option value="F">F - Female</option></select></label>
@@ -235,13 +235,13 @@ export default function RegisterStudentPage() {
           <h3>Contact Details</h3>
           <div className="rcld-contact-template-grid">
             <div>
-              <DigitBoxes label="Mobile No" value={form.mobileNumber} onChange={v=>update("mobileNumber",v)} length={10} required/>
-              <DigitBoxes label="WhatsApp No" value={form.whatsappNumber} onChange={v=>update("whatsappNumber",v)} length={10} required/>
-              <Field label="Aadhaar No" name="aadhaarNumber" value={form.aadhaarNumber} onChange={update} required maxLength={12} inputMode="numeric" pattern="[0-9]{12}"/>
+              <DigitBoxes label="Mobile No" value={form.mobileNumber} onChange={v=>update("mobileNumber",v)} length={10}/>
+              <DigitBoxes label="WhatsApp No" value={form.whatsappNumber} onChange={v=>update("whatsappNumber",v)} length={10}/>
+              <Field label="Aadhaar No" name="aadhaarNumber" value={form.aadhaarNumber} onChange={update} maxLength={12} inputMode="numeric" pattern="[0-9]{12}"/>
             </div>
             <div>
-              <DigitBoxes label="Mobile No Guardian" value={form.guardianContactNumber} onChange={v=>update("guardianContactNumber",v)} length={10} required/>
-              <Field label="Email" name="email" value={form.email} onChange={update} required type="email"/>
+              <DigitBoxes label="Mobile No Guardian" value={form.guardianContactNumber} onChange={v=>update("guardianContactNumber",v)} length={10}/>
+              <Field label="Email" name="email" value={form.email} onChange={update} type="email"/>
             </div>
           </div>
         </section>
@@ -272,7 +272,7 @@ export default function RegisterStudentPage() {
         <footer className="rcld-screen-footer">
           <label className="form-field"><span>Date</span><input type="date" value={form.declarationDate} onChange={e=>update("declarationDate",e.target.value)}/></label>
           <label className="form-field"><span>Place</span><input value={form.declarationPlace} onChange={e=>update("declarationPlace",e.target.value)}/></label>
-          <label className="form-field rcld-signature-field"><span>Student Signature</span><input key={signatureInputKey} type="file" accept="image/*" disabled={signatureUploading} onChange={e=>uploadSignature(e.target.files?.[0])} required={!form.signatureUrl}/><small>{signatureUploading?"Uploading signature…":"PNG/JPG · Maximum 3 MB"}</small>{form.signatureUrl&&<img src={form.signatureUrl} alt="Uploaded student signature"/>}</label>
+          <label className="form-field rcld-signature-field"><span>Student Signature</span><input key={signatureInputKey} type="file" accept="image/*" disabled={signatureUploading} onChange={e=>uploadSignature(e.target.files?.[0])} /><small>{signatureUploading?"Uploading signature…":"PNG/JPG · Maximum 3 MB"}</small>{form.signatureUrl&&<img src={form.signatureUrl} alt="Uploaded student signature"/>}</label>
         </footer>
         {message&&<div className={message.includes("successfully")?"success-msg":"error-msg"}>{message}</div>}
         <div className="form-actions"><a className="ghost-btn" href="/dashboard/students">Cancel</a><button className="primary-btn" disabled={saving||photoUploading||signatureUploading}><Save size={17}/>{saving?"Saving…":"Register Student"}</button></div>

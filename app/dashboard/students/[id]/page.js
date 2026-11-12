@@ -1,13 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, UserRound, MapPin, BookOpen, FileText, CreditCard, CalendarDays, ClipboardCheck, WalletCards, Save, Pencil, Trash2, Printer, ArrowRightLeft, UserX, History, Phone as PhoneIcon } from "lucide-react";
+import { ArrowLeft, UserRound, MapPin, BookOpen, FileText, CreditCard, CalendarDays, ClipboardCheck, WalletCards, Save, Pencil, Trash2, Printer, ArrowRightLeft, UserX, History, Phone as PhoneIcon, IdCard } from "lucide-react";
 import ERPLayout from "@/components/ERPLayout";
 import RCLDLogo from "@/components/RCLDLogo";
 import indiaLocations from "@/lib/indiaStatesDistricts.json";
 
 const value = (v) => v === undefined || v === null || v === "" ? "—" : v;
 function Detail({label,children}){return <div className="student-detail-field"><span>{label}</span><strong>{value(children)}</strong></div>}
+
+function isIcardEligible(s = {}) {
+ const present=s.presentAddress||s.address;
+ const permanent=s.sameAsPresentAddress?Boolean(String(present||"").trim()):["permanentAddress","permanentPostOffice","permanentState","permanentDistrict","permanentPin","permanentNearestLandmark"].every(k=>String(s[k]||"").trim());
+ const q=Array.isArray(s.qualifications)?s.qualifications[0]:null;
+ return [s.applicantName,s.fatherOrHusbandName,s.dateOfBirth,s.sex,s.nationality,s.photoUrl,s.photoUrl,present,s.postOffice,s.policeStation,s.state,s.district,s.pin,s.nearestLandmark,s.mobileNumber,s.guardianContactNumber,s.whatsappNumber,s.email,s.aadhaarNumber,q?.examCourse,q?.collegeInstitute,q?.boardUniversity,q?.year,q?.percentage].every(v=>String(v||"").trim())&&permanent&&s.status!=="Admission Pending"&&!["Cancelled","Suspended","Dropped Out"].includes(s.status);
+}
 
 function numberToIndianWords(input){const n=Math.round(Number(input)||0);if(!n)return "Zero Rupees Only";const one=["","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen"];const ten=["","","Twenty","Thirty","Forty","Fifty","Sixty","Seventy","Eighty","Ninety"];const two=x=>x<20?one[x]:ten[Math.floor(x/10)]+(x%10?" "+one[x%10]:"");const part=x=>x>99?one[Math.floor(x/100)]+" Hundred"+(x%100?" "+two(x%100):""):two(x);let x=n,out=[];for(const [v,label] of [[10000000,"Crore"],[100000,"Lakh"],[1000,"Thousand"],[100,"Hundred"]])if(x>=v){const q=Math.floor(x/v);out.push(part(q)+" "+label);x%=v;}if(x)out.push(part(x));return out.join(" ")+" Rupees Only";}
 
@@ -46,6 +53,14 @@ export default function StudentDetailsPage({params}){
     setProofUploading(true);
     try{const fd=new FormData();fd.append("file",file);fd.append("purpose","payment-proof");const r=await fetch("/api/uploads/student-photo",{method:"POST",body:fd});const d=await r.json();if(!r.ok)throw new Error(d.error||"Unable to upload screenshot.");setFeeForm(f=>({...f,screenshotUrl:d.url}));}
     catch(e){setMessage(e.message);}finally{setProofUploading(false);}
+  }
+
+  function printStudentICard(){
+    if(!student||!isIcardEligible(student)){setMessage("I-Card is unavailable until all required details are complete and admission is not pending.");return;}
+    const esc=v=>String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
+    const w=window.open("","_blank");if(!w){setMessage("Please allow pop-ups to print the I-Card.");return;}
+    const photo=student.photoUrl?'<img class="photo" src="'+esc(student.photoUrl)+'" alt="Student photo"/>':'<div class="photo"></div>';
+    w.document.write('<!doctype html><html><head><title>RCLD Student I-Card</title><style>@page{size:85.6mm 54mm;margin:0}*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif}.card{width:85.6mm;height:54mm;padding:3mm;border:1px solid #173c73;color:#173c73;position:relative;overflow:hidden}.head{display:flex;align-items:center;gap:2mm;border-bottom:1px solid #173c73;padding-bottom:1.5mm}.logo{width:11mm;height:11mm;object-fit:contain}.brand{text-align:center;flex:1}.brand b{display:block;font-size:10pt}.brand small{font-size:6pt}.body{display:flex;gap:3mm;padding-top:2mm}.photo{width:20mm;height:25mm;object-fit:cover;border:1px solid #173c73}.details{font-size:6.5pt;line-height:1.55;flex:1}.details b{display:block;font-size:8pt;margin-bottom:1mm}.footer{position:absolute;bottom:2mm;left:3mm;right:3mm;border-top:1px solid #aaa;padding-top:1mm;font-size:5.5pt;display:flex;justify-content:space-between}</style></head><body><article class="card"><header class="head"><img class="logo" src="/assets/logo.png"/><div class="brand"><b>RCLD – ISLAMPUR</b><small>RASHTRIYA COMPUTER LITERACY DRIVE</small></div></header><div class="body">'+photo+'<div class="details"><b>'+esc(student.applicantName)+'</b>Enrollment: '+esc(student.enrollmentNo||"—")+'<br/>Course: '+esc(student.courseName||student.courseCode||"—")+'<br/>Batch: '+esc(student.batchCode||"Not assigned")+'<br/>Mobile: '+esc(student.mobileNumber)+'<br/>DOB: '+esc(student.dateOfBirth)+'</div></div><footer class="footer"><span>Authorized Signatory</span><span>Student Identity Card</span></footer></article><script>window.onload=()=>Promise.all([...document.images].map(i=>i.decode?.().catch(()=>{})||Promise.resolve())).then(()=>window.print())</script></body></html>');w.document.close();
   }
 
   function printStudentForm(){
@@ -218,7 +233,7 @@ export default function StudentDetailsPage({params}){
   async function saveAttendance(e){e.preventDefault();setMessage("");if(!student)return;const r=await fetch("/api/students/"+student._id+"/attendance",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(attForm)});const d=await r.json();if(!r.ok){setMessage(d.error||"Unable to save attendance.");return}const ar=await fetch("/api/students/"+student._id+"/attendance",{cache:"no-store"});setAttendance(await ar.json());setMessage("Attendance saved.");}
 
   return <ERPLayout active="/dashboard/students">
-    <header className="topbar"><div><div className="crumb">Students / Student Details</div><h1>{student?.applicantName||"Student Details"}</h1></div><div className="top-actions">{student&&<><button className="ghost-btn" onClick={printStudentForm}><Printer size={16}/> Print Registration Form</button><button className="ghost-btn" onClick={printBill}><Printer size={16}/> Print Fee Receipt</button><button className="ghost-btn" onClick={()=>setEditing(true)}><Pencil size={16}/> Edit</button><button className="ghost-btn" onClick={deleteStudent}><Trash2 size={16}/> Delete</button></>}<a className="ghost-btn" href="/dashboard/students"><ArrowLeft size={17}/> Back</a></div></header>
+    <header className="topbar"><div><div className="crumb">Students / Student Details</div><h1>{student?.applicantName||"Student Details"}</h1></div><div className="top-actions">{student&&<><button className="ghost-btn" onClick={printStudentForm}><Printer size={16}/> Print Registration Form</button><button className="ghost-btn" onClick={printStudentICard} disabled={!isIcardEligible(student)} title={!isIcardEligible(student)?"Complete all required details and clear Admission Pending status first":"Print student I-Card"}><IdCard size={16}/> Print I-Card</button><button className="ghost-btn" onClick={printBill}><Printer size={16}/> Print Fee Receipt</button><button className="ghost-btn" onClick={()=>setEditing(true)}><Pencil size={16}/> Edit</button><button className="ghost-btn" onClick={deleteStudent}><Trash2 size={16}/> Delete</button></>}<a className="ghost-btn" href="/dashboard/students"><ArrowLeft size={17}/> Back</a></div></header>
     {loading&&<section className="panel"><div className="empty">Loading student details…</div></section>}
     {error&&<section className="panel"><div className="empty error-text">{error}</div></section>}
     {student&&<main className="student-details student-profile-page">
