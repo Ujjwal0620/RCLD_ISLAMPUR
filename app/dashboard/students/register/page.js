@@ -272,7 +272,7 @@ export default function RegisterStudentPage() {
         <div className="form-actions"><a className="ghost-btn" href="/dashboard/students">Cancel</a><button className="primary-btn" disabled={saving||photoUploading||signatureUploading}><Save size={17}/>{saving?"Saving…":"Register Student"}</button></div>
       </form>
 
-      <section className="rcld-print-document" aria-label="Printable RCLD student registration form">
+      <section className="rcld-print-document" aria-label="RCLD student registration print form">
         <header className="rcld-print-header">
           <RCLDLogo className="rcld-print-logo-image" />
           <div className="rcld-print-heading">
@@ -281,67 +281,68 @@ export default function RegisterStudentPage() {
           </div>
         </header>
         <div className="rcld-print-rule"/>
-        <section className="rcld-print-section">
+        <section className="rcld-print-section rcld-print-office">
           <h2>Office / Registration Details</h2>
           <div className="rcld-print-office-grid">
-            <p><span>AEC CODE:</span> RCLD/ISL-001</p>
-            <p><span>Registration No:</span> {form.regnNo}</p>
-            <p><span>Form No:</span> {form.formNo}</p>
-            <p><span>Enrollment No:</span> {form.enrollmentNo}</p>
-            <p><span>Date:</span> {form.admissionDate ? new Date(form.admissionDate + "T00:00:00").toLocaleDateString("en-GB") : ""}</p>
-            <p><span>Course / Course Code:</span> {[form.courseName, form.courseCode].filter(Boolean).join(" / ")}</p>
+            <p><span>AEC CODE:</span><b>RCLD/ISL-001</b></p>
+            <p><span>Registration No:</span><b>{form.regnNo || ""}</b></p>
+            <p><span>Form No:</span><b>{form.formNo || ""}</b></p>
+            <p><span>Enrollment No:</span><b>{form.enrollmentNo || ""}</b></p>
+            <p><span>Date:</span><b>{form.admissionDate ? new Date(form.admissionDate + "T00:00:00").toLocaleDateString("en-GB") : ""}</b></p>
+            <p><span>Course / Course Code:</span><b>{[form.courseName, form.courseCode].filter(Boolean).join("  /  ")}</b></p>
           </div>
         </section>
-        <section className="rcld-print-section">
+        <section className="rcld-print-section rcld-print-applicant-section">
           <h2>Applicant Details</h2>
           <div className="rcld-print-applicant">
             <div className="rcld-print-applicant-fields">
-              <p><span>Name:</span> {form.applicantName}</p>
-              <p><span>Father/Mother/Husband Name:</span> {form.fatherOrHusbandName}</p>
-              <p><span>DOB:</span> {form.dateOfBirth ? new Date(form.dateOfBirth + "T00:00:00").toLocaleDateString("en-GB") : ""}</p>
-              <p><span>Sex:</span> {form.sex}</p>
-              <p><span>Nationality:</span> {form.nationality}</p>
+              <p className="applicant-name"><span>Name:</span><b>{form.applicantName || ""}</b></p>
+              <p className="applicant-guardian"><span>Father/Mother/Husband Name:</span><b>{form.fatherOrHusbandName || ""}</b></p>
+              <p><span>DOB:</span><b>{form.dateOfBirth ? new Date(form.dateOfBirth + "T00:00:00").toLocaleDateString("en-GB") : ""}</b></p>
+              <p><span>Sex:</span><b>{form.sex || ""}</b></p>
+              <p><span>Nationality:</span><b>{form.nationality || ""}</b></p>
             </div>
             <div className="rcld-print-photo">{form.photoUrl ? <img src={form.photoUrl} alt="Applicant"/> : <span/>}</div>
           </div>
         </section>
-        <section className="rcld-print-section">
+        <section className="rcld-print-section rcld-print-address-section">
           <h2>Address Details</h2>
           <div className="rcld-print-address-grid">
             <div className="rcld-print-address">
               <h3>Present Address</h3>
-              <p>Ward/Colony/ Village: {form.presentAddress || form.address}</p>
-              <p>PO: {form.postOffice}</p>
-              <p>PS: {form.policeStation}</p>
-              <p>State: {form.state}<span>District: {form.district}</span></p>
-              <p>Pin: {form.pin}</p>
-              <p>Nearest Land Mark: {form.nearestLandmark}</p>
+              <p><span>Ward/Colony/ Village:</span> {form.presentAddress || form.address || ""}</p>
+              <p><span>PO:</span> {form.postOffice || ""}</p>
+              <p><span>PS:</span> {form.policeStation || ""}</p>
+              <p className="state-district"><span>State:</span> {form.state || ""}<span>District:</span> {form.district || ""}</p>
+              <p><span>Pin:</span> {form.pin || ""}</p>
+              <p><span>Nearest Land Mark:</span> {form.nearestLandmark || ""}</p>
             </div>
             <div className="rcld-print-address">
               <h3>Permanent Address</h3>
-              <p>Ward/Colony/ Village: {form.sameAsPresentAddress ? (form.presentAddress || form.address) : form.permanentAddress}</p>
-              <p>PO: {form.sameAsPresentAddress ? form.postOffice : form.permanentPostOffice}</p>
-              <p>PS: {form.sameAsPresentAddress ? form.policeStation : ""}</p>
-              <p>State: {form.sameAsPresentAddress ? form.state : form.permanentState}<span>District: {form.sameAsPresentAddress ? form.district : form.permanentDistrict}</span></p>
-              <p>Pin: {form.sameAsPresentAddress ? form.pin : form.permanentPin}</p>
-              <p>Nearest Land Mark: {form.sameAsPresentAddress ? form.nearestLandmark : form.permanentNearestLandmark}</p>
+              <p><span>Ward/Colony/ Village:</span> {form.sameAsPresentAddress ? (form.presentAddress || form.address || "") : (form.permanentAddress || "")}</p>
+              <p><span>PO:</span> {form.sameAsPresentAddress ? (form.postOffice || "") : (form.permanentPostOffice || "")}</p>
+              <p><span>PS:</span> {form.sameAsPresentAddress ? (form.policeStation || "") : ""}</p>
+              <p className="state-district"><span>State:</span> {form.sameAsPresentAddress ? (form.state || "") : (form.permanentState || "")}<span>District:</span> {form.sameAsPresentAddress ? (form.district || "") : (form.permanentDistrict || "")}</p>
+              <p><span>Pin:</span> {form.sameAsPresentAddress ? (form.pin || "") : (form.permanentPin || "")}</p>
+              <p><span>Nearest Land Mark:</span> {form.sameAsPresentAddress ? (form.nearestLandmark || "") : (form.permanentNearestLandmark || "")}</p>
             </div>
           </div>
         </section>
-        <section className="rcld-print-section">
+        <section className="rcld-print-section rcld-print-contact-section">
           <h2>Contact Details</h2>
           <div className="rcld-print-contact-grid">
-            <div><p><b>Mobile No:</b> {form.mobileNumber}</p><p><b>WhatsApp No:</b> {form.whatsappNumber}</p><p><b>Aadhaar No:</b> {form.aadhaarNumber}</p></div>
-            <div><p><b>Mobile No Guardian:</b> {form.guardianContactNumber}</p><p><b>Email:</b> {form.email}</p></div>
+            <div><p><strong>Mobile No:</strong> {form.mobileNumber || ""}</p><p><strong>WhatsApp No:</strong> {form.whatsappNumber || ""}</p><p><strong>Aadhaar No:</strong> {form.aadhaarNumber || ""}</p></div>
+            <div><p><strong>Mobile No Guardian:</strong> {form.guardianContactNumber || ""}</p><p><strong>Email:</strong> {form.email || ""}</p></div>
           </div>
         </section>
-        <section className="rcld-print-section">
+        <section className="rcld-print-section rcld-print-qualification-section">
           <h2>Qualification Details</h2>
-          <table className="rcld-print-qualification"><thead><tr><th>Class/Sem/Course</th><th>Institute/School/College</th><th>Board/Council/University</th><th>Year</th><th>Percentage Of Marks</th></tr></thead>
-            <tbody><tr><td>{form.qualifications?.[0]?.examCourse}</td><td>{form.qualifications?.[0]?.collegeInstitute}</td><td>{form.qualifications?.[0]?.boardUniversity}</td><td>{form.qualifications?.[0]?.year}</td><td>{form.qualifications?.[0]?.percentage}</td></tr></tbody>
+          <table className="rcld-print-qualification">
+            <thead><tr><th>Class/Sem/Course</th><th>Institute/School/College</th><th>Board/Council/University</th><th>Year</th><th>Percentage Of Marks</th></tr></thead>
+            <tbody><tr><td>{form.qualifications?.[0]?.examCourse || ""}</td><td>{form.qualifications?.[0]?.collegeInstitute || ""}</td><td>{form.qualifications?.[0]?.boardUniversity || ""}</td><td>{form.qualifications?.[0]?.year || ""}</td><td>{form.qualifications?.[0]?.percentage || ""}</td></tr></tbody>
           </table>
         </section>
-        <section className="rcld-print-section">
+        <section className="rcld-print-section rcld-print-enclosure-section">
           <h2>Enclosure</h2>
           <div className="rcld-print-enclosures">
             <span><i/>{form.enclosures.stampPhoto ? "✓ " : ""}2 Passport Size photo</span>
@@ -351,7 +352,7 @@ export default function RegisterStudentPage() {
         </section>
         <footer className="rcld-print-footer">
           <div><p>{form.declarationDate ? new Date(form.declarationDate + "T00:00:00").toLocaleDateString("en-GB") : ""}</p><div/><span>DATE</span></div>
-          <div><p>{form.declarationPlace}</p><div/><span>PLACE</span></div>
+          <div><p>{form.declarationPlace || ""}</p><div/><span>PLACE</span></div>
           <div className="rcld-print-signature">{form.signatureUrl ? <img src={form.signatureUrl} alt="Applicant signature"/> : <p/>}<div/><span>SIGNATURE</span></div>
         </footer>
       </section>
