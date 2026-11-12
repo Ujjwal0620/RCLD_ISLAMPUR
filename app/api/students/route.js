@@ -6,11 +6,11 @@ import Course from "@/models/Course";
 const StudentSchema = new mongoose.Schema({
   formNo: { type: String, trim: true },
   aecCode: String, regnNo: String, enrollmentNo: String, admissionDate: String, guardianContactNumber: String, dueAmount: mongoose.Schema.Types.Mixed, paymentStatus: mongoose.Schema.Types.Mixed, sourceCourseLabel: String, importSource: String, courseName: String, courseCode: String, batchId: { type: mongoose.Schema.Types.ObjectId, ref: "Batch", default: null }, batchCode: String,
-  applicantName: { type: String, required: true, trim: true }, nationality: String, dateOfBirth: String, sex: String,
+  applicantName: { type: String, default: "", trim: true }, nationality: String, dateOfBirth: String, sex: String,
   fatherOrHusbandName: String, address: String, presentAddress: String, permanentAddress: String, sameAsPresentAddress: Boolean, postOffice: String, policeStation: String, nearestLandmark: String, district: String, state: String, permanentPostOffice: String, permanentNearestLandmark: String, permanentPin: String, permanentDistrict: String, permanentState: String, pin: String, whatsappNumber: String,
-  mobileNumber: { type: String, required: true, trim: true },
-  email: { type: String, required: true, trim: true, lowercase: true },
-  aadhaarNumber: { type: String, required: true, trim: true },
+  mobileNumber: { type: String, default: "", trim: true },
+  email: { type: String, default: "", trim: true, lowercase: true },
+  aadhaarNumber: { type: String, default: "", trim: true },
   referralId: { type: String, default: "" }, referralName: { type: String, default: "" }, marketingEmployeeId: { type: String, default: "" }, marketingEmployeeName: { type: String, default: "" },
   qualifications: [{ examCourse: String, boardUniversity: String, collegeInstitute: String, year: String, percentage: String }],
   enclosures: { stampPhoto: Boolean, qualifyingCertificates: Boolean, matricAdmitCard: Boolean },
@@ -41,6 +41,9 @@ const ReferralSchema = new mongoose.Schema({}, { strict: false });
 const Referral = mongoose.models.Referral || mongoose.model("Referral", ReferralSchema);
 
 const DEFAULT_COURSES = ["CCA","DCA","ADCA","CCC","CAO","DWPD","DOM","DCST","DCAP","DHNT"];
+
+function hasStudentDetailsForAdmission(s = {}) { const present=s.presentAddress||s.address; const permanent=s.sameAsPresentAddress?Boolean(String(present||"").trim()):["permanentAddress","permanentPostOffice","permanentState","permanentDistrict","permanentPin","permanentNearestLandmark"].every(k=>String(s[k]||"").trim()); const q=Array.isArray(s.qualifications)?s.qualifications[0]:null; return [s.applicantName,s.fatherOrHusbandName,s.dateOfBirth,s.sex,s.nationality,present,s.postOffice,s.policeStation,s.state,s.district,s.pin,s.nearestLandmark,s.mobileNumber,s.guardianContactNumber,s.whatsappNumber,s.email,s.aadhaarNumber,q?.examCourse,q?.collegeInstitute,q?.boardUniversity,q?.year,q?.percentage].every(v=>String(v||"").trim())&&permanent; }
+
 
 export async function GET(request) {
   try {
@@ -103,19 +106,17 @@ export async function POST(request) {
   try {
     await connectMongoDB();
     const body = await request.json();
-    const missing = ["applicantName", "mobileNumber", "email", "aadhaarNumber"].filter((key) => !String(body[key] || "").trim());
-    if (missing.length) return NextResponse.json({ error: "Required fields: " + missing.join(", ") }, { status: 400 });
     const email = String(body.email || "").trim().toLowerCase();
-    const aadhaarNumber = String(body.aadhaarNumber || "").replace(/\D/g, "");
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
-    if (!/^\d{12}$/.test(aadhaarNumber)) return NextResponse.json({ error: "Aadhaar number must contain exactly 12 digits." }, { status: 400 });
-    const mobileNumber = String(body.mobileNumber || "").replace(/\D/g, "");
-    const guardianContactNumber = String(body.guardianContactNumber || "").replace(/\D/g, "");
-    const whatsappNumber = String(body.whatsappNumber || "").replace(/\D/g, "");
-    if (!/^\d{10}$/.test(mobileNumber)) return NextResponse.json({ error: "Mobile number must contain exactly 10 digits." }, { status: 400 });
-    if (!/^\d{10}$/.test(guardianContactNumber)) return NextResponse.json({ error: "Guardian mobile number must contain exactly 10 digits." }, { status: 400 });
-    if (!/^\d{10}$/.test(whatsappNumber)) return NextResponse.json({ error: "WhatsApp number must contain exactly 10 digits." }, { status: 400 });
-    if (!String(body.signatureUrl || "").startsWith("https://res.cloudinary.com/")) return NextResponse.json({ error: "Upload the student signature image before registering." }, { status: 400 });
+    const aadhaarNumber = String(body.aadhaarNumber || "").replace(/\\D/g, "");
+    const mobileNumber = String(body.mobileNumber || "").replace(/\\D/g, "");
+    const guardianContactNumber = String(body.guardianContactNumber || "").replace(/\\D/g, "");
+    const whatsappNumber = String(body.whatsappNumber || "").replace(/\\D/g, "");
+    if (email && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
+    if (aadhaarNumber && !/^\\d{12}$/.test(aadhaarNumber)) return NextResponse.json({ error: "Aadhaar number must contain exactly 12 digits." }, { status: 400 });
+    if (mobileNumber && !/^\\d{10}$/.test(mobileNumber)) return NextResponse.json({ error: "Mobile number must contain exactly 10 digits." }, { status: 400 });
+    if (guardianContactNumber && !/^\\d{10}$/.test(guardianContactNumber)) return NextResponse.json({ error: "Guardian mobile number must contain exactly 10 digits." }, { status: 400 });
+    if (whatsappNumber && !/^\\d{10}$/.test(whatsappNumber)) return NextResponse.json({ error: "WhatsApp number must contain exactly 10 digits." }, { status: 400 });
+    if (body.signatureUrl && !String(body.signatureUrl).startsWith("https://res.cloudinary.com/")) return NextResponse.json({ error: "Student signature must be uploaded to Cloudinary." }, { status: 400 });
     await removeLegacyFormNoUniqueIndex();
     const enrollmentSequence = await nextStudentSequence("student-enrollment");
     const enrollmentNo = "RCLD/ISL/" + String(enrollmentSequence).padStart(6, "0");
@@ -128,6 +129,7 @@ export async function POST(request) {
     }
     const student = await Student.create({
       ...body,
+      status: hasStudentDetailsForAdmission(body) ? (body.status || "Registered") : "Admission Pending",
       email,
       aadhaarNumber,
       ...referralFields,
