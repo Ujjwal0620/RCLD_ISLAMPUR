@@ -4,7 +4,7 @@ import mongoose from "mongoose";
 import Course from "@/models/Course";
 
 const StudentSchema = new mongoose.Schema({
-  formNo: { type: String, required: true, unique: true, trim: true },
+  formNo: { type: String, default: "", trim: true },
   aecCode: String, regnNo: String, enrollmentNo: String, admissionDate: String, guardianContactNumber: String, dueAmount: mongoose.Schema.Types.Mixed, paymentStatus: mongoose.Schema.Types.Mixed, sourceCourseLabel: String, importSource: String, courseName: String, courseCode: String, batchId: { type: mongoose.Schema.Types.ObjectId, ref: "Batch", default: null }, batchCode: String,
   applicantName: { type: String, required: true, trim: true }, nationality: String, dateOfBirth: String, sex: String,
   fatherOrHusbandName: String, address: String, presentAddress: String, permanentAddress: String, sameAsPresentAddress: Boolean, postOffice: String, policeStation: String, nearestLandmark: String, district: String, state: String, permanentPostOffice: String, permanentNearestLandmark: String, permanentPin: String, permanentDistrict: String, permanentState: String, pin: String, whatsappNumber: String,
@@ -105,9 +105,7 @@ export async function POST(request) {
     if (!/^\d{10}$/.test(guardianContactNumber)) return NextResponse.json({ error: "Guardian mobile number must contain exactly 10 digits." }, { status: 400 });
     if (!/^\d{10}$/.test(whatsappNumber)) return NextResponse.json({ error: "WhatsApp number must contain exactly 10 digits." }, { status: 400 });
     if (!String(body.signatureUrl || "").startsWith("https://res.cloudinary.com/")) return NextResponse.json({ error: "Upload the student signature image before registering." }, { status: 400 });
-    const formSequence = await nextStudentSequence("student-form");
     const enrollmentSequence = await nextStudentSequence("student-enrollment");
-    const formNo = "RCLD/ISL/FORM/" + String(formSequence).padStart(6, "0");
     const enrollmentNo = "RCLD/ISL/" + String(enrollmentSequence).padStart(6, "0");
     let referralFields = { referralId: "", referralName: "", marketingEmployeeId: "", marketingEmployeeName: "" };
     if (body.referralId) {
@@ -121,7 +119,8 @@ export async function POST(request) {
       email,
       aadhaarNumber,
       ...referralFields,
-      formNo,
+      formNo: String(body.formNo || "").trim(),
+      regnNo: String(body.regnNo || "").trim(),
       enrollmentNo,
       aecCode: "RCLD/ISL-001",
       applicantName: String(body.applicantName).trim(),
