@@ -236,11 +236,11 @@ export default function RegisterStudentPage() {
           <div className="rcld-contact-template-grid">
             <div>
               <DigitBoxes label="Mobile No" value={form.mobileNumber} onChange={v=>update("mobileNumber",v)} length={10}/>
-              <DigitBoxes label="WhatsApp No" value={form.whatsappNumber} onChange={v=>update("whatsappNumber",v)} length={10} required/>
+              <DigitBoxes label="WhatsApp No" value={form.whatsappNumber} onChange={v=>update("whatsappNumber",v)} length={10}/>
               <Field label="Aadhaar No" name="aadhaarNumber" value={form.aadhaarNumber} onChange={update} maxLength={12} inputMode="numeric" pattern="[0-9]{12}"/>
             </div>
             <div>
-              <DigitBoxes label="Mobile No Guardian" value={form.guardianContactNumber} onChange={v=>update("guardianContactNumber",v)} length={10} required/>
+              <DigitBoxes label="Mobile No Guardian" value={form.guardianContactNumber} onChange={v=>update("guardianContactNumber",v)} length={10}/>
               <Field label="Email" name="email" value={form.email} onChange={update} type="email"/>
             </div>
           </div>
