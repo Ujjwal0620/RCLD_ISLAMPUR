@@ -135,7 +135,9 @@ export default function StudentDetailsPage({params}){
     const receiptDate=payment?.date||new Date().toLocaleDateString("en-IN");
     const enrollmentDate=student.admissionDate||student.createdAt||"—";
     const address=[student.presentAddress||student.address,student.postOffice&&("P.O. "+student.postOffice),student.policeStation&&("P.S. "+student.policeStation),student.district,student.state,student.pin&&("PIN "+student.pin)].filter(Boolean).join(", ");
-    const isCash=String(payment?.method||"Cash").toLowerCase()==="cash";
+    const hasPayment=!!payment;
+    const isCash=hasPayment&&String(payment.method||"").toLowerCase()==="cash";
+    const isOnline=hasPayment&&!isCash;
     const logoUrl=window.location.origin+"/assets/logo.png";
     const w=window.open("","_blank");
     if(!w){setMessage("Please allow pop-ups to print the fee receipt.");return;}
@@ -148,7 +150,7 @@ export default function StudentDetailsPage({params}){
       ["Discount","− "+money(fee.discount)],
       ["Admission Fee",money(fee.admissionFee)],
       ["Registration Fee",money(fee.registrationFee)],
-      ["Instalment Fee (recorded payments)",money(installmentPayments.reduce((n,p)=>n+Number(p.amount||0),0))],
+      ["Instalment Payments Received",money(installmentPayments.reduce((n,p)=>n+Number(p.amount||0),0))],
       ...extraPayments.map(p=>["Others — "+(p.note||p.reference||p.paymentType||"Additional charge"),money(p.amount)])
     ].map(r=>'<tr><td>'+esc(r[0])+'</td><td class="amount">'+esc(r[1])+'</td></tr>').join("");
     const historyRows=payments.slice().reverse().map(p=>'<tr><td>'+esc(p.date||"—")+'</td><td>'+esc(p.receiptNo||"—")+'</td><td>'+esc(p.paymentType||"General")+(p.note?'<small>'+esc(p.note)+'</small>':"")+'</td><td>'+esc(p.method||"—")+'</td><td class="amount">'+money(p.amount)+'</td></tr>').join("");
@@ -182,9 +184,9 @@ export default function StudentDetailsPage({params}){
       '</div></section><section class="panel"><div class="section-title">PAYMENT HISTORY SUMMARY</div><div class="student-grid">'+
       detail("Total Fees",money(payable))+detail("Fees Paid",money(paidAll))+detail("Amount Due",money(dueAll))+detail("This Receipt",money(payment?.amount||0))+detail("Payment Method",payment?.method||"—")+
       '</div><div class="summary"><div><small>TOTAL FEES</small><strong>'+money(payable)+'</strong></div><div><small>FEES PAID</small><strong>'+money(paidAll)+'</strong></div><div class="due"><small>AMOUNT DUE</small><strong>'+money(dueAll)+'</strong></div></div></section></div>'+
-      '<section class="fees"><div class="section-title">FEE DETAILS</div><table><thead><tr><th>Fee Particulars / Purpose</th><th class="amount">Amount</th></tr></thead><tbody>'+feeRows+'<tr class="fee-total"><td>TOTAL COURSE & ONE-TIME FEES</td><td class="amount">'+money(payable)+'</td></tr></tbody></table><div class="words"><b>IN WORDS</b><span>'+esc(numberToIndianWords(Number(payment?.amount||0)))+'</span></div></section>'+
+      '<section class="fees"><div class="section-title">FEE DETAILS</div><table><thead><tr><th>Fee Particulars / Purpose</th><th class="amount">Amount</th></tr></thead><tbody>'+feeRows+'<tr class="fee-total"><td>TOTAL COURSE & ONE-TIME FEES</td><td class="amount">'+money(payable)+'</td></tr></tbody></table><div class="words"><b>IN WORDS</b><span>'+esc(numberToIndianWords(payable))+'</span></div></section>'+
       '<section class="history"><div class="section-title">PAYMENT HISTORY — '+payments.length+' ENTRIES</div><table><thead><tr><th style="width:15%">Date</th><th style="width:25%">Receipt No.</th><th style="width:29%">Purpose / Type</th><th style="width:16%">Method</th><th style="width:15%" class="amount">Amount</th></tr></thead><tbody>'+(historyRows||'<tr><td colspan="5">No payment records found.</td></tr>')+'</tbody></table></section>'+
-      '<section class="transaction"><div><div class="section-title">CURRENT PAYMENT DETAILS</div>'+detail("Amount Received",money(payment?.amount||0))+detail("Payment Date",payment?.date||receiptDate)+detail("Payment Type",payment?.paymentType||"General")+detail("Method",payment?.method||"Cash")+detail("UTR No.",payment?.utrNumber||payment?.reference||"—")+detail("Recorded By",payment?.recordedBy||fee.updatedBy||"—")+'<div class="payment-flags"><span class="check"><i class="square">'+(isCash?"✓":"")+'</i> Cash</span><span class="check"><i class="square">'+(!isCash?"✓":"")+'</i> Online</span></div></div><div class="payment-proof"><div class="section-title">PAYMENT PROOF / UPLOAD</div>'+proof+'</div></section>'+
+      '<section class="transaction"><div><div class="section-title">CURRENT PAYMENT DETAILS</div>'+detail("Amount Received",money(payment?.amount||0))+detail("Payment Date",payment?.date||receiptDate)+detail("Payment Type",payment?.paymentType||"General")+detail("Method",payment?.method||"—")+detail("UTR No.",payment?.utrNumber||payment?.reference||"—")+detail("Recorded By",payment?.recordedBy||fee.updatedBy||"—")+'<div class="payment-flags"><span class="check"><i class="square">'+(isCash?"✓":"")+'</i> Cash</span><span class="check"><i class="square">'+(isOnline?"✓":"")+'</i> Online</span></div></div><div class="payment-proof"><div class="section-title">PAYMENT PROOF / UPLOAD</div>'+proof+'</div></section>'+
       '<div class="signatures"><div class="sign">FOR RCLD – ISLAMPUR<small>AUTHORIZED SIGNATORY</small></div><div class="sign">WITH AFFIX SEAL<small>OFFICIAL STAMP / SEAL</small></div></div>'+
       '<div class="receipt-foot">Computer-generated receipt · Please retain this receipt for your records.</div></main><script>window.addEventListener("load",()=>{const imgs=[...document.images];Promise.all(imgs.map(img=>img.decode?img.decode().catch(()=>{}):Promise.resolve())).then(()=>{const page=document.querySelector(".receipt");const scale=Math.min(1,page.clientHeight/Math.max(page.scrollHeight,page.clientHeight));if(scale<1){page.style.transformOrigin="top left";page.style.transform="scale("+scale+")";page.style.width=(140/scale)+"mm";page.style.height=(202/scale)+"mm";}setTimeout(()=>window.print(),300);});});</script></body></html>';
     w.document.open();w.document.write(html);w.document.close();
