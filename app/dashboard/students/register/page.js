@@ -133,7 +133,7 @@ export default function RegisterStudentPage() {
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || "Unable to register.");
 
-      setMessage("Student registered successfully. Form No: " + j.student.formNo + " · Enrollment No: " + j.student.enrollmentNo);
+      setMessage("Student registered successfully. Enrollment No: " + j.student.enrollmentNo);
       setForm({ ...initial, formNo: "", regnNo: "", enrollmentNo: j.student.enrollmentNo, aecCode: "RCLD/ISL-001" });
       setSignatureInputKey(key => key + 1);
       setSelectedCourse(null);
