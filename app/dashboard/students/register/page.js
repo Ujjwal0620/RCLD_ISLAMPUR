@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, Save, Camera, ImagePlus } from "lucide-react";
+import { ArrowLeft, Save, Camera, ImagePlus, Printer } from "lucide-react";
 import ERPLayout from "@/components/ERPLayout";
 import indiaLocations from "@/lib/indiaStatesDistricts.json";
 
@@ -133,8 +133,8 @@ export default function RegisterStudentPage() {
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || "Unable to register.");
 
-      setMessage("Student registered successfully. Form No: " + j.student.formNo + " · Enrollment No: " + j.student.enrollmentNo);
-      setForm({ ...initial, formNo: j.student.formNo, enrollmentNo: j.student.enrollmentNo, aecCode: "RCLD/ISL-001" });
+      setMessage("Student registered successfully. Enrollment No: " + j.student.enrollmentNo);
+      setForm({ ...initial, formNo: "", regnNo: "", enrollmentNo: j.student.enrollmentNo, aecCode: "RCLD/ISL-001" });
       setSignatureInputKey(key => key + 1);
       setSelectedCourse(null);
     } catch (error) {
@@ -148,7 +148,7 @@ export default function RegisterStudentPage() {
     <ERPLayout active="/dashboard/students/register">
       <header className="topbar">
         <div><div className="crumb">Students / Registration</div><h1>RCLD Registration Form</h1></div>
-        <a className="ghost-btn" href="/dashboard/students"><ArrowLeft size={17}/> Back to Students</a>
+        <div className="top-actions"><button type="button" className="ghost-btn" onClick={() => window.print()}><Printer size={16}/> Print Preview</button><a className="ghost-btn" href="/dashboard/students"><ArrowLeft size={17}/> Back to Students</a></div>
       </header>
 
       <form className="registration-form rcld-registration-sheet" onSubmit={submit}>
@@ -168,8 +168,8 @@ export default function RegisterStudentPage() {
           <div className="rcld-office-layout">
             <div className="rcld-office-fields">
               <label className="form-field"><span>AEC Code</span><input value="RCLD/ISL-001" readOnly/></label>
-              <label className="form-field"><span>Form No. (Auto Generated)</span><input value={form.formNo || "Generated automatically after registration"} readOnly/></label>
-              <label className="form-field"><span>Enrollment No. (Auto Generated)</span><input value={form.enrollmentNo || "Generated automatically after registration"} readOnly/></label>
+              <label className="form-field"><span>Form No. (Office Use)</span><input value={form.formNo} onChange={e=>update("formNo",e.target.value)} placeholder=""/></label>
+              <label className="form-field"><span>Enrollment No. (Auto Generated)</span><input value={form.enrollmentNo} readOnly placeholder="Generated after registration"/></label>
               <label className="form-field"><span>Course *</span><select value={form.courseCode} onChange={e=>selectCourse(e.target.value)} required><option value="">Select course</option>{courses.map(c=><option key={c._id} value={c.code}>{c.code} — {c.name}</option>)}</select></label>
               <Field label="Course Code" name="courseCode" value={form.courseCode} onChange={update}/>
               <Field label="Course Name" name="courseName" value={form.courseName} onChange={update}/>
@@ -270,6 +270,90 @@ export default function RegisterStudentPage() {
         {message&&<div className={message.includes("successfully")?"success-msg":"error-msg"}>{message}</div>}
         <div className="form-actions"><a className="ghost-btn" href="/dashboard/students">Cancel</a><button className="primary-btn" disabled={saving||photoUploading||signatureUploading}><Save size={17}/>{saving?"Saving…":"Register Student"}</button></div>
       </form>
+
+      <section className="rcld-print-document" aria-label="Printable RCLD student registration form">
+        <header className="rcld-print-header">
+          <img className="rcld-print-logo-image" src="/rcld-logo.svg" alt="RCLD logo"/>
+          <div className="rcld-print-heading">
+            <h1>RASHTRIYA COMPUTER LITERACY DRIVE</h1>
+            <p>STUDENT REGISTRATION FORM. RCLD ISLAMPUR</p>
+          </div>
+        </header>
+        <div className="rcld-print-rule"/>
+        <section className="rcld-print-section">
+          <h2>Office / Registration Details</h2>
+          <div className="rcld-print-office-grid">
+            <p><span>AEC CODE:</span> RCLD/ISL-001</p>
+            <p><span>Registration No:</span> {form.regnNo}</p>
+            <p><span>Form No:</span> {form.formNo}</p>
+            <p><span>Enrollment No:</span> {form.enrollmentNo}</p>
+            <p><span>Date:</span> {form.admissionDate ? new Date(form.admissionDate + "T00:00:00").toLocaleDateString("en-GB") : ""}</p>
+            <p><span>Course / Course Code:</span> {[form.courseName, form.courseCode].filter(Boolean).join(" / ")}</p>
+          </div>
+        </section>
+        <section className="rcld-print-section">
+          <h2>Applicant Details</h2>
+          <div className="rcld-print-applicant">
+            <div className="rcld-print-applicant-fields">
+              <p><span>Name:</span> {form.applicantName}</p>
+              <p><span>Father/Mother/Husband Name:</span> {form.fatherOrHusbandName}</p>
+              <p><span>DOB:</span> {form.dateOfBirth ? new Date(form.dateOfBirth + "T00:00:00").toLocaleDateString("en-GB") : ""}</p>
+              <p><span>Sex:</span> {form.sex}</p>
+              <p><span>Nationality:</span> {form.nationality}</p>
+            </div>
+            <div className="rcld-print-photo">{form.photoUrl ? <img src={form.photoUrl} alt="Applicant"/> : <span/>}</div>
+          </div>
+        </section>
+        <section className="rcld-print-section">
+          <h2>Address Details</h2>
+          <div className="rcld-print-address-grid">
+            <div className="rcld-print-address">
+              <h3>Present Address</h3>
+              <p>Ward/Colony/ Village: {form.presentAddress || form.address}</p>
+              <p>PO: {form.postOffice}</p>
+              <p>PS: {form.policeStation}</p>
+              <p>State: {form.state}<span>District: {form.district}</span></p>
+              <p>Pin: {form.pin}</p>
+              <p>Nearest Land Mark: {form.nearestLandmark}</p>
+            </div>
+            <div className="rcld-print-address">
+              <h3>Permanent Address</h3>
+              <p>Ward/Colony/ Village: {form.sameAsPresentAddress ? (form.presentAddress || form.address) : form.permanentAddress}</p>
+              <p>PO: {form.sameAsPresentAddress ? form.postOffice : form.permanentPostOffice}</p>
+              <p>PS: {form.sameAsPresentAddress ? form.policeStation : ""}</p>
+              <p>State: {form.sameAsPresentAddress ? form.state : form.permanentState}<span>District: {form.sameAsPresentAddress ? form.district : form.permanentDistrict}</span></p>
+              <p>Pin: {form.sameAsPresentAddress ? form.pin : form.permanentPin}</p>
+              <p>Nearest Land Mark: {form.sameAsPresentAddress ? form.nearestLandmark : form.permanentNearestLandmark}</p>
+            </div>
+          </div>
+        </section>
+        <section className="rcld-print-section">
+          <h2>Contact Details</h2>
+          <div className="rcld-print-contact-grid">
+            <div><p><b>Mobile No:</b> {form.mobileNumber}</p><p><b>WhatsApp No:</b> {form.whatsappNumber}</p><p><b>Aadhaar No:</b> {form.aadhaarNumber}</p></div>
+            <div><p><b>Mobile No Guardian:</b> {form.guardianContactNumber}</p><p><b>Email:</b> {form.email}</p></div>
+          </div>
+        </section>
+        <section className="rcld-print-section">
+          <h2>Qualification Details</h2>
+          <table className="rcld-print-qualification"><thead><tr><th>Class/Sem/Course</th><th>Institute/School/College</th><th>Board/Council/University</th><th>Year</th><th>Percentage Of Marks</th></tr></thead>
+            <tbody><tr><td>{form.qualifications?.[0]?.examCourse}</td><td>{form.qualifications?.[0]?.collegeInstitute}</td><td>{form.qualifications?.[0]?.boardUniversity}</td><td>{form.qualifications?.[0]?.year}</td><td>{form.qualifications?.[0]?.percentage}</td></tr></tbody>
+          </table>
+        </section>
+        <section className="rcld-print-section">
+          <h2>Enclosure</h2>
+          <div className="rcld-print-enclosures">
+            <span><i/>{form.enclosures.stampPhoto ? "✓ " : ""}2 Passport Size photo</span>
+            <span><i/>{form.enclosures.qualifyingCertificates ? "✓ " : ""}Aadhaar / Qualifying Certificates</span>
+            <span><i/>{form.enclosures.matricAdmitCard ? "✓ " : ""}Admit / Registration Details</span>
+          </div>
+        </section>
+        <footer className="rcld-print-footer">
+          <div><p>{form.declarationDate ? new Date(form.declarationDate + "T00:00:00").toLocaleDateString("en-GB") : ""}</p><div/><span>DATE</span></div>
+          <div><p>{form.declarationPlace}</p><div/><span>PLACE</span></div>
+          <div className="rcld-print-signature">{form.signatureUrl ? <img src={form.signatureUrl} alt="Applicant signature"/> : <p/>}<div/><span>SIGNATURE</span></div>
+        </footer>
+      </section>
     </ERPLayout>
   );
 }
