@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import RAGAssistant from "@/components/RAGAssistant";
 import RCLDLogo from "@/components/RCLDLogo";
 import {
-  LayoutDashboard, Users, UserRoundCog, Menu, X, ShieldCheck, Layers3, BookOpen,
+  LayoutDashboard, Users, UserRoundCog, Menu, X, ShieldCheck, Layers3, BookOpen, BrainCircuit,
   BarChart3, UserRoundX, Clock3, ClipboardList, LogOut, GraduationCap, BookMarked,
   ChevronDown, Search, Bell, Settings2, Sparkles, PanelLeftClose, Megaphone, ContactRound,
   Sun, Moon, Maximize2, Minimize2
@@ -15,6 +15,7 @@ const navGroups = [
     label: "WORKSPACE",
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/dashboard/ai", label: "AI Copilot", icon: BrainCircuit },
       { href: "/dashboard/students", label: "Students", icon: Users },
       { href: "/dashboard/employees", label: "Employees", icon: UserRoundCog },
       { href: "/dashboard/batches", label: "Batches & Timetable", icon: Layers3 },
