@@ -2788,3 +2788,84 @@ html[data-theme="dark"] .batch-track{background:#2a3850}
   .rcld-print-document{display:block!important}
   .erp-sidebar .brand-mark-image{display:none!important}
 }
+
+
+/* RCLD registration screen alignment and complete brand visibility */
+.erp-sidebar .brand{
+  display:flex!important;align-items:center!important;gap:12px!important;
+  min-height:76px!important;height:auto!important;padding:12px 10px 18px!important;
+  overflow:visible!important;flex:0 0 auto!important;
+}
+.erp-sidebar .brand .brand-mark-image{
+  display:block!important;width:58px!important;height:58px!important;min-width:58px!important;
+  max-width:58px!important;max-height:58px!important;flex:0 0 58px!important;
+  object-fit:contain!important;object-position:center!important;overflow:visible!important;
+  background:#fff!important;border-radius:8px!important;padding:2px!important;
+}
+.erp-sidebar .brand-copy{min-width:0!important;flex:1 1 auto!important;overflow:visible!important}
+.erp-sidebar .brand-copy strong,.erp-sidebar .brand-copy span{white-space:normal!important;overflow-wrap:anywhere!important}
+.erp-shell.sidebar-collapsed .erp-sidebar .brand{justify-content:center!important;padding-inline:4px!important}
+.erp-shell.sidebar-collapsed .erp-sidebar .brand .brand-mark-image{width:48px!important;height:48px!important;min-width:48px!important;flex-basis:48px!important}
+.rcld-registration-sheet{
+  width:min(100%,1180px)!important;max-width:1180px!important;margin:18px auto 32px!important;
+  overflow:visible!important;border-radius:4px!important;background:#fff!important;
+}
+.rcld-registration-brand{
+  grid-template-columns:132px minmax(0,1fr)!important;gap:18px!important;
+  min-height:126px!important;padding:12px 22px!important;overflow:visible!important;
+}
+.rcld-screen-logo{
+  width:120px!important;height:104px!important;max-width:100%!important;max-height:none!important;
+  display:block!important;object-fit:contain!important;object-position:center!important;
+  justify-self:center!important;align-self:center!important;background:#fff!important;
+}
+.rcld-brand-title{min-width:0!important;width:100%!important;text-align:center!important}
+.rcld-brand-title h2{font-size:clamp(19px,2.3vw,30px)!important;line-height:1.12!important;white-space:normal!important;overflow-wrap:anywhere!important}
+.rcld-brand-title span{font-size:clamp(10px,1.2vw,15px)!important;line-height:1.35!important;margin-top:8px!important;white-space:normal!important}
+.rcld-registration-sheet .rcld-form-section{padding:0 0 16px!important;min-width:0!important;overflow:visible!important}
+.rcld-registration-sheet .rcld-form-section>h3{margin:0 0 10px!important;padding:8px 18px!important;min-height:36px!important;font-size:16px!important;line-height:1.25!important;border-radius:2px!important}
+.rcld-office-template-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:10px 18px!important;padding:2px 20px 10px!important}
+.rcld-inline-field{display:grid!important;grid-template-columns:minmax(88px,max-content) minmax(0,1fr)!important;gap:7px!important;min-width:0!important}
+.rcld-inline-field>span{font-size:12px!important;white-space:normal!important}
+.rcld-inline-field input,.rcld-inline-field select{width:100%!important;min-width:0!important;max-width:100%!important}
+.rcld-office-extra{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:12px!important;padding:0 20px!important}
+.rcld-applicant-template-grid{display:grid!important;grid-template-columns:minmax(0,1fr) 170px!important;gap:18px!important;padding:0 20px!important;align-items:start!important}
+.rcld-applicant-template-fields{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px 14px!important;min-width:0!important}
+.rcld-applicant-template-fields .form-field{min-width:0!important}
+.rcld-photo-template{width:100%!important;min-width:0!important;min-height:220px!important;margin:0!important;box-sizing:border-box!important}
+.rcld-photo-template .registration-photo-preview{width:124px!important;height:142px!important;max-width:100%!important;flex:0 0 auto!important;overflow:hidden!important}
+.rcld-photo-template .registration-photo-preview img{width:100%!important;height:100%!important;object-fit:cover!important}
+.rcld-address-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:14px!important;padding:0 14px!important}
+.rcld-address-template-card{min-width:0!important;overflow:hidden!important;padding:12px!important;border:2px solid #1700b5!important;border-radius:0!important;background:#fff!important}
+.rcld-address-template-card .form-grid.two{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important}
+.rcld-contact-template-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:18px!important;padding:0 20px!important}
+.rcld-contact-template-grid>div{display:grid!important;gap:10px!important;min-width:0!important}
+.rcld-qualification-table-wrap{width:100%!important;max-width:100%!important;overflow-x:auto!important;padding:0 14px!important}
+.rcld-input-qualification-table{width:100%!important;table-layout:fixed!important;border-collapse:collapse!important}
+.rcld-input-qualification-table th,.rcld-input-qualification-table td{width:auto!important;min-width:0!important;padding:7px 5px!important;overflow-wrap:anywhere!important}
+.rcld-input-qualification-table input{width:100%!important;min-width:0!important;max-width:100%!important;box-sizing:border-box!important}
+.rcld-enclosures{display:flex!important;flex-wrap:wrap!important;gap:10px 24px!important;padding:4px 20px!important}
+.rcld-screen-footer{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:18px!important;padding:8px 20px 14px!important;align-items:end!important}
+.rcld-screen-footer>*{min-width:0!important}
+.rcld-screen-footer .rcld-signature-field img{display:block!important;max-width:100%!important;max-height:54px!important;object-fit:contain!important}
+.rcld-registration-sheet .form-actions{display:flex!important;justify-content:flex-end!important;gap:10px!important;padding:14px 20px!important}
+@media(max-width:900px){
+ .rcld-registration-brand{grid-template-columns:100px minmax(0,1fr)!important;gap:12px!important}
+ .rcld-screen-logo{width:94px!important;height:90px!important}
+ .rcld-office-template-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ .rcld-office-extra{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-width:640px){
+ .rcld-registration-brand{grid-template-columns:76px minmax(0,1fr)!important;padding:10px!important;gap:10px!important;min-height:90px!important}
+ .rcld-screen-logo{width:72px!important;height:72px!important}
+ .rcld-brand-title h2{font-size:17px!important}
+ .rcld-brand-title span{font-size:10px!important;margin-top:5px!important}
+ .rcld-office-template-grid,.rcld-office-extra,.rcld-applicant-template-fields,
+ .rcld-address-grid,.rcld-contact-template-grid{grid-template-columns:1fr!important}
+ .rcld-applicant-template-grid{grid-template-columns:minmax(0,1fr) 112px!important;padding:0 10px!important;gap:10px!important}
+ .rcld-photo-template{min-height:170px!important;padding:8px!important}
+ .rcld-photo-template .registration-photo-preview{width:90px!important;height:112px!important}
+ .rcld-screen-footer{grid-template-columns:1fr!important}
+ .rcld-registration-sheet .rcld-form-section>h3{font-size:14px!important}
+ .rcld-input-qualification-table{min-width:650px!important}
+}
