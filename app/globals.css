@@ -2950,3 +2950,28 @@ table tbody tr:hover{background:#f8faff}
 @media(max-width:900px){.erp-user-bar{margin:0 -28px 16px;padding:0 18px}}
 @media(max-width:600px){.erp-user-bar{margin:0 -14px 14px;padding:0 14px}.panel-head{padding:15px}.dashboard-hero{border-radius:14px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+
+/* Registration print refinements requested: match address borders to section headers
+   and keep the institute name on one clean line in the printed form. */
+@media print {
+  .rcld-print-address {
+    border: 1mm solid #8797bf !important;
+  }
+  .rcld-print-heading {
+    width: 171mm !important;
+    min-width: 0 !important;
+    overflow: visible !important;
+    text-align: center !important;
+  }
+  .rcld-print-heading h1 {
+    width: 100% !important;
+    max-width: 100% !important;
+    font-size: 17pt !important;
+    line-height: 1.08 !important;
+    letter-spacing: -0.15pt !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-align: center !important;
+  }
+}
