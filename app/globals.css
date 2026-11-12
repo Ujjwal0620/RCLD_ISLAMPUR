@@ -2987,3 +2987,25 @@ table tbody tr:hover{background:#f8faff}
     box-shadow: none !important;
   }
 }
+
+/* Exact requested border color for the registration form address panels
+   (screen and print), including the print-only address summary panels. */
+html body .rcld-address-template-card,
+html body .rcld-screen-form .registration-address-card,
+html body .rcld-print-document .rcld-print-address,
+html body .rcld-print-document .rcld-print-address-grid > .rcld-print-address {
+  border: 1px solid #8493BD !important;
+  border-color: #8493BD !important;
+  box-shadow: none !important;
+}
+
+@media print {
+  html body .rcld-address-template-card,
+  html body .rcld-screen-form .registration-address-card,
+  html body .rcld-print-document .rcld-print-address,
+  html body .rcld-print-document .rcld-print-address-grid > .rcld-print-address {
+    border: 1mm solid #8493BD !important;
+    border-color: #8493BD !important;
+    box-shadow: none !important;
+  }
+}
