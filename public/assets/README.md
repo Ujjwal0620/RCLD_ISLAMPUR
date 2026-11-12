@@ -1,14 +1,10 @@
 # RCLD brand assets
 
-Upload the official institute logo into this folder.
+## Official logo
+- Primary logo: `public/assets/rcld-logo.png`
+- Public URL: `/assets/rcld-logo.png`
+- Shared component: `components/RCLDLogo.js`
 
-## Primary logo file
-- Keep the official logo at: `public/assets/rcld-logo.svg`
-- The app serves it at: `/assets/rcld-logo.svg`
-- The shared component is: `components/RCLDLogo.js`
+The PNG in this folder is cropped directly from the official RCLD emblem shown in the approved student registration template image. The student registration print form and ERP branding use the shared component.
 
-The ERP sidebar, ERP login screen and printable student registration form use this shared component. Other screens should import the same component instead of creating text-only logo marks.
-
-When replacing the temporary logo, keep the filename unchanged. If the official artwork is PNG instead, update the shared component's image path once; do not change every screen separately.
-
-Recommended: transparent background, original proportions, high-resolution artwork, no extra whitespace.
+To replace the logo in future, overwrite `rcld-logo.png` with the new official artwork and keep the filename unchanged.
