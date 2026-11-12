@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, Save, Camera, ImagePlus, Printer } from "lucide-react";
 import ERPLayout from "@/components/ERPLayout";
+import RCLDLogo from "@/components/RCLDLogo";
 import indiaLocations from "@/lib/indiaStatesDistricts.json";
 
 const initial = {
@@ -273,7 +274,7 @@ export default function RegisterStudentPage() {
 
       <section className="rcld-print-document" aria-label="Printable RCLD student registration form">
         <header className="rcld-print-header">
-          <img className="rcld-print-logo-image" src="/rcld-logo.svg" alt="RCLD logo"/>
+          <RCLDLogo className="rcld-print-logo-image" />
           <div className="rcld-print-heading">
             <h1>RASHTRIYA COMPUTER LITERACY DRIVE</h1>
             <p>STUDENT REGISTRATION FORM. RCLD ISLAMPUR</p>
