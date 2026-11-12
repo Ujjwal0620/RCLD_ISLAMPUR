@@ -2435,9 +2435,7 @@ html[data-theme="dark"] .batch-track{background:#2a3850}
 /* RCLD registration print sheet — matched to the supplied portrait paper template */
 .rcld-print-document{display:none}
 .rcld-print-header{display:grid;grid-template-columns:104px minmax(0,1fr);align-items:center;gap:12px;padding:12px 18px 15px;color:#1598d2;font-family:Georgia,"Times New Roman",serif}
-.rcld-print-logo{width:96px;height:96px;border:3px solid #168fca;border-radius:50% 50% 12px 12px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#174a9a;font-weight:800;transform:scale(.92)}
-.rcld-print-logo span{font-size:25px;letter-spacing:-1px}
-.rcld-print-logo small{font-size:8px;color:#d22d36;border-top:2px solid #d22d36;padding-top:3px}
+.rcld-print-logo-image{width:104px;height:112px;object-fit:contain;display:block}
 .rcld-print-heading{text-align:center}
 .rcld-print-heading h1{font-size:27px;line-height:1.1;letter-spacing:.01em;margin:0;color:#1598d2;white-space:nowrap}
 .rcld-print-heading p{font:16px Arial,sans-serif;color:#1598d2;margin:17px 0 0}
@@ -2480,7 +2478,7 @@ html[data-theme="dark"] .batch-track{background:#2a3850}
  .rcld-print-heading h1{font-size:18px;white-space:normal}
  .rcld-print-heading p{font-size:12px;margin-top:8px}
  .rcld-print-header{grid-template-columns:66px 1fr;padding:9px}
- .rcld-print-logo{width:62px;height:62px}
+ .rcld-print-logo-image{width:66px;height:72px}
  .rcld-print-logo span{font-size:18px}
 }
 @media print{
