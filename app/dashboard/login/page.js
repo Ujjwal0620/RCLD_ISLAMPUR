@@ -1,6 +1,7 @@
 "use client";
 import {useState} from "react";
 import {Eye,EyeOff,LogIn,ShieldCheck,UserRound,LockKeyhole} from "lucide-react";
+import RCLDLogo from "@/components/RCLDLogo";
 
 export default function Login(){
   const [loginId,setLoginId]=useState("");
@@ -23,7 +24,7 @@ export default function Login(){
 
   return <main className="login-page">
     <div className="login-brand">
-      <div className="login-logo">R</div>
+      <RCLDLogo className="login-logo-image" />
       <div><strong>RCLD</strong><span>Islampur ERP</span></div>
     </div>
     <section className="login-card">
