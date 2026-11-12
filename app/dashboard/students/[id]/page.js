@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, UserRound, MapPin, BookOpen, FileText, CreditCard, CalendarDays, ClipboardCheck, WalletCards, Save, Pencil, Trash2, Printer, ArrowRightLeft, UserX, History, Phone as PhoneIcon } from "lucide-react";
+import { ArrowLeft, UserRound, MapPin, BookOpen, FileText, CreditCard, CalendarDays, ClipboardCheck, WalletCards, Save, Pencil, Trash2, Printer, ArrowRightLeft, UserX, History, Phone as PhoneIcon, IdCard } from "lucide-react";
 import ERPLayout from "@/components/ERPLayout";
 import RCLDLogo from "@/components/RCLDLogo";
 import indiaLocations from "@/lib/indiaStatesDistricts.json";
