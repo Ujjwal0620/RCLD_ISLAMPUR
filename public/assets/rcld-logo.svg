@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
+<rect width="180" height="180" fill="#fff"/>
+<circle cx="82" cy="65" r="55" fill="#fff" stroke="#168fca" stroke-width="4"/>
+<circle cx="82" cy="65" r="49" fill="none" stroke="#263d9a" stroke-width="1.8"/>
+<path d="M35 78 Q82 92 129 78 L129 111 Q82 124 35 111Z" fill="#fff" stroke="#263d9a" stroke-width="2"/>
+<path d="M49 60 Q66 51 82 65 Q98 51 115 60 L115 86 Q98 78 82 91 Q66 78 49 86Z" fill="#fff" stroke="#263d9a" stroke-width="2.5"/>
+<path d="M82 65 V91" stroke="#263d9a" stroke-width="2"/>
+<text x="82" y="20" text-anchor="middle" font-family="Georgia,serif" font-size="9" font-weight="bold" fill="#263d9a">Rashtriya Computer Literacy Drive</text>
+<path d="M19 115 L145 115 L133 132 L145 148 L19 148 L31 132Z" fill="#df2636" stroke="#263d9a" stroke-width="2"/>
+<text x="82" y="137" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" font-weight="bold" fill="#fff">RCLD</text>
+<rect x="21" y="150" width="122" height="19" fill="#e9eef8" stroke="#168fca" stroke-width="2"/>
+<text x="82" y="163" text-anchor="middle" font-family="Arial,sans-serif" font-size="10" font-weight="bold" fill="#df2636">Govt. of India</text>
+<text x="145" y="15" font-family="Arial,sans-serif" font-size="12" fill="#111">®</text>
+</svg>

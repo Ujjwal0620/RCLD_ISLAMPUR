@@ -2495,3 +2495,10 @@ html[data-theme="dark"] .batch-track{background:#2a3850}
  .rcld-print-qualification td{background:#c5e2fa!important}
  .rcld-print-footer>div>div{background:#1600a9!important}
 }
+
+
+/* Central RCLD brand asset: public/assets/rcld-logo.svg */
+.brand-mark-image{width:42px;height:42px;object-fit:contain;flex:0 0 auto;border-radius:0;background:transparent}
+.login-logo-image{width:62px;height:62px;object-fit:contain;display:block;flex:0 0 auto}
+.rcld-print-logo-image{width:104px;height:112px;object-fit:contain;display:block}
+@media(max-width:700px){.rcld-print-logo-image{width:66px;height:72px}}

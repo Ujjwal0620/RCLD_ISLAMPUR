@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import RAGAssistant from "@/components/RAGAssistant";
+import RCLDLogo from "@/components/RCLDLogo";
 import {
   LayoutDashboard, Users, UserRoundCog, Menu, X, ShieldCheck, Layers3, BookOpen,
   BarChart3, UserRoundX, Clock3, ClipboardList, LogOut, GraduationCap, BookMarked,
@@ -103,7 +104,7 @@ export default function ERPLayout({ active, children, hideAssistant = true }) {
       <div className={`sidebar-overlay ${open ? "show" : ""}`} onClick={() => setOpen(false)} />
       <aside id="rcld-mobile-navigation" className={`erp-sidebar ${open ? "open" : ""}`}>
         <div className="brand">
-          <div className="brand-mark"><span>R</span></div>
+          <RCLDLogo className="brand-mark-image" />
           <div className="brand-copy"><strong>RCLD</strong><span>Islampur Education ERP</span></div>
           <button type="button" className="sidebar-close" onClick={() => setOpen(false)} aria-label="Close menu"><X size={18} /></button>
         </div>
