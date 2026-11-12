@@ -273,7 +273,7 @@ export default function RegisterStudentPage() {
 
       <section className="rcld-print-document" aria-label="Printable RCLD student registration form">
         <header className="rcld-print-header">
-          <div className="rcld-print-logo"><span>RCLD</span><small>GOVT. OF INDIA</small></div>
+          <img className="rcld-print-logo-image" src="/rcld-logo.svg" alt="RCLD logo"/>
           <div className="rcld-print-heading">
             <h1>RASHTRIYA COMPUTER LITERACY DRIVE</h1>
             <p>STUDENT REGISTRATION FORM. RCLD ISLAMPUR</p>
