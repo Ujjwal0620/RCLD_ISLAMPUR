@@ -2649,3 +2649,142 @@ html[data-theme="dark"] .batch-track{background:#2a3850}
   .rcld-print-signature img { display:block!important;height:14mm!important;max-width:100%!important;object-fit:contain!important;margin:0 auto!important; }
   .rcld-print-signature p { height:14mm!important; }
 }
+
+
+/* RCLD student registration — on-screen entry form follows the approved paper template */
+.rcld-registration-sheet{
+  width:min(100%,1120px)!important;max-width:1120px!important;margin:18px auto 32px!important;
+  padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;
+  overflow:visible!important;background:#fff!important;color:#111!important;
+  font-family:"Times New Roman",Georgia,serif!important;
+}
+.rcld-registration-brand{
+  display:grid!important;grid-template-columns:118px minmax(0,1fr)!important;gap:12px!important;
+  align-items:center!important;min-height:132px!important;padding:10px 18px 12px!important;
+  background:#fff!important;border:0!important;border-bottom:0!important;position:relative!important;
+}
+.rcld-registration-brand:after{display:none!important}
+.rcld-screen-logo{display:block!important;width:112px!important;height:112px!important;object-fit:contain!important;background:#fff!important;justify-self:start!important}
+.rcld-brand-title{text-align:center!important;min-width:0!important}
+.rcld-brand-title h2{margin:0!important;padding:0!important;color:#219bd2!important;font:700 clamp(20px,2.6vw,34px)/1.08 Georgia,"Times New Roman",serif!important;letter-spacing:0!important;white-space:normal!important}
+.rcld-brand-title span{display:block!important;margin-top:13px!important;color:#159bd5!important;font:16px/1.25 Arial,sans-serif!important;letter-spacing:0!important}
+.rcld-screen-divider{height:5px!important;background:#050505!important;width:100%!important;margin:0 0 18px!important}
+.rcld-registration-sheet .rcld-form-section{padding:0 0 18px!important;margin:0!important;border:0!important;background:#fff!important}
+.rcld-registration-sheet .rcld-form-section>h3{
+  display:block!important;min-height:42px!important;box-sizing:border-box!important;margin:0 0 12px!important;
+  padding:8px 28px!important;border:0!important;border-radius:9px 9px 0 0!important;
+  background:#8493bd!important;color:#fff!important;font:700 19px/1.35 Georgia,"Times New Roman",serif!important;
+  letter-spacing:0!important;text-transform:none!important;
+}
+.rcld-registration-sheet .form-field{min-width:0!important;gap:4px!important}
+.rcld-registration-sheet .form-field>span{color:#111!important;font:600 12px/1.25 Arial,sans-serif!important}
+.rcld-registration-sheet .form-field input,
+.rcld-registration-sheet .form-field select,
+.rcld-registration-sheet .form-field textarea{
+  width:100%!important;min-width:0!important;min-height:36px!important;box-sizing:border-box!important;
+  padding:6px 8px!important;border:1px solid #c8cfdd!important;border-radius:2px!important;
+  background:#fff!important;color:#111!important;font:14px "Times New Roman",Georgia,serif!important;
+  box-shadow:none!important;outline-offset:1px!important;
+}
+.rcld-registration-sheet .form-field textarea{min-height:52px!important;resize:vertical!important}
+.rcld-office-template-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:9px 22px!important;padding:2px 28px 8px!important}
+.rcld-inline-field{display:grid!important;grid-template-columns:max-content minmax(0,1fr)!important;align-items:center!important;gap:8px!important;min-width:0!important}
+.rcld-inline-field>span{font:15px "Times New Roman",Georgia,serif!important;color:#111!important;white-space:nowrap!important}
+.rcld-inline-field input,.rcld-inline-field select{
+  width:100%!important;min-width:0!important;height:34px!important;min-height:34px!important;
+  border:0!important;border-bottom:1px dotted #aab2c2!important;border-radius:0!important;
+  background:#fff!important;padding:4px 3px!important;color:#111!important;
+  font:15px "Times New Roman",Georgia,serif!important;box-shadow:none!important;
+}
+.rcld-office-extra{display:grid!important;grid-template-columns:1fr 1fr 1.3fr!important;gap:12px!important;padding:5px 28px 4px!important;border-top:1px dotted #d6dbe5!important}
+.rcld-office-extra .form-field>span{font-size:11px!important}
+.rcld-office-extra .form-field input,.rcld-office-extra .form-field select{min-height:32px!important}
+.rcld-registration-sheet .course-fee-summary{margin:8px 28px 0!important;padding:10px 14px!important;border:1px solid #d6ddeb!important;border-radius:0!important;background:#f7f9fc!important}
+.rcld-applicant-template-grid{display:grid!important;grid-template-columns:minmax(0,1fr) 190px!important;gap:18px!important;align-items:start!important;padding:3px 28px 4px!important}
+.rcld-applicant-template-fields{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px 18px!important;align-items:end!important}
+.rcld-applicant-template-fields .form-field:first-child{grid-column:1!important}
+.rcld-applicant-template-fields .form-field:nth-child(2){grid-column:2!important}
+.rcld-photo-template{width:184px!important;min-height:190px!important;box-sizing:border-box!important;margin:0 auto!important;padding:8px!important;border:7px solid #d3d3d3!important;border-radius:0!important;background:#fff!important;display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:7px!important;box-shadow:none!important}
+.rcld-photo-template .registration-photo-preview{width:100%!important;height:132px!important;display:grid!important;place-items:center!important;border:0!important;border-radius:0!important;background:#d5d5d5!important;color:#777!important;overflow:hidden!important}
+.rcld-photo-template .registration-photo-preview img{width:100%!important;height:100%!important;object-fit:cover!important}
+.rcld-photo-template strong{font:600 11px Arial,sans-serif!important;color:#222!important}
+.rcld-photo-template .ghost-btn{position:relative!important;min-height:28px!important;padding:4px 8px!important;font-size:11px!important;border-radius:2px!important}
+.rcld-photo-template .ghost-btn input{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;opacity:0!important;cursor:pointer!important}
+.rcld-photo-template small{font-size:9px!important;color:#667085!important}
+.rcld-address-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:38px!important;padding:3px 34px 0!important}
+.rcld-address-template-card{min-width:0!important;padding:10px 14px 12px!important;border:4px solid #1700b5!important;border-radius:0!important;background:#fff!important;box-shadow:none!important}
+.rcld-address-template-card h4{margin:0 0 8px!important;color:#1700b5!important;font:700 18px Georgia,"Times New Roman",serif!important}
+.rcld-address-template-card .form-field{margin-bottom:8px!important}
+.rcld-address-template-card .form-field>span{font:13px "Times New Roman",Georgia,serif!important;color:#111!important}
+.rcld-address-template-card .form-field input,
+.rcld-address-template-card .form-field select,
+.rcld-address-template-card .form-field textarea{border:0!important;border-bottom:1px dotted #c1c7d2!important;border-radius:0!important;padding:4px 2px!important;min-height:30px!important;font-size:14px!important}
+.rcld-address-template-card .form-grid.two{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px 12px!important}
+.rcld-address-template-card .registration-same-address{display:flex!important;align-items:center!important;gap:7px!important;margin:4px 0 8px!important;font:12px Arial,sans-serif!important;color:#222!important}
+.rcld-address-template-card .registration-same-address input{width:15px!important;height:15px!important;min-height:15px!important}
+.rcld-contact-template-grid{display:grid!important;grid-template-columns:1fr 1fr!important;gap:36px!important;padding:3px 28px 0!important}
+.rcld-contact-template-grid>div{display:grid!important;gap:10px!important;align-content:start!important}
+.rcld-contact-template-grid .form-field>span{font:700 16px "Times New Roman",Georgia,serif!important;color:#111!important}
+.rcld-contact-template-grid .form-field input{border:0!important;border-bottom:1px dotted #c1c7d2!important;border-radius:0!important;font:17px "Times New Roman",Georgia,serif!important}
+.rcld-contact-template-grid .digit-box-field .rcld-digit-boxes{display:flex!important;gap:3px!important}
+.rcld-contact-template-grid .digit-box-field .rcld-digit-boxes input{width:25px!important;min-width:0!important;height:30px!important;min-height:30px!important;padding:0!important;text-align:center!important;border:1px solid #c4cbd7!important;border-radius:0!important;font:15px "Times New Roman",Georgia,serif!important}
+.rcld-qualification-table-wrap{width:100%!important;overflow-x:auto!important}
+.rcld-input-qualification-table{width:100%!important;min-width:680px!important;table-layout:fixed!important;border-collapse:collapse!important;font-family:Arial,sans-serif!important}
+.rcld-input-qualification-table th,.rcld-input-qualification-table td{border:1px solid #304bff!important;text-align:center!important;vertical-align:middle!important;padding:7px 5px!important;white-space:normal!important}
+.rcld-input-qualification-table th{background:#fff!important;color:#111!important;font:700 13px Arial,sans-serif!important}
+.rcld-input-qualification-table td{background:#c5e2fa!important}
+.rcld-input-qualification-table td input{width:100%!important;min-width:0!important;min-height:34px!important;padding:4px!important;border:0!important;border-radius:0!important;background:transparent!important;text-align:center!important;font:14px Arial,sans-serif!important;color:#111!important}
+.rcld-input-qualification-table th:nth-child(1){width:21%!important}.rcld-input-qualification-table th:nth-child(2){width:24%!important}.rcld-input-qualification-table th:nth-child(3){width:25%!important}.rcld-input-qualification-table th:nth-child(4){width:11%!important}.rcld-input-qualification-table th:nth-child(5){width:19%!important}
+.rcld-registration-sheet .rcld-enclosures{display:flex!important;flex-wrap:wrap!important;justify-content:space-between!important;gap:12px 20px!important;padding:5px 34px 8px!important}
+.rcld-registration-sheet .rcld-enclosures label{display:flex!important;align-items:center!important;gap:9px!important;color:#111!important;font:15px "Times New Roman",Georgia,serif!important}
+.rcld-registration-sheet .rcld-enclosures input{width:20px!important;height:20px!important;min-height:20px!important;accent-color:#1700b5!important}
+.rcld-screen-footer{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:36px!important;padding:14px 30px 22px!important;align-items:end!important}
+.rcld-screen-footer>.form-field{min-height:92px!important;justify-content:end!important}
+.rcld-screen-footer>.form-field>span{order:2!important;text-align:center!important;color:#111!important;font:15px "Times New Roman",Georgia,serif!important}
+.rcld-screen-footer>.form-field input:not([type=file]){order:1!important;border:0!important;border-bottom:4px solid #1700b5!important;border-radius:0!important;text-align:center!important;font:15px "Times New Roman",Georgia,serif!important}
+.rcld-screen-footer .rcld-signature-field input[type=file]{order:1!important;width:100%!important;min-height:40px!important;border:0!important;border-bottom:4px solid #1700b5!important;border-radius:0!important;font-size:11px!important}
+.rcld-screen-footer .rcld-signature-field small{order:3!important;text-align:center!important}
+.rcld-screen-footer .rcld-signature-field img{order:0!important;display:block!important;max-width:100%!important;max-height:55px!important;object-fit:contain!important;margin:0 auto 3px!important}
+.rcld-registration-sheet .form-actions{padding:14px 28px!important;background:#fff!important;border-top:1px solid #e4e7ed!important}
+.rcld-print-document{display:none}
+.erp-sidebar .brand{display:flex!important;align-items:center!important;gap:10px!important;min-height:66px!important;padding:5px 9px 17px!important;overflow:visible!important}
+.erp-sidebar .brand-mark-image{display:block!important;flex:0 0 52px!important;width:52px!important;height:52px!important;max-width:52px!important;max-height:52px!important;object-fit:contain!important;background:#fff!important;border:2px solid rgba(255,255,255,.85)!important;border-radius:7px!important;padding:1px!important;box-sizing:border-box!important;opacity:1!important;visibility:visible!important}
+.erp-sidebar .brand-copy{min-width:0!important}
+.erp-sidebar .brand-copy strong{font-size:16px!important;line-height:1.2!important;color:#fff!important}
+.erp-sidebar .brand-copy span{display:block!important;font-size:10px!important;line-height:1.3!important;color:#c6d0df!important;white-space:normal!important}
+.erp-shell.sidebar-collapsed .erp-sidebar .brand{justify-content:center!important;padding-left:0!important;padding-right:0!important}
+.erp-shell.sidebar-collapsed .erp-sidebar .brand-mark-image{flex-basis:46px!important;width:46px!important;height:46px!important}
+@media(max-width:900px){
+  .rcld-registration-sheet{margin:12px auto 24px!important}
+  .rcld-registration-brand{grid-template-columns:88px minmax(0,1fr)!important;min-height:105px!important;padding:8px 12px!important}
+  .rcld-screen-logo{width:84px!important;height:84px!important}
+  .rcld-brand-title h2{font-size:clamp(18px,3vw,27px)!important}
+  .rcld-brand-title span{font-size:12px!important;margin-top:8px!important}
+  .rcld-office-template-grid{padding-left:16px!important;padding-right:16px!important;gap:8px 12px!important}
+  .rcld-address-grid{gap:14px!important;padding-left:16px!important;padding-right:16px!important}
+  .rcld-contact-template-grid{gap:18px!important;padding-left:16px!important;padding-right:16px!important}
+}
+@media(max-width:650px){
+  .rcld-registration-brand{grid-template-columns:64px minmax(0,1fr)!important;gap:8px!important;min-height:82px!important;padding:7px 9px!important}
+  .rcld-screen-logo{width:62px!important;height:62px!important}
+  .rcld-brand-title h2{font-size:17px!important;line-height:1.1!important}
+  .rcld-brand-title span{font-size:9px!important;margin-top:6px!important}
+  .rcld-registration-sheet .rcld-form-section>h3{font-size:16px!important;padding:8px 14px!important}
+  .rcld-office-template-grid{grid-template-columns:1fr!important;padding:0 14px 8px!important}
+  .rcld-inline-field{grid-template-columns:130px minmax(0,1fr)!important}
+  .rcld-office-extra{grid-template-columns:1fr!important;padding:8px 14px!important}
+  .rcld-applicant-template-grid{grid-template-columns:1fr!important;padding:0 14px!important}
+  .rcld-applicant-template-fields{grid-template-columns:1fr!important}
+  .rcld-applicant-template-fields .form-field:first-child,.rcld-applicant-template-fields .form-field:nth-child(2){grid-column:auto!important}
+  .rcld-photo-template{width:170px!important;min-height:175px!important}
+  .rcld-address-grid,.rcld-contact-template-grid{grid-template-columns:1fr!important;padding-left:14px!important;padding-right:14px!important}
+  .rcld-address-template-card .form-grid.two{grid-template-columns:1fr 1fr!important}
+  .rcld-registration-sheet .rcld-enclosures{padding:4px 14px 8px!important;justify-content:flex-start!important}
+  .rcld-screen-footer{grid-template-columns:1fr!important;gap:12px!important;padding:12px 16px!important}
+  .rcld-screen-footer>.form-field{min-height:68px!important}
+}
+@media print{
+  .rcld-registration-sheet{display:none!important}
+  .rcld-print-document{display:block!important}
+  .erp-sidebar .brand-mark-image{display:none!important}
+}
