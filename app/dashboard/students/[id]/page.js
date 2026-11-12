@@ -79,7 +79,7 @@ export default function StudentDetailsPage({params}){
     const photo=student.photoUrl
       ?'<img class="student-photo" src="'+esc(student.photoUrl)+'" alt="Student photograph"/>'
       :'<div class="student-photo photo-placeholder"></div>';
-    const logoUrl=window.location.origin+"/assets/rcld-logo.png";
+    const logoUrl=window.location.origin+"/assets/logo.png";
     const w=window.open("","_blank");
     if(!w){setMessage("Please allow pop-ups to print the student form.");return;}
     const html='<!doctype html><html><head><meta charset="utf-8"/><title>RCLD Student Registration Form - '+val(student.applicantName)+'</title><style>'+
