@@ -130,3 +130,50 @@ Never assume a source rollback will reverse database writes. Restore MongoDB fro
 | Verification | Documentation files committed and checkpoint branch created; application lint/build/browser checks not run |
 
 The checkpoint branch was created from main immediately after the documentation refresh commits. This entry is a later log update on main; the branch intentionally preserves the documentation state immediately before this self-referential log entry.
+
+
+## Upcoming delivery checkpoints
+
+Tick a checkpoint only after the related workflow is implemented, verified against representative data and documented. A page or API route alone is not sufficient evidence of completion.
+
+### Milestone 1 — Security baseline
+- [ ] Remove source-code fallback Super Admin credentials.
+- [ ] Require a strong AUTH_SECRET in every deployed environment.
+- [ ] Remove plain-text password compatibility and define a safe legacy-password migration.
+- [ ] Audit every API route for session, role, permission and record-level authorization.
+- [ ] Protect or disable development utility endpoints in production.
+- [ ] Test both allowed and denied access paths.
+
+### Milestone 2 — Student identity and admission
+- [ ] Complete student login and student-scoped session identity.
+- [ ] Finalize registration-to-enrollment data relationships.
+- [ ] Enforce separate online and offline student workflows.
+- [ ] Verify student lifecycle status transitions and batch movement history.
+
+### Milestone 3 — Fees and payment integrity
+- [ ] Implement Super Admin-controlled discount approval.
+- [ ] Finalize installment and fee-plan rules.
+- [ ] Verify receipts, partial payments, payment history and outstanding calculations.
+- [ ] Complete PhonePe signature-verified callbacks/webhooks, idempotency and reconciliation before activating paid enrollments.
+
+### Milestone 4 — Academic delivery
+- [ ] Verify Course → Subject → Chapter mapping end to end.
+- [ ] Verify Course → Main Batch → Batch Series → Schedule mapping and timetable conflict rules.
+- [ ] Complete subject/faculty assignment and chapter-progress tracking.
+- [ ] Implement exams, results and certificates.
+
+### Milestone 5 — Employee and institute operations
+- [ ] Complete employee role/permission administration and enforcement.
+- [ ] Verify employee attendance, breaks, official/personal out-time and leave workflows.
+- [ ] Verify employee task assignment and employee dashboard visibility.
+
+### Milestone 6 — Operational readiness
+- [ ] Complete CRM enquiry/follow-up/admission-conversion workflows.
+- [ ] Complete audit logging, notifications and operational monitoring.
+- [ ] Add safe, repeatable demo-data seed and cleanup scripts.
+- [ ] Add automated tests for fees, timetable conflicts, access control and migrations.
+- [ ] Verify responsive behavior and receipt print preview.
+- [ ] Run npm run lint and npm run build; record results and unresolved failures.
+- [ ] Record a release checkpoint and a separate verified MongoDB backup reference.
+
+**Current status:** These are outstanding delivery gates from the implementation audit. Do not mark them complete until verified.
