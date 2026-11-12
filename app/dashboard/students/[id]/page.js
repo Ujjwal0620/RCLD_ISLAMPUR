@@ -156,7 +156,6 @@ export default function StudentDetailsPage({params}){
     const total=isSingle?Number(payment.amount||0):payable;
     const receiptNo=payment?.receiptNo||"—";
     const formatDate=v=>v?new Date(String(v).slice(0,10)+"T00:00:00").toLocaleDateString("en-GB"):"—";
-    const receiptDate=formatDate(payment?.date)||"—";
     const enrollmentDate=formatDate(student.admissionDate||student.createdAt);
     const course=courses.find(x=>String(x.code||"").toUpperCase()===String(student.courseCode||"").toUpperCase());
     const duration=student.courseDuration||course?.duration||course?.durationText||"—";
@@ -201,7 +200,7 @@ export default function StudentDetailsPage({params}){
       '<header class="header"><img class="logo" src="'+esc(logoUrl)+'" alt="RCLD Islampur logo"/><div class="heading"><h2>STUDENT RECEIPT</h2><h1>RASHTRIYA COMPUTER LITERACY DRIVE</h1><p>A Mission Organised by Smith Services Pvt. Ltd.</p></div></header>'+
       '<div class="org-strip"><div class="org-line"><span>RCLD, Islampur</span><span>AEC – Approved Under Skill Development</span><span>AEC Code: RCLD/ISL/001</span></div><span class="address">9/15, A/9, Accheletalla, Islampur</span></div>'+
       '<div class="top"><section class="panel"><div class="panel-title">STUDENT / RECEIPT INFORMATION</div><div class="student-fields">'+
-      '<div class="field"><b>Receipt No.</b><span>'+esc(receiptNo)+'</span></div><div class="field"><b>Date</b><span>'+esc(formatDate(payment?.date)||formatDate(new Date()))+'</span></div>'+
+      '<div class="field"><b>Receipt No.</b><span>'+esc(receiptNo)+'</span></div><div class="field"><b>Date</b><span>'+esc(formatDate(payment?.date||new Date()))+'</span></div>'+
       '<div class="field"><b>Enrolment No.</b><span>'+esc(student.enrollmentNo||student.regnNo||"—")+'</span></div><div class="field"><b>Enrolment Date</b><span>'+esc(enrollmentDate)+'</span></div>'+
       '<div class="field wide"><b>Student Name</b><span>'+esc(student.applicantName||"—")+'</span></div>'+
       '<div class="field"><b>Course</b><span>'+esc(student.courseName||student.courseCode||"—")+'</span></div><div class="field"><b>Duration</b><span>'+esc(duration)+'</span></div>'+
