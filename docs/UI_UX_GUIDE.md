@@ -10,6 +10,19 @@ Use the reference for its restrained admin-dashboard presentation: persistent na
 
 The earlier Lexa reference remains part of the project's visual history. Hando is the current direction for the ERP workspace.
 
+## Current UI delivery checkpoint — 12 November 2026
+
+The shared ERP shell and dashboard have received a compact-density pass on main (commit 707b3c90c468d42fbcd4c69efdf8e81f82b9d27d).
+
+Delivered in that change:
+- Reduced the visual height and spacing of the shared dashboard shell, page headings, cards, KPI panels, tables, forms and buttons.
+- Reduced dashboard chart/panel heights so more operational information fits in the viewport.
+- Added accessible chart labels and hover tooltip text to existing trend-chart points and mini-bar columns.
+- Preserved existing dashboard API wiring and data sources; no fabricated chart values were introduced.
+- Retained the existing light/dark theme and responsive styling.
+
+This is a compact shared-style and dashboard improvement, not a completed page-by-page redesign of every ERP module. No lint, production build or browser regression run was recorded for this checkpoint. Verify locally before treating the change as release-ready.
+
 ## Design principles
 
 1. **Operational clarity first.** Staff should understand the current page, its main action and the state of the records without visual noise.
