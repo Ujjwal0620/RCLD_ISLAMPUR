@@ -136,15 +136,16 @@ export default function StudentDetailsPage({params}){
     const enrollmentDate=student.admissionDate||student.createdAt||"—";
     const address=[student.presentAddress||student.address,student.postOffice&&("P.O. "+student.postOffice),student.policeStation&&("P.S. "+student.policeStation),student.district,student.state,student.pin&&("PIN "+student.pin)].filter(Boolean).join(", ");
     const hasPayment=!!payment;
-    const isCash=hasPayment&&String(payment.method||"").toLowerCase()==="cash";
-    const isOnline=hasPayment&&!isCash;
+    const paymentMethod=String(payment?.method||"").trim().toLowerCase();
+    const isCash=hasPayment&&paymentMethod==="cash";
+    const isOnline=hasPayment&&!!paymentMethod&&paymentMethod!=="cash";
     const logoUrl=window.location.origin+"/assets/logo.png";
     const w=window.open("","_blank");
     if(!w){setMessage("Please allow pop-ups to print the fee receipt.");return;}
     const detail=(label,val,cls="")=>'<div class="detail '+cls+'"><b>'+esc(label)+'</b><span>'+esc(val)+'</span></div>';
-    const extraTypes=["other","additional","lab charge","lab fee","id card","examination fee","exam fee"];
-    const extraPayments=payments.filter(p=>extraTypes.includes(String(p.paymentType||"").toLowerCase()));
-    const installmentPayments=payments.filter(p=>["installment","course fee","general"].includes(String(p.paymentType||"").toLowerCase()));
+    const normalizedType=p=>String(p.paymentType||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+    const extraPayments=payments.filter(p=>{const t=normalizedType(p);return /(^| )(other|others|additional)( |$)/.test(t)||t.includes("lab")||t.includes("id card")||t.includes("examination")||t.includes("exam fee");});
+    const installmentPayments=payments.filter(p=>{const t=normalizedType(p);return t.includes("installment")||t.includes("instalment")||t==="course fee"||t==="general";});
     const feeRows=[
       ["Course / Tuition Fee",money(fee.totalFee)],
       ["Discount","− "+money(fee.discount)],
@@ -153,7 +154,7 @@ export default function StudentDetailsPage({params}){
       ["Instalment Payments Received",money(installmentPayments.reduce((n,p)=>n+Number(p.amount||0),0))],
       ...extraPayments.map(p=>["Others — "+(p.note||p.reference||p.paymentType||"Additional charge"),money(p.amount)])
     ].map(r=>'<tr><td>'+esc(r[0])+'</td><td class="amount">'+esc(r[1])+'</td></tr>').join("");
-    const historyRows=payments.slice().reverse().map(p=>'<tr><td>'+esc(p.date||"—")+'</td><td>'+esc(p.receiptNo||"—")+'</td><td>'+esc(p.paymentType||"General")+(p.note?'<small>'+esc(p.note)+'</small>':"")+'</td><td>'+esc(p.method||"—")+'</td><td class="amount">'+money(p.amount)+'</td></tr>').join("");
+    const historyRows=payments.slice().reverse().map(p=>{const purpose=p.note||p.reference||p.paymentType||"General";return '<tr><td>'+esc(p.date||"—")+'</td><td>'+esc(p.receiptNo||"—")+'</td><td>'+esc(p.paymentType||"General")+'<small>'+esc(purpose)+'</small></td><td>'+esc(p.method||"—")+'</td><td class="amount">'+money(p.amount)+'</td></tr>';}).join("");
     const proof=payment?.screenshotUrl?'<a class="proof-link" href="'+esc(payment.screenshotUrl)+'" target="_blank" rel="noreferrer"><img class="proof-image" src="'+esc(payment.screenshotUrl)+'" alt="Uploaded payment proof"/><span>Uploaded payment proof</span></a>':'<span class="muted">No payment proof uploaded for this entry</span>';
     const css=
       '@page{size:A5 portrait;margin:4mm}'+
@@ -184,11 +185,11 @@ export default function StudentDetailsPage({params}){
       '</div></section><section class="panel"><div class="section-title">PAYMENT HISTORY SUMMARY</div><div class="student-grid">'+
       detail("Total Fees",money(payable))+detail("Fees Paid",money(paidAll))+detail("Amount Due",money(dueAll))+detail("This Receipt",money(payment?.amount||0))+detail("Payment Method",payment?.method||"—")+
       '</div><div class="summary"><div><small>TOTAL FEES</small><strong>'+money(payable)+'</strong></div><div><small>FEES PAID</small><strong>'+money(paidAll)+'</strong></div><div class="due"><small>AMOUNT DUE</small><strong>'+money(dueAll)+'</strong></div></div></section></div>'+
-      '<section class="fees"><div class="section-title">FEE DETAILS</div><table><thead><tr><th>Fee Particulars / Purpose</th><th class="amount">Amount</th></tr></thead><tbody>'+feeRows+'<tr class="fee-total"><td>TOTAL COURSE & ONE-TIME FEES</td><td class="amount">'+money(payable)+'</td></tr></tbody></table><div class="words"><b>IN WORDS</b><span>'+esc(numberToIndianWords(payable))+'</span></div></section>'+
+      '<section class="fees"><div class="section-title">FEE DETAILS</div><table><thead><tr><th>Fee Particulars / Purpose</th><th class="amount">Amount</th></tr></thead><tbody>'+feeRows+'<tr class="fee-total"><td>TOTAL FEES PAYABLE</td><td class="amount">'+money(payable)+'</td></tr></tbody></table><div class="words"><b>IN WORDS</b><span>'+esc(numberToIndianWords(payable))+'</span></div></section>'+
       '<section class="history"><div class="section-title">PAYMENT HISTORY — '+payments.length+' ENTRIES</div><table><thead><tr><th style="width:15%">Date</th><th style="width:25%">Receipt No.</th><th style="width:29%">Purpose / Type</th><th style="width:16%">Method</th><th style="width:15%" class="amount">Amount</th></tr></thead><tbody>'+(historyRows||'<tr><td colspan="5">No payment records found.</td></tr>')+'</tbody></table></section>'+
       '<section class="transaction"><div><div class="section-title">CURRENT PAYMENT DETAILS</div>'+detail("Amount Received",money(payment?.amount||0))+detail("Payment Date",payment?.date||receiptDate)+detail("Payment Type",payment?.paymentType||"General")+detail("Method",payment?.method||"—")+detail("UTR No.",payment?.utrNumber||payment?.reference||"—")+detail("Recorded By",payment?.recordedBy||fee.updatedBy||"—")+'<div class="payment-flags"><span class="check"><i class="square">'+(isCash?"✓":"")+'</i> Cash</span><span class="check"><i class="square">'+(isOnline?"✓":"")+'</i> Online</span></div></div><div class="payment-proof"><div class="section-title">PAYMENT PROOF / UPLOAD</div>'+proof+'</div></section>'+
       '<div class="signatures"><div class="sign">FOR RCLD – ISLAMPUR<small>AUTHORIZED SIGNATORY</small></div><div class="sign">WITH AFFIX SEAL<small>OFFICIAL STAMP / SEAL</small></div></div>'+
-      '<div class="receipt-foot">Computer-generated receipt · Please retain this receipt for your records.</div></main><script>window.addEventListener("load",()=>{const imgs=[...document.images];Promise.all(imgs.map(img=>img.decode?img.decode().catch(()=>{}):Promise.resolve())).then(()=>{const page=document.querySelector(".receipt");const scale=Math.min(1,page.clientHeight/Math.max(page.scrollHeight,page.clientHeight));if(scale<1){page.style.transformOrigin="top left";page.style.transform="scale("+scale+")";page.style.width=(140/scale)+"mm";page.style.height=(202/scale)+"mm";}setTimeout(()=>window.print(),300);});});</script></body></html>';
+      '<div class="receipt-foot">Computer-generated receipt · Please retain this receipt for your records.</div></main><script>window.addEventListener("load",()=>{const imgs=[...document.images];Promise.all(imgs.map(img=>img.decode?img.decode().catch(()=>{}):Promise.resolve())).then(()=>{const page=document.querySelector(".receipt");const scale=Math.min(1,page.clientHeight/Math.max(page.scrollHeight,page.clientHeight));if(scale<1){page.style.transformOrigin="top left";page.style.transform="scaleY("+scale+")";}setTimeout(()=>window.print(),300);});});</script></body></html>';
     w.document.open();w.document.write(html);w.document.close();
   }
   async function saveAttendance(e){e.preventDefault();setMessage("");if(!student)return;const r=await fetch("/api/students/"+student._id+"/attendance",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(attForm)});const d=await r.json();if(!r.ok){setMessage(d.error||"Unable to save attendance.");return}const ar=await fetch("/api/students/"+student._id+"/attendance",{cache:"no-store"});setAttendance(await ar.json());setMessage("Attendance saved.");}
