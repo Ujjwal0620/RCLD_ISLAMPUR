@@ -88,7 +88,7 @@ Fees and payments are business records, not just editable profile fields.
 
 ## UI conventions
 
-The target is a compact, professional ERP interface inspired by Lexa Node. Keep the visual language consistent across pages. Prefer shared components and existing CSS conventions over one-off styles.
+The target is a compact, professional ERP interface inspired by the Hando admin dashboard. Follow docs/UI_UX_GUIDE.md for the current visual direction, density rules, shared components, responsive behavior and accessibility requirements.
 
 Every data-heavy page should be considered at desktop, tablet and narrow mobile widths. Use hamburger navigation on small screens and avoid forcing wide tables beyond the viewport without a deliberate scroll or responsive treatment.
 
