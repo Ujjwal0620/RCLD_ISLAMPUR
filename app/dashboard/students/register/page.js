@@ -154,120 +154,126 @@ export default function RegisterStudentPage() {
 
       <form className="registration-form rcld-registration-sheet" onSubmit={submit}>
         <div className="rcld-registration-brand">
-          <div className="rcld-brand-seal">RCLD<span>ISLAMPUR</span></div>
-          <div className="rcld-brand-title"><h2>RASHTRIYA COMPUTER<br/>LITERACY DRIVE</h2><span>RCLD ISLAMPUR · STUDENT REGISTRATION FORM</span></div>
-          <div className="rcld-brand-book">RCLD<small>Islampur</small></div>
+          <RCLDLogo className="rcld-screen-logo" />
+          <div className="rcld-brand-title">
+            <h2>RASHTRIYA COMPUTER LITERACY DRIVE</h2>
+            <span>STUDENT REGISTRATION FORM. RCLD ISLAMPUR</span>
+          </div>
         </div>
+        <div className="rcld-screen-divider" />
 
-        <div className="rcld-registration-meta">
-          <label className="form-field"><span>Registration No.</span><input value={form.regnNo} onChange={e=>update("regnNo",e.target.value)} placeholder="Registration number"/></label>
-          <label className="form-field"><span>Date</span><input type="date" value={form.admissionDate} onChange={e=>update("admissionDate",e.target.value)}/></label>
-        </div>
-
-        <section className="form-section rcld-form-section">
+        <section className="form-section rcld-form-section rcld-office-section">
           <h3>Office / Registration Details</h3>
-          <div className="rcld-office-layout">
-            <div className="rcld-office-fields">
-              <label className="form-field"><span>AEC Code</span><input value="RCLD/ISL-001" readOnly/></label>
-              <label className="form-field"><span>Form No. (Office Use)</span><input value={form.formNo} onChange={e=>update("formNo",e.target.value)} placeholder=""/></label>
-              <label className="form-field"><span>Enrollment No. (Auto Generated)</span><input value={form.enrollmentNo} readOnly placeholder="Generated after registration"/></label>
-              <label className="form-field"><span>Course *</span><select value={form.courseCode} onChange={e=>selectCourse(e.target.value)} required><option value="">Select course</option>{courses.map(c=><option key={c._id} value={c.code}>{c.code} — {c.name}</option>)}</select></label>
-              <Field label="Course Code" name="courseCode" value={form.courseCode} onChange={update}/>
-              <Field label="Course Name" name="courseName" value={form.courseName} onChange={update}/>
-              <label className="form-field"><span>Referral / Marketing Source</span><select value={form.referralId} onChange={e=>update("referralId",e.target.value)}><option value="">Direct / No referral</option>{referrals.map(r=><option key={r._id} value={r._id}>{r.name} — {r.marketingEmployeeName}</option>)}</select></label>
-            </div>
-            <label className="registration-photo-card rcld-photo-card">
-              <span className="registration-photo-preview">{form.photoUrl?<img src={form.photoUrl} alt="Student"/>:<Camera size={27}/>}</span>
-              <strong>{photoUploading?"Uploading photo…":"PHOTO Selection Option"}</strong>
-              <span className="ghost-btn"><ImagePlus size={14}/> Choose Photo<input type="file" accept="image/*" disabled={photoUploading} onChange={e=>uploadPhoto(e.target.files?.[0])}/></span>
-              <small>JPG / PNG · Max 5 MB</small>
-            </label>
+          <div className="rcld-office-template-grid">
+            <label className="rcld-inline-field"><span>AEC CODE:</span><input value="RCLD/ISL-001" readOnly /></label>
+            <label className="rcld-inline-field"><span>Registration No:</span><input value={form.regnNo} onChange={e=>update("regnNo",e.target.value)} /></label>
+            <label className="rcld-inline-field"><span>Form No:</span><input value={form.formNo} onChange={e=>update("formNo",e.target.value)} /></label>
+            <label className="rcld-inline-field"><span>Enrollment No:</span><input value={form.enrollmentNo} readOnly placeholder="Auto generated after registration" /></label>
+            <label className="rcld-inline-field"><span>Date:</span><input type="date" value={form.admissionDate} onChange={e=>update("admissionDate",e.target.value)} /></label>
+            <label className="rcld-inline-field rcld-course-field"><span>Course / Course Code:</span><select value={form.courseCode} onChange={e=>selectCourse(e.target.value)} required><option value="">Select course</option>{courses.map(c=><option key={c._id} value={c.code}>{c.name} — {c.code}</option>)}</select></label>
+          </div>
+          <div className="rcld-office-extra">
+            <Field label="Course Name" name="courseName" value={form.courseName} onChange={update}/>
+            <Field label="Course Code" name="courseCode" value={form.courseCode} onChange={update}/>
+            <label className="form-field"><span>Referral / Marketing Source</span><select value={form.referralId} onChange={e=>update("referralId",e.target.value)}><option value="">Direct / No referral</option>{referrals.map(r=><option key={r._id} value={r._id}>{r.name} — {r.marketingEmployeeName}</option>)}</select></label>
           </div>
           {selectedCourse&&<div className="course-fee-summary"><div><span>Course Fee</span><strong>₹{Number(selectedCourse.fee||0).toLocaleString("en-IN")}</strong></div><div><span>Admission Fee</span><strong>₹{Number(selectedCourse.admissionFee||0).toLocaleString("en-IN")}</strong></div><div><span>Initial Payable</span><strong>₹{(Number(selectedCourse.fee||0)+Number(selectedCourse.admissionFee||0)).toLocaleString("en-IN")}</strong></div></div>}
         </section>
 
-        <section className="form-section rcld-form-section">
+        <section className="form-section rcld-form-section rcld-applicant-section">
           <h3>Applicant Details</h3>
-          <div className="rcld-applicant-grid">
-            <Field label="① Name" name="applicantName" value={form.applicantName} onChange={update} required/>
-            <Field label="② Date of Birth" name="dateOfBirth" type="date" value={form.dateOfBirth} onChange={update}/>
-            <label className="form-field"><span>③ Sex</span><select value={form.sex} onChange={e=>update("sex",e.target.value)}><option value="">Select</option><option value="M">M - Male</option><option value="F">F - Female</option></select></label>
-            <Field label="④ Nationality" name="nationality" value={form.nationality} onChange={update}/>
-            <div className="rcld-applicant-wide"><Field label="⑤ Father / Mother / Husband" name="fatherOrHusbandName" value={form.fatherOrHusbandName} onChange={update}/></div>
+          <div className="rcld-applicant-template-grid">
+            <div className="rcld-applicant-template-fields">
+              <Field label="Name" name="applicantName" value={form.applicantName} onChange={update} required/>
+              <Field label="Father/Mother/Husband Name" name="fatherOrHusbandName" value={form.fatherOrHusbandName} onChange={update}/>
+              <Field label="DOB" name="dateOfBirth" type="date" value={form.dateOfBirth} onChange={update}/>
+              <label className="form-field"><span>Sex</span><select value={form.sex} onChange={e=>update("sex",e.target.value)}><option value="">Select</option><option value="M">M - Male</option><option value="F">F - Female</option></select></label>
+              <Field label="Nationality" name="nationality" value={form.nationality} onChange={update}/>
+            </div>
+            <label className="registration-photo-card rcld-photo-card rcld-photo-template">
+              <span className="registration-photo-preview">{form.photoUrl?<img src={form.photoUrl} alt="Student"/>:<Camera size={34}/>}</span>
+              <strong>{photoUploading?"Uploading photo…":"Student Photograph"}</strong>
+              <span className="ghost-btn"><ImagePlus size={14}/> Choose Photo<input type="file" accept="image/*" disabled={photoUploading} onChange={e=>uploadPhoto(e.target.files?.[0])}/></span>
+              <small>JPG / PNG · Max 5 MB</small>
+            </label>
           </div>
         </section>
 
-        <section className="form-section rcld-form-section">
-          <h3>Address</h3>
+        <section className="form-section rcld-form-section rcld-address-section">
+          <h3>Address Details</h3>
           <div className="registration-address-grid rcld-address-grid">
-            <div className="registration-address-card">
-              <h4>◉ Present Address</h4>
-              <label className="form-field"><span>Ward No. / Village / Town</span><textarea value={form.presentAddress||form.address} onChange={e=>{update("presentAddress",e.target.value);update("address",e.target.value);}} rows="2"/></label>
+            <div className="registration-address-card rcld-address-template-card">
+              <h4>Present Address</h4>
+              <label className="form-field"><span>Ward/Colony/ Village</span><textarea value={form.presentAddress||form.address} onChange={e=>{update("presentAddress",e.target.value);update("address",e.target.value);}} rows="2"/></label>
               <div className="form-grid two">
-                <Field label="P.O." name="postOffice" value={form.postOffice} onChange={update}/>
-                <Field label="P.S." name="policeStation" value={form.policeStation} onChange={update}/>
+                <Field label="PO" name="postOffice" value={form.postOffice} onChange={update}/>
+                <Field label="PS" name="policeStation" value={form.policeStation} onChange={update}/>
                 <label className="form-field"><span>State</span><select value={form.state} onChange={e=>{update("state",e.target.value);update("district","");}}><option value="">Select state</option>{indiaLocations.map(st=><option key={st.code} value={st.name}>{st.name}</option>)}</select></label>
                 <label className="form-field"><span>District</span><select value={form.district} disabled={!form.state} onChange={e=>update("district",e.target.value)}><option value="">Select district</option>{(indiaLocations.find(st=>st.name===form.state)?.districts||[]).map(d=><option key={d.code} value={d.name}>{d.name}</option>)}</select></label>
                 <Field label="PIN" name="pin" value={form.pin} onChange={update} maxLength={10}/>
-                <Field label="Nearest Landmark" name="nearestLandmark" value={form.nearestLandmark} onChange={update}/>
+                <Field label="Nearest Land Mark" name="nearestLandmark" value={form.nearestLandmark} onChange={update}/>
               </div>
             </div>
-            <div className="registration-address-card">
+            <div className="registration-address-card rcld-address-template-card">
               <h4>Permanent Address</h4>
               <label className="registration-same-address"><input type="checkbox" checked={!!form.sameAsPresentAddress} onChange={e=>update("sameAsPresentAddress",e.target.checked)}/> Same As Present Address</label>
               {!form.sameAsPresentAddress&&<>
-                <label className="form-field"><span>Ward No. / Village / Town</span><textarea value={form.permanentAddress} onChange={e=>update("permanentAddress",e.target.value)} rows="2"/></label>
+                <label className="form-field"><span>Ward/Colony/ Village</span><textarea value={form.permanentAddress} onChange={e=>update("permanentAddress",e.target.value)} rows="2"/></label>
                 <div className="form-grid two">
-                  <Field label="P.O." name="permanentPostOffice" value={form.permanentPostOffice} onChange={update}/>
+                  <Field label="PO" name="permanentPostOffice" value={form.permanentPostOffice} onChange={update}/>
                   <label className="form-field"><span>State</span><select value={form.permanentState} onChange={e=>{update("permanentState",e.target.value);update("permanentDistrict","");}}><option value="">Select state</option>{indiaLocations.map(st=><option key={st.code} value={st.name}>{st.name}</option>)}</select></label>
                   <label className="form-field"><span>District</span><select value={form.permanentDistrict} disabled={!form.permanentState} onChange={e=>update("permanentDistrict",e.target.value)}><option value="">Select district</option>{(indiaLocations.find(st=>st.name===form.permanentState)?.districts||[]).map(d=><option key={d.code} value={d.name}>{d.name}</option>)}</select></label>
                   <Field label="PIN" name="permanentPin" value={form.permanentPin} onChange={update}/>
-                  <Field label="Nearest Landmark" name="permanentNearestLandmark" value={form.permanentNearestLandmark} onChange={update}/>
+                  <Field label="Nearest Land Mark" name="permanentNearestLandmark" value={form.permanentNearestLandmark} onChange={update}/>
                 </div>
               </>}
             </div>
           </div>
         </section>
 
-        <section className="form-section rcld-form-section">
+        <section className="form-section rcld-form-section rcld-contact-section">
           <h3>Contact Details</h3>
-          <div className="rcld-contact-grid">
-            <DigitBoxes label="Mobile No. (10 digits)" value={form.mobileNumber} onChange={v=>update("mobileNumber",v)} length={10} required/>
-            <DigitBoxes label="Mob. of Guardian (10 digits)" value={form.guardianContactNumber} onChange={v=>update("guardianContactNumber",v)} length={10} required/>
-            <DigitBoxes label="WhatsApp No. (10 digits)" value={form.whatsappNumber} onChange={v=>update("whatsappNumber",v)} length={10} required/>
-            <Field label="Email Id" name="email" value={form.email} onChange={update} required type="email"/>
-            <Field label="Aadhaar No. (12 digits)" name="aadhaarNumber" value={form.aadhaarNumber} onChange={update} required maxLength={12} inputMode="numeric" pattern="[0-9]{12}"/>
+          <div className="rcld-contact-template-grid">
+            <div>
+              <DigitBoxes label="Mobile No" value={form.mobileNumber} onChange={v=>update("mobileNumber",v)} length={10} required/>
+              <DigitBoxes label="WhatsApp No" value={form.whatsappNumber} onChange={v=>update("whatsappNumber",v)} length={10} required/>
+              <Field label="Aadhaar No" name="aadhaarNumber" value={form.aadhaarNumber} onChange={update} required maxLength={12} inputMode="numeric" pattern="[0-9]{12}"/>
+            </div>
+            <div>
+              <DigitBoxes label="Mobile No Guardian" value={form.guardianContactNumber} onChange={v=>update("guardianContactNumber",v)} length={10} required/>
+              <Field label="Email" name="email" value={form.email} onChange={update} required type="email"/>
+            </div>
           </div>
         </section>
 
-        <section className="form-section rcld-form-section">
-          <h3>Qualifications</h3>
-          <div className="rcld-qualification-grid">
-            <Field label="① Class / Sem / Course" name="examCourse" value={form.qualifications[0].examCourse} onChange={(_,v)=>updateQ("examCourse",v)}/>
-            <Field label="② Institute" name="collegeInstitute" value={form.qualifications[0].collegeInstitute} onChange={(_,v)=>updateQ("collegeInstitute",v)}/>
-            <Field label="③ Board / Council / University" name="boardUniversity" value={form.qualifications[0].boardUniversity} onChange={(_,v)=>updateQ("boardUniversity",v)}/>
-            <Field label="④ Year" name="year" value={form.qualifications[0].year} onChange={(_,v)=>updateQ("year",v)}/>
-            <Field label="⑤ Percentage of Marks" name="percentage" value={form.qualifications[0].percentage} onChange={(_,v)=>updateQ("percentage",v)}/>
+        <section className="form-section rcld-form-section rcld-qualification-section">
+          <h3>Qualification Details</h3>
+          <div className="rcld-qualification-table-wrap">
+            <table className="rcld-input-qualification-table">
+              <thead><tr><th>Class/Sem/Course</th><th>Institute/School/College</th><th>Board/Council/University</th><th>Year</th><th>Percentage Of Marks</th></tr></thead>
+              <tbody><tr>
+                <td><input aria-label="Class/Sem/Course" value={form.qualifications[0].examCourse} onChange={e=>updateQ("examCourse",e.target.value)}/></td>
+                <td><input aria-label="Institute/School/College" value={form.qualifications[0].collegeInstitute} onChange={e=>updateQ("collegeInstitute",e.target.value)}/></td>
+                <td><input aria-label="Board/Council/University" value={form.qualifications[0].boardUniversity} onChange={e=>updateQ("boardUniversity",e.target.value)}/></td>
+                <td><input aria-label="Year" value={form.qualifications[0].year} onChange={e=>updateQ("year",e.target.value)}/></td>
+                <td><input aria-label="Percentage Of Marks" value={form.qualifications[0].percentage} onChange={e=>updateQ("percentage",e.target.value)}/></td>
+              </tr></tbody>
+            </table>
           </div>
         </section>
 
-        <section className="form-section rcld-form-section">
+        <section className="form-section rcld-form-section rcld-enclosure-section">
           <h3>Enclosure</h3>
           <div className="checks rcld-enclosures">
-            {[[ "stampPhoto","2 Passport size photo"],["qualifyingCertificates","Aadhaar / Qualifying certificates"],["matricAdmitCard","Admit / Caste worksheet"]].map(([key,label])=><label key={key}><input type="checkbox" checked={!!form.enclosures[key]} onChange={e=>setForm(current=>({...current,enclosures:{...current.enclosures,[key]:e.target.checked}}))}/>{label}</label>)}
+            {[[ "stampPhoto","2 Passport Size photo"],["qualifyingCertificates","Aadhaar / Qualifying Certificates"],["matricAdmitCard","Admit / Registration Details"]].map(([key,label])=><label key={key}><input type="checkbox" checked={!!form.enclosures[key]} onChange={e=>setForm(current=>({...current,enclosures:{...current.enclosures,[key]:e.target.checked}}))}/>{label}</label>)}
           </div>
         </section>
 
-        <section className="form-section rcld-form-section">
-          <h3>Declaration</h3>
-          <p className="declaration">I do hereby declare that all the information stated in this application form is true to the best of my knowledge. I have read and understood the rules and regulations and agree to abide by them.</p>
-          <div className="rcld-declaration-grid">
-            <Field label="Date" name="declarationDate" type="date" value={form.declarationDate} onChange={update}/>
-            <Field label="Place" name="declarationPlace" value={form.declarationPlace} onChange={update}/>
-            <label className="form-field"><span>Student Signature Image *</span><input key={signatureInputKey} type="file" accept="image/*" disabled={signatureUploading} onChange={e=>uploadSignature(e.target.files?.[0])} required={!form.signatureUrl}/><small>{signatureUploading?"Uploading signature to Cloudinary…":"PNG/JPG image · Maximum 3 MB"}</small>{form.signatureUrl&&<img src={form.signatureUrl} alt="Uploaded student signature" style={{maxWidth:220,maxHeight:80,objectFit:"contain",background:"#fff",padding:8,border:"1px solid #d5dce7",borderRadius:8}}/>}</label>
-          </div>
-        </section>
-
+        <footer className="rcld-screen-footer">
+          <label className="form-field"><span>Date</span><input type="date" value={form.declarationDate} onChange={e=>update("declarationDate",e.target.value)}/></label>
+          <label className="form-field"><span>Place</span><input value={form.declarationPlace} onChange={e=>update("declarationPlace",e.target.value)}/></label>
+          <label className="form-field rcld-signature-field"><span>Student Signature</span><input key={signatureInputKey} type="file" accept="image/*" disabled={signatureUploading} onChange={e=>uploadSignature(e.target.files?.[0])} required={!form.signatureUrl}/><small>{signatureUploading?"Uploading signature…":"PNG/JPG · Maximum 3 MB"}</small>{form.signatureUrl&&<img src={form.signatureUrl} alt="Uploaded student signature"/>}</label>
+        </footer>
         {message&&<div className={message.includes("successfully")?"success-msg":"error-msg"}>{message}</div>}
         <div className="form-actions"><a className="ghost-btn" href="/dashboard/students">Cancel</a><button className="primary-btn" disabled={saving||photoUploading||signatureUploading}><Save size={17}/>{saving?"Saving…":"Register Student"}</button></div>
       </form>
