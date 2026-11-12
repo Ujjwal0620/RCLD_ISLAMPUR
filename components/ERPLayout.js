@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Users, UserRoundCog, Menu, X, ShieldCheck, Layers3, BookOpen, BrainCircuit,
   BarChart3, UserRoundX, Clock3, ClipboardList, LogOut, GraduationCap, BookMarked,
   ChevronDown, Search, Bell, Settings2, Sparkles, PanelLeftClose, Megaphone, ContactRound,
-  Sun, Moon, Maximize2, Minimize2
+  Sun, Moon, Maximize2, Minimize2, IdCard, ClipboardCheck
 } from "lucide-react";
 
 const navGroups = [
@@ -17,6 +17,8 @@ const navGroups = [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { href: "/dashboard/ai", label: "AI Copilot", icon: BrainCircuit },
       { href: "/dashboard/students", label: "Students", icon: Users },
+      { href: "/dashboard/students/pending", label: "Pending Admissions", icon: ClipboardCheck },
+      { href: "/dashboard/students/icards", label: "I-Cards", icon: IdCard },
       { href: "/dashboard/employees", label: "Employees", icon: UserRoundCog },
       { href: "/dashboard/batches", label: "Batches & Timetable", icon: Layers3 },
     ],
