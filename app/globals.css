@@ -2956,7 +2956,7 @@ table tbody tr:hover{background:#f8faff}
    and keep the institute name on one clean line in the printed form. */
 @media print {
   .rcld-print-address {
-    border: 1mm solid #8797bf !important;
+    border: 1mm solid #8493BD !important;
   }
   .rcld-print-heading {
     width: 171mm !important;
@@ -2967,7 +2967,8 @@ table tbody tr:hover{background:#f8faff}
   .rcld-print-heading h1 {
     width: 100% !important;
     max-width: 100% !important;
-    font-size: 17pt !important;
+    display: block !important;
+    font-size: 16pt !important;
     line-height: 1.08 !important;
     letter-spacing: -0.15pt !important;
     white-space: nowrap !important;
