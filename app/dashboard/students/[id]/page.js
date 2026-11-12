@@ -124,121 +124,73 @@ export default function StudentDetailsPage({params}){
     if(!student||!fee)return;
     const esc=v=>String(v??"—").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
     const money=v=>"₹"+Number(v||0).toLocaleString("en-IN");
-    const payments=(fee.payments||[]).slice().sort((x,y)=>String(x.date||"").localeCompare(String(y.date||"")));
+    const payments=(fee.payments||[]).slice().sort((a,b)=>String(a.date||"").localeCompare(String(b.date||"")));
     const payment=selectedPayment||payments[payments.length-1]||null;
-    const paymentIndex=payment?payments.findIndex(p=>String(p._id||p.receiptNo||"")===String(payment._id||payment.receiptNo||"")):-1;
-    const paidBefore=paymentIndex>0?payments.slice(0,paymentIndex).reduce((n,p)=>n+Number(p.amount||0),0):0;
-    const paidAfter=paidBefore+Number(payment?.amount||0);
     const payable=Math.max(0,Number(fee.totalFee||0)-Number(fee.discount||0)+Number(fee.admissionFee||0)+Number(fee.registrationFee||0));
-    const paidAll=Number(fee.paid||0),dueAll=Math.max(0,Number(fee.due??(payable-paidAll)));
-    const balanceAfter=Math.max(0,payable-paidAfter);
+    const paidAll=Number(fee.paid??payments.reduce((n,p)=>n+Number(p.amount||0),0));
+    const dueAll=Math.max(0,Number(fee.due??payable-paidAll));
     const course=courses.find(x=>String(x.code||"").toUpperCase()===String(student.courseCode||"").toUpperCase());
     const duration=student.courseDuration||course?.duration||course?.durationText||"—";
     const receiptNo=payment?.receiptNo||"Receipt number not generated";
     const receiptDate=payment?.date||new Date().toLocaleDateString("en-IN");
+    const enrollmentDate=student.admissionDate||student.createdAt||"—";
     const address=[student.presentAddress||student.address,student.postOffice&&("P.O. "+student.postOffice),student.policeStation&&("P.S. "+student.policeStation),student.district,student.state,student.pin&&("PIN "+student.pin)].filter(Boolean).join(", ");
+    const hasPayment=!!payment;
+    const paymentMethod=String(payment?.method||"").trim().toLowerCase();
+    const isCash=hasPayment&&paymentMethod==="cash";
+    const isOnline=hasPayment&&!!paymentMethod&&paymentMethod!=="cash";
+    const logoUrl=window.location.origin+"/assets/logo.png";
     const w=window.open("","_blank");
     if(!w){setMessage("Please allow pop-ups to print the fee receipt.");return;}
-    const css=`
-      @page{size:A4 portrait;margin:5mm}
-      *{box-sizing:border-box}
-      html,body{margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;color:#172b4d}
-      body{font-size:5.8pt;line-height:1.04;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-      .receipt{width:200mm;height:138mm;min-height:138mm;margin:0 auto;border:1px solid #8fa9c9;background:#fff;padding:2mm 2.5mm;position:relative;overflow:hidden}
-      .receipt-title{text-align:center;font-size:7.5pt;font-weight:900;color:#243d60;margin:0 0 .7mm;letter-spacing:.08em}
-      .head{display:grid;grid-template-columns:15mm 1fr 36mm;gap:1.5mm;align-items:center;border-bottom:1px solid #9fb8d8;padding-bottom:.7mm}
-      .logo{height:9mm;width:14mm;border:1px solid #a8bfdc;border-radius:1mm;display:flex;align-items:center;justify-content:center;text-align:center;color:#0b438a;font-weight:900;font-size:7.5pt}
-      .head h1{font-size:9.5pt;line-height:1;color:#174f91;margin:0;font-weight:900}
-      .head p{font-size:5.5pt;margin:.6mm 0 0;color:#334155}
-      .receipt-meta{text-align:right;font-size:5.2pt;line-height:1.25;overflow-wrap:anywhere}
-      .branch{background:#dce8f7;color:#1e3d65;text-align:center;font-size:5pt;font-weight:800;padding:.6mm;margin:.6mm -2.5mm .8mm}
-      .section-title{font-size:5.8pt;font-weight:900;color:#173d70;background:#e7f0fc;border-bottom:1px solid #c5d6eb;padding:.6mm 1mm;margin:0 0 .6mm}
-      .topgrid{display:grid;grid-template-columns:1.05fr .95fr;gap:1mm}
-      .panel{border:1px solid #a9bed9;border-radius:.6mm;padding:.7mm;background:#fbfdff;min-width:0}
-      .details-grid{display:grid;grid-template-columns:1fr 1fr;gap:.4mm 1mm}
-      .detail{display:grid;grid-template-columns:17mm 1fr;gap:.5mm;min-width:0;font-size:5.1pt}
-      .detail b{color:#435873;font-weight:800}
-      .detail span{min-width:0;overflow-wrap:anywhere}
-      .detail.full{grid-column:1/-1}
-      .payment-highlight{display:grid;grid-template-columns:repeat(3,1fr);gap:.6mm;margin-top:.6mm}
-      .payment-highlight div{padding:.6mm;border:1px solid #d3dfed;background:#fff;text-align:center}
-      .payment-highlight small{display:block;font-size:4.6pt;color:#728198}
-      .payment-highlight strong{display:block;font-size:6.2pt;color:#1b4d85;margin-top:.2mm}
-      .payment-highlight .current{background:#eaf8f1;border-color:#c7ead8}
-      .payment-highlight .current strong{color:#11734b}
-      .fee-section{margin-top:.8mm}
-      .fee-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:1mm}
-      .fee-table{width:100%;border-collapse:collapse;font-size:5pt}
-      .fee-table th,.fee-table td{border:1px solid #c5d4e5;padding:.5mm .8mm;text-align:left}
-      .fee-table th{background:#edf4fc;color:#254c7e;font-weight:900}
-      .fee-table td:last-child,.fee-table th:last-child{text-align:right}
-      .fee-table .total td{background:#e4effd;font-weight:900;color:#163e70}
-      .snapshot{border:1px solid #c5d5e8;background:#f4f8fe;padding:.7mm;display:grid;grid-template-columns:1fr 1fr;gap:.5mm 1mm;align-content:start}
-      .snapshot .detail{grid-template-columns:16mm 1fr;font-size:5pt}
-      .words{display:grid;grid-template-columns:14mm 1fr;gap:.7mm;margin-top:.6mm;font-size:5pt}
-      .words b{padding:.5mm 0}
-      .words span{border:1px solid #d1ddeb;background:#fff;padding:.5mm .8mm;font-weight:700}
-      .transaction{margin-top:.8mm;border:1px solid #a9bed9;padding:.7mm;background:#fff}
-      .transaction-head{display:flex;justify-content:space-between;align-items:center;gap:2mm;margin-bottom:.5mm}
-      .transaction-head b{font-size:5.5pt;color:#183f70}
-      .transaction-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.5mm 1mm}
-      .transaction-grid .detail{grid-template-columns:14mm 1fr;font-size:4.9pt}
-      .transaction-grid .full{grid-column:1/-1}
-      .bottom{display:grid;grid-template-columns:1fr 1fr;gap:2mm;margin-top:1mm;align-items:end}
-      .confirmation{font-size:5pt;line-height:1.2;color:#42556f}
-      .signature{text-align:center;padding-top:3mm;border-top:1px dotted #536a88;font-size:5.5pt;font-weight:800}
-      .terms{font-size:4.3pt;line-height:1.1;color:#66758a;margin-top:.6mm;border-top:1px solid #e0e7f0;padding-top:.5mm}
-      .footnote{font-size:4.3pt;color:#718096;text-align:center;margin:.4mm 0 0}
-      @media print{.receipt{break-inside:avoid;page-break-inside:avoid}}
-    `;
-    const d=(label,val,cls="")=>'<div class="detail '+cls+'"><b>'+esc(label)+'</b><span>'+esc(val)+'</span></div>';
+    const detail=(label,val,cls="")=>'<div class="detail '+cls+'"><b>'+esc(label)+'</b><span>'+esc(val)+'</span></div>';
+    const normalizedType=p=>String(p.paymentType||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+    const extraPayments=payments.filter(p=>{const t=normalizedType(p);return /(^| )(other|others|additional)( |$)/.test(t)||t.includes("lab")||t.includes("id card")||t.includes("examination")||t.includes("exam fee");});
+    const installmentPayments=payments.filter(p=>{const t=normalizedType(p);return t.includes("installment")||t.includes("instalment")||t==="course fee"||t==="general";});
     const feeRows=[
       ["Course / Tuition Fee",money(fee.totalFee)],
       ["Discount","− "+money(fee.discount)],
-      ["Tuition After Discount",money(fee.tuitionAfterDiscount??Math.max(0,Number(fee.totalFee||0)-Number(fee.discount||0)))],
       ["Admission Fee",money(fee.admissionFee)],
       ["Registration Fee",money(fee.registrationFee)],
-      ["Late Fine (current)",money(fee.lateFine)],
-      ["Total Payable (before late fine)",money(payable)],
-      ["Total Payable (incl. late fine)",money(payable+Number(fee.lateFine||0))]
-    ].map((r,i)=>'<tr'+(i===7?' class="total"':'')+'><td>'+esc(r[0])+'</td><td>'+esc(r[1])+'</td></tr>').join("");
-    const html='<!doctype html><html><head><meta charset="utf-8"/><title>RCLD Fee Receipt - '+esc(student.applicantName)+'</title><style>'+css+'</style></head><body><main class="receipt">'+
-      '<div class="receipt-title">OFFICIAL STUDENT FEE RECEIPT</div>'+
-      '<header class="head"><div class="logo">RCLD<br/>ISLAMPUR</div><div><h1>Rashtriya Computer Literacy Drive</h1><p>Admission organised by <b>Sunita Services Pvt. Ltd.</b></p></div><div class="receipt-meta"><b>Receipt No.</b><br/>'+esc(receiptNo)+'<br/><b>Receipt Date:</b> '+esc(receiptDate)+'</div></header>'+
-      '<div class="branch">RCLD Islampur · ASC: Cyberworld, Deshbandhu Road, O/H, B/D · ASC Code: RCLD/011</div>'+
-      '<div class="topgrid"><section class="panel"><div class="section-title">STUDENT & COURSE DETAILS</div><div class="details-grid">'+
-      d("Student Name",student.applicantName)+d("Father / Guardian",student.fatherOrHusbandName||student.guardianName)+
-      d("Enrollment No.",student.enrollmentNo||student.regnNo)+d("Form No.",student.formNo)+
-      d("Course",student.courseName||student.courseCode)+d("Course Code",student.courseCode)+
-      d("Duration",duration)+d("Batch",student.batchCode||student.batchName||student.batchId)+
-      d("Mobile",student.mobileNumber)+d("Guardian Mobile",student.guardianContactNumber)+
-      d("Email",student.email)+d("Admission Date",student.admissionDate)+
-      d("Address",address,"full")+
-      '</div></section><section class="panel"><div class="section-title">FEE ACCOUNT SUMMARY</div><div class="details-grid">'+
-      d("Fee Status",dueAll<=0?"PAID":"PAYMENT DUE")+d("Fee Updated By",fee.updatedBy)+
-      d("Course Fee",money(fee.totalFee))+d("Discount",money(fee.discount))+
-      d("One-time Fees",money(fee.oneTimeFees??(Number(fee.admissionFee||0)+Number(fee.registrationFee||0))))+
-      d("Lifetime Entries",payments.length)+
-      '</div><div class="payment-highlight"><div><small>Paid before this receipt</small><strong>'+money(paidBefore)+'</strong></div><div class="current"><small>This payment</small><strong>'+money(payment?.amount||0)+'</strong></div><div><small>Paid after this receipt</small><strong>'+money(paidAfter)+'</strong></div></div><div class="details-grid" style="margin-top:.6mm">'+
-      d("Balance after payment",money(balanceAfter))+d("Current balance incl. fine",money(dueAll))+
-      '</div></section></div>'+
-      '<section class="panel fee-section"><div class="section-title">COMPLETE FEE BREAKDOWN</div><div class="fee-grid"><table class="fee-table"><thead><tr><th>Fee Particulars</th><th>Amount</th></tr></thead><tbody>'+feeRows+'</tbody></table><div class="snapshot">'+
-      d("Payment Status",dueAll<=0?"Paid":"Payment Due")+d("Student Status",student.status)+
-      d("Course",student.courseCode||student.courseName)+d("Duration",duration)+
-      d("Total Collected",money(paidAll))+d("Outstanding Due",money(dueAll))+
-      d("Payment Entries",payments.length)+d("Receipt No.",receiptNo)+
-      '</div></div><div class="words"><b>Amount in words</b><span>'+esc(numberToIndianWords(Number(payment?.amount||0)))+'</span></div></section>'+
-      '<section class="transaction"><div class="transaction-head"><b>PAYMENT TRANSACTION DETAILS</b><b>Amount Received: '+money(payment?.amount||0)+'</b></div><div class="transaction-grid">'+
-      d("Payment Date",payment?.date||receiptDate)+d("Payment Type",payment?.paymentType||"General")+
-      d("Installment",payment?.installmentMonth||"—")+d("Method",payment?.method||"Cash")+
-      d("UTR / Transaction",payment?.utrNumber||"—","full")+d("Reference",payment?.reference||"—")+
-      d("Recorded By",payment?.recordedBy||fee.updatedBy||"—")+d("Authorised By",payment?.authorisedBy||"Not recorded")+
-      d("Payment Note",payment?.note||"—","full")+
-      (payment?.screenshotUrl?d("Payment Proof",payment.screenshotUrl,"full"):"")+
-      '</div></section>'+
-      '<div class="bottom"><div class="confirmation"><b>Received from:</b> '+esc(student.applicantName)+'<br/><b>Balance after this receipt:</b> '+money(balanceAfter)+' (late fine calculated separately)<br/>This receipt confirms the transaction shown above. Please retain it for your records.</div><div class="signature">For RCLD - Islampur<br/><br/>Authorised Signatory with Office Seal</div></div>'+
-      '<div class="terms"><b>Terms:</b> Receipt is valid after authorisation by an AEC representative. Late fee policy: ₹50 per month after the 10th while dues remain unpaid. Amounts reflect the fee ledger at print time.</div><p class="footnote">Computer-generated receipt · RCLD Islampur</p></main><script>window.onload=()=>{const page=document.querySelector(".receipt");const ratio=page.clientHeight/page.scrollHeight;if(ratio<1){page.style.transformOrigin="top left";page.style.transform="scaleY("+Math.max(.45,ratio)+")";}setTimeout(()=>window.print(),500);};</script></body></html>';
-    w.document.write(html);w.document.close();
+      ["Instalment Payments Received",money(installmentPayments.reduce((n,p)=>n+Number(p.amount||0),0))],
+      ...extraPayments.map(p=>["Others — "+(p.note||p.reference||p.paymentType||"Additional charge"),money(p.amount)])
+    ].map(r=>'<tr><td>'+esc(r[0])+'</td><td class="amount">'+esc(r[1])+'</td></tr>').join("");
+    const historyRows=payments.slice().reverse().map(p=>{const purpose=p.note||p.reference||p.paymentType||"General";return '<tr><td>'+esc(p.date||"—")+'</td><td>'+esc(p.receiptNo||"—")+'</td><td>'+esc(p.paymentType||"General")+'<small>'+esc(purpose)+'</small></td><td>'+esc(p.method||"—")+'</td><td class="amount">'+money(p.amount)+'</td></tr>';}).join("");
+    const proof=payment?.screenshotUrl?'<a class="proof-link" href="'+esc(payment.screenshotUrl)+'" target="_blank" rel="noreferrer"><img class="proof-image" src="'+esc(payment.screenshotUrl)+'" alt="Uploaded payment proof"/><span>Uploaded payment proof</span></a>':'<span class="muted">No payment proof uploaded for this entry</span>';
+    const css=
+      '@page{size:A5 portrait;margin:4mm}'+
+      '*{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff;color:#172b4d;font-family:Arial,Helvetica,sans-serif}'+
+      'body{font-size:7pt;line-height:1.18;-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
+      '.receipt{width:140mm;height:202mm;min-height:202mm;max-height:202mm;margin:0 auto;border:1px solid #173d70;background:#fff;padding:3mm;overflow:hidden;display:flex;flex-direction:column;gap:1.5mm}'+
+      '.brand{display:grid;grid-template-columns:25mm minmax(0,1fr);gap:3mm;align-items:center;padding:0 0 2mm;border-bottom:1.5px solid #173d70}.logo{width:24mm;height:22mm;object-fit:contain;display:block}'+
+      '.brand-copy{text-align:center;min-width:0}.brand-copy h1{font-size:12pt;line-height:1.08;margin:0;color:#173d70;font-weight:900}.brand-copy p{font-size:7pt;font-weight:700;margin:1mm 0 0;color:#334d6e}.brand-copy h2{font-size:9pt;letter-spacing:.12em;margin:1.4mm 0 0;color:#173d70}'+
+      '.branch{background:#e6f1fc;border:1px solid #b8cde4;padding:1.2mm 2mm;text-align:center;color:#173d70;font-size:6.2pt;line-height:1.25}.branch strong{font-size:7pt}'+
+      '.section-title{font-size:7pt;font-weight:900;letter-spacing:.05em;color:#173d70;background:#e8f1fb;border-bottom:1px solid #b8cde4;padding:1mm 1.5mm;margin:0 0 1mm}'+
+      '.topgrid{display:grid;grid-template-columns:1.08fr .92fr;gap:1.5mm}.panel{border:1px solid #9eb5d1;padding:1.4mm;min-width:0;background:#fff}.student-grid{display:grid;grid-template-columns:1fr 1fr;gap:1mm 1.5mm}'+
+      '.detail{display:grid;grid-template-columns:19mm minmax(0,1fr);gap:1mm;min-width:0;font-size:6.2pt;align-items:start}.detail b{font-weight:800;color:#465d79}.detail span{min-width:0;overflow-wrap:anywhere;color:#142b49}.detail.full{grid-column:1/-1}'+
+      '.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:1mm;margin-top:1.5mm}.summary>div{border:1px solid #c6d7e9;background:#f5f9fe;padding:1.2mm;text-align:center}.summary small{display:block;font-size:5.4pt;color:#526b88}.summary strong{display:block;font-size:8pt;color:#173d70;margin-top:.5mm}.summary .due{background:#fff8ed;border-color:#ead5b4}.summary .due strong{color:#8a4d0b}'+
+      '.fees,.history{border:1px solid #9eb5d1;padding:1.4mm}table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:6.1pt}th,td{border:1px solid #c2d2e4;padding:1mm 1.2mm;text-align:left;vertical-align:top;overflow-wrap:anywhere}th{background:#e8f1fb;color:#173d70;font-weight:900}.amount{text-align:right;white-space:nowrap;font-weight:700}.fee-total td{background:#e5effb;color:#173d70;font-weight:900;font-size:7pt}'+
+      '.words{display:grid;grid-template-columns:18mm minmax(0,1fr);gap:1mm;margin-top:1mm;font-size:6pt}.words b{color:#405875}.words span{border:1px solid #c2d2e4;padding:1mm;font-weight:700;overflow-wrap:anywhere}.history table{font-size:5.5pt}.history th,.history td{padding:.8mm 1mm}.history small{display:block;color:#61748d;font-size:5pt;margin-top:.3mm}'+
+      '.transaction{display:grid;grid-template-columns:1fr 1fr;gap:1.5mm;border:1px solid #9eb5d1;padding:1.4mm}.transaction .detail{grid-template-columns:20mm minmax(0,1fr);font-size:6pt}.payment-proof{border-left:1px solid #d2deeb;padding-left:1.5mm;min-width:0}.proof-link{display:flex;gap:1.5mm;align-items:center;color:#174f91;text-decoration:none;font-size:6pt}.proof-image{width:22mm;height:18mm;object-fit:contain;border:1px solid #c2d2e4;background:#f8fbff}.muted{font-size:5.7pt;color:#718096}'+
+      '.payment-flags{display:flex;gap:5mm;align-items:center;flex-wrap:wrap;margin-top:1mm;font-size:6pt}.check{display:inline-flex;align-items:center;gap:1mm}.square{width:3mm;height:3mm;border:1px solid #173d70;display:inline-flex;align-items:center;justify-content:center;font-size:6pt;line-height:1}'+
+      '.signatures{display:grid;grid-template-columns:1fr 1fr;gap:8mm;margin-top:auto;padding:2mm 2mm 0;align-items:end}.sign{border-top:1px solid #173d70;text-align:center;padding-top:1mm;font-size:6pt;font-weight:800;min-height:8mm}.sign small{display:block;font-size:5.4pt;font-weight:600;margin-top:.5mm}.receipt-foot{text-align:center;font-size:5.2pt;color:#65758a;border-top:1px solid #d7e1ed;padding-top:1mm}'+
+      '@media screen{body{background:#eef2f7;padding:12px}.receipt{height:auto;min-height:202mm;max-height:none;box-shadow:0 3px 18px #142b4920}}'+
+      '@media print{html,body{width:140mm;height:202mm;margin:0!important;padding:0!important;overflow:hidden!important}.receipt{width:140mm;height:202mm;min-height:202mm;max-height:202mm;margin:0;padding:3mm;box-shadow:none;break-inside:avoid;page-break-inside:avoid}}'+
+      '@media screen and (max-width:560px){body{padding:6px}.receipt{width:100%;min-height:0;max-height:none}.brand{grid-template-columns:20mm minmax(0,1fr)}.logo{width:19mm;height:19mm}.brand-copy h1{font-size:10pt}.topgrid{grid-template-columns:1fr}.transaction{grid-template-columns:1fr}.payment-proof{border-left:0;border-top:1px solid #d2deeb;padding:1mm 0 0}}';
+    const html='<!doctype html><html><head><meta charset="utf-8"/><title>RCLD Student Fee Receipt - '+esc(student.applicantName)+'</title><style>'+css+'</style></head><body><main class="receipt">'+
+      '<header class="brand"><img class="logo" src="'+esc(logoUrl)+'" alt="RCLD Islampur logo"/><div class="brand-copy"><h1>RASHTRIYA COMPUTER LITERACY DRIVE</h1><p>A Mission Organised by Smith Services Pvt. Ltd.</p><h2>STUDENT FEE RECEIPT</h2></div></header>'+
+      '<div class="branch"><strong>RCLD, ISLAMPUR</strong> &nbsp; | &nbsp; AEC – Approved Under Skill Development<br/>9/15, A/9, Accheletalla, Islampur &nbsp; | &nbsp; AEC Code: '+esc(student.aecCode||"RCLD/ISL/001")+'</div>'+
+      '<div class="topgrid"><section class="panel"><div class="section-title">STUDENT INFORMATION</div><div class="student-grid">'+
+      detail("Receipt No.",receiptNo)+detail("Receipt Date",receiptDate)+detail("Enrolment No.",student.enrollmentNo||student.regnNo)+detail("Enrolment Date",enrollmentDate)+
+      detail("Student Name",student.applicantName)+detail("Course",student.courseName||student.courseCode)+detail("Duration",duration)+detail("Batch",student.batchCode||student.batchName||student.batchId)+detail("Address",address,"full")+
+      '</div></section><section class="panel"><div class="section-title">PAYMENT HISTORY SUMMARY</div><div class="student-grid">'+
+      detail("Total Fees",money(payable))+detail("Fees Paid",money(paidAll))+detail("Amount Due",money(dueAll))+detail("This Receipt",money(payment?.amount||0))+detail("Payment Method",payment?.method||"—")+
+      '</div><div class="summary"><div><small>TOTAL FEES</small><strong>'+money(payable)+'</strong></div><div><small>FEES PAID</small><strong>'+money(paidAll)+'</strong></div><div class="due"><small>AMOUNT DUE</small><strong>'+money(dueAll)+'</strong></div></div></section></div>'+
+      '<section class="fees"><div class="section-title">FEE DETAILS</div><table><thead><tr><th>Fee Particulars / Purpose</th><th class="amount">Amount</th></tr></thead><tbody>'+feeRows+'<tr class="fee-total"><td>TOTAL FEES PAYABLE</td><td class="amount">'+money(payable)+'</td></tr></tbody></table><div class="words"><b>IN WORDS</b><span>'+esc(numberToIndianWords(payable))+'</span></div></section>'+
+      '<section class="history"><div class="section-title">PAYMENT HISTORY — '+payments.length+' ENTRIES</div><table><thead><tr><th style="width:15%">Date</th><th style="width:25%">Receipt No.</th><th style="width:29%">Purpose / Type</th><th style="width:16%">Method</th><th style="width:15%" class="amount">Amount</th></tr></thead><tbody>'+(historyRows||'<tr><td colspan="5">No payment records found.</td></tr>')+'</tbody></table></section>'+
+      '<section class="transaction"><div><div class="section-title">CURRENT PAYMENT DETAILS</div>'+detail("Amount Received",money(payment?.amount||0))+detail("Payment Date",payment?.date||receiptDate)+detail("Payment Type",payment?.paymentType||"General")+detail("Method",payment?.method||"—")+detail("UTR No.",payment?.utrNumber||payment?.reference||"—")+detail("Recorded By",payment?.recordedBy||fee.updatedBy||"—")+'<div class="payment-flags"><span class="check"><i class="square">'+(isCash?"✓":"")+'</i> Cash</span><span class="check"><i class="square">'+(isOnline?"✓":"")+'</i> Online</span></div></div><div class="payment-proof"><div class="section-title">PAYMENT PROOF / UPLOAD</div>'+proof+'</div></section>'+
+      '<div class="signatures"><div class="sign">FOR RCLD – ISLAMPUR<small>AUTHORIZED SIGNATORY</small></div><div class="sign">WITH AFFIX SEAL<small>OFFICIAL STAMP / SEAL</small></div></div>'+
+      '<div class="receipt-foot">Computer-generated receipt · Please retain this receipt for your records.</div></main><script>window.addEventListener("load",()=>{const imgs=[...document.images];Promise.all(imgs.map(img=>img.decode?img.decode().catch(()=>{}):Promise.resolve())).then(()=>{const page=document.querySelector(".receipt");const scale=Math.min(1,page.clientHeight/Math.max(page.scrollHeight,page.clientHeight));if(scale<1){page.style.transformOrigin="top left";page.style.transform="scaleY("+scale+")";}setTimeout(()=>window.print(),300);});});</script></body></html>';
+    w.document.open();w.document.write(html);w.document.close();
   }
   async function saveAttendance(e){e.preventDefault();setMessage("");if(!student)return;const r=await fetch("/api/students/"+student._id+"/attendance",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(attForm)});const d=await r.json();if(!r.ok){setMessage(d.error||"Unable to save attendance.");return}const ar=await fetch("/api/students/"+student._id+"/attendance",{cache:"no-store"});setAttendance(await ar.json());setMessage("Attendance saved.");}
 
