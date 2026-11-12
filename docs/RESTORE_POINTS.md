@@ -2,6 +2,23 @@
 
 This file records source-code checkpoints that can be used to compare or recover application changes. It does not replace MongoDB backups or Cloudinary asset retention.
 
+## Latest checkpoint — compact dashboard UI
+
+**Checkpoint branch created on 12 November 2026 from main.**
+
+| Item | Value |
+|---|---|
+| Repository | Ujjwal0620/RCLD_ISLAMPUR |
+| Integration branch | main |
+| Checkpoint branch | checkpoint/2026-11-12-compact-dashboard-ui |
+| Source commit | 707b3c90c468d42fbcd4c69efdf8e81f82b9d27d |
+| Purpose | Preserve the compact Hando-style dashboard density pass, chart accessibility labels/tooltips and current shared UI baseline |
+| Branch URL | https://github.com/Ujjwal0620/RCLD_ISLAMPUR/tree/checkpoint/2026-11-12-compact-dashboard-ui |
+| Commit URL | https://github.com/Ujjwal0620/RCLD_ISLAMPUR/commit/707b3c90c468d42fbcd4c69efdf8e81f82b9d27d |
+| Verification | GitHub branch created; local lint/build/browser checks not run in this checkpoint |
+
+This checkpoint preserves tracked source at the listed commit. It does not include MongoDB records, local secrets, uncommitted changes or Cloudinary assets.
+
 ## Protected baseline — before documentation overhaul
 
 **Restore branch created and verified on 7 November 2026.**
@@ -32,7 +49,6 @@ The checkpoint branch points to the main commit at the end of the documentation 
 
 Neither branch is a copy of the database, local environment files or Cloudinary assets.
 
-
 ## Pre-Hando UI restore point
 
 **Restore branch created before the Hando-inspired workspace refresh on 7 November 2026.**
@@ -44,7 +60,6 @@ Neither branch is a copy of the database, local environment files or Cloudinary 
 | Purpose | Preserve the complete application and documentation before the UI/UX-only redesign |
 | Branch URL | https://github.com/Ujjwal0620/RCLD_ISLAMPUR/tree/restore/2026-11-07-before-hando-ui |
 | Commit URL | https://github.com/Ujjwal0620/RCLD_ISLAMPUR/commit/bb3027f1afbe7ad4ae88f6abe0ae376604037d04 |
-
 
 ## Hando UI refresh checkpoint
 
