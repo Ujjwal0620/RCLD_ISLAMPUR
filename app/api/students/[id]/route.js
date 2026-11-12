@@ -7,10 +7,10 @@ import Batch from "@/models/Batch";
 const StudentSchema = new mongoose.Schema({
   formNo:{type:String,required:true,unique:true,trim:true},
   aecCode:String,regnNo:String,enrollmentNo:String,admissionDate:String,guardianContactNumber:String,dueAmount:mongoose.Schema.Types.Mixed,paymentStatus:mongoose.Schema.Types.Mixed,sourceCourseLabel:String,importSource:String,courseName:String,courseCode:String,batchId:{type:mongoose.Schema.Types.ObjectId,ref:"Batch",default:null},batchCode:String,
-  applicantName:{type:String,required:true,trim:true},nationality:String,dateOfBirth:String,sex:String,
+  applicantName:{type:String,default:"",trim:true},nationality:String,dateOfBirth:String,sex:String,
   fatherOrHusbandName:String,address:String,presentAddress:String,permanentAddress:String,sameAsPresentAddress:Boolean,postOffice:String,policeStation:String,nearestLandmark:String,district:String,state:String,permanentPostOffice:String,permanentNearestLandmark:String,permanentPin:String,permanentDistrict:String,permanentState:String,pin:String,whatsappNumber:String,
-  mobileNumber:{type:String,required:true,trim:true},
-  email:{type:String,required:true,trim:true,lowercase:true}, aadhaarNumber:{type:String,required:true,trim:true},
+  mobileNumber:{type:String,default:"",trim:true},
+  email:{type:String,default:"",trim:true,lowercase:true}, aadhaarNumber:{type:String,default:"",trim:true},
   referralId:{type:String,default:""},referralName:{type:String,default:""},marketingEmployeeId:{type:String,default:""},marketingEmployeeName:{type:String,default:""},
   qualifications:[{examCourse:String,boardUniversity:String,collegeInstitute:String,year:String,percentage:String}],
   enclosures:{stampPhoto:Boolean,qualifyingCertificates:Boolean,matricAdmitCard:Boolean},
@@ -18,6 +18,7 @@ const StudentSchema = new mongoose.Schema({
   status:{type:String,default:"Registered"}
 },{timestamps:true});
 const Student=mongoose.models.Student||mongoose.model("Student",StudentSchema);
+function hasStudentDetailsForAdmission(s = {}) { const present=s.presentAddress||s.address; const permanent=s.sameAsPresentAddress?Boolean(String(present||"").trim()):["permanentAddress","permanentPostOffice","permanentState","permanentDistrict","permanentPin","permanentNearestLandmark"].every(k=>String(s[k]||"").trim()); const q=Array.isArray(s.qualifications)?s.qualifications[0]:null; return [s.applicantName,s.fatherOrHusbandName,s.dateOfBirth,s.sex,s.nationality,present,s.postOffice,s.policeStation,s.state,s.district,s.pin,s.nearestLandmark,s.mobileNumber,s.guardianContactNumber,s.whatsappNumber,s.email,s.aadhaarNumber,q?.examCourse,q?.collegeInstitute,q?.boardUniversity,q?.year,q?.percentage].every(v=>String(v||"").trim())&&permanent; }
 const ReferralSchema=new mongoose.Schema({}, {strict:false});
 const Referral=mongoose.models.Referral||mongoose.model("Referral",ReferralSchema);
 async function idOf(params){return (await params)?.id}
@@ -37,7 +38,7 @@ export async function PATCH(req,{params}){
     const id=await idOf(params);
     if(!mongoose.Types.ObjectId.isValid(id))return NextResponse.json({error:"Invalid student ID."},{status:400});
     const body=await req.json();
-    const current=await Student.findById(id).select("batchId batchCode status").lean();
+    const current=await Student.findById(id).lean();
     if(!current)return NextResponse.json({error:"Student not found."},{status:404});
     if(body.batchId!==undefined && String(body.batchId||"")!==String(current.batchId||"")) return NextResponse.json({error:"Use the Batch Movement workflow to shift, drop out, or rejoin a student so the complete footprint is preserved."},{status:409});
     if(body.status!==undefined && String(body.status||"")!==String(current.status||"")) return NextResponse.json({error:"Use the Batch Movement workflow for status changes so every movement receives a remark and audit footprint."},{status:409});
@@ -68,13 +69,15 @@ export async function PATCH(req,{params}){
     if(update.applicantName!==undefined)update.applicantName=String(update.applicantName).trim();
     if(update.mobileNumber!==undefined)update.mobileNumber=String(update.mobileNumber).trim();
     const email=String(body.email ?? "").trim().toLowerCase();
-    const aadhaarNumber=String(body.aadhaarNumber ?? "").replace(/\D/g, "");
-    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return NextResponse.json({error:"A valid email address is mandatory."},{status:400});
-    if(!/^\d{12}$/.test(aadhaarNumber))return NextResponse.json({error:"Aadhaar number must contain exactly 12 digits."},{status:400});
-    const mobileNumber=String(body.mobileNumber ?? "").replace(/\D/g,"");
-    if(body.mobileNumber!==undefined && !/^\d{10}$/.test(mobileNumber))return NextResponse.json({error:"Mobile number must contain exactly 10 digits."},{status:400});
-    if(body.guardianContactNumber!==undefined && !/^\d{10}$/.test(String(body.guardianContactNumber||"").replace(/\D/g,"")))return NextResponse.json({error:"Guardian mobile number must contain exactly 10 digits."},{status:400});
-    if(body.whatsappNumber!==undefined && !/^\d{10}$/.test(String(body.whatsappNumber||"").replace(/\D/g,"")))return NextResponse.json({error:"WhatsApp number must contain exactly 10 digits."},{status:400});
+    const aadhaarNumber=String(body.aadhaarNumber ?? "").replace(/\\D/g, "");
+    if(email && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))return NextResponse.json({error:"Enter a valid email address."},{status:400});
+    if(aadhaarNumber && !/^\\d{12}$/.test(aadhaarNumber))return NextResponse.json({error:"Aadhaar number must contain exactly 12 digits."},{status:400});
+    const mobileNumber=String(body.mobileNumber ?? "").replace(/\\D/g,"");
+    const guardian=String(body.guardianContactNumber||"").replace(/\\D/g,"");
+    const whatsapp=String(body.whatsappNumber||"").replace(/\\D/g,"");
+    if(body.mobileNumber!==undefined && mobileNumber && !/^\\d{10}$/.test(mobileNumber))return NextResponse.json({error:"Mobile number must contain exactly 10 digits."},{status:400});
+    if(body.guardianContactNumber!==undefined && guardian && !/^\\d{10}$/.test(guardian))return NextResponse.json({error:"Guardian mobile number must contain exactly 10 digits."},{status:400});
+    if(body.whatsappNumber!==undefined && whatsapp && !/^\\d{10}$/.test(whatsapp))return NextResponse.json({error:"WhatsApp number must contain exactly 10 digits."},{status:400});
     if(body.mobileNumber!==undefined)update.mobileNumber=mobileNumber;
     if(body.signatureUrl && !String(body.signatureUrl).startsWith("https://res.cloudinary.com/"))return NextResponse.json({error:"Student signature must be uploaded to Cloudinary."},{status:400});
     update.email=email;update.aadhaarNumber=aadhaarNumber;
@@ -82,9 +85,9 @@ export async function PATCH(req,{params}){
       if(!body.referralId){update.referralId="";update.referralName="";update.marketingEmployeeId="";update.marketingEmployeeName="";}
       else{if(!mongoose.Types.ObjectId.isValid(String(body.referralId)))return NextResponse.json({error:"Invalid referral selection."},{status:400});const referral=await Referral.findOne({_id:body.referralId,status:"Active"}).lean();if(!referral)return NextResponse.json({error:"Selected referral is no longer active."},{status:400});update.referralId=String(referral._id);update.referralName=referral.name;update.marketingEmployeeId=referral.marketingEmployeeId;update.marketingEmployeeName=referral.marketingEmployeeName;}
     }
-    if(!String(update.applicantName ?? "existing").trim() || !String(update.mobileNumber ?? "existing").trim()){
-      return NextResponse.json({error:"Applicant name and mobile are required."},{status:400});
-    }
+    const mergedStudent={...current,...update};
+    if(!hasStudentDetailsForAdmission(mergedStudent))update.status="Admission Pending";
+    else if(current.status==="Admission Pending")update.status="Registered";
     const student=await Student.findByIdAndUpdate(id,update,{new:true,runValidators:true}).lean();
     if(student && (update.courseCode!==undefined || update.courseName!==undefined)){
       const conditions=[];
