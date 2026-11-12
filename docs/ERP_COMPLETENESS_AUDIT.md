@@ -1,8 +1,20 @@
 # Implementation status and delivery gaps
 
-Last reviewed against the GitHub main tree at commit 6823ea161e00a404e825605688dc9014ed8bfe3b on 7 November 2026.
+Last reviewed against the GitHub main tree at commit 707b3c90c468d42fbcd4c69efdf8e81f82b9d27d on 12 November 2026.
 
 This is a code inventory, not a product-completion certificate. A page or API route being present does not prove that its full workflow is secure, tested or ready for production.
+
+## Latest delivery checkpoint
+
+**Compact dashboard UI refresh — committed to main.**
+
+- Shared dashboard styling now uses a more compact density for navigation, toolbar, headings, cards, KPI panels, tables, forms and buttons.
+- Dashboard chart/panel heights were reduced to show more operational information in the viewport.
+- Existing chart points and mini-bars have accessible labels and hover tooltip text.
+- Existing dashboard API wiring and data sources were retained; no fabricated chart values were added.
+- Light/dark theme support and responsive styling remain in place.
+
+**Verification status:** GitHub main contains the change. No npm run lint, npm run build or browser-based regression test was recorded for this checkpoint. Treat the UI as implemented but requiring local verification. The complete page-by-page UI redesign is still outstanding.
 
 ## Present in the repository
 
