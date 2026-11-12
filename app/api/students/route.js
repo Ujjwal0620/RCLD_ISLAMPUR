@@ -42,7 +42,7 @@ const Referral = mongoose.models.Referral || mongoose.model("Referral", Referral
 
 const DEFAULT_COURSES = ["CCA","DCA","ADCA","CCC","CAO","DWPD","DOM","DCST","DCAP","DHNT"];
 
-function hasStudentDetailsForAdmission(s = {}) { const present=s.presentAddress||s.address; const permanent=s.sameAsPresentAddress?Boolean(String(present||"").trim()):["permanentAddress","permanentPostOffice","permanentState","permanentDistrict","permanentPin","permanentNearestLandmark"].every(k=>String(s[k]||"").trim()); const q=Array.isArray(s.qualifications)?s.qualifications[0]:null; return [s.applicantName,s.fatherOrHusbandName,s.dateOfBirth,s.sex,s.nationality,present,s.postOffice,s.policeStation,s.state,s.district,s.pin,s.nearestLandmark,s.mobileNumber,s.guardianContactNumber,s.whatsappNumber,s.email,s.aadhaarNumber,q?.examCourse,q?.collegeInstitute,q?.boardUniversity,q?.year,q?.percentage].every(v=>String(v||"").trim())&&permanent; }
+function hasStudentDetailsForAdmission(s = {}) { const present=s.presentAddress||s.address; const permanent=s.sameAsPresentAddress?Boolean(String(present||"").trim()):["permanentAddress","permanentPostOffice","permanentState","permanentDistrict","permanentPin","permanentNearestLandmark"].every(k=>String(s[k]||"").trim()); const q=Array.isArray(s.qualifications)?s.qualifications[0]:null; return [s.applicantName,s.fatherOrHusbandName,s.dateOfBirth,s.sex,s.nationality,s.photoUrl,s.photoUrl,present,s.postOffice,s.policeStation,s.state,s.district,s.pin,s.nearestLandmark,s.mobileNumber,s.guardianContactNumber,s.whatsappNumber,s.email,s.aadhaarNumber,q?.examCourse,q?.collegeInstitute,q?.boardUniversity,q?.year,q?.percentage].every(v=>String(v||"").trim())&&permanent; }
 
 
 export async function GET(request) {
