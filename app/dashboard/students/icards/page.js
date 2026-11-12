@@ -7,7 +7,7 @@ function eligible(s) {
  const present=s.presentAddress||s.address;
  const permanent=s.sameAsPresentAddress?Boolean(String(present||"").trim()):["permanentAddress","permanentPostOffice","permanentState","permanentDistrict","permanentPin","permanentNearestLandmark"].every(k=>String(s[k]||"").trim());
  const q=Array.isArray(s.qualifications)?s.qualifications[0]:null;
- return [s.applicantName,s.fatherOrHusbandName,s.dateOfBirth,s.sex,s.nationality,present,s.postOffice,s.policeStation,s.state,s.district,s.pin,s.nearestLandmark,s.mobileNumber,s.guardianContactNumber,s.whatsappNumber,s.email,s.aadhaarNumber,q?.examCourse,q?.collegeInstitute,q?.boardUniversity,q?.year,q?.percentage].every(v=>String(v||"").trim())&&permanent&&s.status!=="Admission Pending"&&!["Cancelled","Suspended","Dropped Out"].includes(s.status);
+ return [s.applicantName,s.fatherOrHusbandName,s.dateOfBirth,s.sex,s.nationality,s.photoUrl,s.photoUrl,present,s.postOffice,s.policeStation,s.state,s.district,s.pin,s.nearestLandmark,s.mobileNumber,s.guardianContactNumber,s.whatsappNumber,s.email,s.aadhaarNumber,q?.examCourse,q?.collegeInstitute,q?.boardUniversity,q?.year,q?.percentage].every(v=>String(v||"").trim())&&permanent&&s.status!=="Admission Pending"&&!["Cancelled","Suspended","Dropped Out"].includes(s.status);
 }
 function printCard(s) {
  const esc=v=>String(v??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
