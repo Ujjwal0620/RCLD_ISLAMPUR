@@ -292,12 +292,27 @@ export default function RegisterStudentPage() {
         <section className="rcld-print-section rcld-print-office">
           <h2>Office / Registration Details</h2>
           <div className="rcld-print-office-grid">
-            <p><span>AEC Code:</span><b>RCLD/ISL-001</b></p>
-            <p><span>Registration No:</span><b>{form.regnNo || ""}</b></p>
-            <p><span>Enrollment No:</span><b>{form.enrollmentNo || ""}</b></p>
-            <p><span>Course Name:</span><b>{form.courseName || ""}</b></p>
-            <p><span>Course Code:</span><b>{form.courseCode || ""}</b></p>
-            <p><span>Date:</span><b>{form.admissionDate ? new Date(form.admissionDate + "T00:00:00").toLocaleDateString("en-GB") : ""}</b></p>
+            <div className="rcld-print-kit-box">
+              <strong>KIT ISSUE NO.</strong>
+              <span>(To be filled by AEC)</span>
+              <i />
+            </div>
+            <div className="rcld-print-ho-box">
+              <strong>To be filled by H.O.</strong>
+              <i />
+              <p><span>AEC Code:</span><b>RCLD/ISL-001</b></p>
+              <p><span>Registration No:</span><b>{form.regnNo || ""}</b></p>
+            </div>
+            <div className="rcld-print-office-data">
+              <p><span>Course Name:</span><b>{form.courseName || ""}</b></p>
+              <p><span>Course Code:</span><b>{form.courseCode || ""}</b></p>
+              <p><span>Demand Draft No:</span><b></b></p>
+              <p><span>Amount:</span><b></b></p>
+              <p><span>Demand Draft Date:</span><b></b></p>
+              <p><span>Bank:</span><b></b></p>
+              <p><span>Enrollment No:</span><b>{form.enrollmentNo || ""}</b></p>
+              <p><span>Date:</span><b>{form.admissionDate ? new Date(form.admissionDate + "T00:00:00").toLocaleDateString("en-GB") : ""}</b></p>
+            </div>
           </div>
         </section>
         <section className="rcld-print-section rcld-print-applicant-section">
@@ -339,7 +354,7 @@ export default function RegisterStudentPage() {
         <section className="rcld-print-section rcld-print-contact-section">
           <h2>Contact Details</h2>
           <div className="rcld-print-contact-grid">
-            <div><p><strong>Mobile No:</strong> {form.mobileNumber || ""}</p><p><strong>WhatsApp No:</strong> {form.whatsappNumber || ""}</p><p><strong>Aadhaar No:</strong> {form.aadhaarNumber || ""}</p></div>
+            <div><p><strong>STD Code:</strong> </p><p><strong>Telephone Number:</strong> </p><p><strong>Mobile Number:</strong> {form.mobileNumber || ""}</p><p><strong>WhatsApp No:</strong> {form.whatsappNumber || ""}</p></div>
             <div><p><strong>Mobile No Guardian:</strong> {form.guardianContactNumber || ""}</p><p><strong>Email:</strong> {form.email || ""}</p></div>
           </div>
         </section>
@@ -375,6 +390,10 @@ export default function RegisterStudentPage() {
               </tr>
             </tbody>
           </table>
+        </section>
+        <section className="rcld-print-course-selection">
+          <h2>Course Selection for G.D.C.A. Candidate only</h2>
+          <div><span>SEM - II</span><span>SEM - III</span></div>
         </section>
         <section className="rcld-print-section rcld-print-enclosure-section">
           <h2>Enclosure</h2>
