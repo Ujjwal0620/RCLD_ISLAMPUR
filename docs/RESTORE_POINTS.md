@@ -193,4 +193,4 @@ Tick a checkpoint only after the related workflow is implemented, verified again
 | Branch URL | https://github.com/Ujjwal0620/RCLD_ISLAMPUR/tree/checkpoint/pre-system-audit-2026-11-13 |
 | Verification | Branch created from main; no database or Cloudinary backup is included |
 
-The working changes are on `chore/system-audit-ui-format-docs` until reviewed and merged. The restore branch remains a source-only checkpoint.
+The audit work was merged to `main` in PR #24 (merge commit `305cb96503aea7b69927d727d9fed2d228af58b2`). The restore branch remains a source-only checkpoint.
