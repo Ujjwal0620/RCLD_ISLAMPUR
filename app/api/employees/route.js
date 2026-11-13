@@ -68,7 +68,7 @@ export async function GET(request) {
     if (search) {
       const escaped = search.replace(/[.*+?^{}()|[\]\\]/g, "\\$&");
       const rx = new RegExp(escaped, "i");
-      filter.$or = ["employeeId","name","mobile","email","designation","department","gender","employmentType","address","emergencyContactName","emergencyContactNumber","notes","skills"].map(field => ({ [field]: rx }));
+      filter.$or = ["employeeId","name","mobile","email","designation","department","gender","employmentType","address","emergencyContactName","emergencyContactNumber","notes","skills","age","dateOfBirth","joiningDate","salary","salaryFrequency","offDays","status","leaveBalance.casual","leaveBalance.sick","leaveBalance.earned","leaveBalance.other"].map(field => ({ [field]: rx }));
     }
     if (status && status !== "all") filter.status = status;
     else if (!status) filter.status = { $ne: "Inactive" };
@@ -92,6 +92,16 @@ export async function GET(request) {
       filter.salary = {};
       if (salaryMin !== null && salaryMin !== "") filter.salary.$gte = Number(salaryMin);
       if (salaryMax !== null && salaryMax !== "") filter.salary.$lte = Number(salaryMax);
+    }
+    const dateOfBirth = (searchParams.get("dateOfBirth") || "").trim();
+    if (dateOfBirth) filter.dateOfBirth = dateOfBirth;
+    const salaryFrequency = (searchParams.get("salaryFrequency") || "").trim();
+    if (salaryFrequency) filter.salaryFrequency = salaryFrequency;
+    const offDay = (searchParams.get("offDay") || "").trim();
+    if (offDay) filter.offDays = offDay;
+    for (const [key, field] of [["casualLeaveMin","leaveBalance.casual"],["sickLeaveMin","leaveBalance.sick"],["earnedLeaveMin","leaveBalance.earned"],["otherLeaveMin","leaveBalance.other"]]) {
+      const value = searchParams.get(key);
+      if (value !== null && value !== "") filter[field] = { $gte: Number(value) };
     }
     const joiningFrom = searchParams.get("joiningFrom"), joiningTo = searchParams.get("joiningTo");
     if (joiningFrom || joiningTo) {
