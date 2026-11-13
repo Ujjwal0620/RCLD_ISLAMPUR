@@ -575,8 +575,8 @@ export default function StudentDetailsPage({ params }) {
         .standard-brand .logo{width:4.4mm;height:5mm;object-fit:contain}
         .standard-brand-copy{min-width:0}
         .standard-brand strong{display:block;color:#c62828;font-size:10pt;line-height:.82;letter-spacing:.1mm}
-        .standard-brand span{display:block;font-size:3.25pt;line-height:1.1;font-weight:800;white-space:nowrap}
-        .standard-brand small{display:block;font-size:2.45pt;line-height:1.1;white-space:nowrap}
+        .standard-brand span{display:block;max-width:100%;font-size:2.55pt;line-height:1.05;font-weight:800;letter-spacing:-.035mm;white-space:normal;overflow-wrap:anywhere;text-wrap:balance}
+        .standard-brand small{display:block;max-width:100%;font-size:1.95pt;line-height:1.05;white-space:normal;overflow-wrap:anywhere}
         .standard-main{position:absolute;top:9.3mm;left:.7mm;right:.7mm;bottom:6.1mm;display:grid;grid-template-columns:7.1mm minmax(0,1fr);gap:.7mm;align-items:start}
         .standard-photo-wrap{width:7.1mm;height:9mm;border:.25mm solid #273d5a;border-radius:.45mm;overflow:hidden;background:#fff}
         .standard-photo-wrap .student-photo{width:100%;height:100%;object-fit:cover}
