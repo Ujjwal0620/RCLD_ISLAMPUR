@@ -77,9 +77,33 @@ export async function GET(request) {
       "permanentPostOffice","permanentNearestLandmark","courseCode","batchCode","referralName",
       "marketingEmployeeName","paymentStatus","declarationPlace"
     ];
+    const escapeRegex = value => String(value).replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
     for (const field of textFilters) {
       const value = (searchParams.get(field) || "").trim();
-      if (value) filter[field] = new RegExp(value.replace(/[.*+?^{}()|[\\]\\\\]/g, "\\\\    if (sex) filter.sex = sex;
+      if (value) filter[field] = new RegExp(escapeRegex(value), "i");
+    }
+    const dateOfBirth = (searchParams.get("dateOfBirth") || "").trim();
+    if (dateOfBirth) filter.dateOfBirth = dateOfBirth;
+    const dueMin = searchParams.get("dueMin");
+    const dueMax = searchParams.get("dueMax");
+    if (dueMin !== null || dueMax !== null) {
+      filter.dueAmount = {};
+      if (dueMin !== null && dueMin !== "") filter.dueAmount.$gte = Number(dueMin);
+      if (dueMax !== null && dueMax !== "") filter.dueAmount.$lte = Number(dueMax);
+    }
+    const admissionFrom = searchParams.get("admissionFrom");
+    const admissionTo = searchParams.get("admissionTo");
+    if (admissionFrom || admissionTo) {
+      filter.admissionDate = {};
+      if (admissionFrom) filter.admissionDate.$gte = admissionFrom;
+      if (admissionTo) filter.admissionDate.$lte = admissionTo;
+    }
+    const qualification = (searchParams.get("qualification") || "").trim();
+    if (qualification) {
+      const qualificationRx = new RegExp(escapeRegex(qualification), "i");
+      filter.$or = [...(filter.$or || []), ...["qualifications.examCourse","qualifications.boardUniversity","qualifications.collegeInstitute","qualifications.year","qualifications.percentage"].map(field => ({ [field]: qualificationRx }))];
+    }
+    if (sex) filter.sex = sex;
     if (course) filter.courseName = course;"), "i");
     }
     const dateOfBirth = (searchParams.get("dateOfBirth") || "").trim();
