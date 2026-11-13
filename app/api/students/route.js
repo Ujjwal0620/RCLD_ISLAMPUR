@@ -57,47 +57,66 @@ export async function GET(request) {
     const registration = (searchParams.get("registration") || "").trim();
     const fromDate = (searchParams.get("fromDate") || "").trim();
     const toDate = (searchParams.get("toDate") || "").trim();
-
     const filter = {};
+    const escapeRegex = value => String(value).replace(/[.*+?^{}()|[\]\\$]/g, "\\$&");
+
     if (search) {
-      const rx = new RegExp(search.replace(/[.*+?^{}()|[\]\\]/g, "\\$&"), "i");
-      filter.$or = [
+      const rx = new RegExp(escapeRegex(search), "i");
+      const searchFields = [
         "applicantName","formNo","enrollmentNo","regnNo","aecCode","courseName","courseCode","batchCode",
         "mobileNumber","whatsappNumber","guardianContactNumber","email","aadhaarNumber","fatherOrHusbandName",
-        "nationality","dateOfBirth","sex","address","presentAddress","permanentAddress","postOffice","policeStation","sourceCourseLabel","importSource","signatureApplicant","declarationDate","referralId","marketingEmployeeId",
+        "nationality","dateOfBirth","sex","address","presentAddress","permanentAddress","postOffice","policeStation",
         "nearestLandmark","district","state","pin","permanentPostOffice","permanentNearestLandmark","permanentPin",
-        "permanentDistrict","permanentState","referralName","marketingEmployeeName","paymentStatus","declarationPlace","sourceCourseLabel","importSource","address","presentAddress","permanentAddress","signatureApplicant","declarationDate","referralId","marketingEmployeeId",
+        "permanentDistrict","permanentState","referralName","marketingEmployeeName","paymentStatus","declarationPlace",
+        "sourceCourseLabel","importSource","signatureApplicant","declarationDate","referralId","marketingEmployeeId",
         "qualifications.examCourse","qualifications.boardUniversity","qualifications.collegeInstitute","qualifications.year","qualifications.percentage"
-      ].map(field => ({ [field]: rx }));
+      ];
+      filter.$or = searchFields.map(field => ({ [field]: rx }));
+      const numericSearch = Number(search);
+      if (Number.isFinite(numericSearch) && search !== "") filter.$or.push({ dueAmount: numericSearch });
     }
+
     const textFilters = [
       "formNo","enrollmentNo","regnNo","aecCode","applicantName","fatherOrHusbandName","mobileNumber",
       "whatsappNumber","guardianContactNumber","email","aadhaarNumber","nationality","district","state","pin",
       "postOffice","policeStation","nearestLandmark","permanentDistrict","permanentState","permanentPin",
-      "permanentPostOffice","permanentNearestLandmark","courseCode","batchCode","referralName",
-      "marketingEmployeeName","paymentStatus","declarationPlace","sourceCourseLabel","importSource","address","presentAddress","permanentAddress","signatureApplicant","declarationDate","referralId","marketingEmployeeId"
+      "permanentPostOffice","permanentNearestLandmark","courseCode","batchCode","referralName","marketingEmployeeName",
+      "paymentStatus","declarationPlace","sourceCourseLabel","importSource","address","presentAddress","permanentAddress",
+      "signatureApplicant","declarationDate","referralId","marketingEmployeeId"
     ];
-    const escapeRegex = value => String(value).replace(/[.*+?^{}()|[\]\\$]/g, "\\$&");
     for (const field of textFilters) {
       const value = (searchParams.get(field) || "").trim();
       if (value) filter[field] = new RegExp(escapeRegex(value), "i");
     }
+
+    if (sex) filter.sex = sex;
+    if (course) filter.courseName = course;
+    if (status && status !== "all") filter.status = status;
+    else if (!status) filter.status = { $ne: "Cancelled" };
+    if (registration === "assigned") filter.regnNo = { $exists: true, $nin: ["", null] };
+    if (registration === "unassigned") filter.$and = [...(filter.$and || []), { $or: [{ regnNo: { $exists: false } }, { regnNo: "" }, { regnNo: null }] }];
+
+    if (fromDate || toDate) {
+      filter.createdAt = {};
+      if (fromDate) filter.createdAt.$gte = new Date(fromDate + "T00:00:00.000Z");
+      if (toDate) filter.createdAt.$lte = new Date(toDate + "T23:59:59.999Z");
+    }
     const dateOfBirth = (searchParams.get("dateOfBirth") || "").trim();
     if (dateOfBirth) filter.dateOfBirth = dateOfBirth;
-    const dueMin = searchParams.get("dueMin");
-    const dueMax = searchParams.get("dueMax");
+
+    const dueMin = searchParams.get("dueMin"), dueMax = searchParams.get("dueMax");
     if (dueMin !== null || dueMax !== null) {
       filter.dueAmount = {};
       if (dueMin !== null && dueMin !== "") filter.dueAmount.$gte = Number(dueMin);
       if (dueMax !== null && dueMax !== "") filter.dueAmount.$lte = Number(dueMax);
     }
-    const admissionFrom = searchParams.get("admissionFrom");
-    const admissionTo = searchParams.get("admissionTo");
+    const admissionFrom = searchParams.get("admissionFrom"), admissionTo = searchParams.get("admissionTo");
     if (admissionFrom || admissionTo) {
       filter.admissionDate = {};
       if (admissionFrom) filter.admissionDate.$gte = admissionFrom;
       if (admissionTo) filter.admissionDate.$lte = admissionTo;
     }
+
     for (const [key, field] of [["sameAsPresentAddress","sameAsPresentAddress"],["stampPhoto","enclosures.stampPhoto"],["qualifyingCertificates","enclosures.qualifyingCertificates"],["matricAdmitCard","enclosures.matricAdmitCard"]]) {
       const value = searchParams.get(key);
       if (value === "true" || value === "false") filter[field] = value === "true";
@@ -108,24 +127,11 @@ export async function GET(request) {
       if (value === "yes") filter[field] = { $exists: true, $nin: ["", null] };
       if (value === "no") filter.$and = [...(filter.$and || []), { $or: [{ [field]: { $exists: false } }, { [field]: "" }, { [field]: null }] }];
     }
+
     const qualification = (searchParams.get("qualification") || "").trim();
     if (qualification) {
       const qualificationRx = new RegExp(escapeRegex(qualification), "i");
       filter.$and = [...(filter.$and || []), { $or: ["qualifications.examCourse","qualifications.boardUniversity","qualifications.collegeInstitute","qualifications.year","qualifications.percentage"].map(field => ({ [field]: qualificationRx })) }];
-    }
-    if (sex) filter.sex = sex;
-    if (course) filter.courseName = course;"), "i")}))];
-
-    if (sex) filter.sex = sex;
-    if (course) filter.courseName = course;
-    if (status && status !== "all") filter.status = status;
-    else if (!status) filter.status = { $ne: "Cancelled" };
-    if (registration === "assigned") filter.regnNo = { $exists: true, $nin: ["", null] };
-    if (registration === "unassigned") filter.$and = [...(filter.$and || []), { $or: [{ regnNo: { $exists: false } }, { regnNo: "" }, { regnNo: null }] }];
-    if (fromDate || toDate) {
-      filter.createdAt = {};
-      if (fromDate) filter.createdAt.$gte = new Date(fromDate + "T00:00:00.000Z");
-      if (toDate) filter.createdAt.$lte = new Date(toDate + "T23:59:59.999Z");
     }
 
     const studentQuery = Student.find(filter).sort({ createdAt: -1 });
@@ -137,15 +143,11 @@ export async function GET(request) {
       Student.distinct("status"),
       Student.distinct("sex")
     ]);
-
     const courses = [...new Set([...DEFAULT_COURSES, ...dbCourses.filter(Boolean)])].sort();
-    const filterStatuses = statuses.filter(Boolean).sort();
-    const filterSexes = sexes.filter(Boolean).sort();
-
     return NextResponse.json({
       students,
       pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
-      filterOptions: { courses, statuses: filterStatuses, sexes: filterSexes }
+      filterOptions: { courses, statuses: statuses.filter(Boolean).sort(), sexes: sexes.filter(Boolean).sort() }
     });
   } catch (error) {
     return NextResponse.json({ error: "Unable to load students.", detail: error.message }, { status: 500 });
