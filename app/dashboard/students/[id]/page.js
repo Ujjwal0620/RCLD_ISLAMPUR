@@ -213,6 +213,7 @@ export default function StudentDetailsPage({ params }) {
     utrNumber: "",
     screenshotUrl: "",
     note: "",
+    authorisedBy: "",
     paymentType: "Installment",
     installmentMonth: "",
   });
@@ -387,6 +388,7 @@ export default function StudentDetailsPage({ params }) {
               note: feeForm.note,
               paymentType: paymentItems.map((item) => item.type).filter(Boolean).join(", "),
               installmentMonth: feeForm.installmentMonth,
+              authorisedBy: feeForm.authorisedBy,
             }
           : undefined,
       }),
@@ -406,8 +408,6 @@ export default function StudentDetailsPage({ params }) {
       note: "",
     }));
     setPaymentItems([{ id: "payment-item-" + Date.now(), type: "Admission Fee", amount: "" }]);
-    setMessage("Fee information saved.");
-    }));
     setMessage("Fee information saved.");
   }
   async function uploadPaymentProof(file) {
@@ -2114,6 +2114,11 @@ export default function StudentDetailsPage({ params }) {
                             <span>Installment Month (if applicable)</span>
                             <input type="month" value={feeForm.installmentMonth}
                               onChange={(e) => setFeeForm((f) => ({ ...f, installmentMonth: e.target.value }))} />
+                          </label>
+                          <label className="form-field">
+                            <span>Authorised By</span>
+                            <input value={feeForm.authorisedBy || ""}
+                              onChange={(e) => setFeeForm((f) => ({ ...f, authorisedBy: e.target.value }))} placeholder="Name of authorising person" />
                           </label>
                           <label className="form-field">
                             <span>Payment Purpose / Note</span>
