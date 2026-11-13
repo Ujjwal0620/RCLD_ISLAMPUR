@@ -27,7 +27,7 @@ export default function CoursesPage() {
   const [error, setError] = useState("");
   const [query,setQuery]=useState("");
   const [advanced,setAdvanced]=useState(false);
-  const [filters,setFilters]=useState({category:"",durationMin:"",durationMax:"",classesMin:"",classesMax:"",feeMin:"",feeMax:"",admissionMin:"",admissionMax:"",skill:""});
+  const [filters,setFilters]=useState({category:"",durationMin:"",durationMax:"",classesMin:"",classesMax:"",feeMin:"",feeMax:"",admissionMin:"",admissionMax:"",skill:"",active:"",source:""});
 
   async function load() {
     setLoading(true);
@@ -46,9 +46,11 @@ export default function CoursesPage() {
 
   useEffect(() => { load(); }, []);
   const visibleCourses=useMemo(()=>courses.filter(course=>{
-    const haystack=[course.code,course.name,course.category,course.description,(course.requiredSkills||[]).join(" "),course.durationMonths,course.classesPerWeek,course.fee,course.admissionFee].join(" ").toLowerCase();
+    const haystack=[course.code,course.name,course.category,course.description,(course.requiredSkills||[]).join(" "),course.durationMonths,course.classesPerWeek,course.fee,course.admissionFee,course.active,course.source,course.createdAt,course.updatedAt].join(" ").toLowerCase();
     return (!query||haystack.includes(query.toLowerCase()))
       &&(!filters.category||course.category===filters.category)
+      &&(!filters.active||String(course.active)===filters.active)
+      &&(!filters.source||String(course.source||"").toLowerCase().includes(filters.source.toLowerCase()))
       &&(!filters.skill||(course.requiredSkills||[]).some(s=>s.toLowerCase().includes(filters.skill.toLowerCase())))
       &&(!filters.durationMin||Number(course.durationMonths)>=Number(filters.durationMin))
       &&(!filters.durationMax||Number(course.durationMonths)<=Number(filters.durationMax))
@@ -59,7 +61,7 @@ export default function CoursesPage() {
       &&(!filters.admissionMin||Number(course.admissionFee)>=Number(filters.admissionMin))
       &&(!filters.admissionMax||Number(course.admissionFee)<=Number(filters.admissionMax));
   }),[courses,query,filters]);
-  const clearDirectoryFilters=()=>{setQuery("");setFilters({category:"",durationMin:"",durationMax:"",classesMin:"",classesMax:"",feeMin:"",feeMax:"",admissionMin:"",admissionMax:"",skill:""})};
+  const clearDirectoryFilters=()=>{setQuery("");setFilters({category:"",durationMin:"",durationMax:"",classesMin:"",classesMax:"",feeMin:"",feeMax:"",admissionMin:"",admissionMax:"",skill:"",active:"",source:""})};
 
 
   function change(event) {
@@ -140,7 +142,7 @@ export default function CoursesPage() {
         {advanced&&<div className="advanced-filters advanced-filters-expanded">
           <div className="filter-field"><label>Category</label><select value={filters.category} onChange={e=>setFilters(f=>({...f,category:e.target.value}))}><option value="">All categories</option>{[...new Set(courses.map(x=>x.category).filter(Boolean))].sort().map(x=><option key={x}>{x}</option>)}</select></div>
           {[["durationMin","Duration from (months)"],["durationMax","Duration to (months)"],["classesMin","Classes / week min"],["classesMax","Classes / week max"],["feeMin","Course fee min (₹)"],["feeMax","Course fee max (₹)"],["admissionMin","Admission fee min (₹)"],["admissionMax","Admission fee max (₹)"]].map(([key,label])=><div className="filter-field" key={key}><label>{label}</label><input type="number" min="0" value={filters[key]} onChange={e=>setFilters(f=>({...f,[key]:e.target.value}))}/></div>)}
-          <div className="filter-field"><label>Required skill</label><input value={filters.skill} onChange={e=>setFilters(f=>({...f,skill:e.target.value}))} placeholder="Type a skill"/></div>
+          <div className="filter-field"><label>Required skill</label><input value={filters.skill} onChange={e=>setFilters(f=>({...f,skill:e.target.value}))} placeholder="Type a skill"/></div><div className="filter-field"><label>Catalogue status</label><select value={filters.active} onChange={e=>setFilters(f=>({...f,active:e.target.value}))}><option value="">All</option><option value="true">Active</option><option value="false">Inactive</option></select></div><div className="filter-field"><label>Source</label><input value={filters.source} onChange={e=>setFilters(f=>({...f,source:e.target.value}))} placeholder="Course source"/></div>
           <button type="button" className="clear-btn" onClick={clearDirectoryFilters}><RotateCcw size={15}/> Reset all</button>
         </div>}
         <div className="filter-summary"><span><Filter size={14}/> {visibleCourses.length} matching courses</span><button className="clear-inline" type="button" onClick={clearDirectoryFilters} disabled={!query&&!Object.values(filters).some(Boolean)}><X size={14}/> Clear filters</button></div>
