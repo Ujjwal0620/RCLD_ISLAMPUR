@@ -2796,3 +2796,17 @@ table tbody tr:hover{background:#f8faff}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
 
 
+
+
+/* Multi-line fee collection workspace */
+.fee-payment-items-editor{display:grid;gap:12px;margin:4px 0 16px;padding:14px;border:1px solid var(--border-color,#dbe3ef);border-radius:12px;background:var(--card-bg,#f8fafc)}
+.fee-payment-items-heading,.fee-payment-items-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.fee-payment-items-heading strong{font-size:14px}
+.fee-payment-items-heading span,.fee-item-auto-note small{color:var(--muted,#64748b);font-size:12px}
+.fee-payment-item-row{padding:10px 0;border-bottom:1px solid var(--border-color,#e2e8f0);align-items:end}
+.fee-payment-item-row:last-of-type{border-bottom:0}
+.fee-item-auto-note small{display:block;line-height:1.4;padding:9px 0}
+.fee-item-remove .ghost-btn{white-space:nowrap}
+.fee-payment-items-footer{padding-top:10px;border-top:1px solid var(--border-color,#e2e8f0)}
+.fee-payment-items-footer strong{font-size:15px;color:var(--primary,#173b78)}
+@media(max-width:760px){.fee-payment-item-row{grid-template-columns:1fr 1fr}.fee-item-auto-note,.fee-item-remove{grid-column:span 1}}
