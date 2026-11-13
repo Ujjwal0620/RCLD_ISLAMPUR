@@ -10,7 +10,8 @@ This is the quickest route from opening the repository to making a safe change. 
 4. Find the page and API route for the workflow you are changing.
 5. Find every model or inline schema used by those routes.
 6. Check docs/DATA_MODEL.md before changing a relationship.
-7. Create a restore point before a broad refactor or data migration.
+7. Open docs/COMMAND_CATALOG.md to locate the owning page, API routes, models and shared helpers.
+8. Create a restore point before a broad refactor or data migration.
 
 ## Project layout
 
@@ -77,6 +78,14 @@ The following route handlers are present in the current main tree. Check the han
 | Development utilities | /api/dev/migrate-employee-logins, /api/dev/reset-employee-passwords, /api/dev/seed-course-content, /api/dev/seed-employees, /api/dev/sync-student-fees |
 
 Development utility endpoints are sensitive. Do not expose them in production. The route inventory is not a promise that every endpoint has complete authorization or test coverage.
+
+## Formatting and code consistency
+
+- Prettier configuration is stored in `.prettierrc.json`; `.prettierignore` excludes generated output, binary assets and the large India location reference JSON.
+- Run `npm run format` to format supported JavaScript, CSS, JSON and Markdown files.
+- Run `npm run format:check` to check formatting without changing files.
+- Keep JavaScript (ES modules); do not introduce TypeScript or a second formatting convention.
+- Avoid mass file moves during cleanup. Refactor one module at a time and update its imports and documentation together.
 
 ## How to trace a feature
 
