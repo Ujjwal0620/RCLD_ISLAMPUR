@@ -67,7 +67,7 @@ export async function GET(request) {
     if (search) {
       const rx = new RegExp(escapeRegex(search), "i");
       const searchableFields = [
-        "employeeId","name","mobile","email","designation","department","gender","employmentType","address",
+        "employeeId","loginId","name","mobile","email","designation","department","gender","employmentType","address",
         "emergencyContactName","emergencyContactNumber","notes","skills","age","dateOfBirth","joiningDate",
         "salary","salaryFrequency","offDays","status","leaveBalance.casual","leaveBalance.sick",
         "leaveBalance.earned","leaveBalance.other"
@@ -81,7 +81,7 @@ export async function GET(request) {
     else if (!status) filter.status = { $ne: "Inactive" };
     if (skill) filter.skills = skill;
 
-    for (const field of ["employeeId","name","mobile","email","designation","department","gender","employmentType","address","emergencyContactName","emergencyContactNumber","notes"]) {
+    for (const field of ["employeeId","loginId","name","mobile","email","designation","department","gender","employmentType","address","emergencyContactName","emergencyContactNumber","notes"]) {
       const value = (searchParams.get(field) || "").trim();
       if (value) filter[field] = new RegExp(escapeRegex(value), "i");
     }
