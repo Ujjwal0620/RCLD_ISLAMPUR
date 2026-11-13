@@ -213,39 +213,16 @@ export default function StudentDetailsPage({ params }) {
     utrNumber: "",
     screenshotUrl: "",
     note: "",
-    authorisedBy: "",
     paymentType: "Installment",
     installmentMonth: "",
   });
-  const [proofUploading, setProofUploading] = useState(false);
-  const [paymentItems, setPaymentItems] = useState([
-    { id: "payment-item-1", type: "Admission Fee", amount: "" },
+  const [paymentItems, setPaymentItems] = useState(() => [
+    { id: "payment-line-1", purpose: "Course Fee", amount: "", installmentMonth: "" },
+    ...(new Date().getDate() > 10
+      ? [{ id: "late-fine-initial", purpose: "Late Fine", amount: "50", installmentMonth: "" }]
+      : []),
   ]);
-  const paymentItemTypes = [
-    "Admission Fee", "Registration Fee", "Course Fee", "Installment",
-    "Late Fine", "Lab Charge", "Examination Fee", "Certificate Fee", "Other",
-  ];
-  function defaultPaymentItemAmount(type) {
-    const paid = Number(fee?.paid || 0);
-    const payable = Number(fee?.payable || 0);
-    const remaining = Math.max(0, payable - paid);
-    if (type === "Admission Fee") return String(Number(feeForm.admissionFee || 0));
-    if (type === "Registration Fee") return String(Number(feeForm.registrationFee || 0));
-    if (type === "Late Fine") return String(Number(fee?.lateFine || 0));
-    if (type === "Course Fee" || type === "Installment") return String(remaining);
-    return "";
-  }
-  function updatePaymentItem(id, patch) {
-    setPaymentItems((items) => items.map((item) => item.id === id ? { ...item, ...patch } : item));
-  }
-  function addPaymentItem() {
-    setPaymentItems((items) => [...items, {
-      id: "payment-item-" + Date.now() + "-" + items.length,
-      type: "Lab Charge",
-      amount: "",
-    }]);
-  }
-  const paymentItemsTotal = paymentItems.reduce((sum, item) => sum + Math.max(0, Number(item.amount || 0)), 0);
+  const [proofUploading, setProofUploading] = useState(false);
   const [feeWorkspaceOpen, setFeeWorkspaceOpen] = useState(false);
   const [attForm, setAttForm] = useState({
     date: new Date().toISOString().slice(0, 10),
@@ -342,6 +319,7 @@ export default function StudentDetailsPage({ params }) {
         discount: feeForm.discount || 0,
         admissionFee: feeForm.admissionFee,
         registrationFee: feeForm.registrationFee,
+        lateFine: Number(fee?.lateFine || 0) + paymentItems.filter((item) => item.purpose === "Late Fine").reduce((sum, item) => sum + Number(item.amount || 0), 0),
         admissionDate: student.admissionDate,
       }),
     });
@@ -376,19 +354,16 @@ export default function StudentDetailsPage({ params }) {
         admissionDate: student.admissionDate,
         payment: paymentItems.some((item) => Number(item.amount) > 0)
           ? {
-              amount: paymentItemsTotal,
-              items: paymentItems.filter((item) => Number(item.amount) > 0).map(({ type, amount }) => ({
-                type, amount: Number(amount),
-              })),
+              amount: paymentItems.reduce((sum, item) => sum + Number(item.amount || 0), 0),
               date: feeForm.date,
               method: feeForm.method,
               reference: feeForm.reference,
               utrNumber: feeForm.utrNumber,
               screenshotUrl: feeForm.screenshotUrl,
-              note: feeForm.note,
-              paymentType: paymentItems.map((item) => item.type).filter(Boolean).join(", "),
-              installmentMonth: feeForm.installmentMonth,
-              authorisedBy: feeForm.authorisedBy,
+              note: [feeForm.note, "Fee sections: " + paymentItems.filter((item) => Number(item.amount) > 0).map((item) => `${item.purpose}: ₹${Number(item.amount).toLocaleString("en-IN")}${item.installmentMonth ? ` (${item.installmentMonth})` : ""}`).join("; ")].filter(Boolean).join(" | "),
+              paymentType: paymentItems.length > 1 ? "Multiple Sections" : paymentItems[0]?.purpose || feeForm.paymentType,
+              installmentMonth: paymentItems.find((item) => item.installmentMonth)?.installmentMonth || feeForm.installmentMonth,
+              items: paymentItems.filter((item) => Number(item.amount) > 0).map(({ purpose, amount, installmentMonth }) => ({ purpose, amount: Number(amount), installmentMonth })),
             }
           : undefined,
       }),
@@ -407,7 +382,7 @@ export default function StudentDetailsPage({ params }) {
       screenshotUrl: "",
       note: "",
     }));
-    setPaymentItems([{ id: "payment-item-" + Date.now(), type: "Admission Fee", amount: "" }]);
+    setPaymentItems([{ id: `payment-line-${Date.now()}`, purpose: "Course Fee", amount: "", installmentMonth: "" }]);
     setMessage("Fee information saved.");
   }
   async function uploadPaymentProof(file) {
@@ -617,22 +592,7 @@ export default function StudentDetailsPage({ params }) {
         ? '<img src="' + esc(student.signatureUrl) + '" alt="Student signature"/>'
         : "") +
       "</div><b>Student Signature</b></div></footer>" +
-      '</main><script>
-        window.addEventListener("load",async()=>{
-          const imgs=[...document.images];
-          await Promise.all(imgs.map(img=>img.decode?img.decode().catch(()=>{}):Promise.resolve()));
-          await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-          const receipt=document.querySelector(".receipt");
-          if(receipt){
-            receipt.style.setProperty("--receipt-fit","1");
-            const availableHeight=202*96/25.4;
-            const contentHeight=receipt.scrollHeight;
-            const fit=Math.min(1,availableHeight/Math.max(contentHeight,1));
-            receipt.style.setProperty("--receipt-fit",String(fit));
-          }
-          setTimeout(()=>window.print(),200);
-        });
-      </script></body></html>';
+      '</main><script>window.addEventListener("load",()=>{const imgs=[...document.images];Promise.all(imgs.map(img=>img.decode?img.decode().catch(()=>{}):Promise.resolve())).then(()=>setTimeout(()=>window.print(),250));});</script></body></html>';
     w.document.open();
     w.document.write(html);
     w.document.close();
@@ -640,48 +600,33 @@ export default function StudentDetailsPage({ params }) {
 
   function printBill(selectedPayment = null) {
     if (!student || !fee) return;
-    const esc = (v) => String(v ?? "—").replace(/[&<>"']/g, (ch) => ({
-      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
-    })[ch]);
+    const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]);
     const num = (v) => Number(v || 0);
     const money = (v) => "₹" + num(v).toLocaleString("en-IN");
-    const payments = (fee.payments || []).slice().sort((a, b) =>
-      String(a.date || "").localeCompare(String(b.date || "")));
+    const payments = (fee.payments || []).slice().sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
     const payment = selectedPayment || payments[payments.length - 1] || null;
-    const courseFee = num(fee.totalFee);
-    const discount = num(fee.discount);
-    const admissionFee = num(fee.admissionFee);
-    const registrationFee = num(fee.registrationFee);
-    const lateFine = num(fee.lateFine);
+    const courseFee = num(fee.totalFee), discount = num(fee.discount), admissionFee = num(fee.admissionFee), registrationFee = num(fee.registrationFee), lateFine = num(fee.lateFine);
     const payable = Math.max(0, num(fee.payable ?? (courseFee - discount + admissionFee + registrationFee + lateFine)));
     const paid = num(fee.paid ?? payments.reduce((sum, p) => sum + num(p.amount), 0));
     const due = Math.max(0, num(fee.due ?? payable - paid));
     const formatDate = (v) => v ? new Date(String(v).slice(0, 10) + "T00:00:00").toLocaleDateString("en-GB") : "—";
     const course = courses.find((x) => String(x.code || "").toUpperCase() === String(student.courseCode || "").toUpperCase());
-    const duration = student.courseDuration || course?.duration || course?.durationText || "—";
+    const duration = student.courseDuration || course?.duration || course?.durationText || "";
     const dateKey = String(payment?.date || new Date().toISOString().slice(0, 10)).replace(/\D/g, "");
     const idKey = String(payment?._id || student.enrollmentNo || student._id || "").replace(/[^a-z0-9]/gi, "").slice(-6).toUpperCase();
     const receiptNo = payment?.receiptNo || `RCLD/${dateKey}/${idKey || "PENDING"}`;
-    const amount = num(payment?.amount);
+    const noteItems = String(payment?.note || "").match(/Fee sections: (.*)$/)?.[1];
+    const parsedNoteItems = noteItems ? noteItems.split(/;\s*/).map((part) => {
+      const match = part.match(/^(.*?):\s*₹([\d,.]+)(?:\s*\((.*?)\))?$/);
+      return match ? { purpose: match[1], amount: Number(match[2].replace(/,/g, "")), installmentMonth: match[3] || "" } : null;
+    }).filter(Boolean) : [];
     const items = Array.isArray(payment?.items) && payment.items.length
       ? payment.items
-      : [{ type: payment?.paymentType || "Fee Payment", amount }];
-    const type = String(payment?.paymentType || "Payment").trim();
-    const purpose = String(payment?.purpose || payment?.paymentPurpose || payment?.note || "—").trim();
+      : parsedNoteItems.length ? parsedNoteItems
+      : [{ purpose: payment?.paymentType || "Payment", amount: payment?.amount, installmentMonth: payment?.installmentMonth || "" }];
+    const itemRows = items.map((item) => `<tr><td>${esc(item.purpose || "")}</td><td>${esc(item.installmentMonth || "—")}</td><td class="right">${esc(money(item.amount))}</td></tr>`).join("");
+    const type = String(payment?.paymentType || (items.length > 1 ? "Multiple Sections" : items[0]?.purpose) || "Payment");
     const reference = payment?.utrNumber || payment?.reference || "—";
-    const itemRows = items.map((item, index) =>
-      `<tr><td>${index + 1}</td><td>${esc(item.type || "Fee Payment")}</td><td class="right">${esc(money(item.amount))}</td></tr>`
-    ).join("");
-    const paymentMeta = [
-      ["Payment Date", formatDate(payment?.date)],
-      ["Payment Method", payment?.method || "—"],
-      ["UTR Number", payment?.utrNumber || "—"],
-      ["Other Reference", payment?.reference || "—"],
-      ["Installment Month", payment?.installmentMonth || "—"],
-      ["Recorded By", payment?.recordedBy || "—"],
-      ["Authorised By", payment?.authorisedBy || "—"],
-      ["Receipt Number", receiptNo],
-    ];
     const logoUrl = window.location.origin + "/assets/logo.png";
     const w = window.open("", "_blank");
     if (!w) { setMessage("Please allow pop-ups to print the fee receipt."); return; }
@@ -693,70 +638,45 @@ export default function StudentDetailsPage({ params }) {
       ["Email", student.email], ["Date of Birth", formatDate(student.dob || student.dateOfBirth)],
       ["Gender", student.gender], ["Address", student.address || student.presentAddress],
     ];
-    const fieldHtml = studentFields.map(([label, value]) =>
-      `<div class="field"><b>${esc(label)}</b><span>${esc(value || "")}</span></div>`).join("");
-    const feeRows = [
-      ["Course Fee", courseFee], ["Discount", discount], ["Admission Fee", admissionFee],
-      ["Registration Fee", registrationFee], ["Late Fine (if applicable)", lateFine],
-      ["Total Fee Payable", payable + lateFine],
-    ];
-    const feeHtml = feeRows.map(([label, value], i) =>
-      `<div class="fee-row ${i === feeRows.length - 1 ? "grand" : ""}"><span>${esc(label)}</span><strong>${esc(money(value))}</strong></div>`).join("");
+    const fieldHtml = studentFields.map(([label, value]) => `<div class="field"><b>${esc(label)}</b><span>${esc(value || "")}</span></div>`).join("");
+    const feeRows = [["Course Fee", courseFee], ["Discount", discount], ["Admission Fee", admissionFee], ["Registration Fee", registrationFee], ["Late Fine", lateFine], ["Total Fee Payable", payable]];
+    const feeHtml = feeRows.map(([label, value], i) => `<div class="fee-row ${i === feeRows.length - 1 ? "grand" : ""}"><span>${esc(label)}</span><strong>${esc(money(value))}</strong></div>`).join("");
     const css = `
-      @page{size:A5 portrait;margin:4mm}
-      *{box-sizing:border-box}
-      html,body{margin:0;padding:0;background:#fff;color:#17345e;font-family:Arial,Helvetica,sans-serif}
-      html,body{width:140mm;height:202mm;overflow:hidden}
-      body{position:relative;font-size:6.4pt;line-height:1.16;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-      /* Keep the complete receipt on one A5 (half-A4) page. The fit script
-         measures the finished content and scales it down only when required. */
-      .receipt{position:absolute;top:0;left:50%;transform:translateX(-50%) scale(var(--receipt-fit,1));transform-origin:top center;width:140mm;height:auto;min-height:0;margin:0;padding:3mm;border:1px solid #173b78;display:flex;flex-direction:column;gap:1.5mm}
-      .header{display:grid;grid-template-columns:16mm 1fr 30mm;align-items:center;border-bottom:1.4px solid #173b78;padding-bottom:1.5mm}
-      .logo{width:14mm;height:13mm;object-fit:contain}.heading{text-align:center}.heading h1{font-size:10pt;margin:0;font-weight:900;letter-spacing:.01em}.heading h2{font-size:8pt;letter-spacing:.1em;margin:1mm 0 0}
-      .receipt-meta{text-align:right;font-size:5.8pt;line-height:1.45}.org{display:flex;justify-content:space-between;gap:1mm;background:#eaf2fc;border:1px solid #c6d8ed;padding:1mm 1.5mm;font-weight:700;font-size:5.6pt}
-      .top-grid{display:grid;grid-template-columns:1.35fr .9fr;gap:1.5mm}.panel{border:1px solid #9eb4d1;padding:1.5mm;min-width:0}.panel-title{font-weight:800;background:#173b78;color:#fff;margin:-1.5mm -1.5mm 1.3mm;padding:1mm 1.5mm;font-size:6.2pt;letter-spacing:.025em}
-      .student-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1mm 2mm}.field{min-width:0;display:flex;flex-direction:column;gap:.3mm}.field b{font-size:5.2pt;color:#526987}.field span{min-height:3.5mm;border-bottom:.5px solid #b7c6d9;padding:.3mm 0;overflow-wrap:anywhere}
-      .fee-list{display:grid;gap:0}.fee-row{display:flex;justify-content:space-between;gap:2mm;padding:.7mm .5mm;border-bottom:.5px solid #e0e8f1}.fee-row strong{white-space:nowrap}.fee-row.grand{background:#eaf2fc;font-weight:900;border:0;margin-top:.5mm;padding:1mm}
-      .payment-items{width:100%;border-collapse:collapse;font-size:5.8pt}.payment-items th,.payment-items td{border:.5px solid #c8d5e5;padding:.7mm 1mm;text-align:left}.payment-items th{background:#f0f5fb}.payment-items .right{text-align:right}.payment-items tfoot td{font-weight:900;background:#eaf2fc}
-      .payment-meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1mm;margin-top:1mm}.payment-field{border:.5px solid #d2deeb;padding:1mm;min-width:0;overflow-wrap:anywhere}.payment-field b{display:block;font-size:5pt;color:#526987;margin-bottom:.4mm}.payment-field strong{font-size:5.7pt;font-weight:700}.payment-field.received{background:#eaf2fc;border-color:#9eb4d1}
-      .purpose{margin-top:1mm;border:.5px solid #d2deeb;padding:1mm;overflow-wrap:anywhere}.purpose b{margin-right:1mm}
-      .terms{border:1px solid #9eb4d1;padding:1.3mm}.terms h3{margin:0 0 .7mm;font-size:6pt}.terms ol{margin:0;padding-left:3.5mm;display:grid;grid-template-columns:1fr 1fr;gap:.5mm 3mm;font-size:5.1pt}
-      .bottom{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2mm;align-items:end;margin-top:2mm}.bottom-note{font-size:5.4pt;line-height:1.35;overflow-wrap:anywhere}.sign{text-align:center;padding-top:6mm}.sign strong{display:block;border-top:1px solid #173b78;padding-top:1mm}.auth{font-size:5pt;font-weight:700;margin-top:.5mm}
-      .footer{display:flex;justify-content:space-between;gap:2mm;border-top:1px solid #9eb4d1;padding-top:1mm;font-size:5.2pt}.proof{color:#173b78}
-      @media screen{body{background:#e9eef5;padding:0}.receipt{box-shadow:0 3px 14px #102b5920}}
-      @media print{html,body{width:140mm;height:202mm;margin:0!important;padding:0!important;overflow:hidden!important}.receipt{box-shadow:none!important;break-after:avoid!important;page-break-after:avoid!important}}
+      @page{size:A5 landscape;margin:3.5mm}
+      *{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff;color:#17345e;font-family:Arial,Helvetica,sans-serif}
+      body{font-size:7pt;line-height:1.12;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      .receipt{width:203mm;height:140mm;margin:auto;padding:2.2mm;border:1px solid #173b78;display:flex;flex-direction:column;gap:1.4mm;overflow:hidden}
+      .header{display:grid;grid-template-columns:17mm 1fr 39mm;align-items:center;border-bottom:1.4px solid #173b78;padding-bottom:1.2mm}.logo{width:15mm;height:13mm;object-fit:contain}.heading{text-align:center}.heading h1{font-size:13pt;margin:0;font-weight:900;letter-spacing:.02em}.heading h2{font-size:8pt;letter-spacing:.12em;margin:1mm 0 0}.receipt-meta{text-align:right;font-size:6.5pt;line-height:1.5}
+      .org{display:flex;justify-content:space-between;background:#eaf2fc;border:1px solid #c6d8ed;padding:1mm 2mm;font-weight:700;font-size:6.5pt}
+      .top-grid{display:grid;grid-template-columns:1.55fr 1fr;gap:1.5mm}.panel{border:1px solid #9eb4d1;padding:1.3mm;min-width:0}.panel-title{font-weight:800;background:#173b78;color:#fff;margin:-1.3mm -1.3mm 1.2mm;padding:1mm 1.5mm;font-size:7pt;letter-spacing:.03em}
+      .student-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1mm 2mm}.field{min-width:0;display:flex;flex-direction:column;gap:.3mm}.field b{font-size:5.8pt;color:#526987}.field span{min-height:3.8mm;border-bottom:.5px solid #b7c6d9;padding:.4mm 0;overflow-wrap:anywhere;white-space:normal}
+      .fee-list{display:grid;grid-template-columns:1fr 1fr;column-gap:2mm}.fee-row{display:flex;justify-content:space-between;gap:1mm;padding:.7mm .5mm;border-bottom:.5px solid #e0e8f1;font-size:6.4pt}.fee-row strong{white-space:nowrap}.fee-row.grand{grid-column:1/-1;background:#eaf2fc;font-weight:900;border:0;margin-top:.5mm;padding:1mm}
+      .payment-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:1mm}.payment-field{border:.5px solid #d2deeb;padding:1mm;min-width:0;min-height:7mm}.payment-field b{display:block;font-size:5.7pt;color:#526987;margin-bottom:.5mm}.payment-field strong{font-size:6.7pt;overflow-wrap:anywhere}.payment-field.received{background:#eaf2fc;border-color:#9eb4d1}
+      .items-table{width:100%;border-collapse:collapse;margin-top:1mm;font-size:6.3pt}.items-table th,.items-table td{border:.5px solid #cbd8e7;padding:.7mm 1mm;text-align:left}.items-table th{background:#f0f5fb}.right{text-align:right!important}.purpose-note{margin-top:.7mm;font-size:6pt}
+      .terms{border:1px solid #9eb4d1;padding:1.2mm}.terms h3{margin:0 0 .7mm;font-size:6.8pt}.terms ol{margin:0;padding-left:4mm;display:grid;grid-template-columns:1fr 1fr;gap:.6mm 4mm;font-size:5.9pt}
+      .bottom{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2mm;align-items:end;margin-top:auto}.bottom-note{font-size:5.8pt;line-height:1.3}.sign{text-align:center;padding-top:4mm}.sign strong{display:block;border-top:.7px solid #173b78;padding-top:.7mm}.auth{font-size:5.5pt;font-weight:700;margin-top:.5mm}
+      @media screen{body{background:#e9eef5;padding:5mm}.receipt{box-shadow:0 4px 22px #102b5920}}
+      @media print{html,body{width:203mm;height:140mm;margin:0!important;padding:0!important}.receipt{width:203mm;height:140mm;margin:0;box-shadow:none;break-after:avoid}}
     `;
     const html = `<!doctype html><html><head><meta charset="utf-8"/><title>RCLD Fee Receipt - ${esc(receiptNo)}</title><style>${css}</style></head><body>
       <main class="receipt">
         <header class="header"><img class="logo" src="${esc(logoUrl)}" alt="RCLD logo"/><div class="heading"><h1>RASHTRIYA COMPUTER LITERACY DRIVE</h1><h2>STUDENT FEE RECEIPT</h2></div><div class="receipt-meta"><b>Receipt No.:</b> ${esc(receiptNo)}<br/><b>Payment Date:</b> ${esc(formatDate(payment?.date))}</div></header>
         <div class="org"><span>RCLD – ISLAMPUR</span><span>AEC Code: RCLD/ISL/001</span><span>9/15, A/9, Accheletalla, Islampur</span></div>
-        <div class="top-grid">
-          <section class="panel"><div class="panel-title">STUDENT DETAILS</div><div class="student-grid">${fieldHtml}</div></section>
-          <section class="panel"><div class="panel-title">COMPLETE FEE BREAKUP</div><div class="fee-list">${feeHtml}</div></section>
-        </div>
-        <section class="panel"><div class="panel-title">PAYMENT RECEIVED — ITEMISED DETAILS</div>
-          <table class="payment-items"><thead><tr><th style="width:8%">#</th><th>Fee Head / Particulars</th><th class="right">Amount</th></tr></thead>
-            <tbody>${itemRows}</tbody><tfoot><tr><td colspan="2">TOTAL AMOUNT RECEIVED</td><td class="right">${esc(money(amount))}</td></tr></tfoot>
-          </table>
-          <div class="payment-meta">
-            ${paymentMeta.map(([label, value], index) => `<div class="payment-field ${index === 0 ? "received" : ""}"><b>${esc(label)}</b><strong>${esc(value)}</strong></div>`).join("")}
+        <div class="top-grid"><section class="panel"><div class="panel-title">STUDENT DETAILS</div><div class="student-grid">${fieldHtml}</div></section><section class="panel"><div class="panel-title">COMPLETE FEE BREAKUP</div><div class="fee-list">${feeHtml}</div></section></div>
+        <section class="panel"><div class="panel-title">PAYMENT RECEIVED — COMPLETE TRANSACTION DETAILS</div>
+          <div class="payment-grid">
+            <div class="payment-field received"><b>Total Amount Received</b><strong>${esc(money(payment?.amount))}</strong></div>
+            <div class="payment-field"><b>Payment Section / Type</b><strong>${esc(type)}</strong></div>
+            <div class="payment-field"><b>Payment Date</b><strong>${esc(formatDate(payment?.date))}</strong></div>
+            <div class="payment-field"><b>Payment Method</b><strong>${esc(payment?.method || "—")}</strong></div>
+            <div class="payment-field"><b>Installment Month</b><strong>${esc(payment?.installmentMonth || items.find(x => x.installmentMonth)?.installmentMonth || "—")}</strong></div>
           </div>
-          <div class="purpose"><b>Payment Purpose / Note:</b>${esc(purpose)}</div>
-          <div class="purpose"><b>Payment Proof:</b>${payment?.screenshotUrl ? `<a class="proof" href="${esc(payment.screenshotUrl)}">View attached proof</a>` : "Not attached"}</div>
+          <table class="items-table"><thead><tr><th>Fee Section / Purpose</th><th>Installment Month</th><th class="right">Amount</th></tr></thead><tbody>${itemRows}</tbody></table>
+          <div class="purpose-note"><b>UTR / Transaction No.:</b> ${esc(payment?.utrNumber || "—")} &nbsp; | &nbsp; <b>Other Reference:</b> ${esc(payment?.reference || "—")} &nbsp; | &nbsp; <b>Purpose / Note:</b> ${esc(payment?.note || "—")} &nbsp; | &nbsp; <b>Payment Screenshot:</b> ${payment?.screenshotUrl ? "Attached" : "Not attached"}</div>
         </section>
-        <section class="panel"><div class="panel-title">PAYMENT SUMMARY</div><div class="payment-meta">
-          <div class="payment-field"><b>Total Course Fee Payable</b><strong>${esc(money(payable))}</strong></div>
-          <div class="payment-field"><b>Total Amount Paid</b><strong>${esc(money(paid))}</strong></div>
-          <div class="payment-field"><b>Amount Due</b><strong>${esc(money(due))}</strong></div>
-          <div class="payment-field"><b>Transaction / UTR Reference</b><strong>${esc(reference)}</strong></div>
-        </div></section>
-        <section class="terms"><h3>TERMS &amp; CONDITIONS</h3><ol>
-          <li>If any fee payment or installment is made after the 10th of the month, a late fine of ₹50 will be added.</li>
-          <li>This receipt is valid only after verification by the Authorised AEC.</li>
-          <li>Fee once paid is non-refundable.</li>
-          <li>Admission fee includes nominal charges for registration, ID card, course module and certificates.</li>
-        </ol></section>
-        <div class="bottom"><div class="bottom-note"><b>Transaction / Reference:</b> ${esc(reference)}<br/>${payment?.screenshotUrl ? `<a class="proof" href="${esc(payment.screenshotUrl)}">Payment proof attached</a>` : " "}</div><div class="sign"><strong>Authorised Signature</strong><div class="auth">AUTHORISED AEC • RCLD – ISLAMPUR</div></div><div class="bottom-note" style="text-align:right"><b>Amount Received:</b> ${esc(money(amount))}<br/><b>For RCLD – ISLAMPUR</b></div></div>
+        <section class="panel"><div class="panel-title">PAYMENT SUMMARY</div><div class="payment-grid"><div class="payment-field"><b>Total Course Fee Payable</b><strong>${esc(money(payable))}</strong></div><div class="payment-field"><b>Total Amount Paid</b><strong>${esc(money(paid))}</strong></div><div class="payment-field"><b>Amount Due</b><strong>${esc(money(due))}</strong></div><div class="payment-field"><b>Receipt Amount</b><strong>${esc(money(payment?.amount))}</strong></div><div class="payment-field"><b>Receipt No.</b><strong>${esc(receiptNo)}</strong></div></div></section>
+        <section class="terms"><h3>TERMS &amp; CONDITIONS</h3><ol><li>If any fee payment or installment is made after the 10th of the month, a late fine of ₹50 will be added.</li><li>This receipt is valid only after verification by the Authorised AEC.</li><li>Fee once paid is non-refundable.</li><li>Admission fee includes nominal charges for registration, ID card, course module and certificates.</li></ol></section>
+        <div class="bottom"><div class="bottom-note"><b>Payment Proof:</b> ${payment?.screenshotUrl ? `<a href="${esc(payment.screenshotUrl)}">View uploaded proof</a>` : "Not attached"}<br/><b>Reference:</b> ${esc(reference)}</div><div class="sign"><strong>Authorised Signature</strong><div class="auth">AUTHORISED AEC • RCLD – ISLAMPUR</div></div><div class="bottom-note" style="text-align:right"><b>Received:</b> ${esc(money(payment?.amount))}<br/><b>For RCLD – ISLAMPUR</b></div></div>
       </main><script>window.addEventListener("load",()=>{const imgs=[...document.images];Promise.all(imgs.map(img=>img.decode?img.decode().catch(()=>{}):Promise.resolve())).then(()=>setTimeout(()=>window.print(),250));});</script>
     </body></html>`;
     w.document.open(); w.document.write(html); w.document.close();
@@ -2061,103 +1981,102 @@ export default function StudentDetailsPage({ params }) {
                         <span className="fee-section-tag fee-tag-blue">NEW ENTRY</span>
                       </div>
                       <form className="inline-operation-form fee-modal-form" onSubmit={saveFees}>
-                        <div className="fee-payment-items-editor">
-                          <div className="fee-payment-items-heading">
-                            <strong>Payment Items</strong>
-                            <span>Add every fee head included in this receipt</span>
-                          </div>
-                          {paymentItems.map((item, index) => (
-                            <div className="form-grid four fee-payment-item-row" key={item.id}>
-                              <label className="form-field">
-                                <span>Fee Head / Particulars *</span>
-                                <select
-                                  value={item.type}
-                                  onChange={(e) => {
-                                    const type = e.target.value;
-                                    updatePaymentItem(item.id, { type, amount: defaultPaymentItemAmount(type) });
-                                  }}
-                                >
-                                  {paymentItemTypes.map((type) => <option key={type} value={type}>{type}</option>)}
-                                </select>
-                              </label>
-                              <label className="form-field">
-                                <span>Amount (₹) *</span>
-                                <input type="number" min="0.01" step="0.01" required
-                                  value={item.amount}
-                                  onChange={(e) => updatePaymentItem(item.id, { amount: e.target.value })}
-                                  placeholder="Enter amount" />
-                              </label>
-                              <div className="form-field fee-item-auto-note">
-                                <span>Amount source</span>
-                                <small>{["Admission Fee","Registration Fee","Late Fine","Course Fee","Installment"].includes(item.type) ? "Auto-filled from current fee balance; editable" : "Enter applicable charge amount"}</small>
-                              </div>
-                              <div className="form-field fee-item-remove">
-                                <span>Action</span>
-                                <button type="button" className="ghost-btn" disabled={paymentItems.length === 1}
-                                  onClick={() => setPaymentItems((items) => items.filter((row) => row.id !== item.id))}>
-                                  Remove item
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                          <div className="fee-payment-items-footer">
-                            <button type="button" className="ghost-btn" onClick={addPaymentItem}>+ Add Payment Item</button>
-                            <strong>Receipt Total: ₹{paymentItemsTotal.toLocaleString("en-IN")}</strong>
-                          </div>
-                        </div>
                         <div className="form-grid four">
                           <label className="form-field">
                             <span>Payment Date *</span>
                             <input type="date" required value={feeForm.date}
-                              onChange={(e) => setFeeForm((f) => ({ ...f, date: e.target.value }))} />
+                              onChange={(e) => {
+                                const date = e.target.value;
+                                setFeeForm((f) => ({ ...f, date }));
+                                const isLate = Number(date.slice(8, 10)) > 10;
+                                setPaymentItems((items) => {
+                                  const withoutLate = items.filter((item) => item.purpose !== "Late Fine");
+                                  return isLate ? [...withoutLate, { id: `late-fine-${date}`, purpose: "Late Fine", amount: "50", installmentMonth: "" }] : withoutLate;
+                                });
+                              }} />
                           </label>
                           <label className="form-field">
-                            <span>Payment Method</span>
-                            <select value={feeForm.method}
-                              onChange={(e) => setFeeForm((f) => ({ ...f, method: e.target.value }))}>
+                            <span>Payment Method *</span>
+                            <select value={feeForm.method} onChange={(e) => setFeeForm((f) => ({ ...f, method: e.target.value }))}>
                               <option>Cash</option><option>UPI</option><option>Bank Transfer</option><option>Card</option><option>PhonePe</option>
                             </select>
                           </label>
                           <label className="form-field">
                             <span>UTR / Transaction No.</span>
-                            <input value={feeForm.utrNumber}
-                              onChange={(e) => setFeeForm((f) => ({ ...f, utrNumber: e.target.value }))} placeholder="Enter UTR number" />
+                            <input value={feeForm.utrNumber} onChange={(e) => setFeeForm((f) => ({ ...f, utrNumber: e.target.value }))} placeholder="Enter UTR number" />
                           </label>
                           <label className="form-field">
                             <span>Other Reference</span>
-                            <input value={feeForm.reference}
-                              onChange={(e) => setFeeForm((f) => ({ ...f, reference: e.target.value }))} placeholder="Bank / transaction reference" />
+                            <input value={feeForm.reference} onChange={(e) => setFeeForm((f) => ({ ...f, reference: e.target.value }))} placeholder="Receipt / bank reference" />
                           </label>
-                          <label className="form-field">
-                            <span>Installment Month (if applicable)</span>
-                            <input type="month" value={feeForm.installmentMonth}
-                              onChange={(e) => setFeeForm((f) => ({ ...f, installmentMonth: e.target.value }))} />
-                          </label>
-                          <label className="form-field">
-                            <span>Authorised By</span>
-                            <input value={feeForm.authorisedBy || ""}
-                              onChange={(e) => setFeeForm((f) => ({ ...f, authorisedBy: e.target.value }))} placeholder="Name of authorising person" />
-                          </label>
-                          <label className="form-field">
-                            <span>Payment Purpose / Note</span>
-                            <input value={feeForm.note}
-                              onChange={(e) => setFeeForm((f) => ({ ...f, note: e.target.value }))} placeholder="Optional note for this receipt" />
+                        </div>
+                        <div className="fee-payment-items">
+                          <div className="fee-modal-section-heading">
+                            <div><h4>Payment Sections & Amounts</h4><p>Add multiple fee heads to this one receipt. Each line is recorded separately in the receipt breakdown.</p></div>
+                            <button type="button" className="secondary-btn" onClick={() => setPaymentItems((items) => [...items, { id: `payment-line-${Date.now()}-${items.length}`, purpose: "Lab Charge", amount: "", installmentMonth: "" }])}>+ Add Fee Section</button>
+                          </div>
+                          {paymentItems.map((item, index) => (
+                            <div className="form-grid four fee-payment-item-row" key={item.id}>
+                              <label className="form-field"><span>Fee Section / Purpose</span>
+                                <select value={item.purpose} onChange={(e) => setPaymentItems((items) => items.map((row, i) => i === index ? { ...row, purpose: e.target.value, amount: e.target.value === "Late Fine" ? "50" : row.amount } : row))}>
+                                  <option>Course Fee</option><option>Admission Fee</option><option>Registration Fee</option><option>Installment</option><option>Lab Charge</option><option>Late Fine</option><option>Other</option>
+                                </select>
+                              </label>
+                              <label className="form-field"><span>Amount (₹) *</span>
+                                <input type="number" min="0" required value={item.amount} disabled={item.purpose === "Late Fine" && Number(item.amount) === 50}
+                                  onChange={(e) => setPaymentItems((items) => items.map((row, i) => i === index ? { ...row, amount: e.target.value } : row))} placeholder="Enter amount" />
+                              </label>
+                              <label className="form-field"><span>Installment Month (if applicable)</span>
+                                <input type="month" value={item.installmentMonth} onChange={(e) => setPaymentItems((items) => items.map((row, i) => i === index ? { ...row, installmentMonth: e.target.value } : row))} />
+                              </label>
+                              <div className="form-field fee-item-remove"><span>&nbsp;</span><button type="button" className="secondary-btn" disabled={paymentItems.length === 1 || item.purpose === "Late Fine"} onClick={() => setPaymentItems((items) => items.filter((_, i) => i !== index))}>Remove</button></div>
+                            </div>
+                          ))}
+                          <div className="fee-plan-total"><span>Total amount on this receipt</span><strong>₹{paymentItems.reduce((sum, item) => sum + Number(item.amount || 0), 0).toLocaleString("en-IN")}</strong><span>{Number(feeForm.date.slice(8, 10)) > 10 ? "₹50 late fine automatically included (payment date is after the 10th)." : "No late fine based on the selected payment date."}</span></div>
+                        </div>
+                        <div className="form-grid four">
+                          <label className="form-field"><span>Payment Purpose / Note</span>
+                            <input value={feeForm.note} onChange={(e) => setFeeForm((f) => ({ ...f, note: e.target.value }))} placeholder="Additional purpose or note" />
                           </label>
                           <label className="form-field">
                             <span>Payment Screenshot</span>
-                            <input type="file" accept="image/*" disabled={proofUploading}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              disabled={proofUploading}
                               onChange={async (e) => {
-                                const file = e.target.files?.[0]; if (!file) return;
-                                if (file.size > 5 * 1024 * 1024) { setMessage("Payment screenshot must be smaller than 5 MB."); return; }
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                if (file.size > 5 * 1024 * 1024) {
+                                  setMessage("Payment screenshot must be smaller than 5 MB.");
+                                  return;
+                                }
                                 setProofUploading(true);
                                 try {
-                                  const fd = new FormData(); fd.append("file", file); fd.append("purpose", "payment-proof");
-                                  const up = await fetch("/api/uploads/student-photo", { method: "POST", body: fd });
-                                  const ud = await up.json(); if (!up.ok) throw new Error(ud.error || "Unable to upload screenshot.");
-                                  setFeeForm((f) => ({ ...f, screenshotUrl: ud.url })); setMessage("Payment screenshot uploaded.");
-                                } catch (err) { setMessage(err.message); } finally { setProofUploading(false); }
-                              }} />
-                            {feeForm.screenshotUrl && <a href={feeForm.screenshotUrl} target="_blank" rel="noreferrer">View uploaded screenshot</a>}
+                                  const fd = new FormData();
+                                  fd.append("file", file);
+                                  fd.append("purpose", "payment-proof");
+                                  const up = await fetch("/api/uploads/student-photo", {
+                                    method: "POST",
+                                    body: fd,
+                                  });
+                                  const ud = await up.json();
+                                  if (!up.ok)
+                                    throw new Error(ud.error || "Unable to upload screenshot.");
+                                  setFeeForm((f) => ({ ...f, screenshotUrl: ud.url }));
+                                  setMessage("Payment screenshot uploaded.");
+                                } catch (err) {
+                                  setMessage(err.message);
+                                } finally {
+                                  setProofUploading(false);
+                                }
+                              }}
+                            />
+                            {feeForm.screenshotUrl && (
+                              <a href={feeForm.screenshotUrl} target="_blank" rel="noreferrer">
+                                View uploaded screenshot
+                              </a>
+                            )}
                           </label>
                         </div>
                         <div className="fee-modal-actions">
