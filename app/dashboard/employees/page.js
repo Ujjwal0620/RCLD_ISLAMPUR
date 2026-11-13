@@ -67,7 +67,7 @@ export default function EmployeesPage() {
           <button className="search-action" type="button" onClick={()=>load()}><Search size={16}/> Search</button>
         </div>
         {advanced&&<div className="advanced-filters advanced-filters-expanded">
-          <div className="filter-field"><label>Status</label><select value={filters.status} onChange={e=>update("status",e.target.value)}><option value="">Active records</option><option>Active</option><option>Inactive</option><option>On Leave</option></select></div>
+          <div className="filter-field"><label>Status</label><select value={filters.status} onChange={e=>update("status",e.target.value)}><option value="">Active records</option><option value="all">All statuses</option><option>Active</option><option>Inactive</option><option>On Leave</option></select></div>
           <div className="filter-field"><label>Gender</label><select value={filters.gender} onChange={e=>update("gender",e.target.value)}><option value="">All genders</option><option>Male</option><option>Female</option><option>Other</option></select></div>
           <div className="filter-field"><label>Employment type</label><select value={filters.employmentType} onChange={e=>update("employmentType",e.target.value)}><option value="">All types</option><option>Full Time</option><option>Part Time</option><option>Contract</option><option>Intern</option></select></div>
           <div className="filter-field"><label>Age from</label><input type="number" min="16" value={filters.ageMin} onChange={e=>update("ageMin",e.target.value)}/></div>
