@@ -617,7 +617,22 @@ export default function StudentDetailsPage({ params }) {
         ? '<img src="' + esc(student.signatureUrl) + '" alt="Student signature"/>'
         : "") +
       "</div><b>Student Signature</b></div></footer>" +
-      '</main><script>window.addEventListener("load",()=>{const imgs=[...document.images];Promise.all(imgs.map(img=>img.decode?img.decode().catch(()=>{}):Promise.resolve())).then(()=>setTimeout(()=>window.print(),250));});</script></body></html>';
+      '</main><script>
+        window.addEventListener("load",async()=>{
+          const imgs=[...document.images];
+          await Promise.all(imgs.map(img=>img.decode?img.decode().catch(()=>{}):Promise.resolve()));
+          await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+          const receipt=document.querySelector(".receipt");
+          if(receipt){
+            receipt.style.setProperty("--receipt-fit","1");
+            const availableHeight=202*96/25.4;
+            const contentHeight=receipt.scrollHeight;
+            const fit=Math.min(1,availableHeight/Math.max(contentHeight,1));
+            receipt.style.setProperty("--receipt-fit",String(fit));
+          }
+          setTimeout(()=>window.print(),200);
+        });
+      </script></body></html>';
     w.document.open();
     w.document.write(html);
     w.document.close();
@@ -691,8 +706,11 @@ export default function StudentDetailsPage({ params }) {
       @page{size:A5 portrait;margin:4mm}
       *{box-sizing:border-box}
       html,body{margin:0;padding:0;background:#fff;color:#17345e;font-family:Arial,Helvetica,sans-serif}
-      body{font-size:6.4pt;line-height:1.16;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-      .receipt{width:140mm;min-height:202mm;margin:auto;padding:3mm;border:1px solid #173b78;display:flex;flex-direction:column;gap:1.5mm}
+      html,body{width:140mm;height:202mm;overflow:hidden}
+      body{position:relative;font-size:6.4pt;line-height:1.16;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      /* Keep the complete receipt on one A5 (half-A4) page. The fit script
+         measures the finished content and scales it down only when required. */
+      .receipt{position:absolute;top:0;left:50%;transform:translateX(-50%) scale(var(--receipt-fit,1));transform-origin:top center;width:140mm;height:auto;min-height:0;margin:0;padding:3mm;border:1px solid #173b78;display:flex;flex-direction:column;gap:1.5mm}
       .header{display:grid;grid-template-columns:16mm 1fr 30mm;align-items:center;border-bottom:1.4px solid #173b78;padding-bottom:1.5mm}
       .logo{width:14mm;height:13mm;object-fit:contain}.heading{text-align:center}.heading h1{font-size:10pt;margin:0;font-weight:900;letter-spacing:.01em}.heading h2{font-size:8pt;letter-spacing:.1em;margin:1mm 0 0}
       .receipt-meta{text-align:right;font-size:5.8pt;line-height:1.45}.org{display:flex;justify-content:space-between;gap:1mm;background:#eaf2fc;border:1px solid #c6d8ed;padding:1mm 1.5mm;font-weight:700;font-size:5.6pt}
@@ -703,10 +721,10 @@ export default function StudentDetailsPage({ params }) {
       .payment-meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1mm;margin-top:1mm}.payment-field{border:.5px solid #d2deeb;padding:1mm;min-width:0;overflow-wrap:anywhere}.payment-field b{display:block;font-size:5pt;color:#526987;margin-bottom:.4mm}.payment-field strong{font-size:5.7pt;font-weight:700}.payment-field.received{background:#eaf2fc;border-color:#9eb4d1}
       .purpose{margin-top:1mm;border:.5px solid #d2deeb;padding:1mm;overflow-wrap:anywhere}.purpose b{margin-right:1mm}
       .terms{border:1px solid #9eb4d1;padding:1.3mm}.terms h3{margin:0 0 .7mm;font-size:6pt}.terms ol{margin:0;padding-left:3.5mm;display:grid;grid-template-columns:1fr 1fr;gap:.5mm 3mm;font-size:5.1pt}
-      .bottom{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2mm;align-items:end;margin-top:auto}.bottom-note{font-size:5.4pt;line-height:1.35;overflow-wrap:anywhere}.sign{text-align:center;padding-top:6mm}.sign strong{display:block;border-top:1px solid #173b78;padding-top:1mm}.auth{font-size:5pt;font-weight:700;margin-top:.5mm}
+      .bottom{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2mm;align-items:end;margin-top:2mm}.bottom-note{font-size:5.4pt;line-height:1.35;overflow-wrap:anywhere}.sign{text-align:center;padding-top:6mm}.sign strong{display:block;border-top:1px solid #173b78;padding-top:1mm}.auth{font-size:5pt;font-weight:700;margin-top:.5mm}
       .footer{display:flex;justify-content:space-between;gap:2mm;border-top:1px solid #9eb4d1;padding-top:1mm;font-size:5.2pt}.proof{color:#173b78}
-      @media screen{body{background:#e9eef5;padding:5mm}.receipt{box-shadow:0 3px 14px #102b5920}}
-      @media print{html,body{width:148mm;height:210mm;margin:0!important;padding:0!important}.receipt{width:140mm;min-height:202mm;height:202mm;margin:0;box-shadow:none;break-after:avoid;page-break-after:avoid}}
+      @media screen{body{background:#e9eef5;padding:0}.receipt{box-shadow:0 3px 14px #102b5920}}
+      @media print{html,body{width:140mm;height:202mm;margin:0!important;padding:0!important;overflow:hidden!important}.receipt{box-shadow:none!important;break-after:avoid!important;page-break-after:avoid!important}}
     `;
     const html = `<!doctype html><html><head><meta charset="utf-8"/><title>RCLD Fee Receipt - ${esc(receiptNo)}</title><style>${css}</style></head><body>
       <main class="receipt">
