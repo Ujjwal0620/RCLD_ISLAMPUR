@@ -188,3 +188,20 @@ For each phase, preserve the current routes, API calls, field names, roles, fee 
 ### Public homepage scope
 
 The root route `app/page.js` is a public institute landing page and reads active course records from `GET /api/courses`. It includes course details, duration, weekly class frequency and fee information returned by the API. It does not invent contact numbers or email addresses, and it does not claim that student authentication or an LMS course player is already implemented. The staff ERP login is intentionally linked only from the footer.
+
+
+## RCLD registration print system
+
+The student registration print document is designed against the supplied RCLD paper registration-form reference. The dedicated stylesheet `app/styles/registration-print.css` is imported last in `app/layout.js` and is the single owner of registration print rules. Legacy registration-specific `@media print` blocks were removed from `app/globals.css` so competing A4 coordinate systems cannot override one another.
+
+The print layout is A4 portrait and includes:
+- the RCLD logo, single-line institute heading, paper-form subtitle, registration-form label and Form No.;
+- the original capital-letter instruction strip;
+- office fields using the current registration data;
+- applicant details and photograph;
+- Present Address and Permanent Address boxes with the exact `#8493BD` border;
+- contact details;
+- the six-column qualification table in the paper reference order: Sl. No., Exam/Course, Board/University, College/Institute, Year and % of Marks;
+- enclosure checkboxes, declaration and date/place/signature lines.
+
+The print-only work does not change the student registration API payload, MongoDB schema, uploads, admission status rules or fee behavior. Verify the rendered result in Chrome print preview using A4 portrait, 100% scale, no margins and browser headers/footers disabled. A source change is not a substitute for checking the actual rendered print preview.
