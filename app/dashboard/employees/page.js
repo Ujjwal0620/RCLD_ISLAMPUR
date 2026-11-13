@@ -8,13 +8,13 @@ const emptyFilters = {
   search:"", skill:"", status:"", department:"", designation:"", employmentType:"", gender:"",
   employeeId:"", name:"", mobile:"", email:"", address:"", emergencyContactName:"",
   emergencyContactNumber:"", ageMin:"", ageMax:"", salaryMin:"", salaryMax:"",
-  joiningFrom:"", joiningTo:""
+  joiningFrom:"", joiningTo:"", dateOfBirth:"", salaryFrequency:"", offDay:"", casualLeaveMin:"", sickLeaveMin:"", earnedLeaveMin:"", otherLeaveMin:"", notes:""
 };
 
 const advancedFields = [
   ["employeeId","Employee ID"],["name","Employee name"],["mobile","Mobile number"],["email","Email address"],
   ["department","Department"],["designation","Designation"],["gender","Gender"],["employmentType","Employment type"],
-  ["address","Address"],["emergencyContactName","Emergency contact name"],["emergencyContactNumber","Emergency contact number"]
+  ["address","Address"],["emergencyContactName","Emergency contact name"],["emergencyContactNumber","Emergency contact number"],["dateOfBirth","Date of birth"],["notes","HR notes"]
 ];
 
 export default function EmployeesPage() {
@@ -74,6 +74,10 @@ export default function EmployeesPage() {
           <div className="filter-field"><label>Age to</label><input type="number" min="16" value={filters.ageMax} onChange={e=>update("ageMax",e.target.value)}/></div>
           <div className="filter-field"><label>Salary from (₹)</label><input type="number" min="0" value={filters.salaryMin} onChange={e=>update("salaryMin",e.target.value)}/></div>
           <div className="filter-field"><label>Salary to (₹)</label><input type="number" min="0" value={filters.salaryMax} onChange={e=>update("salaryMax",e.target.value)}/></div>
+          <div className="filter-field"><label>Date of birth</label><input type="date" value={filters.dateOfBirth} onChange={e=>update("dateOfBirth",e.target.value)}/></div>
+          <div className="filter-field"><label>Salary frequency</label><select value={filters.salaryFrequency} onChange={e=>update("salaryFrequency",e.target.value)}><option value="">All</option><option>Monthly</option><option>Weekly</option><option>Daily</option><option>Annual</option></select></div>
+          <div className="filter-field"><label>Weekly off day</label><select value={filters.offDay} onChange={e=>update("offDay",e.target.value)}><option value="">Any</option>{["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].map(x=><option key={x}>{x}</option>)}</select></div>
+          {[["casualLeaveMin","Casual leave balance min"],["sickLeaveMin","Sick leave balance min"],["earnedLeaveMin","Earned leave balance min"],["otherLeaveMin","Other leave balance min"]].map(([key,label])=><div className="filter-field" key={key}><label>{label}</label><input type="number" min="0" value={filters[key]} onChange={e=>update(key,e.target.value)}/></div>)}
           <div className="filter-field"><label>Joined from</label><input type="date" value={filters.joiningFrom} onChange={e=>update("joiningFrom",e.target.value)}/></div>
           <div className="filter-field"><label>Joined to</label><input type="date" value={filters.joiningTo} onChange={e=>update("joiningTo",e.target.value)}/></div>
           {advancedFields.map(([key,label])=><div className="filter-field" key={key}><label>{label}</label><input value={filters[key]} onChange={e=>update(key,e.target.value)} placeholder={"Filter by "+label.toLowerCase()}/></div>)}
