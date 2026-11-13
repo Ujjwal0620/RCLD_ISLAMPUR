@@ -63,18 +63,24 @@ export async function GET(request) {
     const skill = (searchParams.get("skill") || "").trim();
     const filter = {};
     const escapeRegex = value => String(value).replace(/[.*+?^{}()|[\]\\$]/g, "\\$&");
-    const skill = (searchParams.get("skill") || "").trim();
-    const filter = {};");
+
     if (search) {
-      const escaped = search.replace(/[.*+?^{}()|[\]\\]/g, "\\$&");
-      const rx = new RegExp(escaped, "i");
-      filter.$or = ["employeeId","name","mobile","email","designation","department","gender","employmentType","address","emergencyContactName","emergencyContactNumber","notes","skills","age","dateOfBirth","joiningDate","salary","salaryFrequency","offDays","status","leaveBalance.casual","leaveBalance.sick","leaveBalance.earned","leaveBalance.other"].map(field => ({ [field]: rx }));
+      const rx = new RegExp(escapeRegex(search), "i");
+      const searchableFields = [
+        "employeeId","name","mobile","email","designation","department","gender","employmentType","address",
+        "emergencyContactName","emergencyContactNumber","notes","skills","age","dateOfBirth","joiningDate",
+        "salary","salaryFrequency","offDays","status","leaveBalance.casual","leaveBalance.sick",
+        "leaveBalance.earned","leaveBalance.other"
+      ];
+      filter.$or = searchableFields.map(field => ({ [field]: rx }));
       const numericSearch = Number(search);
       if (Number.isFinite(numericSearch) && search !== "") filter.$or.push({ age: numericSearch }, { salary: numericSearch });
     }
+
     if (status && status !== "all") filter.status = status;
     else if (!status) filter.status = { $ne: "Inactive" };
     if (skill) filter.skills = skill;
+
     for (const field of ["employeeId","name","mobile","email","designation","department","gender","employmentType","address","emergencyContactName","emergencyContactNumber","notes"]) {
       const value = (searchParams.get(field) || "").trim();
       if (value) filter[field] = new RegExp(escapeRegex(value), "i");
@@ -83,6 +89,7 @@ export async function GET(request) {
       const value = (searchParams.get(field) || "").trim();
       if (value && value !== "all") filter[field] = new RegExp("^" + escapeRegex(value) + "$", "i");
     }
+
     const ageMin = searchParams.get("ageMin"), ageMax = searchParams.get("ageMax");
     if (ageMin !== null || ageMax !== null) {
       filter.age = {};
@@ -101,6 +108,7 @@ export async function GET(request) {
     if (salaryFrequency) filter.salaryFrequency = salaryFrequency;
     const offDay = (searchParams.get("offDay") || "").trim();
     if (offDay) filter.offDays = offDay;
+
     for (const [key, field] of [["casualLeaveMin","leaveBalance.casual"],["sickLeaveMin","leaveBalance.sick"],["earnedLeaveMin","leaveBalance.earned"],["otherLeaveMin","leaveBalance.other"]]) {
       const value = searchParams.get(key);
       if (value !== null && value !== "") filter[field] = { $gte: Number(value) };
@@ -111,18 +119,16 @@ export async function GET(request) {
       if (joiningFrom) filter.joiningDate.$gte = joiningFrom;
       if (joiningTo) filter.joiningDate.$lte = joiningTo;
     }
+
     const employees = await Employee.find(filter).select("-password -accountNumber -bankName -ifsc").sort({ createdAt: -1 }).lean();
     return NextResponse.json({ employees, skills: ALL_EMPLOYEE_SKILLS });
   } catch (error) {
     const unavailable = /MONGODB_URI|ECONNREFUSED|Server selection|connect/i.test(error.message || "");
-    return NextResponse.json(
-      {
-        error: unavailable ? "Employee database is unavailable." : "Unable to load employees.",
-        detail: error.message,
-        code: unavailable ? "DATABASE_UNAVAILABLE" : "EMPLOYEE_LOAD_FAILED",
-      },
-      { status: unavailable ? 503 : 500 }
-    );
+    return NextResponse.json({
+      error: unavailable ? "Employee database is unavailable." : "Unable to load employees.",
+      detail: error.message,
+      code: unavailable ? "DATABASE_UNAVAILABLE" : "EMPLOYEE_LOAD_FAILED"
+    }, { status: unavailable ? 503 : 500 });
   }
 }
 
