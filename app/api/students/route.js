@@ -64,10 +64,10 @@ export async function GET(request) {
       filter.$or = [
         "applicantName","formNo","enrollmentNo","regnNo","aecCode","courseName","courseCode","batchCode",
         "mobileNumber","whatsappNumber","guardianContactNumber","email","aadhaarNumber","fatherOrHusbandName",
-        "nationality","dateOfBirth","sex","address","presentAddress","permanentAddress","postOffice","policeStation",
+        "nationality","dateOfBirth","sex","address","presentAddress","permanentAddress","postOffice","policeStation","sourceCourseLabel","importSource","signatureApplicant","declarationDate","referralId","marketingEmployeeId",
         "nearestLandmark","district","state","pin","permanentPostOffice","permanentNearestLandmark","permanentPin",
-        "permanentDistrict","permanentState","referralName","marketingEmployeeName","paymentStatus","declarationPlace",
-        "qualifications.examCourse","qualifications.boardUniversity","qualifications.collegeInstitute","qualifications.year"
+        "permanentDistrict","permanentState","referralName","marketingEmployeeName","paymentStatus","declarationPlace","sourceCourseLabel","importSource","address","presentAddress","permanentAddress","signatureApplicant","declarationDate","referralId","marketingEmployeeId",
+        "qualifications.examCourse","qualifications.boardUniversity","qualifications.collegeInstitute","qualifications.year","qualifications.percentage"
       ].map(field => ({ [field]: rx }));
     }
     const textFilters = [
@@ -97,6 +97,16 @@ export async function GET(request) {
       filter.admissionDate = {};
       if (admissionFrom) filter.admissionDate.$gte = admissionFrom;
       if (admissionTo) filter.admissionDate.$lte = admissionTo;
+    }
+    for (const field of ["sameAsPresentAddress","enclosures.stampPhoto","enclosures.qualifyingCertificates","enclosures.matricAdmitCard"]) {
+      const value = searchParams.get(field);
+      if (value === "true" || value === "false") filter[field] = value === "true";
+    }
+    for (const field of ["photoUrl","signatureUrl"]) {
+      const key = field === "photoUrl" ? "hasPhoto" : "hasSignature";
+      const value = searchParams.get(key);
+      if (value === "yes") filter[field] = { $exists: true, $nin: ["", null] };
+      if (value === "no") filter.$or = [...(filter.$or || []), { [field]: { $exists: false } }, { [field]: "" }, { [field]: null }];
     }
     const qualification = (searchParams.get("qualification") || "").trim();
     if (qualification) {
