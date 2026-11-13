@@ -177,3 +177,20 @@ Tick a checkpoint only after the related workflow is implemented, verified again
 - [ ] Record a release checkpoint and a separate verified MongoDB backup reference.
 
 **Current status:** These are outstanding delivery gates from the implementation audit. Do not mark them complete until verified.
+
+
+## System audit and UI organization checkpoint
+
+**Restore branch created on 13 November 2026 before the system-wide organization and UI baseline work.**
+
+| Item | Value |
+|---|---|
+| Repository | Ujjwal0620/RCLD_ISLAMPUR |
+| Integration branch | main |
+| Restore branch | checkpoint/pre-system-audit-2026-11-13 |
+| Source commit | 4f88a6df0d49e526703f82b0f9b19fcce3437c3b |
+| Purpose | Preserve the complete source tree before Prettier setup, shared Lexa-inspired UI layer, registration print-border cleanup and documentation updates |
+| Branch URL | https://github.com/Ujjwal0620/RCLD_ISLAMPUR/tree/checkpoint/pre-system-audit-2026-11-13 |
+| Verification | Branch created from main; no database or Cloudinary backup is included |
+
+The working changes are on `chore/system-audit-ui-format-docs` until reviewed and merged. The restore branch remains a source-only checkpoint.
