@@ -202,6 +202,6 @@ The print layout is A4 portrait and includes:
 - Present Address and Permanent Address boxes with the exact `#8493BD` border;
 - contact details;
 - the six-column qualification table in the paper reference order: Sl. No., Exam/Course, Board/University, College/Institute, Year and % of Marks;
-- enclosure checkboxes, declaration and date/place/signature lines.
+- the GDCA-only Semester II / Semester III selection row, enclosure checkboxes, declaration and date/place/signature lines. Blank paper-only fields remain manual print fields and do not create or imply database values.
 
 The print-only work does not change the student registration API payload, MongoDB schema, uploads, admission status rules or fee behavior. Verify the rendered result in Chrome print preview using A4 portrait, 100% scale, no margins and browser headers/footers disabled. A source change is not a substitute for checking the actual rendered print preview.
