@@ -686,3 +686,137 @@
     min-height: 5mm !important;
   }
 }
+
+
+/* Extra paper-template office boxes and GDCA semester selection fields. */
+@media print {
+  html body .rcld-print-document .rcld-print-office-grid {
+    display: grid !important;
+    grid-template-columns: 1.12fr 0.72fr 1.55fr !important;
+    align-items: stretch !important;
+    gap: 2mm !important;
+    min-height: 27mm !important;
+  }
+
+  html body .rcld-print-document .rcld-print-kit-box,
+  html body .rcld-print-document .rcld-print-ho-box {
+    display: flex !important;
+    flex-direction: column !important;
+    min-width: 0 !important;
+    min-height: 27mm !important;
+    padding: 1.5mm !important;
+    border: 0.35mm solid #8493BD !important;
+    background: #ffffff !important;
+  }
+
+  html body .rcld-print-document .rcld-print-kit-box strong,
+  html body .rcld-print-document .rcld-print-ho-box strong {
+    display: block !important;
+    color: #172238 !important;
+    font: bold 7.5pt Arial, Helvetica, sans-serif !important;
+  }
+
+  html body .rcld-print-document .rcld-print-kit-box > span {
+    display: block !important;
+    margin-top: 1mm !important;
+    color: #4b5563 !important;
+    font: 6.8pt Arial, Helvetica, sans-serif !important;
+  }
+
+  html body .rcld-print-document .rcld-print-kit-box > i,
+  html body .rcld-print-document .rcld-print-ho-box > i {
+    display: block !important;
+    flex: 1 1 auto !important;
+    min-height: 8mm !important;
+    margin-top: 1mm !important;
+    border-bottom: 0.2mm solid #aab2bf !important;
+  }
+
+  html body .rcld-print-document .rcld-print-ho-box p {
+    display: flex !important;
+    gap: 1mm !important;
+    min-height: 4mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    font: 6.8pt Arial, Helvetica, sans-serif !important;
+    white-space: nowrap !important;
+  }
+
+  html body .rcld-print-document .rcld-print-office-data {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    align-content: stretch !important;
+    column-gap: 2mm !important;
+    row-gap: 0.5mm !important;
+    min-width: 0 !important;
+  }
+
+  html body .rcld-print-document .rcld-print-office-data p {
+    display: flex !important;
+    align-items: baseline !important;
+    gap: 0.8mm !important;
+    min-width: 0 !important;
+    min-height: 6mm !important;
+    margin: 0 !important;
+    padding: 0.5mm 0.3mm !important;
+    border: 0 !important;
+    border-bottom: 0.2mm solid #aab2bf !important;
+    font: 6.7pt Arial, Helvetica, sans-serif !important;
+    white-space: nowrap !important;
+  }
+
+  html body .rcld-print-document .rcld-print-office-data p span {
+    flex: 0 0 auto !important;
+    font-weight: 700 !important;
+  }
+
+  html body .rcld-print-document .rcld-print-office-data p b {
+    min-width: 0 !important;
+    overflow: hidden !important;
+    font-weight: 400 !important;
+    text-overflow: ellipsis !important;
+  }
+
+  html body .rcld-print-document .rcld-print-course-selection {
+    display: block !important;
+    position: static !important;
+    width: 196mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    break-inside: avoid !important;
+  }
+
+  html body .rcld-print-document .rcld-print-course-selection h2 {
+    margin: 0 !important;
+    padding: 1mm !important;
+    border: 0.3mm solid #8493BD !important;
+    background: #ffffff !important;
+    color: #172238 !important;
+    font: bold 7.5pt Arial, Helvetica, sans-serif !important;
+    text-align: center !important;
+  }
+
+  html body .rcld-print-document .rcld-print-course-selection > div {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    width: 196mm !important;
+    min-height: 8mm !important;
+    border: 0.3mm solid #8493BD !important;
+    border-top: 0 !important;
+  }
+
+  html body .rcld-print-document .rcld-print-course-selection > div span {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 8mm !important;
+    padding: 1mm !important;
+    color: #111111 !important;
+    font: 7.5pt Arial, Helvetica, sans-serif !important;
+  }
+
+  html body .rcld-print-document .rcld-print-course-selection > div span + span {
+    border-left: 0.3mm solid #8493BD !important;
+  }
+}
