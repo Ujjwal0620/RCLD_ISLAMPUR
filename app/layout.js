@@ -4,7 +4,11 @@ import "./styles/design-system.css";
 export const metadata = {
   title: "RCLD Islampur ERP",
   description: "RCLD Islampur education institute ERP",
-  icons: { icon: [{ url: "/assets/logo.png", type: "image/png" }], shortcut: ["/assets/logo.png"], apple: [{ url: "/assets/logo.png" }] },
+  icons: {
+    icon: [{ url: "/assets/logo.png", type: "image/png" }],
+    shortcut: ["/assets/logo.png"],
+    apple: ["/assets/logo.png"],
+  },
 };
 
 export default function RootLayout({ children }) {
