@@ -109,7 +109,7 @@ export async function GET(request) {
       if (joiningFrom) filter.joiningDate.$gte = joiningFrom;
       if (joiningTo) filter.joiningDate.$lte = joiningTo;
     }
-    const employees = await Employee.find(filter).sort({ createdAt: -1 }).lean();
+    const employees = await Employee.find(filter).select("-password -accountNumber -bankName -ifsc").sort({ createdAt: -1 }).lean();
     return NextResponse.json({ employees, skills: ALL_EMPLOYEE_SKILLS });
   } catch (error) {
     const unavailable = /MONGODB_URI|ECONNREFUSED|Server selection|connect/i.test(error.message || "");
