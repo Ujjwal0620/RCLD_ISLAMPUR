@@ -8,7 +8,7 @@ const emptyFilters = {
   search:"", skill:"", status:"", department:"", designation:"", employmentType:"", gender:"",
   employeeId:"", loginId:"", name:"", mobile:"", email:"", address:"", emergencyContactName:"",
   emergencyContactNumber:"", ageMin:"", ageMax:"", salaryMin:"", salaryMax:"",
-  joiningFrom:"", joiningTo:"", dateOfBirth:"", salaryFrequency:"", offDay:"", casualLeaveMin:"", sickLeaveMin:"", earnedLeaveMin:"", otherLeaveMin:"", notes:""
+  joiningFrom:"", joiningTo:"", createdFrom:"", createdTo:"", updatedFrom:"", updatedTo:"", dateOfBirth:"", salaryFrequency:"", offDay:"", casualLeaveMin:"", sickLeaveMin:"", earnedLeaveMin:"", otherLeaveMin:"", notes:""
 };
 
 const advancedFields = [
@@ -79,7 +79,7 @@ export default function EmployeesPage() {
           <div className="filter-field"><label>Weekly off day</label><select value={filters.offDay} onChange={e=>update("offDay",e.target.value)}><option value="">Any</option>{["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].map(x=><option key={x}>{x}</option>)}</select></div>
           {[["casualLeaveMin","Casual leave balance min"],["sickLeaveMin","Sick leave balance min"],["earnedLeaveMin","Earned leave balance min"],["otherLeaveMin","Other leave balance min"]].map(([key,label])=><div className="filter-field" key={key}><label>{label}</label><input type="number" min="0" value={filters[key]} onChange={e=>update(key,e.target.value)}/></div>)}
           <div className="filter-field"><label>Joined from</label><input type="date" value={filters.joiningFrom} onChange={e=>update("joiningFrom",e.target.value)}/></div>
-          <div className="filter-field"><label>Joined to</label><input type="date" value={filters.joiningTo} onChange={e=>update("joiningTo",e.target.value)}/></div>
+          <div className="filter-field"><label>Joined to</label><input type="date" value={filters.joiningTo} onChange={e=>update("joiningTo",e.target.value)}/></div><div className="filter-field"><label>Created from</label><input type="date" value={filters.createdFrom} onChange={e=>update("createdFrom",e.target.value)}/></div><div className="filter-field"><label>Created to</label><input type="date" value={filters.createdTo} onChange={e=>update("createdTo",e.target.value)}/></div><div className="filter-field"><label>Updated from</label><input type="date" value={filters.updatedFrom} onChange={e=>update("updatedFrom",e.target.value)}/></div><div className="filter-field"><label>Updated to</label><input type="date" value={filters.updatedTo} onChange={e=>update("updatedTo",e.target.value)}/></div>
           {advancedFields.map(([key,label])=><div className="filter-field" key={key}><label>{label}</label><input value={filters[key]} onChange={e=>update(key,e.target.value)} placeholder={"Filter by "+label.toLowerCase()}/></div>)}
           <button className="clear-btn" type="button" onClick={clearFilters}><RotateCcw size={15}/> Reset all</button>
         </div>}
