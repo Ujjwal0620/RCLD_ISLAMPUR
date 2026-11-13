@@ -232,7 +232,6 @@ export default function StudentDetailsPage({ params }) {
     note: "",
   });
   const [message, setMessage] = useState("");
-  const [icardSemesterOpen, setIcardSemesterOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({});
   const [history, setHistory] = useState([]),
@@ -408,135 +407,182 @@ export default function StudentDetailsPage({ params }) {
     }
   }
 
-  function isCodingForKidsStudent() {
-    const courseText = [student?.courseName, student?.courseCode, student?.course]
-      .filter(Boolean).join(" ").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-    return /(^|\s)(cfk|coding for kids)(\s|$)/.test(courseText);
-  }
-
-  function printStudentICard(semester = "SEM 1") {
+  function printStudentICard() {
     if (!student || !isIcardEligible(student)) {
-      setMessage("I-Card is unavailable until all required details are complete and admission is not pending.");
+      setMessage(
+        "I-Card is unavailable until all required details are complete and admission is not pending.",
+      );
       return;
     }
-    const esc = (v) => String(v ?? "—").replace(/[&<>"']/g, (ch) => ({
-      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-    })[ch]);
-    const text = (v, fallback = "—") => String(v ?? "").trim() || fallback;
-    const courseName = text(student.courseName || student.courseCode);
-    const studentId = text(student.enrollmentNo || student.regnNo || student.formNo);
-    const father = text(student.fatherOrHusbandName || student.fatherName || student.guardianName);
+
+    const esc = (v) =>
+      String(v ?? "—").replace(/[&<>"']/g, (ch) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+      })[ch]);
+    const courseText = String(student.courseName || student.courseCode || "").trim();
+    const isCFK = /coding\s*for\s*kids|\bCFK\b/i.test(courseText);
+    const semesterOptions = ["SEM 1", "SEM 2", "SEM 3", "SEM 4", "SEM 5", "SEM 6", "Robotics"];
+    const semesterColors = {
+      "SEM 1": "#ec008c",
+      "SEM 2": "#269b52",
+      "SEM 3": "#f1c40f",
+      "SEM 4": "#858585",
+      "SEM 5": "#1688d4",
+      "SEM 6": "#e53935",
+      Robotics: "#777777",
+    };
+
+    // CFK cards require the learner's current semester/module to be selected at print time.
+    let selectedSemester = "";
+    if (isCFK) {
+      const choice = window.prompt(
+        "Select Coding For Kids semester/module:\n" +
+          semesterOptions.map((item, index) => `${index + 1}. ${item}`).join("\n") +
+          "\n\nEnter 1-7:",
+        "1",
+      );
+      if (choice === null) return;
+      const index = Number(choice.trim()) - 1;
+      if (!Number.isInteger(index) || index < 0 || index >= semesterOptions.length) {
+        setMessage("Please select a valid CFK semester/module from 1 to 7.");
+        return;
+      }
+      selectedSemester = semesterOptions[index];
+    }
+
+    const w = window.open("", "_blank");
+    if (!w) {
+      setMessage("Please allow pop-ups to print the I-Card.");
+      return;
+    }
+
+    const studentName = esc(student.applicantName);
+    const fatherName = esc(student.fatherOrHusbandName);
+    const enrollment = esc(student.enrollmentNo || student.studentId || student.admissionNo || "—");
+    const admissionDate = student.admissionDate || student.createdAt || "";
+    const formatDate = (date) => {
+      if (!date) return "—";
+      const parsed = new Date(String(date).slice(0, 10) + "T00:00:00");
+      return Number.isNaN(parsed.getTime()) ? esc(date) : parsed.toLocaleDateString("en-GB");
+    };
+    const issueDate = formatDate(admissionDate);
     const address = [
       student.presentAddress || student.address,
-      student.postOffice ? "P.O. " + student.postOffice : "",
-      student.policeStation ? "P.S. " + student.policeStation : "",
-      student.district,
-      student.state,
-      student.pin
+      student.postOffice ? `P.O. ${student.postOffice}` : "",
+      student.district ? `Dist. ${student.district}` : "",
+      student.state || "",
+      student.pin ? `PIN ${student.pin}` : "",
     ].filter(Boolean).join(", ");
-    const issued = student.admissionDate || student.createdAt || student.dateOfAdmission;
-    const issueDate = issued ? new Date(issued).toLocaleDateString("en-GB") : "—";
     const photo = student.photoUrl
-      ? '<img class="photo" src="' + esc(student.photoUrl) + '" alt="Student photo"/>'
-      : '<div class="photo photo-empty">PHOTO</div>';
-    const logo = window.location.origin + "/assets/logo.png";
-    const coding = isCodingForKidsStudent();
-    const semColors = {
-      "SEM 1":"#ec168c", "SEM 2":"#36a852", "SEM 3":"#f2d32f",
-      "SEM 4":"#92969b", "SEM 5":"#2878c8", "SEM 6":"#e33137",
-      "ROBOTICS":"#7b4bb7"
-    };
-    const semColor = semColors[semester] || semColors["SEM 1"];
-    const w = window.open("", "_blank");
-    if (!w) { setMessage("Please allow pop-ups to print the I-Card."); return; }
-    const commonCss = `
-      @page{size:24mm 35mm;margin:0}
-      *{box-sizing:border-box}
-      html,body{width:24mm;height:35mm;margin:0;padding:0;overflow:hidden}
-      body{font-family:Arial,Helvetica,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact;color:#414b54}
-      .card{position:relative;width:24mm;height:35mm;overflow:hidden;background:#fff;border:.25mm solid #d7dce2}
-      .photo{display:block;object-fit:cover;background:#fff;border:.25mm solid #fff}
-      .photo-empty{display:flex;align-items:center;justify-content:center;color:#777;font-size:4pt}
-      .brand-logo{object-fit:contain}
-      .name{font-weight:900;text-transform:uppercase;overflow-wrap:anywhere}
-      .label{font-weight:700}
-      `;
-    let cardHtml = "";
-    if (coding) {
-      cardHtml = `
-        <article class="card cfk" style="--sem-color:${semColor}">
-          <div class="cfk-top">
-            <div class="brandline"><img class="brand-logo" src="${esc(logo)}"/><div><b>RCLD</b><small>Rashtriya Computer Literacy Drive</small><em>A mission encouraged by<br/>Govt. of India</em></div></div>
-          </div>
-          <div class="cfk-photo">${photo}</div>
-          <div class="cfk-name">${esc(text(student.applicantName))}</div>
-          <div class="cfk-course">CODING FOR KIDS</div>
-          <div class="cfk-details">
-            <div><b>ID No. :</b><span>${esc(studentId)}</span></div>
+      ? `<img class="student-photo" src="${esc(student.photoUrl)}" alt="Student photo"/>`
+      : '<div class="student-photo photo-placeholder">PHOTO</div>';
+    const logo = '<img class="logo" src="/assets/logo.png" alt="RCLD logo"/>';
+    const contactLine = 'AEC: CYBER WORLD, DESHBANDHU PARA, ISLAMPUR';
+    const contactDetails = '✉ islampur.cyberworld@gmail.com　☎ 9851775891';
+
+    let cardMarkup = "";
+    if (isCFK) {
+      const semesterColor = semesterColors[selectedSemester];
+      cardMarkup = `
+        <article class="card cfk-card" style="--semester-color:${semesterColor}">
+          <header class="cfk-header">
+            <div class="cfk-brand">${logo}<div><strong>RCLD</strong><span>Rashtriya Computer Literacy Drive</span><small>A mission encouraged by Govt. of India</small></div></div>
+          </header>
+          <div class="cfk-photo-wrap">${photo}</div>
+          <section class="cfk-name"><h1>${studentName}</h1><h2>CODING FOR KIDS</h2></section>
+          <section class="cfk-info">
+            <div><b>ID No :</b><span>${enrollment}</span></div>
             <div><b>Date of Admn. :</b><span>${esc(issueDate)}</span></div>
-            <div><b>Father's Name :</b><span>${esc(father)}</span></div>
-            <div><b>Address :</b><span>${esc(text(address))}</span></div>
-          </div>
-          <div class="semester"><small>${esc(semester.replace("SEM ","SEM "))}</small><strong>${semester.startsWith("SEM ") ? esc(semester.slice(4)) : "R"}</strong></div>
+            <div><b>Father's Name :</b><span>${fatherName}</span></div>
+            <div><b>Address :</b><span>${esc(address)}</span></div>
+          </section>
+          <div class="semester-badge"><span>${esc(selectedSemester.replace(" ", "\n"))}</span></div>
           <div class="authority">✍<small>Issuing Authority</small></div>
-          <div class="aec"><b>AEC: CYBER WORLD, DESHBANDHU PARA, ISLAMPUR</b><br/>✉ islampur.cyberworld@gmail.com &nbsp; ☎ 9851775891</div>
-          <div class="card-footer">STUDENT ID CARD</div>
+          <footer class="cfk-footer"><div>${contactLine}</div><small>${contactDetails}</small><strong>STUDENT ID CARD</strong></footer>
         </article>`;
     } else {
-      const session = text(student.session || student.academicSession || student.batchSession, "2025–2026");
-      const courseLabel = courseName.length > 31 ? courseName.slice(0, 29) + "…" : courseName;
-      cardHtml = `
-        <article class="card regular">
-          <div class="reg-top"><div class="reg-id"><b>ID NO.</b><strong>${esc(studentId)}</strong></div><div class="reg-session"><b>Session:</b><strong>${esc(session)}</strong></div></div>
-          <div class="reg-brand"><img class="brand-logo" src="${esc(logo)}"/><div><b>RCLD</b><small>Rashtriya Computer Literacy Drive</small><em>A mission encouraged by National IT Task Force (Govt. of India)</em></div></div>
-          <div class="reg-photo">${photo}</div>
-          <div class="reg-name">${esc(text(student.applicantName))}</div>
-          <div class="reg-details">
-            <div><b>Father's Name:</b><span>${esc(father)}</span></div>
-            <div><b>Address:</b><span>${esc(text(address))}</span></div>
-            <div><b>Course:</b><span>${esc(courseLabel)}</span></div>
-            <div><b>Date of Issue:</b><span>${esc(issueDate)}</span></div>
+      cardMarkup = `
+        <article class="card standard-card">
+          <div class="standard-top">
+            <div class="standard-id">ID NO.: ${enrollment}</div>
+            <div class="standard-session">Session: ${esc(student.session || student.academicSession || "—")}</div>
           </div>
-          <div class="reg-sign">✍<small>Authorised Signatory</small></div>
-          <div class="reg-contact"><b>AEC: CYBER WORLD, DESHBANDHU PARA, ISLAMPUR</b><br/>Uttar Dinajpur, West Bengal, PIN-733202<br/>✉ islampur.cyberworld@gmail.com &nbsp; ☎ 9851775891</div>
-          <div class="reg-footer">IDENTITY CARD</div>
+          <div class="standard-brand">${logo}<div><strong>RCLD</strong><span>Rashtriya Computer Literacy Drive</span><small>(A mission encouraged by National IT Task Force, Govt. of India)</small></div></div>
+          <div class="standard-photo-wrap">${photo}</div>
+          <h1>${studentName}</h1>
+          <div class="standard-details">
+            <p><b>Father's Name:</b> ${fatherName}</p>
+            <p><b>Address:</b> ${esc(address)}</p>
+            <p><b>Course:</b> ${esc(courseText || "—")}</p>
+            <p><b>Date of Issue:</b> ${esc(issueDate)}</p>
+          </div>
+          <div class="standard-sign">✍<small>Authorized Signatory</small></div>
+          <footer class="standard-footer"><span>${contactLine}</span><small>${contactDetails}</small><strong>IDENTITY CARD</strong></footer>
         </article>`;
     }
-    const css = commonCss + (coding ? `
-      .cfk-top{height:8mm;background:#414b54;color:#fff;position:relative;padding:1mm 1mm 0;clip-path:polygon(0 0,100% 0,100% 70%,50% 100%,0 70%)}
-      .brandline{display:flex;align-items:center;justify-content:center;gap:.7mm;text-align:left}
-      .brand-logo{width:4mm;height:4mm}.brandline b{font-size:18pt;line-height:.85;letter-spacing:.5mm;color:#fff}.brandline small{display:block;font-size:3.4pt;font-weight:700;color:#fff;white-space:nowrap}.brandline em{display:block;font-size:3pt;text-align:center;color:#fff;font-style:normal;line-height:1.1}
-      .cfk:before{content:"";position:absolute;left:0;right:0;top:5mm;height:12mm;background:var(--sem-color);clip-path:polygon(0 0,50% 68%,100% 0,100% 38%,50% 100%,0 38%);z-index:0}
-      .cfk-photo{position:absolute;z-index:1;top:9.4mm;left:6.1mm;width:11.8mm;height:11.8mm;border-radius:50%;background:#fff;border:1mm solid #fff;overflow:hidden}
-      .cfk-photo .photo{width:100%;height:100%;border:0;border-radius:50%}
-      .cfk-name{position:absolute;top:21.3mm;left:1mm;right:1mm;text-align:center;font-size:6.1pt;line-height:1.1;color:#414b54}
-      .cfk-course{position:absolute;top:23.1mm;left:0;right:0;text-align:center;font-size:5pt;font-weight:900}
-      .cfk-details{position:absolute;top:25.1mm;left:5.7mm;right:.7mm;font-size:3.55pt;line-height:1.25}
-      .cfk-details div{display:grid;grid-template-columns:6.3mm 1fr;gap:.4mm;margin-bottom:.25mm}
-      .cfk-details b{color:var(--sem-color);text-align:right}.cfk-details span{overflow-wrap:anywhere}
-      .semester{position:absolute;left:0;bottom:8mm;width:6.4mm;height:6.3mm;background:var(--sem-color);color:#fff;border-radius:0 55% 55% 0;text-align:center;padding-top:.8mm;display:flex;flex-direction:column;align-items:center;justify-content:center}
-      .semester small{font-size:3pt;font-weight:800}.semester strong{font-size:9pt;line-height:1}
-      .authority{position:absolute;right:1mm;bottom:7.8mm;font-size:8pt;text-align:center;line-height:.8}.authority small{display:block;font-size:2.8pt}
-      .aec{position:absolute;left:.8mm;right:.8mm;bottom:3.1mm;text-align:center;font-size:2.75pt;line-height:1.3;border-top:.2mm solid #ddd;padding-top:.6mm}
-      .card-footer{position:absolute;bottom:0;left:0;right:0;height:2.7mm;background:var(--sem-color);color:#fff;text-align:center;font-size:6.2pt;font-weight:900;padding-top:.25mm}
-    ` : `
-      .regular{padding:.8mm}
-      .reg-top{height:3.1mm;display:flex;justify-content:space-between;align-items:center;font-size:3.3pt;color:#263b60}
-      .reg-top b{font-size:2.8pt}.reg-top strong{font-size:3.2pt;color:#c32e35}
-      .reg-brand{height:6.2mm;display:flex;align-items:center;justify-content:center;gap:1mm;border-bottom:.2mm solid #cbd3df;text-align:center}
-      .reg-brand .brand-logo{width:5mm;height:5mm}.reg-brand b{font-size:12pt;line-height:.85;color:#c52e32;letter-spacing:.4mm}.reg-brand small{display:block;font-size:3.2pt;font-weight:800;white-space:nowrap}.reg-brand em{display:block;font-size:2.4pt;font-style:normal;white-space:nowrap}
-      .reg-photo{position:absolute;top:10mm;left:7.3mm;width:9.2mm;height:9.8mm;border:.4mm solid #3e5a83;border-radius:1mm;padding:.35mm}
-      .reg-photo .photo{width:100%;height:100%}
-      .reg-name{position:absolute;top:20.2mm;left:1mm;right:1mm;text-align:center;font-size:5.3pt;font-weight:900;text-transform:uppercase}
-      .reg-details{position:absolute;top:22.2mm;left:1.2mm;right:1mm;font-size:3.35pt;line-height:1.35}
-      .reg-details div{display:grid;grid-template-columns:6.7mm 1fr;gap:.5mm;margin-bottom:.3mm}
-      .reg-details b{text-align:right;color:#354f70}.reg-details span{overflow-wrap:anywhere}
-      .reg-sign{position:absolute;right:1mm;bottom:7.5mm;text-align:center;font-size:7pt;line-height:.8}.reg-sign small{display:block;font-size:2.6pt}
-      .reg-contact{position:absolute;left:1mm;right:1mm;bottom:3mm;text-align:center;font-size:2.55pt;line-height:1.25;border-top:.2mm solid #ccd4df;padding-top:.5mm}
-      .reg-footer{position:absolute;bottom:0;left:0;right:0;height:2.7mm;background:#263d69;color:#fff;text-align:center;font-size:6pt;font-weight:900;padding-top:.25mm}
-    `);
+
+    const html = `<!doctype html><html><head><meta charset="utf-8"/><title>RCLD Student I-Card - ${studentName}</title>
+      <style>
+        @page{size:24mm 35mm;margin:0}
+        *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+        html,body{width:24mm;height:35mm;margin:0;padding:0;font-family:Arial,Helvetica,sans-serif}
+        body{overflow:hidden}
+        .card{position:relative;width:24mm;height:35mm;overflow:hidden;background:#fff;color:#414b52}
+        .logo{display:block;object-fit:contain;flex:none}
+        .student-photo{display:block;width:100%;height:100%;object-fit:cover;background:#fff}
+        .photo-placeholder{display:flex;align-items:center;justify-content:center;color:#888;font-size:3.5pt}
+        /* Coding For Kids format: fixed, non-overlapping zones */
+        .cfk-card{border:.25mm solid #ddd;background:#fff}
+        .cfk-header{height:7mm;background:#424f56;color:#fff;padding:.6mm .8mm;position:relative;overflow:hidden}
+        .cfk-header:before,.cfk-header:after{content:"";position:absolute;top:5.1mm;width:15mm;height:3mm;background:var(--semester-color);z-index:0}
+        .cfk-header:before{left:-2mm;transform:rotate(18deg)}
+        .cfk-header:after{right:-2mm;transform:rotate(-18deg)}
+        .cfk-brand{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:.7mm;height:100%;color:#fff;text-align:left}
+        .cfk-brand .logo{width:3.2mm;height:3.8mm}
+        .cfk-brand strong{display:block;font-size:10pt;line-height:.9;letter-spacing:.2mm}
+        .cfk-brand span{display:block;font-size:3.1pt;font-weight:bold;white-space:nowrap}
+        .cfk-brand small{display:block;font-size:2.7pt;text-align:center;white-space:nowrap}
+        .cfk-photo-wrap{position:absolute;z-index:2;top:6.7mm;left:7.8mm;width:8.4mm;height:8.4mm;border:.45mm solid #fff;border-radius:50%;overflow:hidden;background:#fff}
+        .cfk-photo-wrap .student-photo{border-radius:50%}
+        .cfk-name{position:absolute;top:15.5mm;left:1mm;right:1mm;height:5mm;text-align:center;overflow:hidden}
+        .cfk-name h1{font-size:5.2pt;line-height:1.05;margin:0 0 .6mm;font-weight:800;text-transform:uppercase;overflow-wrap:anywhere;max-height:2.5mm;overflow:hidden}
+        .cfk-name h2{font-size:4.6pt;line-height:1;margin:0;font-weight:800}
+        .cfk-info{position:absolute;top:21mm;left:4.4mm;right:.7mm;bottom:5.1mm;font-size:3.05pt;line-height:1.12;overflow:hidden}
+        .cfk-info div{display:grid;grid-template-columns:5.7mm minmax(0,1fr);gap:.35mm;margin:0 0 .3mm;align-items:start}
+        .cfk-info b{color:var(--semester-color);text-align:right;white-space:nowrap}
+        .cfk-info span{font-weight:600;overflow-wrap:anywhere;min-width:0}
+        .semester-badge{position:absolute;left:0;bottom:5.1mm;width:4.1mm;height:4.5mm;background:var(--semester-color);color:#fff;border-radius:0 50% 50% 0;display:flex;align-items:center;justify-content:center;text-align:center;font-size:3.5pt;font-weight:bold;white-space:pre-line;line-height:1.05}
+        .authority{position:absolute;right:.8mm;bottom:5.2mm;font-size:6pt;line-height:.8;text-align:center;color:#15233c}
+        .authority small{display:block;font-size:2.6pt;font-style:italic;margin-top:.5mm}
+        .cfk-footer{position:absolute;bottom:0;left:0;right:0;height:4.8mm;border-top:.35mm solid var(--semester-color);text-align:center;padding:.25mm .3mm 0;font-size:2.55pt;font-weight:bold;line-height:1.05;overflow:hidden}
+        .cfk-footer small{display:block;font-size:2.45pt;white-space:nowrap}
+        .cfk-footer strong{display:block;background:var(--semester-color);color:#fff;font-size:5pt;line-height:1.25;margin-top:.15mm}
+        /* Standard format for DOM, DCST and every non-CFK course */
+        .standard-card{border:.35mm solid #29415b;padding:.6mm;color:#1f2937}
+        .standard-top{height:2.2mm;display:flex;align-items:center;justify-content:space-between;gap:.5mm;font-size:2.8pt;line-height:1;color:#b32228;font-weight:bold;white-space:nowrap;overflow:hidden}
+        .standard-id,.standard-session{min-width:0;overflow:hidden;text-overflow:ellipsis}
+        .standard-brand{height:5.3mm;display:flex;align-items:center;justify-content:center;gap:.7mm;border-bottom:.2mm solid #243c5a;text-align:center;overflow:hidden}
+        .standard-brand .logo{width:3.2mm;height:3.4mm}
+        .standard-brand strong{display:block;color:#c62828;font-size:9.5pt;line-height:.85}
+        .standard-brand span{display:block;font-size:3pt;font-weight:bold;white-space:nowrap}
+        .standard-brand small{display:block;font-size:2.35pt;white-space:nowrap}
+        .standard-photo-wrap{position:absolute;top:7.9mm;left:8mm;width:8mm;height:8mm;border:.3mm solid #273d5a;border-radius:.7mm;overflow:hidden;background:#fff}
+        .standard-card h1{position:absolute;top:16.2mm;left:.7mm;right:.7mm;height:2.4mm;text-align:center;font-size:4.8pt;line-height:1.05;margin:0;text-transform:uppercase;overflow-wrap:anywhere;overflow:hidden}
+        .standard-details{position:absolute;top:18.8mm;left:.9mm;right:.9mm;bottom:5.7mm;font-size:2.85pt;line-height:1.15;overflow:hidden}
+        .standard-details p{margin:0 0 .55mm;overflow-wrap:anywhere;display:block}
+        .standard-details b{color:#b32228}
+        .standard-sign{position:absolute;right:.8mm;bottom:5.2mm;font-size:5.8pt;text-align:center;line-height:.8;background:#fff;padding-left:.4mm}
+        .standard-sign small{display:block;font-size:2.45pt;white-space:nowrap}
+        .standard-footer{position:absolute;left:0;right:0;bottom:0;height:5mm;border-top:.25mm solid #b32228;text-align:center;padding:.25mm .25mm;font-size:2.35pt;line-height:1.05;font-weight:bold;overflow:hidden}
+        .standard-footer span,.standard-footer small{display:block;white-space:nowrap;overflow:hidden;text-overflow:clip}
+        .standard-footer small{font-size:2.25pt}
+        .standard-footer strong{display:block;background:#243c5a;color:#fff;font-size:4.8pt;letter-spacing:.1mm;margin-top:.15mm;line-height:1.2}
+        @media screen{body{margin:12px auto;box-shadow:0 0 0 1px #aaa}.card{box-shadow:0 1px 8px #aaa}}
+      </style></head><body>${cardMarkup}<script>
+        window.addEventListener('load',async()=>{await Promise.all([...document.images].map(img=>img.decode?img.decode().catch(()=>{}):Promise.resolve()));setTimeout(()=>window.print(),250)});
+      </script></body></html>`;
     w.document.open();
-    w.document.write('<!doctype html><html><head><meta charset="utf-8"/><title>RCLD Student I-Card</title><style>' + css + '</style></head><body>' + cardHtml + '<script>window.addEventListener("load",async()=>{await Promise.all([...document.images].map(i=>i.decode?i.decode().catch(()=>{}):Promise.resolve()));setTimeout(()=>window.print(),150)});</script></body></html>');
+    w.document.write(html);
     w.document.close();
   }
 
@@ -807,7 +853,7 @@ export default function StudentDetailsPage({ params }) {
               </button>
               <button
                 className="ghost-btn"
-                onClick={() => isCodingForKidsStudent() ? setIcardSemesterOpen(true) : printStudentICard()}
+                onClick={printStudentICard}
                 disabled={!isIcardEligible(student)}
                 title={
                   !isIcardEligible(student)
@@ -833,28 +879,6 @@ export default function StudentDetailsPage({ params }) {
           </a>
         </div>
       </header>
-      {icardSemesterOpen && (
-        <div className="modal-backdrop" role="presentation" onClick={() => setIcardSemesterOpen(false)}>
-          <section className="modal-card" role="dialog" aria-modal="true" aria-labelledby="icard-semester-title" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div><h2 id="icard-semester-title">Coding For Kids I-Card</h2><p>Select the semester or programme colour for this card.</p></div>
-              <button type="button" className="ghost-btn" onClick={() => setIcardSemesterOpen(false)}>Close</button>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {[
-                ["SEM 1","#ec168c"],["SEM 2","#36a852"],["SEM 3","#f2d32f"],
-                ["SEM 4","#92969b"],["SEM 5","#2878c8"],["SEM 6","#e33137"],
-                ["ROBOTICS","#7b4bb7"]
-              ].map(([label,color]) => (
-                <button key={label} type="button" className="ghost-btn flex items-center justify-center gap-2" onClick={() => { setIcardSemesterOpen(false); printStudentICard(label); }}>
-                  <span style={{width:14,height:14,borderRadius:4,background:color,display:"inline-block",border:"1px solid #0002"}} />
-                  {label}
-                </button>
-              ))}
-            </div>
-          </section>
-        </div>
-      )}
       {loading && (
         <section className="panel">
           <div className="empty">Loading student details…</div>
