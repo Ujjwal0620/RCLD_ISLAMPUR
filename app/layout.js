@@ -1,5 +1,6 @@
 import "./globals.css";
 import "./styles/design-system.css";
+import "./styles/public-home.css";
 
 export const metadata = {
   title: "RCLD Islampur ERP",
