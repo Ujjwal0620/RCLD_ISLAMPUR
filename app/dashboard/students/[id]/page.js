@@ -238,6 +238,8 @@ export default function StudentDetailsPage({ params }) {
     [contactLogs, setContactLogs] = useState([]);
   const [transition, setTransition] = useState({ action: "", batchId: "", remark: "" });
   const [transitioning, setTransitioning] = useState(false);
+  const [icardDialogOpen, setIcardDialogOpen] = useState(false);
+  const [selectedCfkSemester, setSelectedCfkSemester] = useState("SEM 1");
 
   async function loadOperational(id) {
     const [fr, ar] = await Promise.all([
@@ -407,7 +409,7 @@ export default function StudentDetailsPage({ params }) {
     }
   }
 
-  function printStudentICard() {
+  function printStudentICard(selectedSemester = "") {
     if (!student || !isIcardEligible(student)) {
       setMessage(
         "I-Card is unavailable until all required details are complete and admission is not pending.",
@@ -432,22 +434,10 @@ export default function StudentDetailsPage({ params }) {
       Robotics: "#777777",
     };
 
-    // CFK cards require the learner's current semester/module to be selected at print time.
-    let selectedSemester = "";
-    if (isCFK) {
-      const choice = window.prompt(
-        "Select Coding For Kids semester/module:\n" +
-          semesterOptions.map((item, index) => `${index + 1}. ${item}`).join("\n") +
-          "\n\nEnter 1-7:",
-        "1",
-      );
-      if (choice === null) return;
-      const index = Number(choice.trim()) - 1;
-      if (!Number.isInteger(index) || index < 0 || index >= semesterOptions.length) {
-        setMessage("Please select a valid CFK semester/module from 1 to 7.");
-        return;
-      }
-      selectedSemester = semesterOptions[index];
+    // CFK semester is selected in the in-app dialog before this print function runs.
+    if (isCFK && !semesterOptions.includes(selectedSemester)) {
+      setMessage("Please select a valid Coding For Kids semester/module.");
+      return;
     }
 
     const w = window.open("", "_blank");
@@ -853,6 +843,19 @@ export default function StudentDetailsPage({ params }) {
 
   return (
     <ERPLayout active="/dashboard/students">
+      <style jsx global>{`
+        .cfk-dialog-backdrop{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(10,20,35,.62);backdrop-filter:blur(5px)}
+        .cfk-dialog{width:min(100%,460px);background:var(--panel-bg,#fff);color:var(--text-primary,#172033);border:1px solid var(--border-color,#e3e8ef);border-radius:18px;padding:24px;box-shadow:0 24px 80px rgba(0,0,0,.28)}
+        .cfk-dialog-heading{display:flex;align-items:center;gap:13px;position:relative;padding-right:25px}
+        .cfk-dialog-icon{width:44px;height:44px;display:grid;place-items:center;border-radius:13px;background:rgba(37,99,235,.1);color:#2563eb;flex:none}
+        .cfk-dialog-heading h2{margin:0;font-size:19px;font-weight:750}.cfk-dialog-heading p{margin:5px 0 0;font-size:13px;opacity:.72}
+        .cfk-dialog-close{position:absolute;right:-8px;top:-8px;border:0;background:transparent;font-size:27px;line-height:1;cursor:pointer;color:inherit}
+        .cfk-dialog-student{display:flex;justify-content:space-between;gap:12px;margin:22px 0 18px;padding:12px 14px;border:1px solid var(--border-color,#e3e8ef);border-radius:11px;background:rgba(127,127,127,.045);font-size:13px}
+        .cfk-dialog-student span{opacity:.7;text-align:right}.cfk-semester-field{display:flex;flex-direction:column;gap:8px}.cfk-semester-field select{width:100%;min-height:44px;border:1px solid var(--border-color,#d7deea);border-radius:9px;padding:0 12px;background:var(--input-bg,#fff);color:inherit;font:inherit}
+        .cfk-dialog-note{margin-top:12px;font-size:12px;line-height:1.5;opacity:.7}
+        .cfk-dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:24px}
+        @media(max-width:520px){.cfk-dialog{padding:19px}.cfk-dialog-student{flex-direction:column;gap:4px}.cfk-dialog-student span{text-align:left}}
+      `}</style>
       <header className="topbar">
         <div>
           <div className="crumb">Students / Student Details</div>
@@ -866,7 +869,15 @@ export default function StudentDetailsPage({ params }) {
               </button>
               <button
                 className="ghost-btn"
-                onClick={printStudentICard}
+                onClick={() => {
+                  const courseText = String(student.courseName || student.courseCode || "");
+                  if (/coding\\s*for\\s*kids|\\bCFK\\b/i.test(courseText)) {
+                    setSelectedCfkSemester("SEM 1");
+                    setIcardDialogOpen(true);
+                  } else {
+                    printStudentICard();
+                  }
+                }}
                 disabled={!isIcardEligible(student)}
                 title={
                   !isIcardEligible(student)
@@ -904,6 +915,43 @@ export default function StudentDetailsPage({ params }) {
       )}
       {student && (
         <main className="student-details student-profile-page">
+          {icardDialogOpen && (
+            <div className="cfk-dialog-backdrop" role="presentation" onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setIcardDialogOpen(false);
+            }}>
+              <section className="cfk-dialog" role="dialog" aria-modal="true" aria-labelledby="cfk-dialog-title">
+                <div className="cfk-dialog-heading">
+                  <div className="cfk-dialog-icon"><IdCard size={22} /></div>
+                  <div>
+                    <h2 id="cfk-dialog-title">Coding For Kids I-Card</h2>
+                    <p>Select the student's current semester or learning module.</p>
+                  </div>
+                  <button type="button" className="cfk-dialog-close" aria-label="Close dialog" onClick={() => setIcardDialogOpen(false)}>×</button>
+                </div>
+                <div className="cfk-dialog-student">
+                  <strong>{student.applicantName}</strong>
+                  <span>{student.enrollmentNo || student.studentId || student.admissionNo || "Student ID not available"}</span>
+                </div>
+                <label className="form-field cfk-semester-field">
+                  <span>Semester / Module</span>
+                  <select value={selectedCfkSemester} onChange={(event) => setSelectedCfkSemester(event.target.value)}>
+                    {["SEM 1", "SEM 2", "SEM 3", "SEM 4", "SEM 5", "SEM 6", "Robotics"].map((semester) => (
+                      <option key={semester} value={semester}>{semester}</option>
+                    ))}
+                  </select>
+                </label>
+                <div className="cfk-dialog-note">The selected module's colour and label will be applied to the existing Coding For Kids I-Card print format.</div>
+                <footer className="cfk-dialog-actions">
+                  <button type="button" className="ghost-btn" onClick={() => setIcardDialogOpen(false)}>Cancel</button>
+                  <button type="button" className="primary-btn" onClick={() => {
+                    setIcardDialogOpen(false);
+                    printStudentICard(selectedCfkSemester);
+                  }}><Printer size={16} /> Continue to Print</button>
+                </footer>
+              </section>
+            </div>
+          )}
+
           {editing && (
             <section className="detail-section student-edit-panel">
               <div className="detail-section-title">
