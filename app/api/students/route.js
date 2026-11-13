@@ -62,11 +62,46 @@ export async function GET(request) {
     if (search) {
       const rx = new RegExp(search.replace(/[.*+?^{}()|[\]\\]/g, "\\$&"), "i");
       filter.$or = [
-        { applicantName: rx }, { formNo: rx }, { enrollmentNo: rx }, { mobileNumber: rx }, { email: rx }, { aadhaarNumber: rx },
-        { courseName: rx }, { regnNo: rx }, { fatherOrHusbandName: rx },
-        { aecCode: rx }, { whatsappNumber: rx }
-      ];
+        "applicantName","formNo","enrollmentNo","regnNo","aecCode","courseName","courseCode","batchCode",
+        "mobileNumber","whatsappNumber","guardianContactNumber","email","aadhaarNumber","fatherOrHusbandName",
+        "nationality","dateOfBirth","sex","address","presentAddress","permanentAddress","postOffice","policeStation",
+        "nearestLandmark","district","state","pin","permanentPostOffice","permanentNearestLandmark","permanentPin",
+        "permanentDistrict","permanentState","referralName","marketingEmployeeName","paymentStatus","declarationPlace",
+        "qualifications.examCourse","qualifications.boardUniversity","qualifications.collegeInstitute","qualifications.year"
+      ].map(field => ({ [field]: rx }));
     }
+    const textFilters = [
+      "formNo","enrollmentNo","regnNo","aecCode","applicantName","fatherOrHusbandName","mobileNumber",
+      "whatsappNumber","guardianContactNumber","email","aadhaarNumber","nationality","district","state","pin",
+      "postOffice","policeStation","nearestLandmark","permanentDistrict","permanentState","permanentPin",
+      "permanentPostOffice","permanentNearestLandmark","courseCode","batchCode","referralName",
+      "marketingEmployeeName","paymentStatus","declarationPlace"
+    ];
+    for (const field of textFilters) {
+      const value = (searchParams.get(field) || "").trim();
+      if (value) filter[field] = new RegExp(value.replace(/[.*+?^{}()|[\\]\\\\]/g, "\\\\    if (sex) filter.sex = sex;
+    if (course) filter.courseName = course;"), "i");
+    }
+    const dateOfBirth = (searchParams.get("dateOfBirth") || "").trim();
+    if (dateOfBirth) filter.dateOfBirth = dateOfBirth;
+    const dueMin = searchParams.get("dueMin");
+    const dueMax = searchParams.get("dueMax");
+    if (dueMin !== null || dueMax !== null) {
+      filter.dueAmount = {};
+      if (dueMin !== null && dueMin !== "") filter.dueAmount.$gte = Number(dueMin);
+      if (dueMax !== null && dueMax !== "") filter.dueAmount.$lte = Number(dueMax);
+    }
+    const admissionFrom = searchParams.get("admissionFrom");
+    const admissionTo = searchParams.get("admissionTo");
+    if (admissionFrom || admissionTo) {
+      filter.admissionDate = {};
+      if (admissionFrom) filter.admissionDate.$gte = admissionFrom;
+      if (admissionTo) filter.admissionDate.$lte = admissionTo;
+    }
+    const qualification = (searchParams.get("qualification") || "").trim();
+    if (qualification) filter.$or = [...(filter.$or || []), ...["qualifications.examCourse","qualifications.boardUniversity","qualifications.collegeInstitute","qualifications.year","qualifications.percentage"].map(field => ({[field]: new RegExp(qualification.replace(/[.*+?^{}()|[\\]\\\\]/g, "\\\\    if (sex) filter.sex = sex;
+    if (course) filter.courseName = course;"), "i")}))];
+
     if (sex) filter.sex = sex;
     if (course) filter.courseName = course;
     if (status && status !== "all") filter.status = status;
