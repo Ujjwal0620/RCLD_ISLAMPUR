@@ -1,8 +1,19 @@
 # Implementation status and delivery gaps
 
-Last reviewed against the GitHub main tree at commit 707b3c90c468d42fbcd4c69efdf8e81f82b9d27d on 12 November 2026.
+Last repository inventory reviewed on 13 November 2026 against main commit 4f88a6df0d49e526703f82b0f9b19fcce3437c3b. This pass reviewed the complete recursive tree (220 entries), 26 dashboard page components, 48 API route handlers, 12 reusable model files and the shared shell/style entry points.
 
 This is a code inventory, not a product-completion certificate. A page or API route being present does not prove that its full workflow is secure, tested or ready for production.
+
+## Latest delivery checkpoint
+
+**System organization baseline — in progress, 13 November 2026.**
+
+- Created source restore point branch `checkpoint/pre-system-audit-2026-11-13` from main commit `4f88a6df0d49e526703f82b0f9b19fcce3437c3b` before the audit changes.
+- Added `docs/COMMAND_CATALOG.md` to map each current page to its API routes, models and shared logic.
+- Added Prettier configuration and `format` / `format:check` npm scripts. Existing source-wide formatting still requires running `npm run format` in a local checkout; this remote repository session could not execute npm.
+- Added `app/styles/design-system.css` as the shared Lexa-inspired UI layer and loaded it after the legacy global stylesheet.
+- Removed the duplicated trailing registration border override blocks and corrected the original print border declarations to `#8493BD`; the print-only address elements now carry an explicit dedicated class.
+- Full per-route visual regression, lint and production build are still pending local execution. Do not treat this audit pass as proof that every workflow is production-ready.
 
 ## Latest delivery checkpoint
 
