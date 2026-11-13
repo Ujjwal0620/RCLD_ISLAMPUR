@@ -65,7 +65,7 @@ export async function GET(request) {
       const searchFields = [
         "applicantName","formNo","enrollmentNo","regnNo","aecCode","courseName","courseCode","batchCode",
         "mobileNumber","whatsappNumber","guardianContactNumber","email","aadhaarNumber","fatherOrHusbandName",
-        "nationality","dateOfBirth","sex","address","presentAddress","permanentAddress","postOffice","policeStation",
+        "nationality","dateOfBirth","sex","status","address","presentAddress","permanentAddress","postOffice","policeStation",
         "nearestLandmark","district","state","pin","permanentPostOffice","permanentNearestLandmark","permanentPin",
         "permanentDistrict","permanentState","referralName","marketingEmployeeName","paymentStatus","declarationPlace",
         "sourceCourseLabel","importSource","signatureApplicant","declarationDate","referralId","marketingEmployeeId",
