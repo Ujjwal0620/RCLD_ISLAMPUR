@@ -3,16 +3,16 @@
  * workspace primitives so changes can be made once and applied consistently.
  */
 :root {
-  --rcld-ui-canvas: #f5f7fb;
+  --rcld-ui-canvas: #f3f6fb;
   --rcld-ui-surface: #ffffff;
-  --rcld-ui-surface-muted: #f8faff;
-  --rcld-ui-ink: #202b3d;
+  --rcld-ui-surface-muted: #f7f9fd;
+  --rcld-ui-ink: #1d2b42;
   --rcld-ui-muted: #718096;
-  --rcld-ui-border: #e4e9f1;
-  --rcld-ui-primary: #405bd5;
-  --rcld-ui-primary-hover: #3049bd;
-  --rcld-ui-radius: 12px;
-  --rcld-ui-shadow: 0 5px 18px rgba(22, 38, 68, 0.045);
+  --rcld-ui-border: #e3e9f2;
+  --rcld-ui-primary: #465fce;
+  --rcld-ui-primary-hover: #354dbb;
+  --rcld-ui-radius: 14px;
+  --rcld-ui-shadow: 0 8px 24px rgba(22, 38, 68, 0.055);
   --rcld-ui-focus: 0 0 0 3px rgba(64, 91, 213, 0.13);
 }
 
@@ -337,5 +337,471 @@ html[data-theme="dark"] .filter-toggle:hover {
     scroll-behavior: auto !important;
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+
+/* Lexa-inspired workspace refinement — shared across existing ERP modules. */
+body {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: -0.006em;
+}
+
+.erp-sidebar {
+  background: linear-gradient(180deg, #142139 0%, #101b2e 100%);
+  border-right: 1px solid rgba(255,255,255,.07);
+}
+
+.brand {
+  min-height: 58px;
+  padding: 2px 9px 18px;
+}
+
+.brand-mark-image {
+  width: 43px;
+  height: 43px;
+  flex: 0 0 43px;
+  object-fit: contain;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 11px;
+  background: #fff;
+}
+
+.brand-copy strong {
+  color: #f7f9ff;
+  font-size: 15px;
+  letter-spacing: .01em;
+}
+
+.brand-copy span {
+  color: #a9b7cd;
+  font-size: 10px;
+}
+
+.workspace-switcher {
+  min-height: 56px;
+  margin: 0 3px 12px;
+  padding: 9px 10px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 11px;
+  background: rgba(255,255,255,.055);
+  color: #edf2fb;
+}
+
+.workspace-switcher > div:nth-child(2) {
+  min-width: 0;
+}
+
+.workspace-switcher strong {
+  display: block;
+  color: #f4f7fc;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.workspace-switcher span {
+  display: block;
+  margin-top: 3px;
+  color: #9cabc2;
+  font-size: 9px;
+}
+
+.workspace-icon {
+  display: grid;
+  width: 29px;
+  height: 29px;
+  flex: 0 0 29px;
+  place-items: center;
+  border: 1px solid rgba(163,180,255,.18);
+  border-radius: 9px;
+  background: rgba(105,126,232,.18);
+  color: #bdc8ff;
+}
+
+.side-label {
+  color: #8191aa;
+  font-size: 9px;
+  letter-spacing: .15em;
+}
+
+.side-link {
+  min-height: 40px;
+  border-radius: 9px;
+  font-size: 11px;
+}
+
+.erp-user-bar {
+  min-height: 68px;
+  margin-bottom: 4px;
+  background: rgba(255,255,255,.92);
+  border-bottom: 1px solid var(--rcld-ui-border);
+}
+
+.erp-command-search {
+  height: 38px;
+  border-radius: 10px;
+  background: #f8fafd;
+}
+
+.erp-top-icon,
+.erp-sidebar-toggle {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+}
+
+.erp-user-identity {
+  min-width: 0;
+}
+
+.erp-user-identity strong {
+  color: #27364e;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.erp-user-identity span {
+  color: #8794a7;
+  font-size: 9px;
+}
+
+.erp-main {
+  min-width: 0;
+}
+
+.erp-main > .topbar {
+  min-height: 72px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--rcld-ui-border);
+}
+
+.erp-main > .topbar h1 {
+  margin: 0;
+  color: var(--rcld-ui-ink);
+  font-size: clamp(20px, 1.8vw, 25px);
+  font-weight: 760;
+  letter-spacing: -.04em;
+}
+
+.crumb {
+  color: #8a97aa;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.welcome {
+  gap: 18px;
+  padding: 21px 0 16px;
+}
+
+.welcome h2 {
+  color: #21324c;
+  font-size: clamp(19px, 1.7vw, 23px);
+  font-weight: 760;
+  letter-spacing: -.035em;
+}
+
+.welcome p {
+  max-width: 760px;
+  color: #7c8ba0;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.panel,
+.metric,
+.stat,
+.detail-section,
+.report-paper,
+.builder-step {
+  border-color: var(--rcld-ui-border);
+  border-radius: var(--rcld-ui-radius);
+  box-shadow: var(--rcld-ui-shadow);
+}
+
+.panel {
+  margin-top: 14px;
+}
+
+.panel-head,
+.filter-title {
+  min-height: 58px;
+  padding: 14px 17px;
+  border-bottom-color: #edf1f6;
+}
+
+.panel-head h3,
+.filter-title h3 {
+  color: #263750;
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.panel-head p,
+.filter-title p {
+  color: #8a97a9;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.metric {
+  min-width: 0;
+  padding: 15px;
+  border-radius: 13px;
+}
+
+.metric strong {
+  color: #20314b;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.metric span,
+.metric small {
+  color: #8794a7;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.table-wrap {
+  max-width: 100%;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e3 transparent;
+}
+
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 11px 13px;
+  border-bottom: 1px solid #e6ebf3;
+  background: #f7f9fc;
+  color: #718096;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .055em;
+}
+
+table tbody td {
+  padding: 11px 13px;
+  border-bottom: 1px solid #edf1f6;
+  color: #3c4b61;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+table tbody tr:hover {
+  background: #f7f9fd;
+}
+
+.badge {
+  min-height: 23px;
+  align-items: center;
+  padding: 4px 9px;
+  border: 1px solid #dcefe5;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.primary-btn,
+.search-action {
+  min-height: 38px;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.ghost-btn,
+.icon-btn,
+.clear-btn,
+.filter-toggle {
+  min-height: 38px;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.form-field input,
+.form-field select,
+.form-field textarea,
+.filter-field input,
+.filter-field select,
+.search-box {
+  border-radius: 9px;
+  background: #fff;
+}
+
+.filter-panel {
+  border-radius: 13px;
+}
+
+.filters {
+  gap: 9px;
+}
+
+.search-box {
+  min-height: 39px;
+}
+
+.bulk-selection-bar,
+.batch-assignment-toolbar {
+  border: 1px solid #dce4f1;
+  border-radius: 12px;
+  background: #f7f9ff;
+}
+
+.excel-schedule {
+  border-color: #dfe6f0;
+  border-radius: 12px;
+  box-shadow: 0 5px 18px rgba(22,38,68,.04);
+}
+
+.excel-title {
+  border-bottom: 1px solid #e7edf5;
+  background: #f7f9fc;
+}
+
+.excel-cell {
+  min-height: 48px;
+  border-radius: 8px;
+  transition: border-color 140ms ease, background-color 140ms ease, transform 140ms ease;
+}
+
+.excel-cell.picked {
+  border-color: #536bd7;
+  background: #edf1ff;
+  color: #354dbb;
+  box-shadow: inset 0 0 0 1px rgba(83,107,215,.12);
+}
+
+.modal-card {
+  border: 1px solid var(--rcld-ui-border);
+  border-radius: 15px;
+  box-shadow: 0 24px 70px rgba(15,23,42,.2);
+}
+
+.modal-head {
+  background: #fbfcfe;
+}
+
+:focus-visible {
+  outline: 2px solid var(--rcld-ui-primary);
+  outline-offset: 2px;
+}
+
+html[data-theme="dark"] .workspace-switcher {
+  border-color: rgba(255,255,255,.1);
+  background: rgba(255,255,255,.055);
+}
+
+html[data-theme="dark"] .erp-user-bar {
+  background: rgba(27,39,57,.94);
+}
+
+html[data-theme="dark"] .erp-user-identity strong,
+html[data-theme="dark"] .welcome h2,
+html[data-theme="dark"] .panel-head h3,
+html[data-theme="dark"] .filter-title h3,
+html[data-theme="dark"] .metric strong {
+  color: var(--rcld-ui-ink);
+}
+
+html[data-theme="dark"] .welcome p,
+html[data-theme="dark"] .panel-head p,
+html[data-theme="dark"] .filter-title p {
+  color: var(--rcld-ui-muted);
+}
+
+html[data-theme="dark"] table thead th {
+  border-bottom-color: var(--rcld-ui-border);
+  background: #202d41;
+  color: #b8c4d6;
+}
+
+html[data-theme="dark"] table tbody td {
+  border-bottom-color: #2c3a50;
+  color: #d4dce8;
+}
+
+html[data-theme="dark"] table tbody tr:hover {
+  background: #223149;
+}
+
+html[data-theme="dark"] .excel-title,
+html[data-theme="dark"] .modal-head {
+  border-color: var(--rcld-ui-border);
+  background: #202d41;
+}
+
+html[data-theme="dark"] .excel-schedule {
+  border-color: var(--rcld-ui-border);
+}
+
+@media (max-width: 900px) {
+  .erp-user-bar {
+    padding-left: 48px;
+  }
+
+  .erp-main > .topbar {
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .erp-main > .topbar .top-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 600px) {
+  .erp-main {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  .erp-user-bar {
+    min-height: 60px;
+    padding-left: 46px;
+  }
+
+  .erp-command-search {
+    width: min(100%, 240px);
+  }
+
+  .erp-command-search kbd,
+  .erp-sidebar-toggle,
+  .erp-user-identity .user-chevron {
+    display: none;
+  }
+
+  .erp-user-identity {
+    padding-left: 7px;
+  }
+
+  .erp-user-identity > div:nth-child(2) {
+    display: none;
+  }
+
+  .topbar .top-actions {
+    gap: 7px;
+  }
+
+  .panel-head,
+  .filter-title {
+    padding: 12px;
+  }
+
+  table {
+    min-width: 720px;
   }
 }
