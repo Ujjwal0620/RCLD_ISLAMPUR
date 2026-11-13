@@ -27,6 +27,19 @@ This is a code inventory, not a product-completion certificate. A page or API ro
 
 **Verification status:** GitHub main contains the change. No npm run lint, npm run build or browser-based regression test was recorded for this checkpoint. Treat the UI as implemented but requiring local verification. The complete page-by-page UI redesign is still outstanding.
 
+## Structure and maintainability findings
+
+The 13 November source-tree pass identified these maintenance facts:
+
+- The application is a modular monolith with 26 dashboard page components and 48 API route handlers.
+- There are 12 reusable model files; employee/login and several fee/student schemas remain inline in route handlers. Consolidate only after collection-name and compatibility checks.
+- `app/globals.css` is approximately 294 KB and contains historical style layers and repeated overrides. The shared workspace baseline is now separated into `app/styles/design-system.css`; migrate feature-specific rules incrementally rather than rewriting the whole stylesheet at once.
+- The root package manifest previously had no Prettier setup. Prettier 3 configuration, ignore rules and npm format/check commands have now been added. The complete repository-wide formatter has not yet been executed in a local checkout.
+- No automated test files or test runner were found in the reviewed source tree. Lint/build and manual workflow checks remain required before release.
+- A module ownership index is available in `docs/COMMAND_CATALOG.md` so future changes can start from the owning page, API route, model and helper.
+
+**Registration address border correction:** the original print rules contained hard-coded blue `!important` borders. Those source declarations now use `#8493BD`; the duplicated appended override tail was removed, and the print address panels have a dedicated class with a print-specific exact-color rule. The screen address card border declarations were also aligned to `#8493BD`. A real browser print preview and physical print still need confirmation.
+
 ## Present in the repository
 
 The current route tree contains implementation areas for:
