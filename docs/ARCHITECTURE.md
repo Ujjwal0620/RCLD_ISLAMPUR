@@ -37,6 +37,8 @@ The route handler is the server boundary. A client-side check, disabled button o
 - lib/: database connection, authentication, access-control catalog and Cloudinary configuration.
 - data/: institute-owned reference data such as timetable slot definitions.
 - scripts/: command-line maintenance/import scripts.
+- app/styles/design-system.css: shared workspace design tokens and reusable shell/component styling, imported after app/globals.css from app/layout.js.
+- docs/COMMAND_CATALOG.md: page-to-API-to-model ownership map for targeted changes.
 - docs/: engineering and operational documentation.
 
 Some schemas are currently declared inside route handlers rather than in models/. This is existing implementation, not a pattern to spread further. When extracting one, preserve the MongoDB collection name and schema behavior; avoid creating a second model for the same collection.
