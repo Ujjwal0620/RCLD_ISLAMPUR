@@ -68,7 +68,7 @@ export async function GET(request) {
       const rx = new RegExp(escapeRegex(search), "i");
       const searchableFields = [
         "employeeId","loginId","name","mobile","email","designation","department","gender","employmentType","address",
-        "emergencyContactName","emergencyContactNumber","notes","skills","age","dateOfBirth","joiningDate",
+        "emergencyContactName","emergencyContactNumber","notes","skills","dateOfBirth","joiningDate",
         "salaryFrequency","offDays","status"
       ];
       filter.$or = searchableFields.map(field => ({ [field]: rx }));
