@@ -638,7 +638,7 @@ export default function StudentDetailsPage({ params }) {
     const money = (v) => "₹" + Number(v || 0).toLocaleString("en-IN");
     const payable = Math.max(0, Number(fee.totalFee || 0) - Number(fee.discount || 0) + Number(fee.admissionFee || 0) + Number(fee.registrationFee || 0));
     const paid = (fee.payments || []).reduce((n, p) => n + Number(p.amount || 0), 0);
-    const due = Math.max(0, Number(fee.due ?? (payable - paid)));
+    const due = Math.max(0, payable - paid);
     const rows = (fee.payments || []).slice().sort((x, y) => String(x.date || "").localeCompare(String(y.date || ""))).map(p => "<tr><td>" + esc(p.date) + "</td><td>" + esc(p.receiptNo) + "</td><td>" + esc(p.paymentType) + "</td><td>" + esc(p.installmentMonth) + "</td><td>" + esc(p.note) + "</td><td>" + esc(money(p.amount)) + "</td></tr>").join("");
     const css = "@page{size:A4 landscape;margin:8mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#172b4d;font-size:9pt}.head{display:flex;align-items:center;gap:5mm;border-bottom:1px solid #244777;padding-bottom:3mm}.head img{width:18mm;height:18mm;object-fit:contain}.head h1{flex:1;text-align:center;font-size:17pt}.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:4mm;margin:4mm 0}.metric{border:1px solid #9fb1c8;padding:4mm}.metric span{display:block;color:#52647d}.metric strong{display:block;font-size:15pt;margin-top:2mm}.ledger{width:100%;border-collapse:collapse;table-layout:fixed}.ledger th,.ledger td{border:1px solid #aebed2;padding:2.5mm;text-align:left;overflow-wrap:anywhere}.ledger th{background:#edf3fa}.ledger td:last-child,.ledger th:last-child{text-align:right}";
     const body = '<main><header class="head"><img src="/assets/logo.png"/><h1>RASHTRIYA COMPUTER LITERACY DRIVE — STUDENT FEE STATEMENT</h1></header><p><b>Student:</b> ' + esc(student.applicantName) + ' &nbsp; <b>Enrollment:</b> ' + esc(student.enrollmentNo || student.regnNo) + ' &nbsp; <b>Course:</b> ' + esc(student.courseName || student.courseCode) + '</p><section class="summary"><div class="metric"><span>Total Course Fee Payable</span><strong>' + esc(money(payable)) + '</strong></div><div class="metric"><span>Amount Paid</span><strong>' + esc(money(paid)) + '</strong></div><div class="metric"><span>Due Amount</span><strong>' + esc(money(due)) + '</strong></div></section><table class="ledger"><thead><tr><th>Date</th><th>Receipt No.</th><th>Payment Type</th><th>Installment</th><th>Purpose / Note</th><th>Amount</th></tr></thead><tbody>' + (rows || '<tr><td colspan="6">No payments recorded</td></tr>') + '</tbody></table></main>';
@@ -673,8 +673,22 @@ export default function StudentDetailsPage({ params }) {
               >
                 <IdCard size={16} /> Print I-Card
               </button>
-              <button className="ghost-btn" onClick={printBill}>
-                <Printer size={16} /> Print Fee Receipt
+              <button
+                className="ghost-btn"
+                onClick={() => {
+                  const latestPayment = (fee?.payments || [])
+                    .slice()
+                    .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")))[0];
+                  if (!latestPayment) {
+                    setMessage("No payment has been recorded for this student yet.");
+                    return;
+                  }
+                  printBill(latestPayment);
+                }}
+                disabled={!fee?.payments?.length}
+                title={!fee?.payments?.length ? "Record a payment before printing a receipt" : "Print the latest payment receipt"}
+              >
+                <Printer size={16} /> Print Latest Fee Receipt
               </button>
               <button className="ghost-btn" onClick={() => setEditing(true)}>
                 <Pencil size={16} /> Edit
