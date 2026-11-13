@@ -283,19 +283,21 @@ export default function RegisterStudentPage() {
           <RCLDLogo className="rcld-print-logo-image" />
           <div className="rcld-print-heading">
             <h1>RASHTRIYA COMPUTER LITERACY DRIVE</h1>
-            <p>STUDENT REGISTRATION FORM. RCLD ISLAMPUR</p>
+            <p className="rcld-print-tagline">Mission organised by Sunita Infotech &amp; encouraged by National IT Task Force, Govt. of India</p>
+            <strong>Registration Form</strong>
           </div>
+          <div className="rcld-print-form-number"><span>Form No.</span><b>{form.formNo || ""}</b></div>
         </header>
-        <div className="rcld-print-rule"/>
+        <div className="rcld-print-rule"><span>All information to be filled in CAPITAL letters only using Blue/Black Roller pen.</span></div>
         <section className="rcld-print-section rcld-print-office">
           <h2>Office / Registration Details</h2>
           <div className="rcld-print-office-grid">
-            <p><span>AEC CODE:</span><b>RCLD/ISL-001</b></p>
+            <p><span>AEC Code:</span><b>RCLD/ISL-001</b></p>
             <p><span>Registration No:</span><b>{form.regnNo || ""}</b></p>
-            <p><span>Form No:</span><b>{form.formNo || ""}</b></p>
             <p><span>Enrollment No:</span><b>{form.enrollmentNo || ""}</b></p>
+            <p><span>Course Name:</span><b>{form.courseName || ""}</b></p>
+            <p><span>Course Code:</span><b>{form.courseCode || ""}</b></p>
             <p><span>Date:</span><b>{form.admissionDate ? new Date(form.admissionDate + "T00:00:00").toLocaleDateString("en-GB") : ""}</b></p>
-            <p><span>Course / Course Code:</span><b>{[form.courseName, form.courseCode].filter(Boolean).join("  /  ")}</b></p>
           </div>
         </section>
         <section className="rcld-print-section rcld-print-applicant-section">
@@ -345,26 +347,29 @@ export default function RegisterStudentPage() {
           <h2>Qualification Details</h2>
           <table className="rcld-print-qualification">
             <colgroup>
-              <col className="qualification-course-column" />
-              <col className="qualification-institute-column" />
-              <col className="qualification-board-column" />
-              <col className="qualification-year-column" />
-              <col className="qualification-marks-column" />
+              <col style={{ width: "8%" }} />
+              <col style={{ width: "19%" }} />
+              <col style={{ width: "24%" }} />
+              <col style={{ width: "24%" }} />
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "15%" }} />
             </colgroup>
             <thead>
               <tr>
-                <th scope="col">Class / Sem / Course</th>
-                <th scope="col">Institute / School / College</th>
-                <th scope="col">Board / Council / University</th>
+                <th scope="col">Sl. No.</th>
+                <th scope="col">Exam / Course</th>
+                <th scope="col">Board / University</th>
+                <th scope="col">College / Institute</th>
                 <th scope="col">Year</th>
-                <th scope="col">Percentage of Marks</th>
+                <th scope="col">% of Marks</th>
               </tr>
             </thead>
             <tbody>
               <tr>
+                <td>1</td>
                 <td>{form.qualifications?.[0]?.examCourse || ""}</td>
-                <td>{form.qualifications?.[0]?.collegeInstitute || ""}</td>
                 <td>{form.qualifications?.[0]?.boardUniversity || ""}</td>
+                <td>{form.qualifications?.[0]?.collegeInstitute || ""}</td>
                 <td>{form.qualifications?.[0]?.year || ""}</td>
                 <td>{form.qualifications?.[0]?.percentage || ""}</td>
               </tr>
@@ -374,10 +379,14 @@ export default function RegisterStudentPage() {
         <section className="rcld-print-section rcld-print-enclosure-section">
           <h2>Enclosure</h2>
           <div className="rcld-print-enclosures">
-            <span><i/>{form.enclosures.stampPhoto ? "✓ " : ""}2 Passport Size photo</span>
-            <span><i/>{form.enclosures.qualifyingCertificates ? "✓ " : ""}Aadhaar / Qualifying Certificates</span>
-            <span><i/>{form.enclosures.matricAdmitCard ? "✓ " : ""}Admit / Registration Details</span>
+            <span><i/>{form.enclosures.stampPhoto ? "✓ " : ""}One Stamp Size Photo</span>
+            <span><i/>{form.enclosures.qualifyingCertificates ? "✓ " : ""}Xerox Copy of Qualifying Certificates</span>
+            <span><i/>{form.enclosures.matricAdmitCard ? "✓ " : ""}Matric Admit Card</span>
           </div>
+        </section>
+        <section className="rcld-print-declaration">
+          <h2>Declaration</h2>
+          <p>I do hereby declare that all the informations stated in this application form are true to the best of my knowledge. As I have followed the prospectus carefully and understood all the rules and regulations agree to abide by them.</p>
         </section>
         <footer className="rcld-print-footer">
           <div><p>{form.declarationDate ? new Date(form.declarationDate + "T00:00:00").toLocaleDateString("en-GB") : ""}</p><div/><span>DATE</span></div>
