@@ -871,7 +871,7 @@ export default function StudentDetailsPage({ params }) {
                 className="ghost-btn"
                 onClick={() => {
                   const courseText = String(student.courseName || student.courseCode || "");
-                  if (/coding\\s*for\\s*kids|\\bCFK\\b/i.test(courseText)) {
+                  if (/coding\s*for\s*kids|\bCFK\b/i.test(courseText)) {
                     setSelectedCfkSemester("SEM 1");
                     setIcardDialogOpen(true);
                   } else {
