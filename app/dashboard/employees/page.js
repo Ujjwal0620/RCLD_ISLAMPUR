@@ -14,7 +14,7 @@ const emptyFilters = {
 const advancedFields = [
   ["employeeId","Employee ID"],["name","Employee name"],["mobile","Mobile number"],["email","Email address"],
   ["department","Department"],["designation","Designation"],["gender","Gender"],["employmentType","Employment type"],
-  ["address","Address"],["emergencyContactName","Emergency contact name"],["emergencyContactNumber","Emergency contact number"],["dateOfBirth","Date of birth"],["notes","HR notes"]
+  ["address","Address"],["emergencyContactName","Emergency contact name"],["emergencyContactNumber","Emergency contact number"],["notes","HR notes"]
 ];
 
 export default function EmployeesPage() {
