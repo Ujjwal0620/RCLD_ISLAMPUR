@@ -180,7 +180,7 @@ export async function POST(request, { params }) {
             utrNumber: String(body.payment.utrNumber || "").trim(),
             screenshotUrl,
             recordedBy: actor.name,
-            authorisedBy: "",
+            authorisedBy: String(body.payment.authorisedBy || "").trim(),
             amount,
             items,
             date: body.payment.date || new Date().toISOString().slice(0, 10),
