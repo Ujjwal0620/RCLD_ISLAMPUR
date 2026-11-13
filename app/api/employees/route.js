@@ -69,11 +69,13 @@ export async function GET(request) {
       const escaped = search.replace(/[.*+?^{}()|[\]\\]/g, "\\$&");
       const rx = new RegExp(escaped, "i");
       filter.$or = ["employeeId","name","mobile","email","designation","department","gender","employmentType","address","emergencyContactName","emergencyContactNumber","notes","skills","age","dateOfBirth","joiningDate","salary","salaryFrequency","offDays","status","leaveBalance.casual","leaveBalance.sick","leaveBalance.earned","leaveBalance.other"].map(field => ({ [field]: rx }));
+      const numericSearch = Number(search);
+      if (Number.isFinite(numericSearch) && search !== "") filter.$or.push({ age: numericSearch }, { salary: numericSearch });
     }
     if (status && status !== "all") filter.status = status;
     else if (!status) filter.status = { $ne: "Inactive" };
     if (skill) filter.skills = skill;
-    for (const field of ["employeeId","name","mobile","email","designation","department","gender","employmentType","address","emergencyContactName","emergencyContactNumber"]) {
+    for (const field of ["employeeId","name","mobile","email","designation","department","gender","employmentType","address","emergencyContactName","emergencyContactNumber","notes"]) {
       const value = (searchParams.get(field) || "").trim();
       if (value) filter[field] = new RegExp(escapeRegex(value), "i");
     }
