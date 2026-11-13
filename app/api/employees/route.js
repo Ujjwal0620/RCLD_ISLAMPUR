@@ -69,12 +69,11 @@ export async function GET(request) {
       const searchableFields = [
         "employeeId","loginId","name","mobile","email","designation","department","gender","employmentType","address",
         "emergencyContactName","emergencyContactNumber","notes","skills","age","dateOfBirth","joiningDate",
-        "salary","salaryFrequency","offDays","status","leaveBalance.casual","leaveBalance.sick",
-        "leaveBalance.earned","leaveBalance.other"
+        "salaryFrequency","offDays","status"
       ];
       filter.$or = searchableFields.map(field => ({ [field]: rx }));
       const numericSearch = Number(search);
-      if (Number.isFinite(numericSearch) && search !== "") filter.$or.push({ age: numericSearch }, { salary: numericSearch });
+      if (Number.isFinite(numericSearch) && search !== "") filter.$or.push({ age: numericSearch }, { salary: numericSearch }, { "leaveBalance.casual": numericSearch }, { "leaveBalance.sick": numericSearch }, { "leaveBalance.earned": numericSearch }, { "leaveBalance.other": numericSearch });
     }
 
     if (status && status !== "all") filter.status = status;
