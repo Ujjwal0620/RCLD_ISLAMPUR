@@ -148,8 +148,10 @@ export async function GET(request) {
       if (toDate) filter.createdAt.$lte = new Date(toDate + "T23:59:59.999Z");
     }
 
+    const studentQuery = Student.find(filter).sort({ createdAt: -1 });
+    if (searchParams.get("globalSearch") === "1") studentQuery.select("applicantName formNo enrollmentNo mobileNumber courseCode courseName status");
     const [students, total, dbCourses, statuses, sexes] = await Promise.all([
-      Student.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+      studentQuery.skip((page - 1) * limit).limit(limit).lean(),
       Student.countDocuments(filter),
       Student.distinct("courseName"),
       Student.distinct("status"),
