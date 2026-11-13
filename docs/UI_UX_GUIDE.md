@@ -57,7 +57,7 @@ Keep navigation groups and links aligned with the routes that actually exist. Do
 
 ## Visual tokens
 
-The current theme tokens are declared near the Hando-inspired refresh section in app/globals.css.
+Shared workspace tokens are declared in app/styles/design-system.css. Legacy feature-specific styles remain in app/globals.css until they can be migrated safely.
 
 | Token / role | Current direction |
 |---|---|
