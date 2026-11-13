@@ -169,3 +169,17 @@ If a design issue cannot be solved without changing one of those areas, stop and
 ## Maintenance
 
 When adding a reusable pattern, update this guide and the shared styles rather than styling a single page in isolation. Keep this document current when the shell, design tokens, breakpoints or component patterns change.
+
+
+## Page-by-page redesign status — 13 November 2026
+
+The Lexa-inspired shared layer is being applied in controlled phases. The shared layer improves navigation, page headings, panels, metrics, tables, filters, forms, modals and the Excel-like timetable without changing API contracts or institute rules. It does **not** mean every page has been individually redesigned.
+
+- **Phase 1 — Shared workspace and core operations:** shared ERP shell, dashboard, student directory, employee directory, course catalog and batch/timetable screens. Shared styling foundation is in progress; each page still requires individual visual and interaction review.
+- **Phase 2 — Student lifecycle:** registration, pending admissions, I-Cards, student profile, fee workspace, payment history, attendance, batch movement and import.
+- **Phase 3 — Academic operations:** subjects/chapters, course content, batch details, batch roster, timetable detail and faculty assignment.
+- **Phase 4 — People and administration:** employee create/profile, employee attendance, back-office tasks, permissions and settings.
+- **Phase 5 — Business operations:** CRM, referrals, dropouts, reports and AI Copilot.
+- **Phase 6 — Public and student experience:** public institute homepage, course catalogue, student sign-in and student-facing learning area.
+
+For each phase, preserve the current routes, API calls, field names, roles, fee calculations, batch relationships and historical records. Record the exact pages changed and the local/browser checks performed. Do not mark a phase complete until its pages have been reviewed at desktop, tablet and mobile widths.

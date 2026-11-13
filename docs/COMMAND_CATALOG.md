@@ -61,7 +61,8 @@ Run commands from the repository root. Keep `.env.local` private. See [Operation
 | Concern | Owner |
 |---|---|
 | Global legacy styles | `app/globals.css` |
-| Shared design tokens and reusable workspace styling | `app/styles/design-system.css` (also owns the final registration print overrides loaded after globals) |
+| Shared design tokens and reusable workspace styling | `app/styles/design-system.css` |
+| Registration form and print document styling | `app/globals.css` (registration screen and dedicated A4 print rules) |
 | App metadata and global stylesheet imports | `app/layout.js` |
 | Authentication/session | `lib/auth.js`, `app/api/auth/*` |
 | Permission catalog | `lib/access-control.js` (catalog only; full enforcement is not complete) |

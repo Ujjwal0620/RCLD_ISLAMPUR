@@ -116,3 +116,17 @@ Treat these as tracked work, not as claims that the features already exist.
 8. Automated regression tests, responsive checks and production release runbook.
 
 Update this file after each meaningful delivery. Use Implemented, In progress, Not started and Needs verification consistently; do not mark a feature complete based only on its UI.
+
+
+## Registration print/header correction — PR #26
+
+Merged to main on 13 November 2026 (merge commit `8f43f06229100b9795f8655a8b735ccef4b7d4f7`).
+
+- Reduced the registration screen logo to 72px and adjusted the screen heading size/desktop no-wrap behavior.
+- Reduced the print logo to 19mm and the print heading to 14pt with a wider fixed heading region and explicit no-wrap behavior.
+- Changed the remaining qualification-table bright-blue borders to `#8493BD`.
+- Standardized both print address boxes to a 0.6mm `#8493BD` border.
+- Removed the duplicate registration print override tail from `app/styles/design-system.css`; the registration print layout is owned by `app/globals.css`.
+- Source-level verification on main confirms the old `#304bff` qualification border and 1mm address border declarations are absent.
+
+**Still unverified:** browser print preview, actual paper output, lint and production build. The UI redesign also remains incomplete; see `docs/UI_UX_GUIDE.md` for the page-by-page phases. Do not treat the print work as visually confirmed until a real print preview has been checked.
