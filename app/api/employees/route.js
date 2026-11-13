@@ -62,14 +62,43 @@ export async function GET(request) {
     const status = (searchParams.get("status") || "").trim();
     const skill = (searchParams.get("skill") || "").trim();
     const filter = {};
+    const escapeRegex = value => String(value).replace(/[-/\\^$*+?.()|[\\]{}]/g, "\\    const status = (searchParams.get("status") || "").trim();
+    const skill = (searchParams.get("skill") || "").trim();
+    const filter = {};");
     if (search) {
       const escaped = search.replace(/[.*+?^{}()|[\]\\]/g, "\\$&");
       const rx = new RegExp(escaped, "i");
-      filter.$or = [{ employeeId: rx }, { name: rx }, { mobile: rx }, { email: rx }, { designation: rx }, { department: rx }];
+      filter.$or = ["employeeId","name","mobile","email","designation","department","gender","employmentType","address","emergencyContactName","emergencyContactNumber","notes","skills"].map(field => ({ [field]: rx }));
     }
     if (status && status !== "all") filter.status = status;
     else if (!status) filter.status = { $ne: "Inactive" };
     if (skill) filter.skills = skill;
+    for (const field of ["employeeId","name","mobile","email","designation","department","gender","employmentType","address","emergencyContactName","emergencyContactNumber"]) {
+      const value = (searchParams.get(field) || "").trim();
+      if (value) filter[field] = new RegExp(escapeRegex(value), "i");
+    }
+    for (const field of ["status","employmentType","gender","department","designation"]) {
+      const value = (searchParams.get(field) || "").trim();
+      if (value && value !== "all") filter[field] = new RegExp("^" + escapeRegex(value) + "$", "i");
+    }
+    const ageMin = searchParams.get("ageMin"), ageMax = searchParams.get("ageMax");
+    if (ageMin !== null || ageMax !== null) {
+      filter.age = {};
+      if (ageMin !== null && ageMin !== "") filter.age.$gte = Number(ageMin);
+      if (ageMax !== null && ageMax !== "") filter.age.$lte = Number(ageMax);
+    }
+    const salaryMin = searchParams.get("salaryMin"), salaryMax = searchParams.get("salaryMax");
+    if (salaryMin !== null || salaryMax !== null) {
+      filter.salary = {};
+      if (salaryMin !== null && salaryMin !== "") filter.salary.$gte = Number(salaryMin);
+      if (salaryMax !== null && salaryMax !== "") filter.salary.$lte = Number(salaryMax);
+    }
+    const joiningFrom = searchParams.get("joiningFrom"), joiningTo = searchParams.get("joiningTo");
+    if (joiningFrom || joiningTo) {
+      filter.joiningDate = {};
+      if (joiningFrom) filter.joiningDate.$gte = joiningFrom;
+      if (joiningTo) filter.joiningDate.$lte = joiningTo;
+    }
     const employees = await Employee.find(filter).sort({ createdAt: -1 }).lean();
     return NextResponse.json({ employees, skills: ALL_EMPLOYEE_SKILLS });
   } catch (error) {
