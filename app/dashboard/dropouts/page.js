@@ -18,10 +18,10 @@ export default function DropoutsPage(){
     }finally{setLoading(false)}
   }
   useEffect(()=>{load()},[]);
-  const filtered=students.filter(s=>!search||[s.applicantName,s.formNo,s.enrollmentNo,s.courseCode,s.courseName].join(" ").toLowerCase().includes(search.toLowerCase()));
+  const filtered=students.filter(s=>{const searchable=Object.entries(s).filter(([key])=>!["photoUrl","signatureUrl","password"].includes(key)).map(([,value])=>typeof value==="object"?JSON.stringify(value):String(value??"")).join(" ");return !search||searchable.toLowerCase().includes(search.toLowerCase())});
   return <ERPLayout active="/dashboard/dropouts">
     <header className="topbar"><div><div className="crumb">Students / Dropouts</div><h1>Dropout Students</h1></div><div className="top-actions"><span className="badge">{students.length} Dropouts</span></div></header>
-    <section className="panel filter-panel"><div className="filter-title"><div><h3>Dropout Register</h3><p>Students remain here until they are dropped back into a batch. Their original batch, faculty, schedule, attendance footprint and dropout remark remain preserved.</p></div></div><div className="search-box"><Search size={17}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search dropout student…"/></div></section>
+    <section className="panel filter-panel"><div className="filter-title"><div><h3>Dropout Register</h3><p>Students remain here until they are dropped back into a batch. Their original batch, faculty, schedule, attendance footprint and dropout remark remain preserved.</p></div></div><div className="search-box"><Search size={17}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search all student, academic and dropout details…"/></div></section>
     <section className="panel table-panel">
       {message&&<div className="success-msg">{message}</div>}
       {loading?<div className="empty">Loading dropout records…</div>:filtered.length===0?<div className="empty"><UserRoundX size={30}/><br/>No dropout students found.</div>:<div className="table-wrap"><table><thead><tr><th>Student</th><th>Course</th><th>Previous Batch</th><th>Dropout Remark</th><th>Dropped On</th><th>Action</th></tr></thead><tbody>{filtered.map(s=>{

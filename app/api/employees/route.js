@@ -62,26 +62,89 @@ export async function GET(request) {
     const status = (searchParams.get("status") || "").trim();
     const skill = (searchParams.get("skill") || "").trim();
     const filter = {};
+    const escapeRegex = value => String(value).replace(/[.*+?^{}()|[\]\\$]/g, "\\$&");
+
     if (search) {
-      const escaped = search.replace(/[.*+?^{}()|[\]\\]/g, "\\$&");
-      const rx = new RegExp(escaped, "i");
-      filter.$or = [{ employeeId: rx }, { name: rx }, { mobile: rx }, { email: rx }, { designation: rx }, { department: rx }];
+      const rx = new RegExp(escapeRegex(search), "i");
+      const searchableFields = [
+        "employeeId","loginId","name","mobile","email","designation","department","gender","employmentType","address",
+        "emergencyContactName","emergencyContactNumber","notes","skills","dateOfBirth","joiningDate",
+        "salaryFrequency","offDays","status"
+      ];
+      filter.$or = searchableFields.map(field => ({ [field]: rx }));
+      const numericSearch = Number(search);
+      if (Number.isFinite(numericSearch) && search !== "") filter.$or.push({ age: numericSearch }, { salary: numericSearch }, { "leaveBalance.casual": numericSearch }, { "leaveBalance.sick": numericSearch }, { "leaveBalance.earned": numericSearch }, { "leaveBalance.other": numericSearch });
     }
+
     if (status && status !== "all") filter.status = status;
     else if (!status) filter.status = { $ne: "Inactive" };
     if (skill) filter.skills = skill;
-    const employees = await Employee.find(filter).sort({ createdAt: -1 }).lean();
+
+    for (const field of ["employeeId","loginId","name","mobile","email","designation","department","gender","employmentType","address","emergencyContactName","emergencyContactNumber","notes"]) {
+      const value = (searchParams.get(field) || "").trim();
+      if (value) filter[field] = new RegExp(escapeRegex(value), "i");
+    }
+    for (const field of ["status","employmentType","gender","department","designation"]) {
+      const value = (searchParams.get(field) || "").trim();
+      if (value && value !== "all") filter[field] = new RegExp("^" + escapeRegex(value) + "$", "i");
+    }
+
+    const ageMin = searchParams.get("ageMin"), ageMax = searchParams.get("ageMax");
+    if (ageMin !== null || ageMax !== null) {
+      filter.age = {};
+      if (ageMin !== null && ageMin !== "") filter.age.$gte = Number(ageMin);
+      if (ageMax !== null && ageMax !== "") filter.age.$lte = Number(ageMax);
+    }
+    const salaryMin = searchParams.get("salaryMin"), salaryMax = searchParams.get("salaryMax");
+    if (salaryMin !== null || salaryMax !== null) {
+      filter.salary = {};
+      if (salaryMin !== null && salaryMin !== "") filter.salary.$gte = Number(salaryMin);
+      if (salaryMax !== null && salaryMax !== "") filter.salary.$lte = Number(salaryMax);
+    }
+    const dateOfBirth = (searchParams.get("dateOfBirth") || "").trim();
+    if (dateOfBirth) filter.dateOfBirth = dateOfBirth;
+    const salaryFrequency = (searchParams.get("salaryFrequency") || "").trim();
+    if (salaryFrequency) filter.salaryFrequency = salaryFrequency;
+    const offDay = (searchParams.get("offDay") || "").trim();
+    if (offDay) filter.offDays = offDay;
+
+    for (const [key, field] of [["casualLeaveMin","leaveBalance.casual"],["sickLeaveMin","leaveBalance.sick"],["earnedLeaveMin","leaveBalance.earned"],["otherLeaveMin","leaveBalance.other"]]) {
+      const value = searchParams.get(key);
+      if (value !== null && value !== "") filter[field] = { $gte: Number(value) };
+    }
+    const createdFrom = searchParams.get("createdFrom"), createdTo = searchParams.get("createdTo");
+    if (createdFrom || createdTo) {
+      filter.createdAt = {};
+      if (createdFrom) filter.createdAt.$gte = new Date(createdFrom + "T00:00:00.000Z");
+      if (createdTo) filter.createdAt.$lte = new Date(createdTo + "T23:59:59.999Z");
+    }
+    const updatedFrom = searchParams.get("updatedFrom"), updatedTo = searchParams.get("updatedTo");
+    if (updatedFrom || updatedTo) {
+      filter.updatedAt = {};
+      if (updatedFrom) filter.updatedAt.$gte = new Date(updatedFrom + "T00:00:00.000Z");
+      if (updatedTo) filter.updatedAt.$lte = new Date(updatedTo + "T23:59:59.999Z");
+    }
+    const joiningFrom = searchParams.get("joiningFrom"), joiningTo = searchParams.get("joiningTo");
+    if (joiningFrom || joiningTo) {
+      filter.joiningDate = {};
+      if (joiningFrom) filter.joiningDate.$gte = joiningFrom;
+      if (joiningTo) filter.joiningDate.$lte = joiningTo;
+    }
+
+    const globalSearch = searchParams.get("globalSearch") === "1";
+    const employeeQuery = Employee.find(filter)
+      .select(globalSearch ? "employeeId name designation mobile department status" : "-password -accountNumber -bankName -ifsc")
+      .sort({ createdAt: -1 });
+    if (globalSearch) employeeQuery.limit(Math.min(10, Math.max(1, Number(searchParams.get("limit") || 5))));
+    const employees = await employeeQuery.lean();
     return NextResponse.json({ employees, skills: ALL_EMPLOYEE_SKILLS });
   } catch (error) {
     const unavailable = /MONGODB_URI|ECONNREFUSED|Server selection|connect/i.test(error.message || "");
-    return NextResponse.json(
-      {
-        error: unavailable ? "Employee database is unavailable." : "Unable to load employees.",
-        detail: error.message,
-        code: unavailable ? "DATABASE_UNAVAILABLE" : "EMPLOYEE_LOAD_FAILED",
-      },
-      { status: unavailable ? 503 : 500 }
-    );
+    return NextResponse.json({
+      error: unavailable ? "Employee database is unavailable." : "Unable to load employees.",
+      detail: error.message,
+      code: unavailable ? "DATABASE_UNAVAILABLE" : "EMPLOYEE_LOAD_FAILED"
+    }, { status: unavailable ? 503 : 500 });
   }
 }
 

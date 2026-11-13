@@ -57,44 +57,103 @@ export async function GET(request) {
     const registration = (searchParams.get("registration") || "").trim();
     const fromDate = (searchParams.get("fromDate") || "").trim();
     const toDate = (searchParams.get("toDate") || "").trim();
-
     const filter = {};
+    const escapeRegex = value => String(value).replace(/[.*+?^{}()|[\]\\$]/g, "\\$&");
+
     if (search) {
-      const rx = new RegExp(search.replace(/[.*+?^{}()|[\]\\]/g, "\\$&"), "i");
-      filter.$or = [
-        { applicantName: rx }, { formNo: rx }, { enrollmentNo: rx }, { mobileNumber: rx }, { email: rx }, { aadhaarNumber: rx },
-        { courseName: rx }, { regnNo: rx }, { fatherOrHusbandName: rx },
-        { aecCode: rx }, { whatsappNumber: rx }
+      const rx = new RegExp(escapeRegex(search), "i");
+      const searchFields = [
+        "applicantName","formNo","enrollmentNo","regnNo","aecCode","courseName","courseCode","batchCode",
+        "mobileNumber","whatsappNumber","guardianContactNumber","email","aadhaarNumber","fatherOrHusbandName",
+        "nationality","dateOfBirth","sex","status","address","presentAddress","permanentAddress","postOffice","policeStation",
+        "nearestLandmark","district","state","pin","permanentPostOffice","permanentNearestLandmark","permanentPin",
+        "permanentDistrict","permanentState","referralName","marketingEmployeeName","paymentStatus","declarationPlace",
+        "sourceCourseLabel","importSource","signatureApplicant","declarationDate","referralId","marketingEmployeeId",
+        "qualifications.examCourse","qualifications.boardUniversity","qualifications.collegeInstitute","qualifications.year","qualifications.percentage","admissionDate"
       ];
+      filter.$or = searchFields.map(field => ({ [field]: rx }));
+      const numericSearch = Number(search);
+      if (Number.isFinite(numericSearch) && search !== "") filter.$or.push({ dueAmount: numericSearch });
     }
+
+    const textFilters = [
+      "formNo","enrollmentNo","regnNo","aecCode","applicantName","fatherOrHusbandName","mobileNumber",
+      "whatsappNumber","guardianContactNumber","email","aadhaarNumber","nationality","district","state","pin",
+      "postOffice","policeStation","nearestLandmark","permanentDistrict","permanentState","permanentPin",
+      "permanentPostOffice","permanentNearestLandmark","courseCode","batchCode","referralName","marketingEmployeeName",
+      "paymentStatus","declarationPlace","sourceCourseLabel","importSource","address","presentAddress","permanentAddress",
+      "signatureApplicant","declarationDate","referralId","marketingEmployeeId"
+    ];
+    for (const field of textFilters) {
+      const value = (searchParams.get(field) || "").trim();
+      if (value) filter[field] = new RegExp(escapeRegex(value), "i");
+    }
+
     if (sex) filter.sex = sex;
     if (course) filter.courseName = course;
     if (status && status !== "all") filter.status = status;
     else if (!status) filter.status = { $ne: "Cancelled" };
     if (registration === "assigned") filter.regnNo = { $exists: true, $nin: ["", null] };
     if (registration === "unassigned") filter.$and = [...(filter.$and || []), { $or: [{ regnNo: { $exists: false } }, { regnNo: "" }, { regnNo: null }] }];
+
     if (fromDate || toDate) {
       filter.createdAt = {};
       if (fromDate) filter.createdAt.$gte = new Date(fromDate + "T00:00:00.000Z");
       if (toDate) filter.createdAt.$lte = new Date(toDate + "T23:59:59.999Z");
     }
+    const updatedFrom = searchParams.get("updatedFrom"), updatedTo = searchParams.get("updatedTo");
+    if (updatedFrom || updatedTo) {
+      filter.updatedAt = {};
+      if (updatedFrom) filter.updatedAt.$gte = new Date(updatedFrom + "T00:00:00.000Z");
+      if (updatedTo) filter.updatedAt.$lte = new Date(updatedTo + "T23:59:59.999Z");
+    }
+    const dateOfBirth = (searchParams.get("dateOfBirth") || "").trim();
+    if (dateOfBirth) filter.dateOfBirth = dateOfBirth;
 
+    const dueMin = searchParams.get("dueMin"), dueMax = searchParams.get("dueMax");
+    if (dueMin !== null || dueMax !== null) {
+      filter.dueAmount = {};
+      if (dueMin !== null && dueMin !== "") filter.dueAmount.$gte = Number(dueMin);
+      if (dueMax !== null && dueMax !== "") filter.dueAmount.$lte = Number(dueMax);
+    }
+    const admissionFrom = searchParams.get("admissionFrom"), admissionTo = searchParams.get("admissionTo");
+    if (admissionFrom || admissionTo) {
+      filter.admissionDate = {};
+      if (admissionFrom) filter.admissionDate.$gte = admissionFrom;
+      if (admissionTo) filter.admissionDate.$lte = admissionTo;
+    }
+
+    for (const [key, field] of [["sameAsPresentAddress","sameAsPresentAddress"],["stampPhoto","enclosures.stampPhoto"],["qualifyingCertificates","enclosures.qualifyingCertificates"],["matricAdmitCard","enclosures.matricAdmitCard"]]) {
+      const value = searchParams.get(key);
+      if (value === "true" || value === "false") filter[field] = value === "true";
+    }
+    for (const field of ["photoUrl","signatureUrl"]) {
+      const key = field === "photoUrl" ? "hasPhoto" : "hasSignature";
+      const value = searchParams.get(key);
+      if (value === "yes") filter[field] = { $exists: true, $nin: ["", null] };
+      if (value === "no") filter.$and = [...(filter.$and || []), { $or: [{ [field]: { $exists: false } }, { [field]: "" }, { [field]: null }] }];
+    }
+
+    const qualification = (searchParams.get("qualification") || "").trim();
+    if (qualification) {
+      const qualificationRx = new RegExp(escapeRegex(qualification), "i");
+      filter.$and = [...(filter.$and || []), { $or: ["qualifications.examCourse","qualifications.boardUniversity","qualifications.collegeInstitute","qualifications.year","qualifications.percentage"].map(field => ({ [field]: qualificationRx })) }];
+    }
+
+    const studentQuery = Student.find(filter).sort({ createdAt: -1 });
+    if (searchParams.get("globalSearch") === "1") studentQuery.select("applicantName formNo enrollmentNo mobileNumber courseCode courseName status");
     const [students, total, dbCourses, statuses, sexes] = await Promise.all([
-      Student.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+      studentQuery.skip((page - 1) * limit).limit(limit).lean(),
       Student.countDocuments(filter),
       Student.distinct("courseName"),
       Student.distinct("status"),
       Student.distinct("sex")
     ]);
-
     const courses = [...new Set([...DEFAULT_COURSES, ...dbCourses.filter(Boolean)])].sort();
-    const filterStatuses = statuses.filter(Boolean).sort();
-    const filterSexes = sexes.filter(Boolean).sort();
-
     return NextResponse.json({
       students,
       pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
-      filterOptions: { courses, statuses: filterStatuses, sexes: filterSexes }
+      filterOptions: { courses, statuses: statuses.filter(Boolean).sort(), sexes: sexes.filter(Boolean).sort() }
     });
   } catch (error) {
     return NextResponse.json({ error: "Unable to load students.", detail: error.message }, { status: 500 });

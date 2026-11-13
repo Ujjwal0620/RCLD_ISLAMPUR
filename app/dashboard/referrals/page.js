@@ -25,7 +25,7 @@ export default function ReferralsPage() {
       setForm({ name: "", marketingEmployeeId: "", notes: "" }); setMessage("Referral created and assigned to the marketing employee."); await load();
     } catch (e) { setMessage(e.message); } finally { setSaving(false); }
   }
-  const visible = data.referrals.filter((r) => (r.name + " " + r.marketingEmployeeName).toLowerCase().includes(search.toLowerCase()));
+  const visible = data.referrals.filter((r) => JSON.stringify(r).toLowerCase().includes(search.toLowerCase()));
   return <ERPLayout active="/dashboard/referrals">
     <header className="topbar"><div><div className="crumb">Marketing / Referrals</div><h1>Referral Directory</h1></div><div className="top-actions"><a className="ghost-btn" href="/dashboard/marketing"><ArrowLeft size={16}/> Marketing CRM</a><button className="ghost-btn" onClick={load}><RefreshCw size={16}/> Refresh</button></div></header>
     <section className="marketing-hero referral-hero"><div><span>REFERRAL SOURCE MANAGEMENT</span><h2>Build your referral network</h2><p>Create referral names such as Ram or Shyam and assign each one to the marketing employee who manages that relationship.</p></div><div className="marketing-hero-icon"><Users size={36}/></div></section>

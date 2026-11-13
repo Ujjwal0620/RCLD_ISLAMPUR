@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import RAGAssistant from "@/components/RAGAssistant";
 import RCLDLogo from "@/components/RCLDLogo";
 import {
@@ -56,6 +56,11 @@ export default function ERPLayout({ active, children, hideAssistant = true }) {
   const [user, setUser] = useState(null);
   const [theme, setTheme] = useState("light");
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [commandQuery,setCommandQuery]=useState("");
+  const [commandResults,setCommandResults]=useState([]);
+  const [commandOpen,setCommandOpen]=useState(false);
+  const [commandLoading,setCommandLoading]=useState(false);
+  const commandInputRef=useRef(null);
 
   useEffect(() => {
     const savedTheme = window.localStorage.getItem("rcld-erp-theme");
@@ -67,6 +72,49 @@ export default function ERPLayout({ active, children, hideAssistant = true }) {
     document.addEventListener("fullscreenchange", syncFullscreen);
     syncFullscreen();
     return () => document.removeEventListener("fullscreenchange", syncFullscreen);
+  }, []);
+
+  useEffect(() => {
+    const query=commandQuery.trim();
+    if(query.length<2){setCommandResults([]);setCommandLoading(false);return}
+    let active=true;
+    const timer=setTimeout(async()=>{
+      setCommandLoading(true);
+      try{
+        const [studentsRes,employeesRes,coursesRes,batchesRes,subjectsRes]=await Promise.all([
+          fetch("/api/students?search="+encodeURIComponent(query)+"&limit=5&globalSearch=1&status=all",{cache:"no-store"}),
+          fetch("/api/employees?search="+encodeURIComponent(query)+"&limit=5&globalSearch=1&status=all",{cache:"no-store"}),
+          fetch("/api/courses",{cache:"no-store"}),
+          fetch("/api/batches",{cache:"no-store"}),
+          fetch("/api/subjects",{cache:"no-store"})
+        ]);
+        const [students,employees,courses,batches,subjects]=await Promise.all([studentsRes.json(),employeesRes.json(),coursesRes.json(),batchesRes.json(),subjectsRes.json()]);
+        if(!active)return;
+        const q=query.toLowerCase();
+        const results=[
+          ...(students.students||[]).slice(0,5).map(x=>({type:"Student",title:x.applicantName||"Student",meta:[x.formNo,x.courseCode||x.courseName,x.mobileNumber].filter(Boolean).join(" · "),href:"/dashboard/students/"+x._id})),
+          ...(employees.employees||[]).slice(0,5).map(x=>({type:"Employee",title:x.name||"Employee",meta:[x.employeeId,x.designation,x.mobile].filter(Boolean).join(" · "),href:"/dashboard/employees/"+x._id})),
+          ...(courses.courses||[]).filter(x=>[x.code,x.name,x.category,x.description,x.active,x.source,(x.requiredSkills||[]).join(" ")].join(" ").toLowerCase().includes(q)).slice(0,4).map(x=>({type:"Course",title:x.name,meta:[x.code,x.category].filter(Boolean).join(" · "),href:"/dashboard/courses/"+x._id})),
+          ...(batches.batches||[]).filter(x=>[x.batchCode,x.name,x.courseId,x.courseCode,x.courseName,(x.series||[]).join(" "),x.facultyId,x.facultyName,(x.facultyIds||[]).join(" "),(x.facultyNames||[]).join(" "),x.status,x.room,x.notes,x.createdBy,x.startDate,x.endDate,(x.schedules||[]).map(y=>[y.day,y.time,y.slot,y.room,y.facultyId,y.facultyName].join(" ")).join(" ")].join(" ").toLowerCase().includes(q)).slice(0,4).map(x=>({type:"Batch",title:x.batchCode||x.name,meta:[x.courseCode,(x.series||[]).join(", "),x.status].filter(Boolean).join(" · "),href:"/dashboard/batches/"+x._id})),
+          ...(subjects.subjects||[]).filter(x=>[x.code,x.name,x.courseCode,x.courseName,x.active,(x.requiredSkills||[]).join(" "),(x.chapters||[]).map(y=>y.name+" "+y.description).join(" ")].join(" ").toLowerCase().includes(q)).slice(0,4).map(x=>({type:"Subject",title:x.name,meta:[x.code,x.courseCode].filter(Boolean).join(" · "),href:"/dashboard/subjects"}))
+        ];
+        setCommandResults(results.slice(0,12));
+      }catch{if(active)setCommandResults([])}
+      finally{if(active)setCommandLoading(false)}
+    },280);
+    return()=>{active=false;clearTimeout(timer)};
+  },[commandQuery]);
+
+  useEffect(() => {
+    const onShortcut = event => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        commandInputRef.current?.focus();
+        setCommandOpen(true);
+      }
+    };
+    window.addEventListener("keydown", onShortcut);
+    return () => window.removeEventListener("keydown", onShortcut);
   }, []);
 
   const toggleTheme = () => {
@@ -147,9 +195,10 @@ export default function ERPLayout({ active, children, hideAssistant = true }) {
       <a className="erp-skip-link" href="#erp-page-content">Skip to main content</a>
       <main className="erp-main" id="erp-page-content">
         <header className="erp-user-bar">
-          <div className="erp-command-search">
-            <Search size={16}/><input aria-label="Search ERP" placeholder="Search students, batches, employees..." />
+          <div className="erp-command-search erp-command-search-live">
+            <Search size={16}/><input ref={commandInputRef} aria-label="Search ERP" value={commandQuery} onChange={e=>{setCommandQuery(e.target.value);setCommandOpen(true)}} onFocus={()=>setCommandOpen(true)} onKeyDown={e=>{if(e.key==="Escape")setCommandOpen(false);if(e.key==="Enter"&&commandResults[0])window.location.href=commandResults[0].href}} placeholder="Search every student, employee, course, batch…" />
             <kbd>⌘ K</kbd>
+            {commandOpen&&commandQuery.trim().length>=2&&<div className="erp-command-results">{commandLoading?<div className="erp-command-empty">Searching institute records…</div>:commandResults.length?commandResults.map((item,i)=><a key={item.type+"-"+item.href+"-"+i} href={item.href} className="erp-command-result"><span className="erp-command-result-icon"><Search size={14}/></span><span><strong>{item.title}</strong><small>{item.type} {item.meta?"· "+item.meta:""}</small></span></a>):<div className="erp-command-empty">No matching ERP records found.</div>}</div>}
           </div>
           <div className="erp-top-actions">
             <button type="button" className="erp-top-icon erp-theme-toggle" title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"} aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"} aria-pressed={theme === "dark"} onClick={toggleTheme}>{theme === "dark" ? <Sun size={17}/> : <Moon size={17}/>}</button>
