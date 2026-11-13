@@ -964,3 +964,48 @@ html[data-theme="dark"] .course-skill-list span {
   .course-metrics { grid-template-columns:1fr; }
   .batch-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
+
+
+/* Registration address panels: calm neutral borders on screen and in print preview. */
+.registration-address-card,
+.rcld-address-grid .registration-address-card,
+.rcld-address-template-card {
+  border-color: #9ca3af !important;
+  background: #ffffff;
+}
+
+.registration-address-card h4,
+.rcld-address-grid .registration-address-card h4,
+.rcld-address-template-card h4 {
+  color: #344054;
+}
+
+/* Consistent, restrained interaction feedback across ERP forms and data views. */
+.panel,
+.metric,
+.stat,
+.detail-section,
+.report-paper,
+.builder-step {
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.form-field > span,
+.filter-field > span {
+  line-height: 1.45;
+}
+
+.form-field input,
+.form-field select,
+.form-field textarea,
+.filter-field input,
+.filter-field select {
+  min-height: 38px;
+}
+
+@media (max-width: 700px) {
+  .registration-address-grid,
+  .rcld-address-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
