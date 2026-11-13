@@ -107,6 +107,44 @@ export async function POST(request, { params }) {
     if (!mongoose.Types.ObjectId.isValid(id)) return NextResponse.json({ error: "Invalid student ID." }, { status: 400 });
 
     const body = await request.json();
+
+    // Give legacy payment records a permanent receipt number on first print.
+    if (body.receiptPaymentId) {
+      if (!mongoose.Types.ObjectId.isValid(String(body.receiptPaymentId))) {
+        return NextResponse.json({ error: "Invalid payment record." }, { status: 400 });
+      }
+      const existing = await StudentFee.findOne({
+        studentId: id,
+        "payments._id": body.receiptPaymentId,
+      }).lean();
+      if (!existing) return NextResponse.json({ error: "Payment record not found." }, { status: 404 });
+      const existingPayment = (existing.payments || []).find(
+        payment => String(payment._id) === String(body.receiptPaymentId)
+      );
+      if (existingPayment?.receiptNo) return NextResponse.json({ fee: feeSummary(existing) });
+      const counter = await FeeReceiptCounter.findOneAndUpdate(
+        { _id: "RCLD-FEE-RECEIPT" },
+        { $inc: { seq: 1 } },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+      const receiptNo = "RCLD/ISL/RCPT/" + String(counter.seq).padStart(6, "0");
+      const updated = await StudentFee.findOneAndUpdate(
+        {
+          studentId: id,
+          "payments._id": body.receiptPaymentId,
+          $or: [
+            { "payments.receiptNo": { $exists: false } },
+            { "payments.receiptNo": "" },
+            { "payments.receiptNo": null }
+          ]
+        },
+        { $set: { "payments.$.receiptNo": receiptNo } },
+        { new: true }
+      ).lean();
+      const latest = updated || await StudentFee.findOne({ studentId: id }).lean();
+      return NextResponse.json({ fee: feeSummary(latest) });
+    }
+
     const totalFee = Number(body.totalFee ?? 0);
     const discount = Number(body.discount ?? 0);
     const admissionFee = Number(body.admissionFee ?? 0);
