@@ -6,14 +6,14 @@ This is a code inventory, not a product-completion certificate. A page or API ro
 
 ## Latest delivery checkpoint
 
-**System organization baseline — in progress, 13 November 2026.**
+**System organization baseline — merged to main on 13 November 2026 (PR #24, merge commit 305cb96503aea7b69927d727d9fed2d228af58b2).**
 
 - Created source restore point branch `checkpoint/pre-system-audit-2026-11-13` from main commit `4f88a6df0d49e526703f82b0f9b19fcce3437c3b` before the audit changes.
 - Added `docs/COMMAND_CATALOG.md` to map each current page to its API routes, models and shared logic.
 - Added Prettier configuration and `format` / `format:check` npm scripts. Existing source-wide formatting still requires running `npm run format` in a local checkout; this remote repository session could not execute npm.
 - Added `app/styles/design-system.css` as the shared Lexa-inspired UI layer and loaded it after the legacy global stylesheet.
 - Removed the duplicated trailing registration border override blocks and corrected the original print border declarations to `#8493BD`; the print-only address elements now carry an explicit dedicated class.
-- Full per-route visual regression, lint and production build are still pending local execution. Do not treat this audit pass as proof that every workflow is production-ready.
+- Full per-route visual regression, lint and production build are still pending local execution. The shared UI baseline is now in main, but this is not proof that every workflow is production-ready.
 
 ## Latest delivery checkpoint
 
