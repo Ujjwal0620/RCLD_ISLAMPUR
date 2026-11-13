@@ -175,11 +175,16 @@ When adding a reusable pattern, update this guide and the shared styles rather t
 
 The Lexa-inspired shared layer is being applied in controlled phases. The shared layer improves navigation, page headings, panels, metrics, tables, filters, forms, modals and the Excel-like timetable without changing API contracts or institute rules. It does **not** mean every page has been individually redesigned.
 
-- **Phase 1 — Shared workspace and core operations:** shared ERP shell, dashboard, student directory, employee directory, course catalog and batch/timetable screens. Shared styling foundation is in progress; each page still requires individual visual and interaction review.
+- **Phase 1 — Shared workspace and core operations:** shared ERP shell, dashboard, student directory, employee directory, course catalog and batch/timetable screens. Shared Lexa-inspired styling is merged; the student and employee directories now have dedicated overview/metric layouts; course catalogue hierarchy and batch overview metrics have been refreshed. The dashboard and batch/timetable still require individual visual and interaction review.
 - **Phase 2 — Student lifecycle:** registration, pending admissions, I-Cards, student profile, fee workspace, payment history, attendance, batch movement and import.
 - **Phase 3 — Academic operations:** subjects/chapters, course content, batch details, batch roster, timetable detail and faculty assignment.
 - **Phase 4 — People and administration:** employee create/profile, employee attendance, back-office tasks, permissions and settings.
 - **Phase 5 — Business operations:** CRM, referrals, dropouts, reports and AI Copilot.
-- **Phase 6 — Public and student experience:** public institute homepage, course catalogue, student sign-in and student-facing learning area.
+- **Phase 6 — Public and student experience:** the root route now has a public RCLD institute homepage with a live course catalogue and the ERP login link only in the footer. Student-specific sign-in and the student-facing learning area remain outstanding.
 
 For each phase, preserve the current routes, API calls, field names, roles, fee calculations, batch relationships and historical records. Record the exact pages changed and the local/browser checks performed. Do not mark a phase complete until its pages have been reviewed at desktop, tablet and mobile widths.
+
+
+### Public homepage scope
+
+The root route `app/page.js` is a public institute landing page and reads active course records from `GET /api/courses`. It includes course details, duration, weekly class frequency and fee information returned by the API. It does not invent contact numbers or email addresses, and it does not claim that student authentication or an LMS course player is already implemented. The staff ERP login is intentionally linked only from the footer.
