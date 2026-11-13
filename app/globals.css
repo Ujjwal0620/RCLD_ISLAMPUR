@@ -2515,9 +2515,9 @@ html[data-theme="dark"] .batch-track{background:#2a3850}
   .erp-shell, .erp-main, .erp-content, .erp-main-content, main { display: block !important; position: static !important; width: 210mm !important; max-width: none !important; min-width: 0 !important; height: auto !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; transform: none !important; background: #fff !important; box-shadow: none !important; }
   .rcld-print-document { visibility: visible !important; display: block !important; position: relative !important; width: 210mm !important; height: 297mm !important; min-height: 297mm !important; max-height: 297mm !important; box-sizing: border-box !important; padding: 3.5mm 0 2mm !important; margin: 0 !important; overflow: hidden !important; background: #fff !important; color: #111 !important; font-family: "Times New Roman", Georgia, serif !important; page-break-after: avoid !important; break-after: avoid-page !important; }
   .rcld-print-header { height: 28mm !important; box-sizing: border-box !important; display: grid !important; grid-template-columns: 27mm 1fr !important; gap: 3mm !important; align-items: center !important; padding: 0 6.5mm 2mm !important; margin: 0 !important; }
-  .rcld-print-logo-image { display: block !important; width: 25mm !important; height: 25mm !important; object-fit: contain !important; }
-  .rcld-print-heading { text-align: center !important; min-width: 0 !important; }
-  .rcld-print-heading h1 { margin: 0 !important; color: #159bd5 !important; font-family: Georgia, "Times New Roman", serif !important; font-size: 21pt !important; line-height: 1.08 !important; font-weight: 700 !important; letter-spacing: 0 !important; white-space: nowrap !important; }
+  .rcld-print-logo-image { display: block !important; width: 19mm !important; height: 19mm !important; object-fit: contain !important; }
+  .rcld-print-heading { position:absolute!important;left:22mm!important;top:3mm!important;width:182mm!important;text-align:center!important;min-width:0!important; }
+  .rcld-print-heading h1 { display:block!important;width:100%!important;max-width:none!important;margin:0!important;padding:0!important;color:#159bd5!important;font-family:Georgia,"Times New Roman",serif!important;font-size:14pt!important;line-height:1.1!important;font-weight:700!important;letter-spacing:0!important;white-space:nowrap!important;word-break:keep-all!important;overflow-wrap:normal!important; }
   .rcld-print-heading p { margin: 4mm 0 0 !important; color: #0799db !important; font: 11pt Arial, sans-serif !important; white-space: nowrap !important; }
   .rcld-print-rule { display: block !important; height: 1.1mm !important; margin: 0 0 4mm !important; background: #050505 !important; }
   .rcld-print-section { display: block !important; margin: 0 0 2.3mm !important; padding: 0 !important; color: #111 !important; font-family: "Times New Roman", Georgia, serif !important; break-inside: avoid !important; }
@@ -2659,14 +2659,13 @@ html[data-theme="dark"] .batch-track{background:#2a3850}
   font-family:"Times New Roman",Georgia,serif!important;
 }
 .rcld-registration-brand{
-  display:grid!important;grid-template-columns:118px minmax(0,1fr)!important;gap:12px!important;
-  align-items:center!important;min-height:132px!important;padding:10px 18px 12px!important;
+  display:grid!important;grid-template-columns:78px minmax(0,1fr)!important;gap:12px!important;align-items:center!important;min-height:96px!important;padding:8px 18px 10px!important;
   background:#fff!important;border:0!important;border-bottom:0!important;position:relative!important;
 }
 .rcld-registration-brand:after{display:none!important}
-.rcld-screen-logo{display:block!important;width:112px!important;height:112px!important;object-fit:contain!important;background:#fff!important;justify-self:start!important}
+.rcld-screen-logo{display:block!important;width:72px!important;height:72px!important;object-fit:contain!important;background:#fff!important;justify-self:start!important}
 .rcld-brand-title{text-align:center!important;min-width:0!important}
-.rcld-brand-title h2{margin:0!important;padding:0!important;color:#219bd2!important;font:700 clamp(20px,2.6vw,34px)/1.08 Georgia,"Times New Roman",serif!important;letter-spacing:0!important;white-space:normal!important}
+.rcld-brand-title h2{margin:0!important;padding:0!important;color:#219bd2!important;font:700 clamp(18px,2vw,25px)/1.1 Georgia,"Times New Roman",serif!important;letter-spacing:0!important;white-space:nowrap!important;overflow:visible!important}
 .rcld-brand-title span{display:block!important;margin-top:13px!important;color:#159bd5!important;font:16px/1.25 Arial,sans-serif!important;letter-spacing:0!important}
 .rcld-screen-divider{height:5px!important;background:#050505!important;width:100%!important;margin:0 0 18px!important}
 .rcld-registration-sheet .rcld-form-section{padding:0 0 18px!important;margin:0!important;border:0!important;background:#fff!important}
