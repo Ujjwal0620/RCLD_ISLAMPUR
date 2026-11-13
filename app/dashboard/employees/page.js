@@ -6,13 +6,13 @@ import ERPLayout from "@/components/ERPLayout";
 
 const emptyFilters = {
   search:"", skill:"", status:"", department:"", designation:"", employmentType:"", gender:"",
-  employeeId:"", name:"", mobile:"", email:"", address:"", emergencyContactName:"",
+  employeeId:"", loginId:"", name:"", mobile:"", email:"", address:"", emergencyContactName:"",
   emergencyContactNumber:"", ageMin:"", ageMax:"", salaryMin:"", salaryMax:"",
   joiningFrom:"", joiningTo:"", dateOfBirth:"", salaryFrequency:"", offDay:"", casualLeaveMin:"", sickLeaveMin:"", earnedLeaveMin:"", otherLeaveMin:"", notes:""
 };
 
 const advancedFields = [
-  ["employeeId","Employee ID"],["name","Employee name"],["mobile","Mobile number"],["email","Email address"],
+  ["employeeId","Employee ID"],["loginId","Login ID"],["name","Employee name"],["mobile","Mobile number"],["email","Email address"],
   ["department","Department"],["designation","Designation"],
   ["address","Address"],["emergencyContactName","Emergency contact name"],["emergencyContactNumber","Emergency contact number"],["notes","HR notes"]
 ];
