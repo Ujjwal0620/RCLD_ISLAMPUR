@@ -49,7 +49,7 @@ export default function CoursesPage() {
     const haystack=[course.code,course.name,course.category,course.description,(course.requiredSkills||[]).join(" "),course.durationMonths,course.classesPerWeek,course.fee,course.admissionFee,course.active,course.source,course.createdAt,course.updatedAt].join(" ").toLowerCase();
     return (!query||haystack.includes(query.toLowerCase()))
       &&(!filters.category||course.category===filters.category)
-      &&(!filters.active||String(course.active)===filters.active)
+      &&(!filters.active||String(course.active!==false)===filters.active)
       &&(!filters.source||String(course.source||"").toLowerCase().includes(filters.source.toLowerCase()))
       &&(!filters.skill||(course.requiredSkills||[]).some(s=>s.toLowerCase().includes(filters.skill.toLowerCase())))
       &&(!filters.durationMin||Number(course.durationMonths)>=Number(filters.durationMin))
