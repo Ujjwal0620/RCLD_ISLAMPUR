@@ -1144,3 +1144,16 @@ html[data-theme="dark"] .panel.table-panel table tbody tr:hover {
   .filter-title { align-items: flex-start; flex-direction: column; }
   .filter-toggle { align-self: flex-start; }
 }
+
+
+.erp-command-search-live{position:relative;z-index:120}
+.erp-command-search-live>input{flex:1;min-width:0}
+.erp-command-results{position:absolute;top:calc(100% + 9px);left:0;right:0;z-index:500;max-height:min(65vh,520px);overflow:auto;padding:6px;border:1px solid var(--rcld-ui-border);border-radius:13px;background:var(--rcld-ui-surface);box-shadow:0 18px 50px rgba(15,23,42,.2)}
+.erp-command-result{display:flex;align-items:center;gap:10px;min-width:0;padding:10px;border-radius:9px;color:var(--rcld-ui-ink);text-decoration:none}
+.erp-command-result:hover,.erp-command-result:focus-visible{background:var(--rcld-ui-surface-muted)}
+.erp-command-result-icon{display:grid;width:30px;height:30px;flex:0 0 30px;place-items:center;border:1px solid var(--rcld-ui-border);border-radius:9px;color:var(--rcld-ui-primary);background:var(--rcld-ui-surface-muted)}
+.erp-command-result>span:last-child{display:grid;min-width:0;gap:3px}
+.erp-command-result strong{overflow:hidden;color:var(--rcld-ui-ink);font-size:11px;font-weight:750;text-overflow:ellipsis;white-space:nowrap}
+.erp-command-result small{overflow:hidden;color:var(--rcld-ui-muted);font-size:9px;text-overflow:ellipsis;white-space:nowrap}
+.erp-command-empty{padding:17px 12px;color:var(--rcld-ui-muted);font-size:11px;text-align:center}
+@media(max-width:600px){.erp-command-results{position:fixed;top:61px;left:12px;right:12px;width:auto}}
