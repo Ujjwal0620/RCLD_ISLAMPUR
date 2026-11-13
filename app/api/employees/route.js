@@ -62,7 +62,7 @@ export async function GET(request) {
     const status = (searchParams.get("status") || "").trim();
     const skill = (searchParams.get("skill") || "").trim();
     const filter = {};
-    const escapeRegex = value => String(value).replace(/[-/\\^$*+?.()|[\\]{}]/g, "\\    const status = (searchParams.get("status") || "").trim();
+    const escapeRegex = value => String(value).replace(/[.*+?^{}()|[\]\\$]/g, "\\$&");
     const skill = (searchParams.get("skill") || "").trim();
     const filter = {};");
     if (search) {
