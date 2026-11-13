@@ -83,7 +83,7 @@ export default function ERPLayout({ active, children, hideAssistant = true }) {
       try{
         const [studentsRes,employeesRes,coursesRes,batchesRes,subjectsRes]=await Promise.all([
           fetch("/api/students?search="+encodeURIComponent(query)+"&limit=5&globalSearch=1",{cache:"no-store"}),
-          fetch("/api/employees?search="+encodeURIComponent(query)+"&limit=5&globalSearch=1,{cache:"no-store"}),
+          fetch("/api/employees?search="+encodeURIComponent(query)+"&limit=5&globalSearch=1",{cache:"no-store"}),
           fetch("/api/courses",{cache:"no-store"}),
           fetch("/api/batches",{cache:"no-store"}),
           fetch("/api/subjects",{cache:"no-store"})
