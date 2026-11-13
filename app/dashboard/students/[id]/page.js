@@ -589,17 +589,33 @@ export default function StudentDetailsPage({ params }) {
     w.document.close();
   }
 
-  function printBill(payment) {
+  async function printBill(payment) {
     if (!student || !fee || !payment) return;
+    if (!payment.receiptNo && payment._id) {
+      try {
+        const response = await fetch("/api/students/" + student._id + "/fees", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ receiptPaymentId: payment._id }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Unable to generate receipt number.");
+        setFee(data.fee);
+        payment = (data.fee.payments || []).find((item) => String(item._id) === String(payment._id)) || payment;
+      } catch (error) {
+        setMessage(error.message || "Unable to generate receipt number.");
+        return;
+      }
+    }
     const esc = (v) => String(v ?? "—").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
     const money = (v) => "₹" + Number(v || 0).toLocaleString("en-IN");
     const date = payment.date ? new Date(String(payment.date).slice(0, 10) + "T00:00:00").toLocaleDateString("en-GB") : "—";
     const installment = /installment|instalment|course fee|general/i.test(payment.paymentType || "");
     const label = installment ? "Installment Fee" : (payment.paymentType || "Fee Payment");
-    const receiptNo = payment.receiptNo || ("RCLD/ISL/RCPT/LEGACY-" + String(payment._id || "").slice(-6).toUpperCase());
+    const receiptNo = payment.receiptNo || "Receipt number unavailable";
     const amount = Number(payment.amount || 0);
     const css = "@page{size:A5 portrait;margin:7mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#142b4f;font-size:10pt}.receipt{border:1px solid #244777;padding:7mm}.head{display:grid;grid-template-columns:22mm 1fr;gap:4mm;align-items:center;border-bottom:1px solid #244777;padding-bottom:4mm}.head img{width:20mm;height:20mm;object-fit:contain}.head h1{text-align:center;font-size:16pt;margin:0}.head h2{text-align:center;font-size:11pt;letter-spacing:.12em;margin:2mm 0 0}.meta{display:grid;grid-template-columns:1fr 1fr;gap:3mm;margin:5mm 0}.meta div{border:1px solid #b8c7d9;padding:3mm;display:flex;justify-content:space-between;gap:2mm}.student{border:1px solid #b8c7d9;padding:4mm}.student h3{margin:0 0 3mm;font-size:10pt}.student-grid{display:grid;grid-template-columns:1fr 1fr;gap:3mm}.fee-title{font-weight:800;margin:5mm 0 2mm}.fees{width:100%;border-collapse:collapse}.fees th,.fees td{border:1px solid #aebed2;padding:4mm;text-align:left}.fees th{background:#edf3fa}.fees td:last-child,.fees th:last-child{text-align:right}.total{display:flex;justify-content:space-between;border:1.5px solid #244777;padding:4mm;margin-top:4mm;font-size:14pt;font-weight:800}.words{margin-top:4mm}.sign{text-align:right;margin-top:18mm}.sign span{display:inline-block;width:55mm;border-top:1px solid #244777;text-align:center;padding-top:2mm;font-weight:700}.foot{text-align:center;margin-top:6mm;color:#536985;font-size:8pt}@media screen{body{background:#e9eef5;padding:10mm}.receipt{max-width:185mm;margin:auto;background:white;box-shadow:0 4px 20px #142b4f20}}";
-    const body = '<main class="receipt"><header class="head"><img src="/assets/logo.png" alt="RCLD logo"/><div><h1>RASHTRIYA COMPUTER LITERACY DRIVE</h1><h2>STUDENT RECEIPT</h2></div></header><div class="meta"><div><span>Receipt No.</span><b>' + esc(receiptNo) + '</b></div><div><span>Date</span><b>' + esc(date) + '</b></div></div><section class="student"><h3>STUDENT DETAILS</h3><div class="student-grid"><div><b>Name:</b> ' + esc(student.applicantName) + '</div><div><b>Enrollment:</b> ' + esc(student.enrollmentNo || student.regnNo) + '</div><div><b>Course:</b> ' + esc(student.courseName || student.courseCode) + '</div><div><b>Duration:</b> ' + esc(student.courseDuration || "—") + '</div></div></section><div class="fee-title">FEE DETAILS</div><table class="fees"><thead><tr><th>Description</th><th>Amount</th></tr></thead><tbody><tr><td>' + esc(label) + (installment && payment.installmentMonth ? "<br/>" + esc(payment.installmentMonth) : "") + '</td><td>' + esc(money(amount)) + '</td></tr></tbody></table><div class="total"><span>TOTAL RECEIVED</span><strong>' + esc(money(amount)) + '</strong></div><div class="words"><b>In words:</b> ' + esc(numberToIndianWords(amount)) + '</div><div class="sign"><span>Authorized Signature</span></div><div class="foot">RCLD – Islampur</div></main>';
+    const body = '<main class="receipt"><header class="head"><img src="/assets/rcld-logo.svg" alt="RCLD logo"/><div><h1>RASHTRIYA COMPUTER LITERACY DRIVE</h1><h2>STUDENT RECEIPT</h2></div></header><div class="meta"><div><span>Receipt No.</span><b>' + esc(receiptNo) + '</b></div><div><span>Date</span><b>' + esc(date) + '</b></div></div><section class="student"><h3>STUDENT DETAILS</h3><div class="student-grid"><div><b>Name:</b> ' + esc(student.applicantName) + '</div><div><b>Enrollment:</b> ' + esc(student.enrollmentNo || student.regnNo) + '</div><div><b>Course:</b> ' + esc(student.courseName || student.courseCode) + '</div><div><b>Duration:</b> ' + esc(student.courseDuration || "—") + '</div></div></section><div class="fee-title">FEE DETAILS</div><table class="fees"><thead><tr><th>Description</th><th>Amount</th></tr></thead><tbody><tr><td>' + esc(label) + (installment && payment.installmentMonth ? "<br/>" + esc(payment.installmentMonth) : "") + '</td><td>' + esc(money(amount)) + '</td></tr></tbody></table><div class="total"><span>TOTAL RECEIVED</span><strong>' + esc(money(amount)) + '</strong></div><div class="words"><b>In words:</b> ' + esc(numberToIndianWords(amount)) + '</div><div class="sign"><span>Authorized Signature</span></div><div class="foot">RCLD – Islampur</div></main>';
     const w = window.open("", "_blank");
     if (!w) return setMessage("Please allow pop-ups to print the fee receipt.");
     w.document.write('<!doctype html><html><head><meta charset="utf-8"/><title>RCLD Student Receipt</title><style>' + css + '</style></head><body>' + body + '<script>window.onload=()=>Promise.all([...document.images].map(i=>i.decode?.().catch(()=>{})||Promise.resolve())).then(()=>window.print())</script></body></html>');
@@ -622,7 +638,7 @@ export default function StudentDetailsPage({ params }) {
     const money = (v) => "₹" + Number(v || 0).toLocaleString("en-IN");
     const payable = Math.max(0, Number(fee.totalFee || 0) - Number(fee.discount || 0) + Number(fee.admissionFee || 0) + Number(fee.registrationFee || 0));
     const paid = (fee.payments || []).reduce((n, p) => n + Number(p.amount || 0), 0);
-    const due = Math.max(0, payable - paid);
+    const due = Math.max(0, Number(fee.due ?? (payable - paid)));
     const rows = (fee.payments || []).slice().sort((x, y) => String(x.date || "").localeCompare(String(y.date || ""))).map(p => "<tr><td>" + esc(p.date) + "</td><td>" + esc(p.receiptNo) + "</td><td>" + esc(p.paymentType) + "</td><td>" + esc(p.installmentMonth) + "</td><td>" + esc(p.note) + "</td><td>" + esc(money(p.amount)) + "</td></tr>").join("");
     const css = "@page{size:A4 landscape;margin:8mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#172b4d;font-size:9pt}.head{display:flex;align-items:center;gap:5mm;border-bottom:1px solid #244777;padding-bottom:3mm}.head img{width:18mm;height:18mm;object-fit:contain}.head h1{flex:1;text-align:center;font-size:17pt}.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:4mm;margin:4mm 0}.metric{border:1px solid #9fb1c8;padding:4mm}.metric span{display:block;color:#52647d}.metric strong{display:block;font-size:15pt;margin-top:2mm}.ledger{width:100%;border-collapse:collapse;table-layout:fixed}.ledger th,.ledger td{border:1px solid #aebed2;padding:2.5mm;text-align:left;overflow-wrap:anywhere}.ledger th{background:#edf3fa}.ledger td:last-child,.ledger th:last-child{text-align:right}";
     const body = '<main><header class="head"><img src="/assets/logo.png"/><h1>RASHTRIYA COMPUTER LITERACY DRIVE — STUDENT FEE STATEMENT</h1></header><p><b>Student:</b> ' + esc(student.applicantName) + ' &nbsp; <b>Enrollment:</b> ' + esc(student.enrollmentNo || student.regnNo) + ' &nbsp; <b>Course:</b> ' + esc(student.courseName || student.courseCode) + '</p><section class="summary"><div class="metric"><span>Total Course Fee Payable</span><strong>' + esc(money(payable)) + '</strong></div><div class="metric"><span>Amount Paid</span><strong>' + esc(money(paid)) + '</strong></div><div class="metric"><span>Due Amount</span><strong>' + esc(money(due)) + '</strong></div></section><table class="ledger"><thead><tr><th>Date</th><th>Receipt No.</th><th>Payment Type</th><th>Installment</th><th>Purpose / Note</th><th>Amount</th></tr></thead><tbody>' + (rows || '<tr><td colspan="6">No payments recorded</td></tr>') + '</tbody></table></main>';
