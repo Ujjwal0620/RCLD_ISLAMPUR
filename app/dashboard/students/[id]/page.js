@@ -683,7 +683,7 @@ export default function StudentDetailsPage({ params }) {
     const feeRows = [
       ["Course Fee", courseFee], ["Discount", discount], ["Admission Fee", admissionFee],
       ["Registration Fee", registrationFee], ["Late Fine (if applicable)", lateFine],
-      ["Total Fee Payable", payable],
+      ["Total Fee Payable", payable + lateFine],
     ];
     const feeHtml = feeRows.map(([label, value], i) =>
       `<div class="fee-row ${i === feeRows.length - 1 ? "grand" : ""}"><span>${esc(label)}</span><strong>${esc(money(value))}</strong></div>`).join("");
