@@ -13,7 +13,7 @@ const emptyFilters = {
 
 const advancedFields = [
   ["employeeId","Employee ID"],["name","Employee name"],["mobile","Mobile number"],["email","Email address"],
-  ["department","Department"],["designation","Designation"],["gender","Gender"],["employmentType","Employment type"],
+  ["department","Department"],["designation","Designation"],
   ["address","Address"],["emergencyContactName","Emergency contact name"],["emergencyContactNumber","Emergency contact number"],["notes","HR notes"]
 ];
 
@@ -67,7 +67,7 @@ export default function EmployeesPage() {
           <button className="search-action" type="button" onClick={()=>load()}><Search size={16}/> Search</button>
         </div>
         {advanced&&<div className="advanced-filters advanced-filters-expanded">
-          <div className="filter-field"><label>Status</label><select value={filters.status} onChange={e=>update("status",e.target.value)}><option value="">Active records</option><option>Active</option><option>Inactive</option><option>On Leave</option><option>Resigned</option></select></div>
+          <div className="filter-field"><label>Status</label><select value={filters.status} onChange={e=>update("status",e.target.value)}><option value="">Active records</option><option>Active</option><option>Inactive</option><option>On Leave</option></select></div>
           <div className="filter-field"><label>Gender</label><select value={filters.gender} onChange={e=>update("gender",e.target.value)}><option value="">All genders</option><option>Male</option><option>Female</option><option>Other</option></select></div>
           <div className="filter-field"><label>Employment type</label><select value={filters.employmentType} onChange={e=>update("employmentType",e.target.value)}><option value="">All types</option><option>Full Time</option><option>Part Time</option><option>Contract</option><option>Intern</option></select></div>
           <div className="filter-field"><label>Age from</label><input type="number" min="16" value={filters.ageMin} onChange={e=>update("ageMin",e.target.value)}/></div>
@@ -75,7 +75,7 @@ export default function EmployeesPage() {
           <div className="filter-field"><label>Salary from (₹)</label><input type="number" min="0" value={filters.salaryMin} onChange={e=>update("salaryMin",e.target.value)}/></div>
           <div className="filter-field"><label>Salary to (₹)</label><input type="number" min="0" value={filters.salaryMax} onChange={e=>update("salaryMax",e.target.value)}/></div>
           <div className="filter-field"><label>Date of birth</label><input type="date" value={filters.dateOfBirth} onChange={e=>update("dateOfBirth",e.target.value)}/></div>
-          <div className="filter-field"><label>Salary frequency</label><select value={filters.salaryFrequency} onChange={e=>update("salaryFrequency",e.target.value)}><option value="">All</option><option>Monthly</option><option>Weekly</option><option>Daily</option><option>Annual</option></select></div>
+          <div className="filter-field"><label>Salary frequency</label><select value={filters.salaryFrequency} onChange={e=>update("salaryFrequency",e.target.value)}><option value="">All</option><option>Monthly</option><option>Daily</option><option>Hourly</option></select></div>
           <div className="filter-field"><label>Weekly off day</label><select value={filters.offDay} onChange={e=>update("offDay",e.target.value)}><option value="">Any</option>{["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].map(x=><option key={x}>{x}</option>)}</select></div>
           {[["casualLeaveMin","Casual leave balance min"],["sickLeaveMin","Sick leave balance min"],["earnedLeaveMin","Earned leave balance min"],["otherLeaveMin","Other leave balance min"]].map(([key,label])=><div className="filter-field" key={key}><label>{label}</label><input type="number" min="0" value={filters[key]} onChange={e=>update(key,e.target.value)}/></div>)}
           <div className="filter-field"><label>Joined from</label><input type="date" value={filters.joiningFrom} onChange={e=>update("joiningFrom",e.target.value)}/></div>
