@@ -69,7 +69,7 @@ export async function GET(request) {
         "nearestLandmark","district","state","pin","permanentPostOffice","permanentNearestLandmark","permanentPin",
         "permanentDistrict","permanentState","referralName","marketingEmployeeName","paymentStatus","declarationPlace",
         "sourceCourseLabel","importSource","signatureApplicant","declarationDate","referralId","marketingEmployeeId",
-        "qualifications.examCourse","qualifications.boardUniversity","qualifications.collegeInstitute","qualifications.year","qualifications.percentage"
+        "qualifications.examCourse","qualifications.boardUniversity","qualifications.collegeInstitute","qualifications.year","qualifications.percentage","admissionDate","createdAt","updatedAt","sameAsPresentAddress","enclosures.stampPhoto","enclosures.qualifyingCertificates","enclosures.matricAdmitCard"
       ];
       filter.$or = searchFields.map(field => ({ [field]: rx }));
       const numericSearch = Number(search);
@@ -100,6 +100,12 @@ export async function GET(request) {
       filter.createdAt = {};
       if (fromDate) filter.createdAt.$gte = new Date(fromDate + "T00:00:00.000Z");
       if (toDate) filter.createdAt.$lte = new Date(toDate + "T23:59:59.999Z");
+    }
+    const updatedFrom = searchParams.get("updatedFrom"), updatedTo = searchParams.get("updatedTo");
+    if (updatedFrom || updatedTo) {
+      filter.updatedAt = {};
+      if (updatedFrom) filter.updatedAt.$gte = new Date(updatedFrom + "T00:00:00.000Z");
+      if (updatedTo) filter.updatedAt.$lte = new Date(updatedTo + "T23:59:59.999Z");
     }
     const dateOfBirth = (searchParams.get("dateOfBirth") || "").trim();
     if (dateOfBirth) filter.dateOfBirth = dateOfBirth;
