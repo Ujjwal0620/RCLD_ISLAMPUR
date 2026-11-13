@@ -77,7 +77,7 @@ export async function GET(request) {
       "permanentPostOffice","permanentNearestLandmark","courseCode","batchCode","referralName",
       "marketingEmployeeName","paymentStatus","declarationPlace"
     ];
-    const escapeRegex = value => String(value).replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
+    const escapeRegex = value => String(value).replace(/[.*+?^{}()|[\]\\$]/g, "\\$&");
     for (const field of textFilters) {
       const value = (searchParams.get(field) || "").trim();
       if (value) filter[field] = new RegExp(escapeRegex(value), "i");
