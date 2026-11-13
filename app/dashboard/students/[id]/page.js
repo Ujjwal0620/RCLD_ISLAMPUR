@@ -476,7 +476,8 @@ export default function StudentDetailsPage({ params }) {
     const photo = student.photoUrl
       ? `<img class="student-photo" src="${esc(student.photoUrl)}" alt="Student photo"/>`
       : '<div class="student-photo photo-placeholder">PHOTO</div>';
-    const logo = '<img class="logo" src="/assets/logo.png" alt="RCLD logo"/>';
+    const logoUrl = new URL("/assets/logo.png", window.location.origin).href;
+    const logo = `<img class="logo" src="${logoUrl}" alt="RCLD logo"/>`;
     const contactLine = 'AEC: CYBER WORLD, DESHBANDHU PARA, ISLAMPUR';
     const contactDetails = '✉ islampur.cyberworld@gmail.com　☎ 9851775891';
 
@@ -504,17 +505,26 @@ export default function StudentDetailsPage({ params }) {
       cardMarkup = `
         <article class="card standard-card">
           <div class="standard-top">
-            <div class="standard-id">ID NO.: ${enrollment}</div>
-            <div class="standard-session">Session: ${esc(student.session || student.academicSession || "—")}</div>
+            <div class="standard-id"><b>ID NO.:</b> ${enrollment}</div>
+            <div class="standard-session"><b>Session:</b> ${esc(student.session || student.academicSession || "2025-2026")}</div>
           </div>
-          <div class="standard-brand">${logo}<div><strong>RCLD</strong><span>Rashtriya Computer Literacy Drive</span><small>(A mission encouraged by National IT Task Force, Govt. of India)</small></div></div>
-          <div class="standard-photo-wrap">${photo}</div>
-          <h1>${studentName}</h1>
-          <div class="standard-details">
-            <p><b>Father's Name:</b> ${fatherName}</p>
-            <p><b>Address:</b> ${esc(address)}</p>
-            <p><b>Course:</b> ${esc(courseText || "—")}</p>
-            <p><b>Date of Issue:</b> ${esc(issueDate)}</p>
+          <header class="standard-brand">
+            ${logo}
+            <div class="standard-brand-copy">
+              <strong>RCLD</strong>
+              <span>Rashtriya Computer Literacy Drive</span>
+              <small>(A mission encouraged by National IT Task Force, Govt. of India)</small>
+            </div>
+          </header>
+          <div class="standard-main">
+            <div class="standard-photo-wrap">${photo}</div>
+            <div class="standard-details">
+              <div class="standard-detail-row"><b>Name:</b><span>${studentName}</span></div>
+              <div class="standard-detail-row"><b>Father's Name:</b><span>${fatherName}</span></div>
+              <div class="standard-detail-row"><b>Address:</b><span>${esc(address)}</span></div>
+              <div class="standard-detail-row"><b>Course:</b><span>${esc(courseText || "—")}</span></div>
+              <div class="standard-detail-row"><b>Date of Issue:</b><span>${esc(issueDate)}</span></div>
+            </div>
           </div>
           <div class="standard-sign">✍<small>Authorized Signatory</small></div>
           <footer class="standard-footer"><span>${contactLine}</span><small>${contactDetails}</small><strong>IDENTITY CARD</strong></footer>
@@ -557,22 +567,25 @@ export default function StudentDetailsPage({ params }) {
         .cfk-footer{position:absolute;bottom:0;left:0;right:0;height:4.8mm;border-top:.35mm solid var(--semester-color);text-align:center;padding:.25mm .3mm 0;font-size:2.55pt;font-weight:bold;line-height:1.05;overflow:hidden}
         .cfk-footer small{display:block;font-size:2.45pt;white-space:nowrap}
         .cfk-footer strong{display:block;background:var(--semester-color);color:#fff;font-size:5pt;line-height:1.25;margin-top:.15mm}
-        /* Standard format for DOM, DCST and every non-CFK course */
-        .standard-card{border:.35mm solid #29415b;padding:.6mm;color:#1f2937}
-        .standard-top{height:2.2mm;display:flex;align-items:center;justify-content:space-between;gap:.5mm;font-size:2.8pt;line-height:1;color:#b32228;font-weight:bold;white-space:nowrap;overflow:hidden}
+        /* Standard RCLD card: portrait layout with aligned label/value columns */
+        .standard-card{border:.35mm solid #29415b;padding:.55mm .65mm;color:#1f2937;background:#fff}
+        .standard-top{height:2.5mm;display:flex;align-items:center;justify-content:space-between;gap:.4mm;font-size:2.7pt;line-height:1;color:#b32228;font-weight:bold;white-space:nowrap;overflow:hidden}
         .standard-id,.standard-session{min-width:0;overflow:hidden;text-overflow:ellipsis}
-        .standard-brand{height:5.3mm;display:flex;align-items:center;justify-content:center;gap:.7mm;border-bottom:.2mm solid #243c5a;text-align:center;overflow:hidden}
-        .standard-brand .logo{width:3.2mm;height:3.4mm}
-        .standard-brand strong{display:block;color:#c62828;font-size:9.5pt;line-height:.85}
-        .standard-brand span{display:block;font-size:3pt;font-weight:bold;white-space:nowrap}
-        .standard-brand small{display:block;font-size:2.35pt;white-space:nowrap}
-        .standard-photo-wrap{position:absolute;top:7.9mm;left:8mm;width:8mm;height:8mm;border:.3mm solid #273d5a;border-radius:.7mm;overflow:hidden;background:#fff}
-        .standard-card h1{position:absolute;top:16.2mm;left:.7mm;right:.7mm;height:2.4mm;text-align:center;font-size:4.8pt;line-height:1.05;margin:0;text-transform:uppercase;overflow-wrap:anywhere;overflow:hidden}
-        .standard-details{position:absolute;top:18.8mm;left:.9mm;right:.9mm;bottom:5.7mm;font-size:2.85pt;line-height:1.15;overflow:hidden}
-        .standard-details p{margin:0 0 .55mm;overflow-wrap:anywhere;display:block}
-        .standard-details b{color:#b32228}
-        .standard-sign{position:absolute;right:.8mm;bottom:5.2mm;font-size:5.8pt;text-align:center;line-height:.8;background:#fff;padding-left:.4mm}
-        .standard-sign small{display:block;font-size:2.45pt;white-space:nowrap}
+        .standard-brand{height:6mm;display:flex;align-items:center;justify-content:center;gap:.7mm;border-bottom:.2mm solid #243c5a;text-align:center;overflow:hidden}
+        .standard-brand .logo{width:4.4mm;height:5mm;object-fit:contain}
+        .standard-brand-copy{min-width:0}
+        .standard-brand strong{display:block;color:#c62828;font-size:10pt;line-height:.82;letter-spacing:.1mm}
+        .standard-brand span{display:block;font-size:3.25pt;line-height:1.1;font-weight:800;white-space:nowrap}
+        .standard-brand small{display:block;font-size:2.45pt;line-height:1.1;white-space:nowrap}
+        .standard-main{position:absolute;top:9.3mm;left:.7mm;right:.7mm;bottom:6.1mm;display:grid;grid-template-columns:7.1mm minmax(0,1fr);gap:.7mm;align-items:start}
+        .standard-photo-wrap{width:7.1mm;height:9mm;border:.25mm solid #273d5a;border-radius:.45mm;overflow:hidden;background:#fff}
+        .standard-photo-wrap .student-photo{width:100%;height:100%;object-fit:cover}
+        .standard-details{min-width:0;display:flex;flex-direction:column;gap:.55mm;font-size:2.75pt;line-height:1.12;overflow:hidden}
+        .standard-detail-row{display:grid;grid-template-columns:4.7mm minmax(0,1fr);gap:.35mm;align-items:start;min-width:0}
+        .standard-detail-row b{color:#b32228;font-weight:800;overflow-wrap:anywhere}
+        .standard-detail-row span{font-weight:600;min-width:0;overflow-wrap:anywhere;word-break:break-word}
+        .standard-sign{position:absolute;right:.8mm;bottom:5.35mm;font-size:5.5pt;text-align:center;line-height:.8;background:#fff;padding-left:.4mm}
+        .standard-sign small{display:block;font-size:2.35pt;white-space:nowrap}
         .standard-footer{position:absolute;left:0;right:0;bottom:0;height:5mm;border-top:.25mm solid #b32228;text-align:center;padding:.25mm .25mm;font-size:2.35pt;line-height:1.05;font-weight:bold;overflow:hidden}
         .standard-footer span,.standard-footer small{display:block;white-space:nowrap;overflow:hidden;text-overflow:clip}
         .standard-footer small{font-size:2.25pt}
