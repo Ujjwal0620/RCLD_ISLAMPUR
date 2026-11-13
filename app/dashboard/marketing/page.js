@@ -57,11 +57,7 @@ export default function MarketingPage() {
         studentCount: group.referrals.reduce((total, referral) => total + referral.students.length, 0),
       }))
       .filter((group) => {
-        const searchable = [
-          group.employee.name,
-          ...group.referrals.map((referral) => referral.name),
-          ...group.referrals.flatMap((referral) => referral.students.map((student) => student.applicantName)),
-        ].join(" ").toLowerCase();
+        const searchable = JSON.stringify({employee:group.employee,referrals:group.referrals}).toLowerCase();
         return !search || searchable.includes(search.toLowerCase());
       });
   }, [data, students, search]);
