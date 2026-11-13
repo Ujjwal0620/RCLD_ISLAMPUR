@@ -120,7 +120,7 @@ export default function TaskAssignmentPage() {
   }
 
   const filteredEmployees = employees.filter((employee) =>
-    (employee.name + " " + employee.employeeId + " " + (employee.designation || "")).toLowerCase().includes(employeeSearch.toLowerCase())
+    Object.entries(employee).filter(([key,value])=>!["password","accountNumber","bankName","ifsc"].includes(key)&&(typeof value==="string"||typeof value==="number"||typeof value==="boolean"||Array.isArray(value))).map(([,value])=>Array.isArray(value)?value.join(" "):String(value)).join(" ").toLowerCase().includes(employeeSearch.toLowerCase())
   );
 
   return <ERPLayout active="/dashboard/back-office">
