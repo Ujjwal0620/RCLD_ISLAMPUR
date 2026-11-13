@@ -111,7 +111,8 @@ Do not change only the UI when the business rule belongs on the server.
 - Session helpers are in lib/auth.js.
 - Cloudinary is configured on demand in lib/cloudinary.js.
 - Shared staff navigation is in components/ERPLayout.js.
-- Global and responsive styling is in app/globals.css.
+- Legacy global and feature-specific styling is in app/globals.css.
+- Shared workspace styling is in app/styles/design-system.css.
 
 ## Timetable rules
 
