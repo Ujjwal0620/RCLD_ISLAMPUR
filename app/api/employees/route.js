@@ -120,7 +120,12 @@ export async function GET(request) {
       if (joiningTo) filter.joiningDate.$lte = joiningTo;
     }
 
-    const employees = await Employee.find(filter).select("-password -accountNumber -bankName -ifsc").sort({ createdAt: -1 }).lean();
+    const globalSearch = searchParams.get("globalSearch") === "1";
+    const employeeQuery = Employee.find(filter)
+      .select(globalSearch ? "employeeId name designation mobile department status" : "-password -accountNumber -bankName -ifsc")
+      .sort({ createdAt: -1 });
+    if (globalSearch) employeeQuery.limit(Math.min(10, Math.max(1, Number(searchParams.get("limit") || 5))));
+    const employees = await employeeQuery.lean();
     return NextResponse.json({ employees, skills: ALL_EMPLOYEE_SKILLS });
   } catch (error) {
     const unavailable = /MONGODB_URI|ECONNREFUSED|Server selection|connect/i.test(error.message || "");
