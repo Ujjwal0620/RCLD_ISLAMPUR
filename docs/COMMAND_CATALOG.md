@@ -54,7 +54,7 @@ Run commands from the repository root. Keep `.env.local` private. See [Operation
 | Login | `app/dashboard/login/page.js`, `app/login/page.js` | `/api/auth/login`, `/api/auth/me` | `lib/auth.js` |
 | Change password | `app/dashboard/change-password/page.js` | `/api/auth/change-password` | `lib/auth.js` |
 | Shared ERP shell | `components/ERPLayout.js` | `/api/auth/me`, `/api/auth/logout` | Shared navigation, theme, user bar and responsive menu |
-| Public homepage | `app/page.js` | Public course data where used | Keep public/student-facing experience separate from staff navigation |
+| Public homepage | `app/page.js` | `GET /api/courses` | Public RCLD landing page and live active-course catalogue; ERP login link appears in footer only |
 
 ## Shared foundations
 
