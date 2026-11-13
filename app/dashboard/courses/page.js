@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { BookOpen, RefreshCw, Plus, Clock3, CalendarDays, Pencil, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { BookOpen, RefreshCw, Plus, Clock3, CalendarDays, Pencil, Trash2, Search, SlidersHorizontal, Filter, RotateCcw, X } from "lucide-react";
 import ERPLayout from "@/components/ERPLayout";
 
 const empty = {
@@ -25,6 +25,9 @@ export default function CoursesPage() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(empty);
   const [error, setError] = useState("");
+  const [query,setQuery]=useState("");
+  const [advanced,setAdvanced]=useState(false);
+  const [filters,setFilters]=useState({category:"",durationMin:"",durationMax:"",classesMin:"",classesMax:"",feeMin:"",feeMax:"",admissionMin:"",admissionMax:"",skill:""});
 
   async function load() {
     setLoading(true);
@@ -42,6 +45,22 @@ export default function CoursesPage() {
   }
 
   useEffect(() => { load(); }, []);
+  const visibleCourses=useMemo(()=>courses.filter(course=>{
+    const haystack=[course.code,course.name,course.category,course.description,(course.requiredSkills||[]).join(" "),course.durationMonths,course.classesPerWeek,course.fee,course.admissionFee].join(" ").toLowerCase();
+    return (!query||haystack.includes(query.toLowerCase()))
+      &&(!filters.category||course.category===filters.category)
+      &&(!filters.skill||(course.requiredSkills||[]).some(s=>s.toLowerCase().includes(filters.skill.toLowerCase())))
+      &&(!filters.durationMin||Number(course.durationMonths)>=Number(filters.durationMin))
+      &&(!filters.durationMax||Number(course.durationMonths)<=Number(filters.durationMax))
+      &&(!filters.classesMin||Number(course.classesPerWeek)>=Number(filters.classesMin))
+      &&(!filters.classesMax||Number(course.classesPerWeek)<=Number(filters.classesMax))
+      &&(!filters.feeMin||Number(course.fee)>=Number(filters.feeMin))
+      &&(!filters.feeMax||Number(course.fee)<=Number(filters.feeMax))
+      &&(!filters.admissionMin||Number(course.admissionFee)>=Number(filters.admissionMin))
+      &&(!filters.admissionMax||Number(course.admissionFee)<=Number(filters.admissionMax));
+  }),[courses,query,filters]);
+  const clearDirectoryFilters=()=>{setQuery("");setFilters({category:"",durationMin:"",durationMax:"",classesMin:"",classesMax:"",feeMin:"",feeMax:"",admissionMin:"",admissionMax:"",skill:""})};
+
 
   function change(event) {
     setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
@@ -115,18 +134,29 @@ export default function CoursesPage() {
 
       {error && <div className="error-msg" role="alert">{error}</div>}
 
+      <section className="panel filter-panel">
+        <div className="filter-title"><div><h3>Search & filter courses</h3><p>Search every catalogue field and combine category, duration, class frequency, fee and skill filters.</p></div><button type="button" className="filter-toggle" onClick={()=>setAdvanced(v=>!v)}><SlidersHorizontal size={17}/>{advanced?"Hide filters":"Advanced filters"}</button></div>
+        <div className="filters primary-filters"><div className="search-box"><Search size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search course code, name, description, category, skills, fees…"/></div><button className="search-action" type="button"><Search size={16}/> Search</button></div>
+        {advanced&&<div className="advanced-filters advanced-filters-expanded">
+          <div className="filter-field"><label>Category</label><select value={filters.category} onChange={e=>setFilters(f=>({...f,category:e.target.value}))}><option value="">All categories</option>{[...new Set(courses.map(x=>x.category).filter(Boolean))].sort().map(x=><option key={x}>{x}</option>)}</select></div>
+          {[["durationMin","Duration from (months)"],["durationMax","Duration to (months)"],["classesMin","Classes / week min"],["classesMax","Classes / week max"],["feeMin","Course fee min (₹)"],["feeMax","Course fee max (₹)"],["admissionMin","Admission fee min (₹)"],["admissionMax","Admission fee max (₹)"]].map(([key,label])=><div className="filter-field" key={key}><label>{label}</label><input type="number" min="0" value={filters[key]} onChange={e=>setFilters(f=>({...f,[key]:e.target.value}))}/></div>)}
+          <div className="filter-field"><label>Required skill</label><input value={filters.skill} onChange={e=>setFilters(f=>({...f,skill:e.target.value}))} placeholder="Type a skill"/></div>
+          <button type="button" className="clear-btn" onClick={clearDirectoryFilters}><RotateCcw size={15}/> Reset all</button>
+        </div>}
+        <div className="filter-summary"><span><Filter size={14}/> {visibleCourses.length} matching courses</span><button className="clear-inline" type="button" onClick={clearDirectoryFilters} disabled={!query&&!Object.values(filters).some(Boolean)}><X size={14}/> Clear filters</button></div>
+      </section>
       <section className="panel table-panel directory-table-panel" aria-busy={loading}>
         <div className="panel-head">
           <div><h3>Course catalogue</h3><p>Review course codes, duration, class frequency, fees and required faculty skills.</p></div>
-          <span className="badge">{courses.length} listed</span>
+          <span className="badge">{visibleCourses.length} listed</span>
         </div>
-        {loading ? <div className="empty">Loading course catalogue…</div> : courses.length === 0 ? (
-          <div className="empty"><strong>No courses found.</strong><p>Add the first course to begin configuring academic batches.</p><button className="primary-btn" type="button" onClick={add}><Plus size={16}/> Add Course</button></div>
+        {loading ? <div className="empty">Loading course catalogue…</div> : visibleCourses.length === 0 ? (
+          <div className="empty"><strong>No courses match your filters.</strong><p>Add the first course to begin configuring academic batches.</p><button className="primary-btn" type="button" onClick={add}><Plus size={16}/> Add Course</button></div>
         ) : (
           <div className="table-wrap">
             <table>
               <thead><tr><th scope="col">Code</th><th scope="col">Course</th><th scope="col">Category</th><th scope="col">Duration</th><th scope="col">Classes / Week</th><th scope="col">Course Fee</th><th scope="col">Required Skills</th><th scope="col">Actions</th></tr></thead>
-              <tbody>{courses.map((course) => (
+              <tbody>{visibleCourses.map((course) => (
                 <tr key={course._id}>
                   <td><strong>{course.code}</strong></td>
                   <td><strong>{course.name}</strong>{course.description && <small className="course-description-cell">{course.description}</small>}</td>
