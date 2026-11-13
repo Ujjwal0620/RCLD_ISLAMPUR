@@ -823,7 +823,7 @@ export default function StudentDetailsPage({ params }) {
                         />
                       </label>
                       <label className="form-field">
-                        <span>Payment Note</span>
+                        <span>Payment Purpose / Note</span>
                         <input
                           value={editForm.paymentNote ?? ""}
                           onChange={(e) =>
@@ -1927,7 +1927,7 @@ export default function StudentDetailsPage({ params }) {
                             />
                           </label>
                           <label className="form-field">
-                            <span>Payment Date *</span>
+                            <span>Payment Date (fee counter) *</span>
                             <input
                               type="date"
                               required
@@ -2056,7 +2056,7 @@ export default function StudentDetailsPage({ params }) {
                       <div className="fee-modal-section-heading">
                         <div>
                           <h3>Payment History</h3>
-                          <p>Course fee summary and payment-wise receipt / purpose printing</p>
+                          <p>Only the course fee payable, amount paid and remaining due are shown here</p>
                         </div>
                         <button type="button" className="ghost-btn" onClick={printFeeLedger}>
                           <Printer size={15} /> Print Full Fee Statement
@@ -2070,29 +2070,26 @@ export default function StudentDetailsPage({ params }) {
                       {(fee?.payments || []).length === 0 ? (
                         <div className="empty">No payment history recorded yet.</div>
                       ) : (
-                        <div className="table-wrap fee-history-table-wrap">
-                          <table className="fee-history-table">
-                            <thead><tr><th>Date</th><th>Amount Paid</th><th>Purpose</th><th>Print</th></tr></thead>
-                            <tbody>
-                              {fee.payments.slice().sort((a, b) => String(b.date || "").localeCompare(String(a.date || ""))).map((p, i) => (
-                                <tr key={p._id || p.receiptNo || i}>
-                                  <td>{p.date || "—"}</td>
-                                  <td className="fee-history-amount">₹{Number(p.amount || 0).toLocaleString("en-IN")}</td>
-                                  <td>{p.note || "—"}</td>
-                                  <td className="fee-history-actions">
-                                    <button type="button" className="fee-print-row" onClick={() => printBill(p)}><Printer size={14} /> Receipt</button>
-                                    {p.note && <button type="button" className="fee-print-row" onClick={() => printPaymentPurpose(p)}><Printer size={14} /> Purpose</button>}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                        <div className="fee-history-actions-list">
+                          {fee.payments.slice().sort((a, b) => String(b.date || "").localeCompare(String(a.date || ""))).map((p, i) => (
+                            <div className="fee-history-action-row" key={p._id || p.receiptNo || i}>
+                              <span>{p.date || "Payment date not set"}</span>
+                              <div>
+                                <button type="button" className="fee-print-row" onClick={() => printBill(p)}>
+                                  <Printer size={14} /> Print Receipt
+                                </button>
+                                {p.note && <button type="button" className="fee-print-row" onClick={() => printPaymentPurpose(p)}>
+                                  <Printer size={14} /> Print Purpose
+                                </button>}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       )}
                     </section>
                   </div>
                   <footer className="fee-modal-footer">
-                    <span>Print format remains a compact half-page receipt.</span>
+                    <span>Individual receipts print as A5; the complete fee statement prints in landscape A4.</span>
                     <button
                       type="button"
                       className="ghost-btn"
