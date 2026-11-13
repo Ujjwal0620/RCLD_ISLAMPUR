@@ -5,6 +5,7 @@ import { getSession, roleOfEmployee } from "@/lib/auth";
 
 const PaymentSchema = new mongoose.Schema({
   amount: { type: Number, required: true, min: 0 },
+  items: { type: [{ type: { type: String, required: true }, amount: { type: Number, required: true, min: 0 } }], default: [] },
   date: { type: String, required: true },
   method: { type: String, default: "Cash" },
   reference: String,
@@ -155,9 +156,18 @@ export async function POST(request, { params }) {
 
     let paymentUpdate = {};
     if (body.payment) {
-      const amount = Number(body.payment.amount);
-      if (!Number.isFinite(amount) || amount <= 0) {
-        return NextResponse.json({ error: "Enter a payment amount greater than zero." }, { status: 400 });
+      const items = Array.isArray(body.payment.items) ? body.payment.items.map((item) => ({
+        type: String(item.type || "Other").trim(),
+        amount: Number(item.amount),
+      })) : [];
+      const amount = items.length
+        ? items.reduce((sum, item) => sum + item.amount, 0)
+        : Number(body.payment.amount);
+      if (!Number.isFinite(amount) || amount <= 0 || (items.length && items.some((item) => !item.type || !Number.isFinite(item.amount) || item.amount <= 0))) {
+        return NextResponse.json({ error: "Add at least one valid fee item with an amount greater than zero." }, { status: 400 });
+      }
+      if (items.length && Math.abs(amount - Number(body.payment.amount)) > 0.01) {
+        return NextResponse.json({ error: "Receipt total does not match the payment item total." }, { status: 400 });
       }
       const counter = await FeeReceiptCounter.findOneAndUpdate({ _id: "RCLD-FEE-RECEIPT" }, { $inc: { seq: 1 } }, { upsert: true, new: true, setDefaultsOnInsert: true });
       const receiptNo = "RCLD/ISL/RCPT/" + String(counter.seq).padStart(6, "0");
@@ -172,6 +182,7 @@ export async function POST(request, { params }) {
             recordedBy: actor.name,
             authorisedBy: "",
             amount,
+            items,
             date: body.payment.date || new Date().toISOString().slice(0, 10),
             method: body.payment.method || "Cash",
             reference: body.payment.reference || "",
