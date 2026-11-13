@@ -10,7 +10,7 @@ export default function SubjectsPage(){
  const [query,setQuery]=useState(""),[advanced,setAdvanced]=useState(false),[filters,setFilters]=useState({courseId:"",skill:"",chaptersMin:"",chaptersMax:"",active:""});
  const visibleSubjects=useMemo(()=>subjects.filter(s=>{
   const haystack=[s.code,s.name,s.courseCode,s.courseName,s.active,s.createdAt,s.updatedAt,(s.requiredSkills||[]).join(" "),(s.chapters||[]).map(c=>c.name+" "+c.description).join(" ")].join(" ").toLowerCase();
-  return (!query||haystack.includes(query.toLowerCase()))&&(!filters.courseId||String(s.courseId)===filters.courseId||String(s.course?._id)===filters.courseId)&&(!filters.skill||(s.requiredSkills||[]).some(x=>x.toLowerCase().includes(filters.skill.toLowerCase())))&&(!filters.chaptersMin||(s.chapters?.length||0)>=Number(filters.chaptersMin))&&(!filters.chaptersMax||(s.chapters?.length||0)<=Number(filters.chaptersMax))&&(!filters.active||String(s.active)===filters.active);
+  return (!query||haystack.includes(query.toLowerCase()))&&(!filters.courseId||String(s.courseId)===filters.courseId||String(s.course?._id)===filters.courseId)&&(!filters.skill||(s.requiredSkills||[]).some(x=>x.toLowerCase().includes(filters.skill.toLowerCase())))&&(!filters.chaptersMin||(s.chapters?.length||0)>=Number(filters.chaptersMin))&&(!filters.chaptersMax||(s.chapters?.length||0)<=Number(filters.chaptersMax))&&(!filters.active||String(s.active!==false)===filters.active);
  }),[subjects,query,filters]);
  const clearFilters=()=>{setQuery("");setFilters({courseId:"",skill:"",chaptersMin:"",chaptersMax:"",active:""})};
 
