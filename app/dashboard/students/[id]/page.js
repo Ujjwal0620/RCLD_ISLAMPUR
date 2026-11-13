@@ -411,7 +411,7 @@ export default function StudentDetailsPage({ params }) {
   function isCodingForKidsStudent() {
     const courseText = [student?.courseName, student?.courseCode, student?.course]
       .filter(Boolean).join(" ").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-    return /(^|\\s)(cfk|coding for kids)(\\s|$)/.test(courseText);
+    return /(^|\s)(cfk|coding for kids)(\s|$)/.test(courseText);
   }
 
   function printStudentICard(semester = "SEM 1") {
