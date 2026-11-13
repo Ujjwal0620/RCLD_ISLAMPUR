@@ -69,7 +69,7 @@ export async function GET(request) {
         "nearestLandmark","district","state","pin","permanentPostOffice","permanentNearestLandmark","permanentPin",
         "permanentDistrict","permanentState","referralName","marketingEmployeeName","paymentStatus","declarationPlace",
         "sourceCourseLabel","importSource","signatureApplicant","declarationDate","referralId","marketingEmployeeId",
-        "qualifications.examCourse","qualifications.boardUniversity","qualifications.collegeInstitute","qualifications.year","qualifications.percentage","admissionDate","createdAt","updatedAt","sameAsPresentAddress","enclosures.stampPhoto","enclosures.qualifyingCertificates","enclosures.matricAdmitCard"
+        "qualifications.examCourse","qualifications.boardUniversity","qualifications.collegeInstitute","qualifications.year","qualifications.percentage","admissionDate","sameAsPresentAddress","enclosures.stampPhoto","enclosures.qualifyingCertificates","enclosures.matricAdmitCard"
       ];
       filter.$or = searchFields.map(field => ({ [field]: rx }));
       const numericSearch = Number(search);
