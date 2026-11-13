@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import RAGAssistant from "@/components/RAGAssistant";
 import RCLDLogo from "@/components/RCLDLogo";
 import {
@@ -60,6 +60,7 @@ export default function ERPLayout({ active, children, hideAssistant = true }) {
   const [commandResults,setCommandResults]=useState([]);
   const [commandOpen,setCommandOpen]=useState(false);
   const [commandLoading,setCommandLoading]=useState(false);
+  const commandInputRef=useRef(null);
 
   useEffect(() => {
     const savedTheme = window.localStorage.getItem("rcld-erp-theme");
@@ -75,7 +76,7 @@ export default function ERPLayout({ active, children, hideAssistant = true }) {
 
   useEffect(() => {
     const query=commandQuery.trim();
-    if(!query){setCommandResults([]);setCommandLoading(false);return}
+    if(query.length<2){setCommandResults([]);setCommandLoading(false);return}
     let active=true;
     const timer=setTimeout(async()=>{
       setCommandLoading(true);
@@ -103,6 +104,18 @@ export default function ERPLayout({ active, children, hideAssistant = true }) {
     },280);
     return()=>{active=false;clearTimeout(timer)};
   },[commandQuery]);
+
+  useEffect(() => {
+    const onShortcut = event => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        commandInputRef.current?.focus();
+        setCommandOpen(true);
+      }
+    };
+    window.addEventListener("keydown", onShortcut);
+    return () => window.removeEventListener("keydown", onShortcut);
+  }, []);
 
   const toggleTheme = () => {
     const nextTheme = theme === "dark" ? "light" : "dark";
@@ -183,7 +196,7 @@ export default function ERPLayout({ active, children, hideAssistant = true }) {
       <main className="erp-main" id="erp-page-content">
         <header className="erp-user-bar">
           <div className="erp-command-search erp-command-search-live">
-            <Search size={16}/><input aria-label="Search ERP" value={commandQuery} onChange={e=>{setCommandQuery(e.target.value);setCommandOpen(true)}} onFocus={()=>setCommandOpen(true)} onKeyDown={e=>{if(e.key==="Escape")setCommandOpen(false);if(e.key==="Enter"&&commandResults[0])window.location.href=commandResults[0].href}} placeholder="Search every student, employee, course, batch…" />
+            <Search size={16}/><input ref={commandInputRef} aria-label="Search ERP" value={commandQuery} onChange={e=>{setCommandQuery(e.target.value);setCommandOpen(true)}} onFocus={()=>setCommandOpen(true)} onKeyDown={e=>{if(e.key==="Escape")setCommandOpen(false);if(e.key==="Enter"&&commandResults[0])window.location.href=commandResults[0].href}} placeholder="Search every student, employee, course, batch…" />
             <kbd>⌘ K</kbd>
             {commandOpen&&commandQuery.trim()&&<div className="erp-command-results">{commandLoading?<div className="erp-command-empty">Searching institute records…</div>:commandResults.length?commandResults.map((item,i)=><a key={item.type+"-"+item.href+"-"+i} href={item.href} className="erp-command-result"><span className="erp-command-result-icon"><Search size={14}/></span><span><strong>{item.title}</strong><small>{item.type} {item.meta?"· "+item.meta:""}</small></span></a>):<div className="erp-command-empty">No matching ERP records found.</div>}</div>}
           </div>
