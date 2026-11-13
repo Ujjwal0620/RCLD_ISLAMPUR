@@ -75,7 +75,7 @@ export async function GET(request) {
       "whatsappNumber","guardianContactNumber","email","aadhaarNumber","nationality","district","state","pin",
       "postOffice","policeStation","nearestLandmark","permanentDistrict","permanentState","permanentPin",
       "permanentPostOffice","permanentNearestLandmark","courseCode","batchCode","referralName",
-      "marketingEmployeeName","paymentStatus","declarationPlace"
+      "marketingEmployeeName","paymentStatus","declarationPlace","sourceCourseLabel","importSource","address","presentAddress","permanentAddress","signatureApplicant","declarationDate","referralId","marketingEmployeeId"
     ];
     const escapeRegex = value => String(value).replace(/[.*+?^{}()|[\]\\$]/g, "\\$&");
     for (const field of textFilters) {
@@ -114,26 +114,6 @@ export async function GET(request) {
       filter.$and = [...(filter.$and || []), { $or: ["qualifications.examCourse","qualifications.boardUniversity","qualifications.collegeInstitute","qualifications.year","qualifications.percentage"].map(field => ({ [field]: qualificationRx })) }];
     }
     if (sex) filter.sex = sex;
-    if (course) filter.courseName = course;"), "i");
-    }
-    const dateOfBirth = (searchParams.get("dateOfBirth") || "").trim();
-    if (dateOfBirth) filter.dateOfBirth = dateOfBirth;
-    const dueMin = searchParams.get("dueMin");
-    const dueMax = searchParams.get("dueMax");
-    if (dueMin !== null || dueMax !== null) {
-      filter.dueAmount = {};
-      if (dueMin !== null && dueMin !== "") filter.dueAmount.$gte = Number(dueMin);
-      if (dueMax !== null && dueMax !== "") filter.dueAmount.$lte = Number(dueMax);
-    }
-    const admissionFrom = searchParams.get("admissionFrom");
-    const admissionTo = searchParams.get("admissionTo");
-    if (admissionFrom || admissionTo) {
-      filter.admissionDate = {};
-      if (admissionFrom) filter.admissionDate.$gte = admissionFrom;
-      if (admissionTo) filter.admissionDate.$lte = admissionTo;
-    }
-    const qualification = (searchParams.get("qualification") || "").trim();
-    if (qualification) filter.$or = [...(filter.$or || []), ...["qualifications.examCourse","qualifications.boardUniversity","qualifications.collegeInstitute","qualifications.year","qualifications.percentage"].map(field => ({[field]: new RegExp(qualification.replace(/[.*+?^{}()|[\\]\\\\]/g, "\\\\    if (sex) filter.sex = sex;
     if (course) filter.courseName = course;"), "i")}))];
 
     if (sex) filter.sex = sex;
