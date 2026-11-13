@@ -3,6 +3,7 @@ import { connectMongoDB } from "@/lib/mongodb";
 import mongoose from "mongoose";
 import Course from "@/models/Course";
 import Batch from "@/models/Batch";
+import { getStudentAdmissionStatus } from "@/lib/student-admission-status";
 
 const StudentSchema = new mongoose.Schema({
   formNo:{type:String,default:"",trim:true},
@@ -15,10 +16,9 @@ const StudentSchema = new mongoose.Schema({
   qualifications:[{examCourse:String,boardUniversity:String,collegeInstitute:String,year:String,percentage:String}],
   enclosures:{stampPhoto:Boolean,qualifyingCertificates:Boolean,matricAdmitCard:Boolean},
   declarationDate:String,declarationPlace:String,signatureApplicant:String,signatureUrl:String,photoUrl:String,
-  status:{type:String,default:"Registered"}
+  status:{type:String,default:"Admission Pending"}
 },{timestamps:true});
 const Student=mongoose.models.Student||mongoose.model("Student",StudentSchema);
-function hasStudentDetailsForAdmission(s = {}) { const present=s.presentAddress||s.address; const permanent=s.sameAsPresentAddress?Boolean(String(present||"").trim()):["permanentAddress","permanentPostOffice","permanentState","permanentDistrict","permanentPin","permanentNearestLandmark"].every(k=>String(s[k]||"").trim()); const q=Array.isArray(s.qualifications)?s.qualifications[0]:null; return [s.applicantName,s.fatherOrHusbandName,s.dateOfBirth,s.sex,s.nationality,s.photoUrl,s.photoUrl,present,s.postOffice,s.policeStation,s.state,s.district,s.pin,s.nearestLandmark,s.mobileNumber,s.guardianContactNumber,s.whatsappNumber,s.email,s.aadhaarNumber,q?.examCourse,q?.collegeInstitute,q?.boardUniversity,q?.year,q?.percentage].every(v=>String(v||"").trim())&&permanent; }
 const ReferralSchema=new mongoose.Schema({}, {strict:false});
 const Referral=mongoose.models.Referral||mongoose.model("Referral",ReferralSchema);
 async function idOf(params){return (await params)?.id}
@@ -87,8 +87,7 @@ export async function PATCH(req,{params}){
       else{if(!mongoose.Types.ObjectId.isValid(String(body.referralId)))return NextResponse.json({error:"Invalid referral selection."},{status:400});const referral=await Referral.findOne({_id:body.referralId,status:"Active"}).lean();if(!referral)return NextResponse.json({error:"Selected referral is no longer active."},{status:400});update.referralId=String(referral._id);update.referralName=referral.name;update.marketingEmployeeId=referral.marketingEmployeeId;update.marketingEmployeeName=referral.marketingEmployeeName;}
     }
     const mergedStudent={...current,...update};
-    if(!hasStudentDetailsForAdmission(mergedStudent))update.status="Admission Pending";
-    else if(current.status==="Admission Pending")update.status="Registered";
+    if(["Admission Pending","Registered","Active",""].includes(String(current.status||""))) update.status=getStudentAdmissionStatus(mergedStudent);
     const student=await Student.findByIdAndUpdate(id,update,{new:true,runValidators:true}).lean();
     if(student && (update.courseCode!==undefined || update.courseName!==undefined)){
       const conditions=[];

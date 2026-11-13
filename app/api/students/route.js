@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectMongoDB } from "@/lib/mongodb";
 import mongoose from "mongoose";
 import Course from "@/models/Course";
+import { getStudentAdmissionStatus } from "@/lib/student-admission-status";
 
 const StudentSchema = new mongoose.Schema({
   formNo: { type: String, trim: true },
@@ -15,7 +16,7 @@ const StudentSchema = new mongoose.Schema({
   qualifications: [{ examCourse: String, boardUniversity: String, collegeInstitute: String, year: String, percentage: String }],
   enclosures: { stampPhoto: Boolean, qualifyingCertificates: Boolean, matricAdmitCard: Boolean },
   declarationDate: String, declarationPlace: String, signatureApplicant: String, signatureUrl: String, photoUrl: String,
-  status: { type: String, default: "Registered" }
+  status: { type: String, default: "Admission Pending" }
 }, { timestamps: true });
 
 StudentSchema.index({ enrollmentNo: 1 }, { unique: true, partialFilterExpression: { enrollmentNo: { $type: "string", $gt: "" } } });
@@ -41,8 +42,6 @@ const ReferralSchema = new mongoose.Schema({}, { strict: false });
 const Referral = mongoose.models.Referral || mongoose.model("Referral", ReferralSchema);
 
 const DEFAULT_COURSES = ["CCA","DCA","ADCA","CCC","CAO","DWPD","DOM","DCST","DCAP","DHNT"];
-
-function hasStudentDetailsForAdmission(s = {}) { const present=s.presentAddress||s.address; const permanent=s.sameAsPresentAddress?Boolean(String(present||"").trim()):["permanentAddress","permanentPostOffice","permanentState","permanentDistrict","permanentPin","permanentNearestLandmark"].every(k=>String(s[k]||"").trim()); const q=Array.isArray(s.qualifications)?s.qualifications[0]:null; return [s.applicantName,s.fatherOrHusbandName,s.dateOfBirth,s.sex,s.nationality,s.photoUrl,s.photoUrl,present,s.postOffice,s.policeStation,s.state,s.district,s.pin,s.nearestLandmark,s.mobileNumber,s.guardianContactNumber,s.whatsappNumber,s.email,s.aadhaarNumber,q?.examCourse,q?.collegeInstitute,q?.boardUniversity,q?.year,q?.percentage].every(v=>String(v||"").trim())&&permanent; }
 
 
 export async function GET(request) {
@@ -129,7 +128,7 @@ export async function POST(request) {
     }
     const student = await Student.create({
       ...body,
-      status: hasStudentDetailsForAdmission(body) ? (body.status || "Registered") : "Admission Pending",
+      status: getStudentAdmissionStatus(body),
       email,
       aadhaarNumber,
       ...referralFields,
