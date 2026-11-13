@@ -70,7 +70,7 @@ export async function GET(request) {
         "employeeId","loginId","name","mobile","email","designation","department","gender","employmentType","address",
         "emergencyContactName","emergencyContactNumber","notes","skills","age","dateOfBirth","joiningDate",
         "salary","salaryFrequency","offDays","status","leaveBalance.casual","leaveBalance.sick",
-        "leaveBalance.earned","leaveBalance.other","createdAt","updatedAt"
+        "leaveBalance.earned","leaveBalance.other"
       ];
       filter.$or = searchableFields.map(field => ({ [field]: rx }));
       const numericSearch = Number(search);
