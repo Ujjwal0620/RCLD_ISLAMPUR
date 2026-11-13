@@ -62,7 +62,7 @@ Run commands from the repository root. Keep `.env.local` private. See [Operation
 |---|---|
 | Global legacy styles | `app/globals.css` |
 | Shared design tokens and reusable workspace styling | `app/styles/design-system.css` |
-| Registration form and print document styling | `app/dashboard/students/register/page.js` (print markup), `app/styles/registration-print.css` (single authoritative A4 print stylesheet), `app/globals.css` (screen form only) |
+| Registration form and print document styling | `app/dashboard/students/register/page.js` (screen form and print markup), `app/styles/registration-print.css` (single authoritative A4 print stylesheet), `app/globals.css` (screen form only) |
 | App metadata and global stylesheet imports | `app/layout.js` |
 | Authentication/session | `lib/auth.js`, `app/api/auth/*` |
 | Permission catalog | `lib/access-control.js` (catalog only; full enforcement is not complete) |
