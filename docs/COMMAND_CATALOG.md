@@ -31,7 +31,7 @@ Run commands from the repository root. Keep `.env.local` private. See [Operation
 |---|---|---|---|
 | Staff dashboard | `app/dashboard/page.js` | `/api/dashboard`, `/api/dashboard/activity` | Dashboard aggregation and activity routes |
 | Student directory | `app/dashboard/students/page.js` | `/api/students`, `/api/students/[id]`, bulk student routes | Student schema is currently declared in route handlers; inspect before extracting |
-| Student registration | `app/dashboard/students/register/page.js` | `/api/students`, `/api/courses`, `/api/referrals`, `/api/uploads/student-photo` | Registration payload, pending status and print-only registration document |
+| Student registration | `app/dashboard/students/register/page.js` (screen form and print document markup) | `/api/students`, `/api/courses`, `/api/referrals`, `/api/uploads/student-photo` | Registration payload, pending status and print-only registration document |
 | Pending admissions | `app/dashboard/students/pending/page.js` | `/api/students` | Required-detail completeness and admission status |
 | Student I-Cards | `app/dashboard/students/icards/page.js` | `/api/students` | Student completeness/eligibility rules |
 | Student profile and fees | `app/dashboard/students/[id]/page.js` | `/api/students/[id]`, `/fees`, `/attendance`, `/batch-history`, `/contact-log` | Student, payment history, receipt and movement history |
@@ -61,7 +61,7 @@ Run commands from the repository root. Keep `.env.local` private. See [Operation
 | Concern | Owner |
 |---|---|
 | Global legacy styles | `app/globals.css` |
-| Shared design tokens and reusable workspace styling | `app/styles/design-system.css` |
+| Shared design tokens and reusable workspace styling | `app/styles/design-system.css` (also owns the final registration print overrides loaded after globals) |
 | App metadata and global stylesheet imports | `app/layout.js` |
 | Authentication/session | `lib/auth.js`, `app/api/auth/*` |
 | Permission catalog | `lib/access-control.js` (catalog only; full enforcement is not complete) |
