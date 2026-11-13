@@ -1555,7 +1555,7 @@ td{font-size:11px}
 .registration-form .form-field select:focus,
 .registration-form .form-field textarea:focus{border-color:#3187ce;box-shadow:0 0 0 3px rgba(49,135,206,.12);outline:0}
 .registration-address-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:13px}
-.registration-address-card{min-width:0;padding:12px;border:1px solid #c5d9f1;border-radius:10px;background:#f6faff}
+.registration-address-card{min-width:0;padding:12px;border:1px solid #8493BD;border-radius:10px;background:#f6faff}
 .registration-address-card h4{margin:0 0 10px;color:#0b4388;font-size:11px;font-weight:850}
 .registration-same-address{display:flex;align-items:center;gap:7px;margin:0 0 9px;color:#294d7b;font-size:10px;font-weight:750}
 .registration-same-address input{width:15px;height:15px}
@@ -1679,7 +1679,7 @@ td{font-size:11px}
 .rcld-applicant-wide{grid-column:1/-1}
 .rcld-applicant-wide .form-field{display:grid;grid-template-columns:205px minmax(0,1fr);align-items:center}
 .rcld-address-grid{grid-template-columns:1fr 1fr;gap:14px}
-.rcld-address-grid .registration-address-card{min-width:0;padding:13px;border:1px solid #b9cde6;border-radius:9px;background:#f8fbff}
+.rcld-address-grid .registration-address-card{min-width:0;padding:13px;border:1px solid #8493BD;border-radius:9px;background:#f8fbff}
 .rcld-address-grid .registration-address-card h4{margin:0 0 10px;color:#0b438a;font-size:12px;font-weight:850}
 .rcld-address-grid .form-grid.two{gap:9px 10px}
 .rcld-address-grid .registration-same-address{display:flex;align-items:center;gap:8px;margin:0 0 10px;color:#163f78;font-size:11px;font-weight:750}
@@ -2454,7 +2454,7 @@ html[data-theme="dark"] .batch-track{background:#2a3850}
 .rcld-print-photo img{width:100%;height:100%;object-fit:cover}
 .rcld-print-photo span{display:block;width:100%;height:100%;background:#eee}
 .rcld-print-address-grid{display:grid;grid-template-columns:1fr 1fr;gap:36px;padding:7px 30px 0}
-.rcld-print-address{border:4px solid #1600a9;padding:5px 13px 4px;min-height:143px}
+.rcld-print-address{border:1px solid #8493BD;padding:5px 13px 4px;min-height:143px}
 .rcld-print-address h3{margin:0 0 2px;color:#1600a9;font-size:16px}
 .rcld-print-address p{min-height:20px}
 .rcld-print-address p span{display:inline-block;margin-left:35px}
@@ -2543,7 +2543,7 @@ html[data-theme="dark"] .batch-track{background:#2a3850}
   .rcld-print-photo span { display: block !important; width: 100% !important; height: 100% !important; background: #d5d5d5 !important; }
   .rcld-print-address-section { min-height: 51mm !important; }
   .rcld-print-address-grid { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 11mm !important; padding: 1.5mm 7.5mm 0 !important; }
-  .rcld-print-address { display: block !important; height: 39mm !important; min-height: 39mm !important; box-sizing: border-box !important; border: 1mm solid #1600b3 !important; padding: 1mm 3mm !important; }
+  .rcld-print-address { display: block !important; height: 39mm !important; min-height: 39mm !important; box-sizing: border-box !important; border: 1mm solid #8493BD !important; padding: 1mm 3mm !important; }
   .rcld-print-address h3 { margin: 0 0 .5mm !important; color: #1600b3 !important; font: bold 13pt Georgia, "Times New Roman", serif !important; }
   .rcld-print-address p { height: 5.2mm !important; min-height: 0 !important; font: 11pt "Times New Roman", Georgia, serif !important; white-space: nowrap !important; line-height: 1.3 !important; }
   .rcld-print-address p span { display: inline !important; margin: 0 !important; }
@@ -2617,7 +2617,7 @@ html[data-theme="dark"] .batch-track{background:#2a3850}
   .rcld-print-photo span { display:block!important;width:100%!important;height:100%!important;background:#d5d5d5!important; }
   .rcld-print-address-section { top:120.2mm!important;height:52.8mm!important; }
   .rcld-print-address-grid { position:absolute!important;left:7.5mm!important;top:11.7mm!important;width:195mm!important;display:grid!important;grid-template-columns:92.5mm 92mm!important;column-gap:11.2mm!important;padding:0!important; }
-  .rcld-print-address { display:block!important;width:92.5mm!important;height:38.5mm!important;min-height:38.5mm!important;box-sizing:border-box!important;border:1mm solid #1600b3!important;padding:1mm 3mm!important; }
+  .rcld-print-address { display:block!important;width:92.5mm!important;height:38.5mm!important;min-height:38.5mm!important;box-sizing:border-box!important;border:1mm solid #8493BD!important;padding:1mm 3mm!important; }
   .rcld-print-address h3 { margin:0 0 .5mm!important;padding:0!important;color:#1600b3!important;font:bold 13pt Georgia,"Times New Roman",serif!important;line-height:1.3!important; }
   .rcld-print-address p { height:5.2mm!important;min-height:0!important;font:11pt "Times New Roman",Georgia,serif!important;white-space:nowrap!important;line-height:1.3!important; }
   .rcld-print-address p span { display:inline!important;margin:0!important; }
@@ -2712,7 +2712,7 @@ html[data-theme="dark"] .batch-track{background:#2a3850}
 .rcld-photo-template .ghost-btn input{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;opacity:0!important;cursor:pointer!important}
 .rcld-photo-template small{font-size:9px!important;color:#667085!important}
 .rcld-address-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:38px!important;padding:3px 34px 0!important}
-.rcld-address-template-card{min-width:0!important;padding:10px 14px 12px!important;border:4px solid #1700b5!important;border-radius:0!important;background:#fff!important;box-shadow:none!important}
+.rcld-address-template-card{min-width:0!important;padding:10px 14px 12px!important;border:1px solid #8493BD!important;border-radius:0!important;background:#fff!important;box-shadow:none!important}
 .rcld-address-template-card h4{margin:0 0 8px!important;color:#1700b5!important;font:700 18px Georgia,"Times New Roman",serif!important}
 .rcld-address-template-card .form-field{margin-bottom:8px!important}
 .rcld-address-template-card .form-field>span{font:13px "Times New Roman",Georgia,serif!important;color:#111!important}
@@ -2836,7 +2836,7 @@ html[data-theme="dark"] .batch-track{background:#2a3850}
 .rcld-photo-template .registration-photo-preview{width:124px!important;height:142px!important;max-width:100%!important;flex:0 0 auto!important;overflow:hidden!important}
 .rcld-photo-template .registration-photo-preview img{width:100%!important;height:100%!important;object-fit:cover!important}
 .rcld-address-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:14px!important;padding:0 14px!important}
-.rcld-address-template-card{min-width:0!important;overflow:hidden!important;padding:12px!important;border:2px solid #1700b5!important;border-radius:0!important;background:#fff!important}
+.rcld-address-template-card{min-width:0!important;overflow:hidden!important;padding:12px!important;border:1px solid #8493BD!important;border-radius:0!important;background:#fff!important}
 .rcld-address-template-card .form-grid.two{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important}
 .rcld-contact-template-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:18px!important;padding:0 20px!important}
 .rcld-contact-template-grid>div{display:grid!important;gap:10px!important;min-width:0!important}
@@ -2952,18 +2952,16 @@ table tbody tr:hover{background:#f8faff}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
 
 
-/* Registration print refinements requested: match address borders to section headers
-   and keep the institute name on one clean line in the printed form. */
+/* Registration print heading refinement. Address borders are defined
+   in their component rules and app/styles/design-system.css. */
 @media print {
-  .rcld-print-address {
-    border: 1mm solid #8493BD !important;
-  }
   .rcld-print-heading {
     width: 171mm !important;
     min-width: 0 !important;
     overflow: visible !important;
     text-align: center !important;
   }
+
   .rcld-print-heading h1 {
     width: 100% !important;
     max-width: 100% !important;
@@ -2974,38 +2972,5 @@ table tbody tr:hover{background:#f8faff}
     white-space: nowrap !important;
     overflow: visible !important;
     text-align: center !important;
-  }
-}
-
-/* Force the exact address-box border color in the registration print document.
-   This targets both Present Address and Permanent Address boxes. */
-@media print {
-  html body .rcld-print-document .rcld-print-address,
-  html body .rcld-print-document .rcld-print-address-grid > .rcld-print-address {
-    border: 1mm solid #8493BD !important;
-    border-color: #8493BD !important;
-    box-shadow: none !important;
-  }
-}
-
-/* Exact requested border color for the registration form address panels
-   (screen and print), including the print-only address summary panels. */
-html body .rcld-address-template-card,
-html body .rcld-screen-form .registration-address-card,
-html body .rcld-print-document .rcld-print-address,
-html body .rcld-print-document .rcld-print-address-grid > .rcld-print-address {
-  border: 1px solid #8493BD !important;
-  border-color: #8493BD !important;
-  box-shadow: none !important;
-}
-
-@media print {
-  html body .rcld-address-template-card,
-  html body .rcld-screen-form .registration-address-card,
-  html body .rcld-print-document .rcld-print-address,
-  html body .rcld-print-document .rcld-print-address-grid > .rcld-print-address {
-    border: 1mm solid #8493BD !important;
-    border-color: #8493BD !important;
-    box-shadow: none !important;
   }
 }

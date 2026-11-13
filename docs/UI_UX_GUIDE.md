@@ -4,11 +4,21 @@ This document records the visual language for the RCLD Islampur ERP workspace. I
 
 ## Design reference
 
-The staff workspace takes visual direction from the Hando admin dashboard by Zoyothemes: https://zoyothemes.com/hando/html/
+The staff ERP takes visual direction from the [Lexa Node dashboard reference](https://themesbrand.com/lexa-node/layouts/index.html). Use its clean vertical navigation, compact top bar, responsive page frame, restrained cards, readable tables, consistent form controls and clear page hierarchy as inspiration.
 
-Use the reference for its restrained admin-dashboard presentation: persistent navigation, a compact utility bar, clear page hierarchy, useful summary cards, balanced data panels, readable tables and consistent component spacing. Build an RCLD interface around the institute's existing workflows; do not copy unrelated Hando CRM, sales, commerce or project features.
+The RCLD application remains a native Next.js App Router + React + JavaScript application backed by MongoDB and Cloudinary. Do not copy or introduce the reference template's EJS, jQuery, Bootstrap or vendor assets. Rebuild the visual patterns with the project's existing React components and CSS.
 
-The earlier Lexa reference remains part of the project's visual history. Hando is the current direction for the ERP workspace.
+Reference traits to preserve:
+- A clear vertical sidebar with grouped navigation and a visible active route.
+- A compact utility/top bar that does not compete with page content.
+- Simple page headers with one primary action and quiet secondary actions.
+- Consistent card, table, form, filter, status and empty-state patterns.
+- Responsive layouts that remain usable on laptop, tablet and mobile.
+- Light/dark theme parity without changing business behavior.
+
+The shared design layer lives in `app/styles/design-system.css`, loaded after `app/globals.css` from `app/layout.js`. New reusable workspace styling belongs there. Keep highly specialized registration, receipt, timetable and report layout rules close to their feature until they can be safely migrated. Do not append another override block when the owning selector can be corrected directly.
+
+See `docs/COMMAND_CATALOG.md` for the exact UI page, API route and data owner for each module.
 
 ## Current UI delivery checkpoint — 12 November 2026
 
@@ -47,7 +57,7 @@ Keep navigation groups and links aligned with the routes that actually exist. Do
 
 ## Visual tokens
 
-The current theme tokens are declared near the Hando-inspired refresh section in app/globals.css.
+Shared workspace tokens are declared in app/styles/design-system.css. Legacy feature-specific styles remain in app/globals.css until they can be migrated safely.
 
 | Token / role | Current direction |
 |---|---|

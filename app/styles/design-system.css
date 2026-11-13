@@ -1,0 +1,356 @@
+/* RCLD shared design layer.
+ * Keep page-specific layout rules in their feature styles; this file owns shared
+ * workspace primitives so changes can be made once and applied consistently.
+ */
+:root {
+  --rcld-ui-canvas: #f5f7fb;
+  --rcld-ui-surface: #ffffff;
+  --rcld-ui-surface-muted: #f8faff;
+  --rcld-ui-ink: #202b3d;
+  --rcld-ui-muted: #718096;
+  --rcld-ui-border: #e4e9f1;
+  --rcld-ui-primary: #405bd5;
+  --rcld-ui-primary-hover: #3049bd;
+  --rcld-ui-radius: 12px;
+  --rcld-ui-shadow: 0 5px 18px rgba(22, 38, 68, 0.045);
+  --rcld-ui-focus: 0 0 0 3px rgba(64, 91, 213, 0.13);
+}
+
+html,
+body {
+  background: var(--rcld-ui-canvas);
+  color: var(--rcld-ui-ink);
+}
+
+body {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+.erp-shell,
+.erp-main {
+  background: var(--rcld-ui-canvas);
+}
+
+.erp-sidebar {
+  background: #17243b;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.erp-nav {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.side-link {
+  min-height: 39px;
+  border: 1px solid transparent;
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+
+.side-link.active {
+  background: #263b61;
+  border-color: rgba(167, 188, 255, 0.12);
+  color: #ffffff;
+  font-weight: 650;
+}
+
+.erp-user-bar {
+  border-bottom-color: var(--rcld-ui-border);
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.erp-command-search {
+  border-color: var(--rcld-ui-border);
+  background: var(--rcld-ui-surface-muted);
+}
+
+.erp-command-search:focus-within {
+  border-color: #a9b8ef;
+  box-shadow: var(--rcld-ui-focus);
+}
+
+.erp-top-icon,
+.erp-sidebar-toggle {
+  border: 1px solid var(--rcld-ui-border);
+  border-radius: 9px;
+  background: var(--rcld-ui-surface);
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.erp-top-icon:hover,
+.erp-sidebar-toggle:hover {
+  border-color: #bdc9f3;
+  background: #f5f7ff;
+  color: var(--rcld-ui-primary);
+}
+
+.erp-main {
+  min-width: 0;
+}
+
+.topbar {
+  gap: 16px;
+  border-bottom-color: var(--rcld-ui-border);
+}
+
+.topbar h1 {
+  color: var(--rcld-ui-ink);
+  font-size: clamp(20px, 2vw, 26px);
+  font-weight: 720;
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+}
+
+.crumb {
+  color: var(--rcld-ui-muted);
+  font-size: 12px;
+}
+
+.panel,
+.metric,
+.stat,
+.detail-section,
+.report-paper,
+.builder-step {
+  border: 1px solid var(--rcld-ui-border);
+  border-radius: var(--rcld-ui-radius);
+  background: var(--rcld-ui-surface);
+  box-shadow: var(--rcld-ui-shadow);
+}
+
+.panel-head {
+  border-bottom-color: var(--rcld-ui-border);
+}
+
+.panel-head h3,
+.filter-title h3 {
+  color: var(--rcld-ui-ink);
+  font-weight: 680;
+  letter-spacing: -0.015em;
+}
+
+.primary-btn,
+.search-action {
+  border: 1px solid var(--rcld-ui-primary);
+  border-radius: 9px;
+  background: var(--rcld-ui-primary);
+  box-shadow: 0 3px 8px rgba(64, 91, 213, 0.12);
+  font-weight: 650;
+  transition: background-color 150ms ease, border-color 150ms ease, transform 150ms ease;
+}
+
+.primary-btn:hover,
+.search-action:hover {
+  border-color: var(--rcld-ui-primary-hover);
+  background: var(--rcld-ui-primary-hover);
+}
+
+.ghost-btn,
+.icon-btn,
+.clear-btn,
+.filter-toggle {
+  border-color: var(--rcld-ui-border);
+  border-radius: 9px;
+  background: var(--rcld-ui-surface);
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.ghost-btn:hover,
+.icon-btn:hover,
+.clear-btn:hover,
+.filter-toggle:hover {
+  border-color: #bdc9f3;
+  background: #f7f8ff;
+  color: var(--rcld-ui-primary);
+}
+
+input,
+select,
+textarea {
+  accent-color: var(--rcld-ui-primary);
+}
+
+.form-field input,
+.form-field select,
+.form-field textarea,
+.filter-field input,
+.filter-field select,
+.search-box,
+.erp-command-search {
+  border-color: var(--rcld-ui-border);
+  border-radius: 8px;
+}
+
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus,
+.filter-field input:focus,
+.filter-field select:focus,
+.search-box:focus-within {
+  border-color: #9aacec;
+  box-shadow: var(--rcld-ui-focus);
+  outline: none;
+}
+
+table thead th,
+th {
+  background: #f7f9fc;
+  color: #66758b;
+  font-weight: 700;
+}
+
+table tbody tr:hover {
+  background: #f7f9ff;
+}
+
+.empty {
+  color: var(--rcld-ui-muted);
+}
+
+:focus-visible {
+  outline: 2px solid var(--rcld-ui-primary);
+  outline-offset: 2px;
+}
+
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --rcld-ui-canvas: #111a29;
+  --rcld-ui-surface: #1b2739;
+  --rcld-ui-surface-muted: #202d41;
+  --rcld-ui-ink: #e8edf5;
+  --rcld-ui-muted: #a0aec0;
+  --rcld-ui-border: #344258;
+  --rcld-ui-primary: #8298ff;
+  --rcld-ui-primary-hover: #9aabff;
+  --rcld-ui-shadow: 0 5px 18px rgba(0, 0, 0, 0.12);
+}
+
+html[data-theme="dark"] body,
+html[data-theme="dark"] .erp-shell,
+html[data-theme="dark"] .erp-main {
+  background: var(--rcld-ui-canvas);
+  color: var(--rcld-ui-ink);
+}
+
+html[data-theme="dark"] .erp-user-bar,
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .metric,
+html[data-theme="dark"] .stat,
+html[data-theme="dark"] .detail-section,
+html[data-theme="dark"] .report-paper,
+html[data-theme="dark"] .builder-step,
+html[data-theme="dark"] .ghost-btn,
+html[data-theme="dark"] .icon-btn,
+html[data-theme="dark"] .clear-btn,
+html[data-theme="dark"] .filter-toggle,
+html[data-theme="dark"] .erp-top-icon,
+html[data-theme="dark"] .erp-sidebar-toggle {
+  border-color: var(--rcld-ui-border);
+  background: var(--rcld-ui-surface);
+  color: var(--rcld-ui-ink);
+}
+
+html[data-theme="dark"] .erp-user-bar {
+  background: rgba(27, 39, 57, 0.94);
+}
+
+html[data-theme="dark"] .erp-command-search,
+html[data-theme="dark"] .form-field input,
+html[data-theme="dark"] .form-field select,
+html[data-theme="dark"] .form-field textarea,
+html[data-theme="dark"] .filter-field input,
+html[data-theme="dark"] .filter-field select,
+html[data-theme="dark"] .search-box {
+  border-color: var(--rcld-ui-border);
+  background: var(--rcld-ui-surface-muted);
+  color: var(--rcld-ui-ink);
+}
+
+html[data-theme="dark"] .topbar h1,
+html[data-theme="dark"] .panel-head h3,
+html[data-theme="dark"] .filter-title h3,
+html[data-theme="dark"] table td {
+  color: var(--rcld-ui-ink);
+}
+
+html[data-theme="dark"] table thead th,
+html[data-theme="dark"] th {
+  background: #202d41;
+  color: #b5c1d3;
+}
+
+html[data-theme="dark"] table tbody tr:hover {
+  background: #223149;
+}
+
+html[data-theme="dark"] .erp-top-icon:hover,
+html[data-theme="dark"] .ghost-btn:hover,
+html[data-theme="dark"] .icon-btn:hover,
+html[data-theme="dark"] .clear-btn:hover,
+html[data-theme="dark"] .filter-toggle:hover {
+  border-color: #586b91;
+  background: #263650;
+  color: #ffffff;
+}
+
+@media (max-width: 900px) {
+  .topbar {
+    flex-wrap: wrap;
+  }
+
+  .topbar .top-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 600px) {
+  .panel,
+  .metric,
+  .stat,
+  .detail-section {
+    border-radius: 10px;
+  }
+
+  .panel-head {
+    gap: 10px;
+  }
+
+  .topbar h1 {
+    font-size: 21px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* The registration print component uses a separate print-only document.
+ * Keep the address-box border explicit here so print layout changes cannot
+ * accidentally inherit the old decorative blue border.
+ */
+@media print {
+  html body .rcld-print-document .rcld-registration-address-print,
+  html body .rcld-print-document .rcld-print-address {
+    border: 1mm solid #8493bd !important;
+    border-color: #8493bd !important;
+    box-shadow: none !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}

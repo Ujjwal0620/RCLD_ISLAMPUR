@@ -314,7 +314,7 @@ export default function RegisterStudentPage() {
         <section className="rcld-print-section rcld-print-address-section">
           <h2>Address Details</h2>
           <div className="rcld-print-address-grid">
-            <div className="rcld-print-address">
+            <div className="rcld-print-address rcld-registration-address-print">
               <h3>Present Address</h3>
               <p><span>Ward/Colony/ Village:</span> {form.presentAddress || form.address || ""}</p>
               <p><span>PO:</span> {form.postOffice || ""}</p>
@@ -323,7 +323,7 @@ export default function RegisterStudentPage() {
               <p><span>Pin:</span> {form.pin || ""}</p>
               <p><span>Nearest Land Mark:</span> {form.nearestLandmark || ""}</p>
             </div>
-            <div className="rcld-print-address">
+            <div className="rcld-print-address rcld-registration-address-print">
               <h3>Permanent Address</h3>
               <p><span>Ward/Colony/ Village:</span> {form.sameAsPresentAddress ? (form.presentAddress || form.address || "") : (form.permanentAddress || "")}</p>
               <p><span>PO:</span> {form.sameAsPresentAddress ? (form.postOffice || "") : (form.permanentPostOffice || "")}</p>

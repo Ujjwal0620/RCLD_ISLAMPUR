@@ -1,8 +1,19 @@
 # Implementation status and delivery gaps
 
-Last reviewed against the GitHub main tree at commit 707b3c90c468d42fbcd4c69efdf8e81f82b9d27d on 12 November 2026.
+Last repository inventory reviewed on 13 November 2026 against main commit 4f88a6df0d49e526703f82b0f9b19fcce3437c3b. This pass reviewed the complete recursive tree (220 entries), 26 dashboard page components, 48 API route handlers, 12 reusable model files and the shared shell/style entry points.
 
 This is a code inventory, not a product-completion certificate. A page or API route being present does not prove that its full workflow is secure, tested or ready for production.
+
+## Latest delivery checkpoint
+
+**System organization baseline — in progress, 13 November 2026.**
+
+- Created source restore point branch `checkpoint/pre-system-audit-2026-11-13` from main commit `4f88a6df0d49e526703f82b0f9b19fcce3437c3b` before the audit changes.
+- Added `docs/COMMAND_CATALOG.md` to map each current page to its API routes, models and shared logic.
+- Added Prettier configuration and `format` / `format:check` npm scripts. Existing source-wide formatting still requires running `npm run format` in a local checkout; this remote repository session could not execute npm.
+- Added `app/styles/design-system.css` as the shared Lexa-inspired UI layer and loaded it after the legacy global stylesheet.
+- Removed the duplicated trailing registration border override blocks and corrected the original print border declarations to `#8493BD`; the print-only address elements now carry an explicit dedicated class.
+- Full per-route visual regression, lint and production build are still pending local execution. Do not treat this audit pass as proof that every workflow is production-ready.
 
 ## Latest delivery checkpoint
 
@@ -15,6 +26,19 @@ This is a code inventory, not a product-completion certificate. A page or API ro
 - Light/dark theme support and responsive styling remain in place.
 
 **Verification status:** GitHub main contains the change. No npm run lint, npm run build or browser-based regression test was recorded for this checkpoint. Treat the UI as implemented but requiring local verification. The complete page-by-page UI redesign is still outstanding.
+
+## Structure and maintainability findings
+
+The 13 November source-tree pass identified these maintenance facts:
+
+- The application is a modular monolith with 26 dashboard page components and 48 API route handlers.
+- There are 12 reusable model files; employee/login and several fee/student schemas remain inline in route handlers. Consolidate only after collection-name and compatibility checks.
+- `app/globals.css` is approximately 294 KB and contains historical style layers and repeated overrides. The shared workspace baseline is now separated into `app/styles/design-system.css`; migrate feature-specific rules incrementally rather than rewriting the whole stylesheet at once.
+- The root package manifest previously had no Prettier setup. Prettier 3 configuration, ignore rules and npm format/check commands have now been added. The complete repository-wide formatter has not yet been executed in a local checkout.
+- No automated test files or test runner were found in the reviewed source tree. Lint/build and manual workflow checks remain required before release.
+- A module ownership index is available in `docs/COMMAND_CATALOG.md` so future changes can start from the owning page, API route, model and helper.
+
+**Registration address border correction:** the original print rules contained hard-coded blue `!important` borders. Those source declarations now use `#8493BD`; the duplicated appended override tail was removed, and the print address panels have a dedicated class with a print-specific exact-color rule. The screen address card border declarations were also aligned to `#8493BD`. A real browser print preview and physical print still need confirmation.
 
 ## Present in the repository
 

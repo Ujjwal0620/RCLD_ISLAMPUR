@@ -17,6 +17,7 @@ This repository is the working application—not a mock-up or a generic college 
 | Follow the engineering process | docs/SDLC.md |
 | Find the protected baseline | docs/RESTORE_POINTS.md |
 | Follow the shared visual language and UI rules | docs/UI_UX_GUIDE.md |
+| Find the exact page/API/model to change | docs/COMMAND_CATALOG.md |
 
 ## Technology
 
@@ -51,7 +52,7 @@ Requirements: a compatible Node.js release, npm and a reachable MongoDB instance
 5. Run npm run dev.
 6. Open http://localhost:3000.
 
-Useful commands: npm run dev, npm run lint, npm run build and npm run start.
+Useful commands: npm run dev, npm run format, npm run format:check, npm run lint, npm run build and npm run start.
 
 Local development has a MongoDB fallback at mongodb://127.0.0.1:27017/rcld_islampur. Production must provide MONGODB_URI. NEXT_PUBLIC_APP_URL is not required for the database connection or normal local startup.
 
@@ -72,7 +73,7 @@ Local development has a MongoDB fallback at mongodb://127.0.0.1:27017/rcld_islam
 
 ## Product and UI direction
 
-The interface is a compact, professional ERP. The current workspace direction is inspired by https://zoyothemes.com/hando/html/; the earlier Lexa reference remains part of the project's design history. Use these as visual references, not as code to copy. Follow docs/UI_UX_GUIDE.md for shared shell, component, responsive and accessibility conventions. Keep tables, forms, student profiles, receipts and timetable views information-dense but readable on desktop and small screens.
+The interface is a compact, professional ERP. The staff workspace uses the Lexa Node reference (https://themesbrand.com/lexa-node/layouts/index.html) for its clean vertical navigation, compact top bar, responsive layouts, restrained cards, tables and forms. The RCLD implementation is native Next.js/React and does not copy the template's EJS/Bootstrap source. Shared workspace styling is centralized in app/styles/design-system.css; legacy feature-specific rules remain in app/globals.css and should be migrated deliberately, not duplicated. Follow docs/UI_UX_GUIDE.md and docs/COMMAND_CATALOG.md when changing any screen.
 
 The public root page and student-facing operational pages should be treated as separate experiences from the authenticated staff workspace. Do not add an LMS course player or learning-content engine unless the product scope is explicitly revised.
 
