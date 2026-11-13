@@ -217,6 +217,34 @@ export default function StudentDetailsPage({ params }) {
     installmentMonth: "",
   });
   const [proofUploading, setProofUploading] = useState(false);
+  const [paymentItems, setPaymentItems] = useState([
+    { id: "payment-item-1", type: "Admission Fee", amount: "" },
+  ]);
+  const paymentItemTypes = [
+    "Admission Fee", "Registration Fee", "Course Fee", "Installment",
+    "Late Fine", "Lab Charge", "Examination Fee", "Certificate Fee", "Other",
+  ];
+  function defaultPaymentItemAmount(type) {
+    const paid = Number(fee?.paid || 0);
+    const payable = Number(fee?.payable || 0);
+    const remaining = Math.max(0, payable - paid);
+    if (type === "Admission Fee") return String(Number(feeForm.admissionFee || 0));
+    if (type === "Registration Fee") return String(Number(feeForm.registrationFee || 0));
+    if (type === "Late Fine") return String(Number(fee?.lateFine || 0));
+    if (type === "Course Fee" || type === "Installment") return String(remaining);
+    return "";
+  }
+  function updatePaymentItem(id, patch) {
+    setPaymentItems((items) => items.map((item) => item.id === id ? { ...item, ...patch } : item));
+  }
+  function addPaymentItem() {
+    setPaymentItems((items) => [...items, {
+      id: "payment-item-" + Date.now() + "-" + items.length,
+      type: "Lab Charge",
+      amount: "",
+    }]);
+  }
+  const paymentItemsTotal = paymentItems.reduce((sum, item) => sum + Math.max(0, Number(item.amount || 0)), 0);
   const [feeWorkspaceOpen, setFeeWorkspaceOpen] = useState(false);
   const [attForm, setAttForm] = useState({
     date: new Date().toISOString().slice(0, 10),
@@ -345,16 +373,19 @@ export default function StudentDetailsPage({ params }) {
         admissionFee: feeForm.admissionFee,
         registrationFee: feeForm.registrationFee,
         admissionDate: student.admissionDate,
-        payment: feeForm.amount
+        payment: paymentItems.some((item) => Number(item.amount) > 0)
           ? {
-              amount: feeForm.amount,
+              amount: paymentItemsTotal,
+              items: paymentItems.filter((item) => Number(item.amount) > 0).map(({ type, amount }) => ({
+                type, amount: Number(amount),
+              })),
               date: feeForm.date,
               method: feeForm.method,
               reference: feeForm.reference,
               utrNumber: feeForm.utrNumber,
               screenshotUrl: feeForm.screenshotUrl,
               note: feeForm.note,
-              paymentType: feeForm.paymentType,
+              paymentType: paymentItems.map((item) => item.type).filter(Boolean).join(", "),
               installmentMonth: feeForm.installmentMonth,
             }
           : undefined,
@@ -373,6 +404,9 @@ export default function StudentDetailsPage({ params }) {
       utrNumber: "",
       screenshotUrl: "",
       note: "",
+    }));
+    setPaymentItems([{ id: "payment-item-" + Date.now(), type: "Admission Fee", amount: "" }]);
+    setMessage("Fee information saved.");
     }));
     setMessage("Fee information saved.");
   }
@@ -614,9 +648,25 @@ export default function StudentDetailsPage({ params }) {
     const idKey = String(payment?._id || student.enrollmentNo || student._id || "").replace(/[^a-z0-9]/gi, "").slice(-6).toUpperCase();
     const receiptNo = payment?.receiptNo || `RCLD/${dateKey}/${idKey || "PENDING"}`;
     const amount = num(payment?.amount);
+    const items = Array.isArray(payment?.items) && payment.items.length
+      ? payment.items
+      : [{ type: payment?.paymentType || "Fee Payment", amount }];
     const type = String(payment?.paymentType || "Payment").trim();
-    const purpose = String(payment?.purpose || payment?.paymentPurpose || payment?.note || (type.toLowerCase() === "other" ? "Other payment" : "—")).trim();
+    const purpose = String(payment?.purpose || payment?.paymentPurpose || payment?.note || "—").trim();
     const reference = payment?.utrNumber || payment?.reference || "—";
+    const itemRows = items.map((item, index) =>
+      `<tr><td>${index + 1}</td><td>${esc(item.type || "Fee Payment")}</td><td class="right">${esc(money(item.amount))}</td></tr>`
+    ).join("");
+    const paymentMeta = [
+      ["Payment Date", formatDate(payment?.date)],
+      ["Payment Method", payment?.method || "—"],
+      ["UTR Number", payment?.utrNumber || "—"],
+      ["Other Reference", payment?.reference || "—"],
+      ["Installment Month", payment?.installmentMonth || "—"],
+      ["Recorded By", payment?.recordedBy || "—"],
+      ["Authorised By", payment?.authorisedBy || "—"],
+      ["Receipt Number", receiptNo],
+    ];
     const logoUrl = window.location.origin + "/assets/logo.png";
     const w = window.open("", "_blank");
     if (!w) { setMessage("Please allow pop-ups to print the fee receipt."); return; }
@@ -638,23 +688,25 @@ export default function StudentDetailsPage({ params }) {
     const feeHtml = feeRows.map(([label, value], i) =>
       `<div class="fee-row ${i === feeRows.length - 1 ? "grand" : ""}"><span>${esc(label)}</span><strong>${esc(money(value))}</strong></div>`).join("");
     const css = `
-      @page{size:A4 landscape;margin:7mm}
-      *{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff;color:#17345e;font-family:Arial,Helvetica,sans-serif}
-      body{font-size:9pt;line-height:1.25;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-      .receipt{width:283mm;min-height:196mm;margin:auto;padding:5mm;border:1.2px solid #173b78;display:flex;flex-direction:column;gap:3mm}
-      .header{display:grid;grid-template-columns:25mm 1fr 50mm;align-items:center;border-bottom:2px solid #173b78;padding-bottom:3mm}
-      .logo{width:22mm;height:21mm;object-fit:contain}.heading{text-align:center}.heading h1{font-size:18pt;margin:0;font-weight:900;letter-spacing:.03em}.heading h2{font-size:11pt;letter-spacing:.14em;margin:2mm 0 0}
-      .receipt-meta{text-align:right;font-size:8pt;line-height:1.6}.org{display:flex;justify-content:space-between;background:#eaf2fc;border:1px solid #c6d8ed;padding:2mm 3mm;font-weight:700;font-size:8pt}
-      .top-grid{display:grid;grid-template-columns:1.55fr 1fr;gap:3mm}.panel{border:1px solid #9eb4d1;padding:2.5mm;min-width:0}.panel-title{font-weight:800;background:#173b78;color:#fff;margin:-2.5mm -2.5mm 2.5mm;padding:1.7mm 2.5mm;font-size:9pt;letter-spacing:.04em}
-      .student-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2mm 3mm}.field{min-width:0;display:flex;flex-direction:column;gap:1mm}.field b{font-size:7.5pt;color:#526987}.field span{min-height:6mm;border-bottom:1px solid #b7c6d9;padding:1mm 0;overflow-wrap:anywhere}
-      .fee-list{display:grid;gap:0}.fee-row{display:flex;justify-content:space-between;gap:4mm;padding:1.7mm 1mm;border-bottom:1px solid #e0e8f1}.fee-row strong{white-space:nowrap}.fee-row.grand{background:#eaf2fc;font-weight:900;border:0;margin-top:1mm;padding:2mm}
-      .payment-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:2mm}.payment-field{border:1px solid #d2deeb;padding:2mm;min-height:15mm}.payment-field b{display:block;font-size:7.5pt;color:#526987;margin-bottom:1mm}.payment-field strong{font-size:10pt;overflow-wrap:anywhere}.payment-field.received{background:#eaf2fc;border-color:#9eb4d1}
-      .purpose{margin-top:2mm;border:1px solid #d2deeb;padding:2mm;min-height:10mm}.purpose b{display:block;font-size:7.5pt;margin-bottom:1mm}
-      .terms{border:1px solid #9eb4d1;padding:2.5mm}.terms h3{margin:0 0 1.5mm;font-size:9pt}.terms ol{margin:0;padding-left:5mm;display:grid;grid-template-columns:1fr 1fr;gap:1mm 7mm;font-size:8pt}
-      .bottom{display:grid;grid-template-columns:1fr 1fr 1fr;gap:3mm;align-items:end;margin-top:auto}.bottom-note{font-size:7.5pt;line-height:1.5}.sign{text-align:center;padding-top:12mm}.sign strong{display:block;border-top:1px solid #173b78;padding-top:1.5mm}.auth{font-size:7pt;font-weight:700;margin-top:1mm}
-      .footer{display:flex;justify-content:space-between;gap:3mm;border-top:1px solid #9eb4d1;padding-top:2mm;font-size:7.5pt}.proof{color:#173b78}
-      @media screen{body{background:#e9eef5;padding:8mm}.receipt{box-shadow:0 4px 22px #102b5920}}
-      @media print{html,body{width:283mm;margin:0!important;padding:0!important}.receipt{width:283mm;min-height:196mm;margin:0;box-shadow:none;break-after:avoid}}
+      @page{size:A5 portrait;margin:4mm}
+      *{box-sizing:border-box}
+      html,body{margin:0;padding:0;background:#fff;color:#17345e;font-family:Arial,Helvetica,sans-serif}
+      body{font-size:6.4pt;line-height:1.16;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      .receipt{width:140mm;min-height:202mm;margin:auto;padding:3mm;border:1px solid #173b78;display:flex;flex-direction:column;gap:1.5mm}
+      .header{display:grid;grid-template-columns:16mm 1fr 30mm;align-items:center;border-bottom:1.4px solid #173b78;padding-bottom:1.5mm}
+      .logo{width:14mm;height:13mm;object-fit:contain}.heading{text-align:center}.heading h1{font-size:10pt;margin:0;font-weight:900;letter-spacing:.01em}.heading h2{font-size:8pt;letter-spacing:.1em;margin:1mm 0 0}
+      .receipt-meta{text-align:right;font-size:5.8pt;line-height:1.45}.org{display:flex;justify-content:space-between;gap:1mm;background:#eaf2fc;border:1px solid #c6d8ed;padding:1mm 1.5mm;font-weight:700;font-size:5.6pt}
+      .top-grid{display:grid;grid-template-columns:1.35fr .9fr;gap:1.5mm}.panel{border:1px solid #9eb4d1;padding:1.5mm;min-width:0}.panel-title{font-weight:800;background:#173b78;color:#fff;margin:-1.5mm -1.5mm 1.3mm;padding:1mm 1.5mm;font-size:6.2pt;letter-spacing:.025em}
+      .student-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1mm 2mm}.field{min-width:0;display:flex;flex-direction:column;gap:.3mm}.field b{font-size:5.2pt;color:#526987}.field span{min-height:3.5mm;border-bottom:.5px solid #b7c6d9;padding:.3mm 0;overflow-wrap:anywhere}
+      .fee-list{display:grid;gap:0}.fee-row{display:flex;justify-content:space-between;gap:2mm;padding:.7mm .5mm;border-bottom:.5px solid #e0e8f1}.fee-row strong{white-space:nowrap}.fee-row.grand{background:#eaf2fc;font-weight:900;border:0;margin-top:.5mm;padding:1mm}
+      .payment-items{width:100%;border-collapse:collapse;font-size:5.8pt}.payment-items th,.payment-items td{border:.5px solid #c8d5e5;padding:.7mm 1mm;text-align:left}.payment-items th{background:#f0f5fb}.payment-items .right{text-align:right}.payment-items tfoot td{font-weight:900;background:#eaf2fc}
+      .payment-meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1mm;margin-top:1mm}.payment-field{border:.5px solid #d2deeb;padding:1mm;min-width:0;overflow-wrap:anywhere}.payment-field b{display:block;font-size:5pt;color:#526987;margin-bottom:.4mm}.payment-field strong{font-size:5.7pt;font-weight:700}.payment-field.received{background:#eaf2fc;border-color:#9eb4d1}
+      .purpose{margin-top:1mm;border:.5px solid #d2deeb;padding:1mm;overflow-wrap:anywhere}.purpose b{margin-right:1mm}
+      .terms{border:1px solid #9eb4d1;padding:1.3mm}.terms h3{margin:0 0 .7mm;font-size:6pt}.terms ol{margin:0;padding-left:3.5mm;display:grid;grid-template-columns:1fr 1fr;gap:.5mm 3mm;font-size:5.1pt}
+      .bottom{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2mm;align-items:end;margin-top:auto}.bottom-note{font-size:5.4pt;line-height:1.35;overflow-wrap:anywhere}.sign{text-align:center;padding-top:6mm}.sign strong{display:block;border-top:1px solid #173b78;padding-top:1mm}.auth{font-size:5pt;font-weight:700;margin-top:.5mm}
+      .footer{display:flex;justify-content:space-between;gap:2mm;border-top:1px solid #9eb4d1;padding-top:1mm;font-size:5.2pt}.proof{color:#173b78}
+      @media screen{body{background:#e9eef5;padding:5mm}.receipt{box-shadow:0 3px 14px #102b5920}}
+      @media print{html,body{width:148mm;height:210mm;margin:0!important;padding:0!important}.receipt{width:140mm;min-height:202mm;height:202mm;margin:0;box-shadow:none;break-after:avoid;page-break-after:avoid}}
     `;
     const html = `<!doctype html><html><head><meta charset="utf-8"/><title>RCLD Fee Receipt - ${esc(receiptNo)}</title><style>${css}</style></head><body>
       <main class="receipt">
@@ -664,16 +716,17 @@ export default function StudentDetailsPage({ params }) {
           <section class="panel"><div class="panel-title">STUDENT DETAILS</div><div class="student-grid">${fieldHtml}</div></section>
           <section class="panel"><div class="panel-title">COMPLETE FEE BREAKUP</div><div class="fee-list">${feeHtml}</div></section>
         </div>
-        <section class="panel"><div class="panel-title">PAYMENT RECEIVED IN THIS TRANSACTION</div>
-          <div class="payment-grid">
-            <div class="payment-field received"><b>Amount Received</b><strong>${esc(money(amount))}</strong></div>
-            <div class="payment-field"><b>Payment Section / Type</b><strong>${esc(type)}</strong></div>
-            <div class="payment-field"><b>Installment Month</b><strong>${esc(payment?.installmentMonth || payment?.dueDate || "")}</strong></div>
-            <div class="payment-field"><b>Payment Date</b><strong>${esc(formatDate(payment?.date))}</strong></div>
+        <section class="panel"><div class="panel-title">PAYMENT RECEIVED — ITEMISED DETAILS</div>
+          <table class="payment-items"><thead><tr><th style="width:8%">#</th><th>Fee Head / Particulars</th><th class="right">Amount</th></tr></thead>
+            <tbody>${itemRows}</tbody><tfoot><tr><td colspan="2">TOTAL AMOUNT RECEIVED</td><td class="right">${esc(money(amount))}</td></tr></tfoot>
+          </table>
+          <div class="payment-meta">
+            ${paymentMeta.map(([label, value], index) => `<div class="payment-field ${index === 0 ? "received" : ""}"><b>${esc(label)}</b><strong>${esc(value)}</strong></div>`).join("")}
           </div>
-          <div class="purpose"><b>Purpose / Other Details</b>${esc(purpose)}</div>
+          <div class="purpose"><b>Payment Purpose / Note:</b>${esc(purpose)}</div>
+          <div class="purpose"><b>Payment Proof:</b>${payment?.screenshotUrl ? `<a class="proof" href="${esc(payment.screenshotUrl)}">View attached proof</a>` : "Not attached"}</div>
         </section>
-        <section class="panel"><div class="panel-title">PAYMENT SUMMARY</div><div class="payment-grid">
+        <section class="panel"><div class="panel-title">PAYMENT SUMMARY</div><div class="payment-meta">
           <div class="payment-field"><b>Total Course Fee Payable</b><strong>${esc(money(payable))}</strong></div>
           <div class="payment-field"><b>Total Amount Paid</b><strong>${esc(money(paid))}</strong></div>
           <div class="payment-field"><b>Amount Due</b><strong>${esc(money(due))}</strong></div>
@@ -1990,135 +2043,98 @@ export default function StudentDetailsPage({ params }) {
                         <span className="fee-section-tag fee-tag-blue">NEW ENTRY</span>
                       </div>
                       <form className="inline-operation-form fee-modal-form" onSubmit={saveFees}>
+                        <div className="fee-payment-items-editor">
+                          <div className="fee-payment-items-heading">
+                            <strong>Payment Items</strong>
+                            <span>Add every fee head included in this receipt</span>
+                          </div>
+                          {paymentItems.map((item, index) => (
+                            <div className="form-grid four fee-payment-item-row" key={item.id}>
+                              <label className="form-field">
+                                <span>Fee Head / Particulars *</span>
+                                <select
+                                  value={item.type}
+                                  onChange={(e) => {
+                                    const type = e.target.value;
+                                    updatePaymentItem(item.id, { type, amount: defaultPaymentItemAmount(type) });
+                                  }}
+                                >
+                                  {paymentItemTypes.map((type) => <option key={type} value={type}>{type}</option>)}
+                                </select>
+                              </label>
+                              <label className="form-field">
+                                <span>Amount (₹) *</span>
+                                <input type="number" min="0.01" step="0.01" required
+                                  value={item.amount}
+                                  onChange={(e) => updatePaymentItem(item.id, { amount: e.target.value })}
+                                  placeholder="Enter amount" />
+                              </label>
+                              <div className="form-field fee-item-auto-note">
+                                <span>Amount source</span>
+                                <small>{["Admission Fee","Registration Fee","Late Fine","Course Fee","Installment"].includes(item.type) ? "Auto-filled from current fee balance; editable" : "Enter applicable charge amount"}</small>
+                              </div>
+                              <div className="form-field fee-item-remove">
+                                <span>Action</span>
+                                <button type="button" className="ghost-btn" disabled={paymentItems.length === 1}
+                                  onClick={() => setPaymentItems((items) => items.filter((row) => row.id !== item.id))}>
+                                  Remove item
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                          <div className="fee-payment-items-footer">
+                            <button type="button" className="ghost-btn" onClick={addPaymentItem}>+ Add Payment Item</button>
+                            <strong>Receipt Total: ₹{paymentItemsTotal.toLocaleString("en-IN")}</strong>
+                          </div>
+                        </div>
                         <div className="form-grid four">
                           <label className="form-field">
-                            <span>Payment Amount (₹) *</span>
-                            <input
-                              type="number"
-                              min="1"
-                              required
-                              value={feeForm.amount}
-                              onChange={(e) =>
-                                setFeeForm((f) => ({ ...f, amount: e.target.value }))
-                              }
-                            />
-                          </label>
-                          <label className="form-field">
                             <span>Payment Date *</span>
-                            <input
-                              type="date"
-                              required
-                              value={feeForm.date}
-                              onChange={(e) => setFeeForm((f) => ({ ...f, date: e.target.value }))}
-                            />
-                          </label>
-                          <label className="form-field">
-                            <span>Payment Type</span>
-                            <select
-                              value={feeForm.paymentType}
-                              onChange={(e) =>
-                                setFeeForm((f) => ({ ...f, paymentType: e.target.value }))
-                              }
-                            >
-                              <option value="Admission Fee">Admission Fee</option>
-                              <option value="Registration Fee">Registration Fee</option>
-                              <option value="Installment">Installment</option>
-                              <option value="Course Fee">Course Fee</option>
-                              <option value="Other">Other</option>
-                            </select>
-                          </label>
-                          <label className="form-field">
-                            <span>Installment Month</span>
-                            <input
-                              type="month"
-                              value={feeForm.installmentMonth}
-                              onChange={(e) =>
-                                setFeeForm((f) => ({ ...f, installmentMonth: e.target.value }))
-                              }
-                            />
+                            <input type="date" required value={feeForm.date}
+                              onChange={(e) => setFeeForm((f) => ({ ...f, date: e.target.value }))} />
                           </label>
                           <label className="form-field">
                             <span>Payment Method</span>
-                            <select
-                              value={feeForm.method}
-                              onChange={(e) =>
-                                setFeeForm((f) => ({ ...f, method: e.target.value }))
-                              }
-                            >
-                              <option>Cash</option>
-                              <option>UPI</option>
-                              <option>Bank Transfer</option>
-                              <option>Card</option>
-                              <option>PhonePe</option>
+                            <select value={feeForm.method}
+                              onChange={(e) => setFeeForm((f) => ({ ...f, method: e.target.value }))}>
+                              <option>Cash</option><option>UPI</option><option>Bank Transfer</option><option>Card</option><option>PhonePe</option>
                             </select>
                           </label>
                           <label className="form-field">
                             <span>UTR / Transaction No.</span>
-                            <input
-                              value={feeForm.utrNumber}
-                              onChange={(e) =>
-                                setFeeForm((f) => ({ ...f, utrNumber: e.target.value }))
-                              }
-                              placeholder="Enter UTR number"
-                            />
+                            <input value={feeForm.utrNumber}
+                              onChange={(e) => setFeeForm((f) => ({ ...f, utrNumber: e.target.value }))} placeholder="Enter UTR number" />
                           </label>
                           <label className="form-field">
                             <span>Other Reference</span>
-                            <input
-                              value={feeForm.reference}
-                              onChange={(e) =>
-                                setFeeForm((f) => ({ ...f, reference: e.target.value }))
-                              }
-                              placeholder="Receipt / bank reference"
-                            />
+                            <input value={feeForm.reference}
+                              onChange={(e) => setFeeForm((f) => ({ ...f, reference: e.target.value }))} placeholder="Bank / transaction reference" />
+                          </label>
+                          <label className="form-field">
+                            <span>Installment Month (if applicable)</span>
+                            <input type="month" value={feeForm.installmentMonth}
+                              onChange={(e) => setFeeForm((f) => ({ ...f, installmentMonth: e.target.value }))} />
                           </label>
                           <label className="form-field">
                             <span>Payment Purpose / Note</span>
-                            <input
-                              value={feeForm.note}
-                              onChange={(e) => setFeeForm((f) => ({ ...f, note: e.target.value }))}
-                              placeholder="Enter purpose when payment type is Other"
-                            />
+                            <input value={feeForm.note}
+                              onChange={(e) => setFeeForm((f) => ({ ...f, note: e.target.value }))} placeholder="Optional note for this receipt" />
                           </label>
                           <label className="form-field">
                             <span>Payment Screenshot</span>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              disabled={proofUploading}
+                            <input type="file" accept="image/*" disabled={proofUploading}
                               onChange={async (e) => {
-                                const file = e.target.files?.[0];
-                                if (!file) return;
-                                if (file.size > 5 * 1024 * 1024) {
-                                  setMessage("Payment screenshot must be smaller than 5 MB.");
-                                  return;
-                                }
+                                const file = e.target.files?.[0]; if (!file) return;
+                                if (file.size > 5 * 1024 * 1024) { setMessage("Payment screenshot must be smaller than 5 MB."); return; }
                                 setProofUploading(true);
                                 try {
-                                  const fd = new FormData();
-                                  fd.append("file", file);
-                                  fd.append("purpose", "payment-proof");
-                                  const up = await fetch("/api/uploads/student-photo", {
-                                    method: "POST",
-                                    body: fd,
-                                  });
-                                  const ud = await up.json();
-                                  if (!up.ok)
-                                    throw new Error(ud.error || "Unable to upload screenshot.");
-                                  setFeeForm((f) => ({ ...f, screenshotUrl: ud.url }));
-                                  setMessage("Payment screenshot uploaded.");
-                                } catch (err) {
-                                  setMessage(err.message);
-                                } finally {
-                                  setProofUploading(false);
-                                }
-                              }}
-                            />
-                            {feeForm.screenshotUrl && (
-                              <a href={feeForm.screenshotUrl} target="_blank" rel="noreferrer">
-                                View uploaded screenshot
-                              </a>
-                            )}
+                                  const fd = new FormData(); fd.append("file", file); fd.append("purpose", "payment-proof");
+                                  const up = await fetch("/api/uploads/student-photo", { method: "POST", body: fd });
+                                  const ud = await up.json(); if (!up.ok) throw new Error(ud.error || "Unable to upload screenshot.");
+                                  setFeeForm((f) => ({ ...f, screenshotUrl: ud.url })); setMessage("Payment screenshot uploaded.");
+                                } catch (err) { setMessage(err.message); } finally { setProofUploading(false); }
+                              }} />
+                            {feeForm.screenshotUrl && <a href={feeForm.screenshotUrl} target="_blank" rel="noreferrer">View uploaded screenshot</a>}
                           </label>
                         </div>
                         <div className="fee-modal-actions">
