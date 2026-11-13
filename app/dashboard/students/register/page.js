@@ -344,8 +344,31 @@ export default function RegisterStudentPage() {
         <section className="rcld-print-section rcld-print-qualification-section">
           <h2>Qualification Details</h2>
           <table className="rcld-print-qualification">
-            <thead><tr><th>Class/Sem/Course</th><th>Institute/School/College</th><th>Board/Council/University</th><th>Year</th><th>Percentage Of Marks</th></tr></thead>
-            <tbody><tr><td>{form.qualifications?.[0]?.examCourse || ""}</td><td>{form.qualifications?.[0]?.collegeInstitute || ""}</td><td>{form.qualifications?.[0]?.boardUniversity || ""}</td><td>{form.qualifications?.[0]?.year || ""}</td><td>{form.qualifications?.[0]?.percentage || ""}</td></tr></tbody>
+            <colgroup>
+              <col className="qualification-course-column" />
+              <col className="qualification-institute-column" />
+              <col className="qualification-board-column" />
+              <col className="qualification-year-column" />
+              <col className="qualification-marks-column" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th scope="col">Class / Sem / Course</th>
+                <th scope="col">Institute / School / College</th>
+                <th scope="col">Board / Council / University</th>
+                <th scope="col">Year</th>
+                <th scope="col">Percentage of Marks</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>{form.qualifications?.[0]?.examCourse || ""}</td>
+                <td>{form.qualifications?.[0]?.collegeInstitute || ""}</td>
+                <td>{form.qualifications?.[0]?.boardUniversity || ""}</td>
+                <td>{form.qualifications?.[0]?.year || ""}</td>
+                <td>{form.qualifications?.[0]?.percentage || ""}</td>
+              </tr>
+            </tbody>
           </table>
         </section>
         <section className="rcld-print-section rcld-print-enclosure-section">
