@@ -130,3 +130,16 @@ Merged to main on 13 November 2026 (merge commit `8f43f06229100b9795f8655a8b735c
 - Source-level verification on main confirms the old `#304bff` qualification border and 1mm address border declarations are absent.
 
 **Still unverified:** browser print preview, actual paper output, lint and production build. The UI redesign also remains incomplete; see `docs/UI_UX_GUIDE.md` for the page-by-page phases. Do not treat the print work as visually confirmed until a real print preview has been checked.
+
+
+## UI redesign delivery checkpoint — 13 November 2026
+
+The following UI changes are merged into main:
+
+- **PR #27 — Shared Lexa-inspired workspace UI** (merge commit `36350e83c786894cccffc88edf3078c6d58948f5`): refined the shared sidebar, utility bar, page headings, cards, metrics, tables, filters, forms, modal and timetable styling, including dark and mobile variants.
+- **PR #28 — Student and employee directories** (merge commit `77afb8b8ff3b1eeefea90eb28b2768db56c74671`): added directory introductions, accurate page-scoped student metrics, clearer employee metric labels and table accessibility improvements.
+- **PR #30 — Public homepage and core academic UI** (merge commit `8aeab3702b7bbbb6800c182413dbb894d2aeab60`): replaced the root login redirect with a public institute homepage, live active-course catalogue, ERP login link in footer only, course catalogue loading/empty/error states and batch overview metrics.
+
+These changes are an initial system-wide design pass, not completion of the full page-by-page redesign. Remaining individual reviews include the staff dashboard, student registration/profile/fees/attendance/import/pending/I-Cards, batch detail/roster/timetable interactions, employee create/profile/attendance/tasks, subjects/course content, CRM/referrals, dropouts, reports and AI Copilot. The student-specific sign-in and learning portal also remain unimplemented.
+
+**Verification status:** GitHub source checks confirm the relevant files and imports are present. No local browser screenshot review, responsive device test, npm lint, production build or real print-preview test has been completed in this remote session. The registration print/header source correction is in PR #26 (merge commit `8f43f06229100b9795f8655a8b735ccef4b7d4f7`), but visual output still requires a real print preview.
