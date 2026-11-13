@@ -589,266 +589,47 @@ export default function StudentDetailsPage({ params }) {
     w.document.close();
   }
 
-  function printBill(selectedPayment = null) {
-    if (!student || !fee) return;
-    const esc = (v) =>
-      String(v ?? "—").replace(
-        /[&<>"']/g,
-        (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch],
-      );
+  function printBill(payment) {
+    if (!student || !fee || !payment) return;
+    const esc = (v) => String(v ?? "—").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
     const money = (v) => "₹" + Number(v || 0).toLocaleString("en-IN");
-    const allPayments = (fee.payments || [])
-      .slice()
-      .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
-    const isSingle = !!selectedPayment;
-    const payment = selectedPayment || allPayments[allPayments.length - 1] || null;
-    const payable = Math.max(
-      0,
-      Number(fee.totalFee || 0) -
-        Number(fee.discount || 0) +
-        Number(fee.admissionFee || 0) +
-        Number(fee.registrationFee || 0),
-    );
-    const normalized = (p) =>
-      String(p?.paymentType || "")
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, " ")
-        .trim();
-    const sumWhere = (predicate) =>
-      allPayments.filter(predicate).reduce((n, p) => n + Number(p.amount || 0), 0);
-    const isOneTimeType = (p) => /admission|registration/.test(normalized(p));
-    const categoryAmount = (name) => {
-      if (!isSingle) {
-        if (name === "Admission Fee") return Number(fee.admissionFee || 0);
-        if (name === "Registration Fee") return Number(fee.registrationFee || 0);
-        if (name === "Instalment Fee")
-          return sumWhere(
-            (p) =>
-              !isOneTimeType(p) && /installment|instalment|course fee|general/.test(normalized(p)),
-          );
-        if (name === "Lab Charge") return sumWhere((p) => normalized(p).includes("lab"));
-        if (name === "Late Fee") return sumWhere((p) => normalized(p).includes("late"));
-        if (name === "ID - Card") return sumWhere((p) => normalized(p).includes("id card"));
-        if (name === "Examination") return sumWhere((p) => normalized(p).includes("exam"));
-        return sumWhere(
-          (p) =>
-            !isOneTimeType(p) &&
-            !/installment|instalment|course fee|general|lab|late|id card|exam/.test(normalized(p)),
-        );
-      }
-      const t = normalized(payment);
-      if (name === "Admission Fee" && t.includes("admission")) return Number(payment.amount || 0);
-      if (name === "Registration Fee" && t.includes("registration"))
-        return Number(payment.amount || 0);
-      if (name === "Instalment Fee" && /installment|instalment|course fee|general/.test(t))
-        return Number(payment.amount || 0);
-      if (name === "Lab Charge" && t.includes("lab")) return Number(payment.amount || 0);
-      if (name === "Late Fee" && t.includes("late")) return Number(payment.amount || 0);
-      if (name === "ID - Card" && t.includes("id card")) return Number(payment.amount || 0);
-      if (name === "Examination" && t.includes("exam")) return Number(payment.amount || 0);
-      if (
-        name === "Other" &&
-        !/admission|registration|installment|instalment|course fee|general|lab|late|id card|exam/.test(
-          t,
-        )
-      )
-        return Number(payment.amount || 0);
-      return 0;
-    };
-    const total = isSingle ? Number(payment.amount || 0) : payable;
-    const receiptNo = payment?.receiptNo || "—";
-    const formatDate = (v) =>
-      v ? new Date(String(v).slice(0, 10) + "T00:00:00").toLocaleDateString("en-GB") : "—";
-    const enrollmentDate = formatDate(student.admissionDate || student.createdAt);
-    const course = courses.find(
-      (x) => String(x.code || "").toUpperCase() === String(student.courseCode || "").toUpperCase(),
-    );
-    const duration = student.courseDuration || course?.duration || course?.durationText || "—";
-    const method = String(payment?.method || "")
-      .trim()
-      .toLowerCase();
-    const isCash = !!payment && method === "cash";
-    const isOnline = !!payment && !!method && method !== "cash";
-    const methodMatches = (p, label) => {
-      const m = String(p.method || "").toLowerCase();
-      if (label === "Cash") return m === "cash";
-      if (label === "Card") return m.includes("card");
-      if (label === "Bank") return m.includes("bank") || m.includes("transfer");
-      return m === "upi" || m.includes("phonepe") || m.includes("online");
-    };
-    const methods = ["Cash", "Card", "Bank", "UPI"]
-      .map((label) => {
-        const records = allPayments.filter((p) => methodMatches(p, label));
-        const active = records.length > 0;
-        return (
-          '<span class="method ' +
-          (active ? "active" : "") +
-          '"><i>' +
-          (active ? "✓" : "") +
-          "</i>" +
-          label +
-          (active
-            ? "<small>" +
-              records.length +
-              " payment" +
-              (records.length === 1 ? "" : "s") +
-              "</small>"
-            : "") +
-          "</span>"
-        );
-      })
-      .join("");
-    const history = allPayments.slice(-5).reverse();
-    const historyRows = history.length
-      ? history
-          .map(
-            (p) =>
-              '<div class="history-row ' +
-              (isSingle &&
-              String(p._id || p.receiptNo) === String(payment?._id || payment?.receiptNo)
-                ? "selected"
-                : "") +
-              '"><span>' +
-              esc(formatDate(p.date)) +
-              "</span><b>" +
-              esc((p.paymentType || "Payment") + " · " + (p.method || "—")) +
-              "</b><strong>" +
-              esc(money(p.amount)) +
-              "</strong></div>",
-          )
-          .join("")
-      : '<div class="history-empty">No payment recorded</div>';
-    const feeRows = [
-      "Admission Fee",
-      "Instalment Fee",
-      "Registration Fee",
-      "Lab Charge",
-      "Late Fee",
-      "ID - Card",
-      "Examination",
-      "Other",
-    ]
-      .map(
-        (label) =>
-          '<div class="fee-row"><span>' +
-          label +
-          "</span><b>" +
-          esc(money(categoryAmount(label))) +
-          "</b></div>",
-      )
-      .join("");
-    const proof = payment?.screenshotUrl
-      ? '<a class="upload-proof" href="' +
-        esc(payment.screenshotUrl) +
-        '" target="_blank" rel="noreferrer"><img src="' +
-        esc(payment.screenshotUrl) +
-        '" alt="Uploaded payment proof"/><span>Uploaded proof</span></a>'
-      : '<span class="upload-empty">—</span>';
-    const logoUrl = window.location.origin + "/assets/logo.png";
+    const date = payment.date ? new Date(String(payment.date).slice(0, 10) + "T00:00:00").toLocaleDateString("en-GB") : "—";
+    const installment = /installment|instalment|course fee|general/i.test(payment.paymentType || "");
+    const label = installment ? "Installment Fee" : (payment.paymentType || "Fee Payment");
+    const receiptNo = payment.receiptNo || ("RCLD/ISL/RCPT/LEGACY-" + String(payment._id || "").slice(-6).toUpperCase());
+    const amount = Number(payment.amount || 0);
+    const css = "@page{size:A5 portrait;margin:7mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#142b4f;font-size:10pt}.receipt{border:1px solid #244777;padding:7mm}.head{display:grid;grid-template-columns:22mm 1fr;gap:4mm;align-items:center;border-bottom:1px solid #244777;padding-bottom:4mm}.head img{width:20mm;height:20mm;object-fit:contain}.head h1{text-align:center;font-size:16pt;margin:0}.head h2{text-align:center;font-size:11pt;letter-spacing:.12em;margin:2mm 0 0}.meta{display:grid;grid-template-columns:1fr 1fr;gap:3mm;margin:5mm 0}.meta div{border:1px solid #b8c7d9;padding:3mm;display:flex;justify-content:space-between;gap:2mm}.student{border:1px solid #b8c7d9;padding:4mm}.student h3{margin:0 0 3mm;font-size:10pt}.student-grid{display:grid;grid-template-columns:1fr 1fr;gap:3mm}.fee-title{font-weight:800;margin:5mm 0 2mm}.fees{width:100%;border-collapse:collapse}.fees th,.fees td{border:1px solid #aebed2;padding:4mm;text-align:left}.fees th{background:#edf3fa}.fees td:last-child,.fees th:last-child{text-align:right}.total{display:flex;justify-content:space-between;border:1.5px solid #244777;padding:4mm;margin-top:4mm;font-size:14pt;font-weight:800}.words{margin-top:4mm}.sign{text-align:right;margin-top:18mm}.sign span{display:inline-block;width:55mm;border-top:1px solid #244777;text-align:center;padding-top:2mm;font-weight:700}.foot{text-align:center;margin-top:6mm;color:#536985;font-size:8pt}@media screen{body{background:#e9eef5;padding:10mm}.receipt{max-width:185mm;margin:auto;background:white;box-shadow:0 4px 20px #142b4f20}}";
+    const body = '<main class="receipt"><header class="head"><img src="/assets/logo.png" alt="RCLD logo"/><div><h1>RASHTRIYA COMPUTER LITERACY DRIVE</h1><h2>STUDENT RECEIPT</h2></div></header><div class="meta"><div><span>Receipt No.</span><b>' + esc(receiptNo) + '</b></div><div><span>Date</span><b>' + esc(date) + '</b></div></div><section class="student"><h3>STUDENT DETAILS</h3><div class="student-grid"><div><b>Name:</b> ' + esc(student.applicantName) + '</div><div><b>Enrollment:</b> ' + esc(student.enrollmentNo || student.regnNo) + '</div><div><b>Course:</b> ' + esc(student.courseName || student.courseCode) + '</div><div><b>Duration:</b> ' + esc(student.courseDuration || "—") + '</div></div></section><div class="fee-title">FEE DETAILS</div><table class="fees"><thead><tr><th>Description</th><th>Amount</th></tr></thead><tbody><tr><td>' + esc(label) + (installment && payment.installmentMonth ? "<br/>" + esc(payment.installmentMonth) : "") + '</td><td>' + esc(money(amount)) + '</td></tr></tbody></table><div class="total"><span>TOTAL RECEIVED</span><strong>' + esc(money(amount)) + '</strong></div><div class="words"><b>In words:</b> ' + esc(numberToIndianWords(amount)) + '</div><div class="sign"><span>Authorized Signature</span></div><div class="foot">RCLD – Islampur</div></main>';
     const w = window.open("", "_blank");
-    if (!w) {
-      setMessage("Please allow pop-ups to print the fee receipt.");
-      return;
-    }
-    const css =
-      "@page{size:A5 portrait;margin:4mm}" +
-      "*{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff;color:#102b59;font-family:Arial,Helvetica,sans-serif}" +
-      "body{font-size:6.7pt;line-height:1.16;-webkit-print-color-adjust:exact;print-color-adjust:exact}" +
-      ".receipt{width:140mm;height:202mm;max-height:202mm;margin:0 auto;padding:2.4mm;border:1px solid #173b78;overflow:hidden;background:#fff;display:flex;flex-direction:column;gap:1.35mm}" +
-      ".header{height:25mm;flex:0 0 25mm;display:grid;grid-template-columns:23mm 1fr;gap:2mm;align-items:center;border-bottom:1.2px solid #173b78;padding-bottom:1.5mm}.logo{width:20mm;height:18mm;object-fit:contain}.heading{text-align:center}.heading h1{margin:0;font-size:12pt;line-height:1.08;font-weight:900;color:#102b59}.heading h2{margin:1.1mm 0 .6mm;font-size:10pt;letter-spacing:.09em}.heading p{margin:0;font-size:6.5pt;font-weight:600;color:#405a7e}" +
-      ".org-strip{background:#eaf2fc;border:1px solid #c6d8ed;padding:1.35mm 1.6mm;text-align:center;font-size:5.9pt;line-height:1.35;font-weight:700}.org-strip .org-line{display:flex;justify-content:space-between;gap:1mm;white-space:nowrap}.org-strip .address{display:block;font-weight:600}" +
-      ".top{display:grid;grid-template-columns:1.12fr .88fr;gap:1.5mm;min-height:47mm}.panel{border:1px solid #173b78;min-width:0}.panel-title{background:#102b59;color:#fff;font-weight:800;font-size:7pt;letter-spacing:.04em;padding:1.3mm 1.6mm}.student-fields{padding:1.5mm;display:grid;grid-template-columns:1fr 1fr;gap:1.5mm 2mm}.field{min-width:0;display:grid;grid-template-columns:1fr;gap:.5mm}.field b{font-size:5.8pt}.field span{border:1px solid #9fb4d0;min-height:5mm;padding:1mm;overflow-wrap:anywhere;font-size:6.2pt}.field.wide{grid-column:1/-1}" +
-      ".history-box{padding:1.4mm}.methods{display:grid;grid-template-columns:repeat(4,1fr);gap:.7mm;margin-bottom:1mm}.method{border:1px solid #c5d4e6;background:#f6f9fd;text-align:center;padding:.8mm .2mm;font-size:5.5pt;font-weight:700}.method i{display:inline-grid;place-items:center;width:3mm;height:3mm;border:1px solid #173b78;font-style:normal;margin-right:.5mm}.method.active{background:#eaf2fc;border-color:#173b78}.method small{display:block;font-size:4.7pt;font-weight:500}.history-row{display:grid;grid-template-columns:1fr 1fr auto;gap:1mm;padding:.75mm 0;border-bottom:1px solid #e3eaf3;font-size:5.4pt}.history-row strong{text-align:right}.history-row.selected{background:#dcecff;border:1px solid #173b78;padding:.9mm .8mm;font-weight:800}.history-empty{padding:3mm 0;text-align:center;color:#687d99}" +
-      ".lower{display:grid;grid-template-columns:1.12fr .88fr;gap:1.5mm;min-height:76mm}.fees{border:1px solid #173b78;padding:1.5mm}.section-title{font-size:7.3pt;font-weight:900;letter-spacing:.06em;border-bottom:1px solid #173b78;padding:0 0 1mm;margin-bottom:1mm}.fee-row{display:flex;justify-content:space-between;align-items:center;min-height:6.4mm;border-bottom:1px solid #d9e4f0;padding:.6mm 1mm;font-size:6.3pt}.fee-row:nth-child(even){background:#f6f9fd}.fee-row b{min-width:24mm;text-align:right;border:1px solid #a9bdd5;padding:1mm 1.3mm;font-size:6.3pt}.sign{border:1px solid #173b78;background:#fafdff;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center;padding:3mm 2mm;min-height:76mm}.sign strong{font-size:8pt;margin-top:1mm}.sign-space{height:43mm;flex:0 0 43mm;width:100%;display:flex;align-items:flex-end;justify-content:center}.sign-line{width:72%;border-top:1px solid #173b78;padding-top:1.3mm;font-size:6pt;font-weight:700}.sign small{font-size:6pt;font-weight:800;margin-top:1mm}.total{display:flex;justify-content:space-between;align-items:center;border-top:1.4px solid #102b59;margin-top:1.4mm;padding-top:1.4mm;font-size:8pt;font-weight:900}.total strong{border:1.4px solid #173b78;padding:1.5mm 3mm;font-size:9pt;min-width:31mm;text-align:right}.words{display:grid;grid-template-columns:19mm 1fr;gap:1mm;align-items:center;margin-top:1.2mm}.words b{font-size:6pt}.words span{border:1px solid #a9bdd5;padding:1.5mm;min-height:7mm;font-size:6pt;overflow-wrap:anywhere}" +
-      ".footer{border:1px solid #173b78;display:grid;grid-template-columns:20mm 23mm 1fr 25mm;gap:1.5mm;align-items:center;padding:1.4mm 1.6mm;min-height:17mm}.pay-flag{font-size:6pt;font-weight:800;white-space:nowrap}.square{display:inline-grid;place-items:center;width:3.5mm;height:3.5mm;border:1px solid #173b78;margin-left:.7mm;font-size:7pt}.utr b,.upload b{display:block;font-size:5.8pt}.utr span{display:block;border:1px solid #a9bdd5;padding:1.2mm;min-height:6mm;font-size:5.8pt;overflow-wrap:anywhere}.utr small{font-size:4.8pt}.upload-proof{display:flex;align-items:center;gap:1mm;text-decoration:none;color:#102b59;font-size:5pt}.upload-proof img{width:9mm;height:9mm;object-fit:contain;border:1px solid #a9bdd5}.upload-empty{display:block;border:1px solid #a9bdd5;padding:1.2mm;min-height:6mm}" +
-      ".receipt-kind{text-align:right;font-size:5pt;color:#526b8b;margin-top:auto}" +
-      "@media screen{body{background:#e9eef5;padding:10mm}.receipt{box-shadow:0 4px 22px #102b5920}}" +
-      "@media print{html,body{width:140mm;height:202mm;margin:0!important;padding:0!important;overflow:hidden!important}.receipt{margin:0;width:140mm;height:202mm;max-height:202mm;box-shadow:none;transform:none;page-break-after:avoid;break-after:avoid}}";
-    const title = isSingle ? "RCLD Instalment / Payment Receipt" : "RCLD Student Fee Receipt";
-    const html =
-      '<!doctype html><html><head><meta charset="utf-8"/><title>' +
-      esc(title) +
-      "</title><style>" +
-      css +
-      '</style></head><body><main class="receipt">' +
-      '<header class="header"><img class="logo" src="' +
-      esc(logoUrl) +
-      '" alt="RCLD Islampur logo"/><div class="heading"><h2>STUDENT RECEIPT</h2><h1>RASHTRIYA COMPUTER LITERACY DRIVE</h1><p>A Mission Organised by Smith Services Pvt. Ltd.</p></div></header>' +
-      '<div class="org-strip"><div class="org-line"><span>RCLD, Islampur</span><span>AEC – Approved Under Skill Development</span><span>AEC Code: RCLD/ISL/001</span></div><span class="address">9/15, A/9, Accheletalla, Islampur</span></div>' +
-      '<div class="top"><section class="panel"><div class="panel-title">STUDENT / RECEIPT INFORMATION</div><div class="student-fields">' +
-      '<div class="field"><b>Receipt No.</b><span>' +
-      esc(receiptNo) +
-      '</span></div><div class="field"><b>Date</b><span>' +
-      esc(formatDate(payment?.date || new Date())) +
-      "</span></div>" +
-      '<div class="field"><b>Enrolment No.</b><span>' +
-      esc(student.enrollmentNo || student.regnNo || "—") +
-      '</span></div><div class="field"><b>Enrolment Date</b><span>' +
-      esc(enrollmentDate) +
-      "</span></div>" +
-      '<div class="field wide"><b>Student Name</b><span>' +
-      esc(student.applicantName || "—") +
-      "</span></div>" +
-      '<div class="field"><b>Course</b><span>' +
-      esc(student.courseName || student.courseCode || "—") +
-      '</span></div><div class="field"><b>Duration</b><span>' +
-      esc(duration) +
-      "</span></div>" +
-      '<div class="field"><b>Payment Type</b><span>' +
-      esc(payment?.paymentType || "—") +
-      '</span></div><div class="field"><b>Payment Method</b><span>' +
-      esc(payment?.method || "—") +
-      "</span></div>" +
-      '<div class="field wide"><b>Transaction / Reference</b><span>' +
-      esc(payment?.utrNumber || payment?.reference || "—") +
-      "</span></div>" +
-      '</div></section><section class="panel"><div class="panel-title">PAYMENT HISTORY</div><div class="history-box"><div class="methods">' +
-      methods +
-      "</div>" +
-      historyRows +
-      "</div></section></div>" +
-      '<div class="lower"><section class="fees"><div class="section-title">FEE DETAILS</div>' +
-      feeRows +
-      '<div class="total"><span>TOTAL</span><strong>' +
-      esc(money(total)) +
-      "</strong></div></section>" +
-      '<section class="sign"><strong>FOR RCLD – ISLAMPUR</strong><div class="sign-space"><span class="sign-line">SIGNATURE</span></div><small>AUTHORIZED SIGNATORY</small><small>WITH AFFIX SEAL</small></section></div>' +
-      '<div class="words"><b>IN WORDS</b><span>' +
-      esc(numberToIndianWords(total)) +
-      "</span></div>" +
-      '<footer class="footer"><div class="pay-flag">CASH <i class="square">' +
-      (isCash ? "✓" : "") +
-      '</i></div><div class="pay-flag">ONLINE <i class="square">' +
-      (isOnline ? "✓" : "") +
-      '</i></div><div class="utr"><b>UTR NO. <small>(If Online)</small></b><span>' +
-      esc(payment?.utrNumber || payment?.reference || "—") +
-      '</span></div><div class="upload"><b>UPLOAD</b>' +
-      proof +
-      "</div></footer>" +
-      '<div class="receipt-kind">' +
-      (isSingle ? "Individual payment receipt" : "Complete fee receipt") +
-      '</div></main><script>window.addEventListener("load",()=>{const imgs=[...document.images];Promise.all(imgs.map(img=>img.decode?img.decode().catch(()=>{}):Promise.resolve())).then(()=>setTimeout(()=>window.print(),250));});</script></body></html>';
-    w.document.open();
-    w.document.write(html);
+    if (!w) return setMessage("Please allow pop-ups to print the fee receipt.");
+    w.document.write('<!doctype html><html><head><meta charset="utf-8"/><title>RCLD Student Receipt</title><style>' + css + '</style></head><body>' + body + '<script>window.onload=()=>Promise.all([...document.images].map(i=>i.decode?.().catch(()=>{})||Promise.resolve())).then(()=>window.print())</script></body></html>');
     w.document.close();
   }
-  async function saveAttendance(e) {
-    e.preventDefault();
-    setMessage("");
-    if (!student) return;
-    const r = await fetch("/api/students/" + student._id + "/attendance", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(attForm),
-    });
-    const d = await r.json();
-    if (!r.ok) {
-      setMessage(d.error || "Unable to save attendance.");
-      return;
-    }
-    const ar = await fetch("/api/students/" + student._id + "/attendance", { cache: "no-store" });
-    setAttendance(await ar.json());
-    setMessage("Attendance saved.");
+
+  function printPaymentPurpose(payment) {
+    if (!payment?.note) return;
+    const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+    const w = window.open("", "_blank");
+    if (!w) return setMessage("Please allow pop-ups to print the payment purpose.");
+    w.document.write('<!doctype html><html><head><title>Payment Purpose</title><style>@page{size:A5 portrait;margin:10mm}body{font-family:Arial;color:#142b4f}.sheet{border:1px solid #244777;padding:8mm}.head{display:flex;align-items:center;gap:5mm;border-bottom:1px solid #244777}.head img{width:18mm;height:18mm;object-fit:contain}.purpose{border:1px solid #b8c7d9;padding:7mm;margin-top:8mm;min-height:45mm}</style></head><body><main class="sheet"><header class="head"><img src="/assets/logo.png"/><h2>RASHTRIYA COMPUTER LITERACY DRIVE<br/>PAYMENT PURPOSE</h2></header><p><b>Student:</b> ' + esc(student?.applicantName) + '</p><p><b>Receipt:</b> ' + esc(payment.receiptNo) + ' &nbsp; <b>Date:</b> ' + esc(payment.date) + ' &nbsp; <b>Amount:</b> ₹' + Number(payment.amount || 0).toLocaleString("en-IN") + '</p><section class="purpose"><b>Purpose / Note</b><p>' + esc(payment.note) + '</p></section></main></body></html>');
+    w.document.close();
+    w.onload = () => w.print();
+  }
+
+  function printFeeLedger() {
+    if (!student || !fee) return;
+    const esc = (v) => String(v ?? "—").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+    const money = (v) => "₹" + Number(v || 0).toLocaleString("en-IN");
+    const payable = Math.max(0, Number(fee.totalFee || 0) - Number(fee.discount || 0) + Number(fee.admissionFee || 0) + Number(fee.registrationFee || 0));
+    const paid = (fee.payments || []).reduce((n, p) => n + Number(p.amount || 0), 0);
+    const due = Math.max(0, payable - paid);
+    const rows = (fee.payments || []).slice().sort((x, y) => String(x.date || "").localeCompare(String(y.date || ""))).map(p => "<tr><td>" + esc(p.date) + "</td><td>" + esc(p.receiptNo) + "</td><td>" + esc(p.paymentType) + "</td><td>" + esc(p.installmentMonth) + "</td><td>" + esc(p.note) + "</td><td>" + esc(money(p.amount)) + "</td></tr>").join("");
+    const css = "@page{size:A4 landscape;margin:8mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#172b4d;font-size:9pt}.head{display:flex;align-items:center;gap:5mm;border-bottom:1px solid #244777;padding-bottom:3mm}.head img{width:18mm;height:18mm;object-fit:contain}.head h1{flex:1;text-align:center;font-size:17pt}.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:4mm;margin:4mm 0}.metric{border:1px solid #9fb1c8;padding:4mm}.metric span{display:block;color:#52647d}.metric strong{display:block;font-size:15pt;margin-top:2mm}.ledger{width:100%;border-collapse:collapse;table-layout:fixed}.ledger th,.ledger td{border:1px solid #aebed2;padding:2.5mm;text-align:left;overflow-wrap:anywhere}.ledger th{background:#edf3fa}.ledger td:last-child,.ledger th:last-child{text-align:right}";
+    const body = '<main><header class="head"><img src="/assets/logo.png"/><h1>RASHTRIYA COMPUTER LITERACY DRIVE — STUDENT FEE STATEMENT</h1></header><p><b>Student:</b> ' + esc(student.applicantName) + ' &nbsp; <b>Enrollment:</b> ' + esc(student.enrollmentNo || student.regnNo) + ' &nbsp; <b>Course:</b> ' + esc(student.courseName || student.courseCode) + '</p><section class="summary"><div class="metric"><span>Total Course Fee Payable</span><strong>' + esc(money(payable)) + '</strong></div><div class="metric"><span>Amount Paid</span><strong>' + esc(money(paid)) + '</strong></div><div class="metric"><span>Due Amount</span><strong>' + esc(money(due)) + '</strong></div></section><table class="ledger"><thead><tr><th>Date</th><th>Receipt No.</th><th>Payment Type</th><th>Installment</th><th>Purpose / Note</th><th>Amount</th></tr></thead><tbody>' + (rows || '<tr><td colspan="6">No payments recorded</td></tr>') + '</tbody></table></main>';
+    const w = window.open("", "_blank");
+    if (!w) return setMessage("Please allow pop-ups to print the fee statement.");
+    w.document.write('<!doctype html><html><head><title>RCLD Fee Statement</title><style>' + css + '</style></head><body>' + body + '<script>window.onload=()=>window.print()</script></body></html>');
+    w.document.close();
   }
 
   return (
@@ -1042,7 +823,7 @@ export default function StudentDetailsPage({ params }) {
                         />
                       </label>
                       <label className="form-field">
-                        <span>Payment Note</span>
+                        <span>Payment Purpose / Note</span>
                         <input
                           value={editForm.paymentNote ?? ""}
                           onChange={(e) =>
@@ -2146,7 +1927,7 @@ export default function StudentDetailsPage({ params }) {
                             />
                           </label>
                           <label className="form-field">
-                            <span>Payment Date *</span>
+                            <span>Payment Date (fee counter) *</span>
                             <input
                               type="date"
                               required
@@ -2274,77 +2055,41 @@ export default function StudentDetailsPage({ params }) {
                     <section className="fee-modal-section fee-history-section">
                       <div className="fee-modal-section-heading">
                         <div>
-                          <h3>Complete Payment History</h3>
-                          <p>All payment records available for this student, newest first</p>
+                          <h3>Payment History</h3>
+                          <p>Only the course fee payable, amount paid and remaining due are shown here</p>
                         </div>
-                        <span className="fee-section-tag">
-                          {(fee?.payments || []).length} RECORDS
-                        </span>
+                        <button type="button" className="ghost-btn" onClick={printFeeLedger}>
+                          <Printer size={15} /> Print Full Fee Statement
+                        </button>
+                      </div>
+                      <div className="fee-history-total fee-summary-totals">
+                        <span>Total course fee payable: <strong>₹{Number(fee?.payable || 0).toLocaleString("en-IN")}</strong></span>
+                        <span>Amount paid: <strong>₹{Number(fee?.paid || 0).toLocaleString("en-IN")}</strong></span>
+                        <span>Due amount: <strong>₹{Math.max(0, Number(fee?.payable || 0) - Number(fee?.paid || 0)).toLocaleString("en-IN")}</strong></span>
                       </div>
                       {(fee?.payments || []).length === 0 ? (
                         <div className="empty">No payment history recorded yet.</div>
                       ) : (
-                        <div className="table-wrap fee-history-table-wrap">
-                          <table className="fee-history-table">
-                            <thead>
-                              <tr>
-                                <th>Receipt No.</th>
-                                <th>Date</th>
-                                <th>Type / Installment</th>
-                                <th>Method</th>
-                                <th>UTR / Reference</th>
-                                <th>Amount</th>
-                                <th>Recorded By</th>
-                                <th>Receipt</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {fee.payments
-                                .slice()
-                                .sort((a, b) =>
-                                  String(b.date || "").localeCompare(String(a.date || "")),
-                                )
-                                .map((p, i) => (
-                                  <tr key={p._id || p.receiptNo || i}>
-                                    <td>
-                                      <strong>{p.receiptNo || "Pending"}</strong>
-                                    </td>
-                                    <td>{p.date || "—"}</td>
-                                    <td>
-                                      {p.paymentType || "General"}
-                                      <small>{p.installmentMonth || p.dueDate || "—"}</small>
-                                    </td>
-                                    <td>{p.method || "—"}</td>
-                                    <td>{p.utrNumber || p.reference || "—"}</td>
-                                    <td className="fee-history-amount">
-                                      ₹{Number(p.amount || 0).toLocaleString("en-IN")}
-                                    </td>
-                                    <td>{p.recordedBy || "—"}</td>
-                                    <td>
-                                      <button
-                                        type="button"
-                                        className="fee-print-row"
-                                        onClick={() => printBill(p)}
-                                      >
-                                        <Printer size={14} /> Print
-                                      </button>
-                                    </td>
-                                  </tr>
-                                ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                      {(fee?.payments || []).length > 0 && (
-                        <div className="fee-history-total">
-                          <span>Lifetime collections</span>
-                          <strong>₹{Number(fee?.paid || 0).toLocaleString("en-IN")}</strong>
+                        <div className="fee-history-actions-list">
+                          {fee.payments.slice().sort((a, b) => String(b.date || "").localeCompare(String(a.date || ""))).map((p, i) => (
+                            <div className="fee-history-action-row" key={p._id || p.receiptNo || i}>
+                              <span>{p.date || "Payment date not set"}</span>
+                              <div>
+                                <button type="button" className="fee-print-row" onClick={() => printBill(p)}>
+                                  <Printer size={14} /> Print Receipt
+                                </button>
+                                {p.note && <button type="button" className="fee-print-row" onClick={() => printPaymentPurpose(p)}>
+                                  <Printer size={14} /> Print Purpose
+                                </button>}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       )}
                     </section>
                   </div>
                   <footer className="fee-modal-footer">
-                    <span>Print format remains a compact half-page receipt.</span>
+                    <span>Individual receipts print as A5; the complete fee statement prints in landscape A4.</span>
                     <button
                       type="button"
                       className="ghost-btn"
