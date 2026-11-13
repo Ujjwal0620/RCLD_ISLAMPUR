@@ -70,7 +70,7 @@ export async function GET(request) {
         "employeeId","loginId","name","mobile","email","designation","department","gender","employmentType","address",
         "emergencyContactName","emergencyContactNumber","notes","skills","age","dateOfBirth","joiningDate",
         "salary","salaryFrequency","offDays","status","leaveBalance.casual","leaveBalance.sick",
-        "leaveBalance.earned","leaveBalance.other"
+        "leaveBalance.earned","leaveBalance.other","createdAt","updatedAt"
       ];
       filter.$or = searchableFields.map(field => ({ [field]: rx }));
       const numericSearch = Number(search);
@@ -112,6 +112,18 @@ export async function GET(request) {
     for (const [key, field] of [["casualLeaveMin","leaveBalance.casual"],["sickLeaveMin","leaveBalance.sick"],["earnedLeaveMin","leaveBalance.earned"],["otherLeaveMin","leaveBalance.other"]]) {
       const value = searchParams.get(key);
       if (value !== null && value !== "") filter[field] = { $gte: Number(value) };
+    }
+    const createdFrom = searchParams.get("createdFrom"), createdTo = searchParams.get("createdTo");
+    if (createdFrom || createdTo) {
+      filter.createdAt = {};
+      if (createdFrom) filter.createdAt.$gte = new Date(createdFrom + "T00:00:00.000Z");
+      if (createdTo) filter.createdAt.$lte = new Date(createdTo + "T23:59:59.999Z");
+    }
+    const updatedFrom = searchParams.get("updatedFrom"), updatedTo = searchParams.get("updatedTo");
+    if (updatedFrom || updatedTo) {
+      filter.updatedAt = {};
+      if (updatedFrom) filter.updatedAt.$gte = new Date(updatedFrom + "T00:00:00.000Z");
+      if (updatedTo) filter.updatedAt.$lte = new Date(updatedTo + "T23:59:59.999Z");
     }
     const joiningFrom = searchParams.get("joiningFrom"), joiningTo = searchParams.get("joiningTo");
     if (joiningFrom || joiningTo) {
