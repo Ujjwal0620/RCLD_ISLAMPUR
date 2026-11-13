@@ -98,20 +98,20 @@ export async function GET(request) {
       if (admissionFrom) filter.admissionDate.$gte = admissionFrom;
       if (admissionTo) filter.admissionDate.$lte = admissionTo;
     }
-    for (const field of ["sameAsPresentAddress","enclosures.stampPhoto","enclosures.qualifyingCertificates","enclosures.matricAdmitCard"]) {
-      const value = searchParams.get(field);
+    for (const [key, field] of [["sameAsPresentAddress","sameAsPresentAddress"],["stampPhoto","enclosures.stampPhoto"],["qualifyingCertificates","enclosures.qualifyingCertificates"],["matricAdmitCard","enclosures.matricAdmitCard"]]) {
+      const value = searchParams.get(key);
       if (value === "true" || value === "false") filter[field] = value === "true";
     }
     for (const field of ["photoUrl","signatureUrl"]) {
       const key = field === "photoUrl" ? "hasPhoto" : "hasSignature";
       const value = searchParams.get(key);
       if (value === "yes") filter[field] = { $exists: true, $nin: ["", null] };
-      if (value === "no") filter.$or = [...(filter.$or || []), { [field]: { $exists: false } }, { [field]: "" }, { [field]: null }];
+      if (value === "no") filter.$and = [...(filter.$and || []), { $or: [{ [field]: { $exists: false } }, { [field]: "" }, { [field]: null }] }];
     }
     const qualification = (searchParams.get("qualification") || "").trim();
     if (qualification) {
       const qualificationRx = new RegExp(escapeRegex(qualification), "i");
-      filter.$or = [...(filter.$or || []), ...["qualifications.examCourse","qualifications.boardUniversity","qualifications.collegeInstitute","qualifications.year","qualifications.percentage"].map(field => ({ [field]: qualificationRx }))];
+      filter.$and = [...(filter.$and || []), { $or: ["qualifications.examCourse","qualifications.boardUniversity","qualifications.collegeInstitute","qualifications.year","qualifications.percentage"].map(field => ({ [field]: qualificationRx })) }];
     }
     if (sex) filter.sex = sex;
     if (course) filter.courseName = course;"), "i");
