@@ -239,6 +239,34 @@ export default function StudentDetailsPage({ params }) {
   const [transitioning, setTransitioning] = useState(false);
   const [icardDialogOpen, setIcardDialogOpen] = useState(false);
   const [selectedCfkSemester, setSelectedCfkSemester] = useState("SEM 1");
+  const [semesterBusy, setSemesterBusy] = useState(false);
+
+  async function updateCfkSemester(action) {
+    if (!student?._id || semesterBusy) return;
+    const promptText = action === "complete"
+      ? "Confirm that the current Coding for Kids semester has been completed?"
+      : "Confirm readmission to the next Coding for Kids semester and apply its new fee plan?";
+    if (!window.confirm(promptText)) return;
+    setSemesterBusy(true);
+    setMessage("");
+    try {
+      const response = await fetch("/api/students/" + student._id + "/semester", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to update semester.");
+      setStudent(current => ({ ...current, currentSemester: data.currentSemester, semesterStatus: data.semesterStatus }));
+      setSelectedCfkSemester("SEM " + data.currentSemester);
+      await loadOperational(student._id);
+      setMessage(data.message || "Semester updated.");
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setSemesterBusy(false);
+    }
+  }
 
   async function loadOperational(id) {
     const [fr, ar] = await Promise.all([
@@ -434,7 +462,7 @@ export default function StudentDetailsPage({ params }) {
     const upper = (v) => esc(String(v ?? "").trim().toUpperCase());
     const courseText = String(student.courseName || student.courseCode || "").trim();
     const isCFK = /coding\s*for\s*kids|\bCFK\b/i.test(courseText);
-    const semesterOptions = ["SEM 1", "SEM 2", "SEM 3", "SEM 4", "SEM 5", "SEM 6", "Robotics"];
+    const semesterOptions = ["SEM 1", "SEM 2", "SEM 3", "SEM 4", "SEM 5", "SEM 6"];
     const semesterColors = {
       "SEM 1": "#ec008c",
       "SEM 2": "#269b52",
@@ -956,7 +984,7 @@ export default function StudentDetailsPage({ params }) {
                 onClick={() => {
                   const courseText = String(student.courseName || student.courseCode || "");
                   if (/coding\s*for\s*kids|\bCFK\b/i.test(courseText)) {
-                    setSelectedCfkSemester("SEM 1");
+                    setSelectedCfkSemester("SEM " + Number(student.currentSemester || 1));
                     setIcardDialogOpen(true);
                   } else {
                     printStudentICard();
@@ -999,6 +1027,28 @@ export default function StudentDetailsPage({ params }) {
       )}
       {student && (
         <main className="student-details student-profile-page">
+          {String(student.courseCode || "").toUpperCase() === "KIDS" && (
+            <section className="detail-section">
+              <div className="detail-section-title">
+                <CalendarDays size={17} />
+                <div><h3>Coding for Kids Semester</h3><span>Six semesters · six months each · ₹500 / ₹600 / ₹700 monthly tuition by semester, plus ₹500 admission fee per semester</span></div>
+              </div>
+              <div className="student-summary-grid compact">
+                <div className="summary-card"><span>Current Semester</span><strong>SEM {Number(student.currentSemester || 1)}</strong></div>
+                <div className="summary-card"><span>Semester Status</span><strong>{student.semesterStatus || "Active"}</strong></div>
+                <div className="summary-card"><span>Semester Fee</span><strong>₹{Number(fee?.totalFee || 0) + Number(fee?.admissionFee || 0)}</strong></div>
+                <div className="summary-card"><span>Semester History</span><strong>{(student.semesterHistory || []).length} / 6</strong></div>
+              </div>
+              <div className="inline-operation-form">
+                <div className="top-actions">
+                  <button type="button" className="primary-btn" disabled={semesterBusy || student.semesterStatus === "Completed"} onClick={() => updateCfkSemester("complete")}>{semesterBusy ? "Saving…" : "Mark Current Semester Completed"}</button>
+                  <button type="button" className="primary-btn" disabled={semesterBusy || student.semesterStatus !== "Completed" || Number(student.currentSemester || 1) >= 6} onClick={() => updateCfkSemester("readmit")}>{semesterBusy ? "Saving…" : "Readmit to Next Semester"}</button>
+                </div>
+                {Number(student.currentSemester || 1) >= 6 && student.semesterStatus === "Completed" && <p>All six semesters are completed. No further readmission is available.</p>}
+                <div className="table-wrap"><table><thead><tr><th>Semester</th><th>Status</th><th>Admission Date</th><th>Completion Date</th><th>Semester Total</th></tr></thead><tbody>{(student.semesterHistory || []).map((item,index)=><tr key={item.semester || index}><td>SEM {item.semester}</td><td>{item.status}</td><td>{item.admittedAt || "—"}</td><td>{item.completedAt || "—"}</td><td>₹{Number(item.totalFee || (Number(item.admissionFee || 0) + Number(item.tuitionFee || 0))).toLocaleString("en-IN")}</td></tr>)}</tbody></table></div>
+              </div>
+            </section>
+          )}
           {icardDialogOpen && (
             <div className="cfk-dialog-backdrop" role="presentation" onMouseDown={(event) => {
               if (event.target === event.currentTarget) setIcardDialogOpen(false);
@@ -1016,15 +1066,8 @@ export default function StudentDetailsPage({ params }) {
                   <strong>{student.applicantName}</strong>
                   <span>{student.enrollmentNo || student.studentId || student.admissionNo || "Student ID not available"}</span>
                 </div>
-                <label className="form-field cfk-semester-field">
-                  <span>Semester / Module</span>
-                  <select value={selectedCfkSemester} onChange={(event) => setSelectedCfkSemester(event.target.value)}>
-                    {["SEM 1", "SEM 2", "SEM 3", "SEM 4", "SEM 5", "SEM 6", "Robotics"].map((semester) => (
-                      <option key={semester} value={semester}>{semester}</option>
-                    ))}
-                  </select>
-                </label>
-                <div className="cfk-dialog-note">The selected module's colour and label will be applied to the Coding For Kids I-Card (5.5 cm × 8.5 cm).</div>
+                <div className="cfk-dialog-student"><strong>Current Semester</strong><span>{selectedCfkSemester}</span></div>
+                <div className="cfk-dialog-note">The I-Card always prints the semester saved in this student's admission and readmission history.</div>
                 <footer className="cfk-dialog-actions">
                   <button type="button" className="ghost-btn" onClick={() => setIcardDialogOpen(false)}>Cancel</button>
                   <button type="button" className="primary-btn" onClick={() => {
