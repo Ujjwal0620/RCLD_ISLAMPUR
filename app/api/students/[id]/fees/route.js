@@ -17,6 +17,7 @@ const PaymentSchema = new mongoose.Schema({
   note: String,
   paymentType: { type: String, default: "General" },
   installmentMonth: String,
+  semester: Number,
 }, { _id: true });
 
 const FeeSchema = new mongoose.Schema({
@@ -26,6 +27,8 @@ const FeeSchema = new mongoose.Schema({
   admissionFee: { type: Number, default: 0 },
   registrationFee: { type: Number, default: 0 },
   admissionDate: String,
+  currentSemester: Number,
+  semesterHistory: { type: [mongoose.Schema.Types.Mixed], default: [] },
   payments: { type: [PaymentSchema], default: [] },
   updatedBy: String,
 }, { timestamps: true });
@@ -65,7 +68,10 @@ function feeSummary(record) {
   const tuitionAfterDiscount = Math.max(0, Number(record.totalFee || 0) - Number(record.discount || 0));
   const oneTimeFees = Number(record.admissionFee || 0) + Number(record.registrationFee || 0);
   const payable = tuitionAfterDiscount + oneTimeFees;
-  const paid = (record.payments || []).reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+  const allPayments = record.payments || [];
+  const semesterPayments = record.currentSemester ? allPayments.filter(payment => Number(payment.semester || (record.currentSemester === 1 ? 1 : 0)) === Number(record.currentSemester)) : allPayments;
+  const paid = semesterPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+  const historicalPaid = allPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
   const dueBeforeFine = Math.max(0, payable - paid);
   const start = record.admissionDate ? new Date(record.admissionDate + "T00:00:00") : null;
   const now = new Date();
@@ -79,7 +85,7 @@ function feeSummary(record) {
     }
   }
   const lateFine = lateMonths * 50;
-  return { ...record, tuitionAfterDiscount, oneTimeFees, payable, paid, lateFine, due: dueBeforeFine + lateFine };
+  return { ...record, tuitionAfterDiscount, oneTimeFees, payable, paid, historicalPaid, lateFine, due: dueBeforeFine + lateFine };
 }
 
 export async function GET(request, { params }) {
@@ -189,6 +195,7 @@ export async function POST(request, { params }) {
             note: body.payment.note || "",
             paymentType: body.payment.paymentType || "General",
             installmentMonth: body.payment.installmentMonth || "",
+            semester: Number((await StudentFee.findOne({ studentId: id }).select("currentSemester").lean())?.currentSemester || 0) || undefined,
           },
         },
       };
