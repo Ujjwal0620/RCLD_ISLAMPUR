@@ -2435,6 +2435,7 @@ export default function StudentDetailsPage({ params }) {
                                 <th>Receipt No.</th>
                                 <th>Date</th>
                                 <th>Type / Installment</th>
+                                <th>Semester</th>
                                 <th>Method</th>
                                 <th>UTR / Reference</th>
                                 <th>Amount</th>
@@ -2458,6 +2459,7 @@ export default function StudentDetailsPage({ params }) {
                                       {p.paymentType || "General"}
                                       <small>{p.installmentMonth || p.dueDate || "—"}</small>
                                     </td>
+                                    <td>{p.semester ? "SEM " + p.semester : "—"}</td>
                                     <td>{p.method || "—"}</td>
                                     <td>{p.utrNumber || p.reference || "—"}</td>
                                     <td className="fee-history-amount">
@@ -2481,8 +2483,9 @@ export default function StudentDetailsPage({ params }) {
                       )}
                       <div className="fee-history-total fee-history-summary">
                         <span>Total Course Fee: <strong>₹{Number(fee?.payable ?? (Number(fee?.totalFee || 0) - Number(fee?.discount || 0) + Number(fee?.admissionFee || 0) + Number(fee?.registrationFee || 0) + Number(fee?.lateFine || 0))).toLocaleString("en-IN")}</strong></span>
-                        <span>Amount Paid: <strong>₹{Number(fee?.paid ?? (fee?.payments || []).reduce((sum, p) => sum + Number(p.amount || 0), 0)).toLocaleString("en-IN")}</strong></span>
-                        <span>Amount Due: <strong>₹{Number(fee?.due ?? Math.max(0, Number(fee?.payable ?? (Number(fee?.totalFee || 0) - Number(fee?.discount || 0) + Number(fee?.admissionFee || 0) + Number(fee?.registrationFee || 0) + Number(fee?.lateFine || 0))) - Number(fee?.paid ?? (fee?.payments || []).reduce((sum, p) => sum + Number(p.amount || 0), 0)))).toLocaleString("en-IN")}</strong></span>
+                        <span>Current Semester Paid: <strong>₹{Number(fee?.paid ?? (fee?.payments || []).reduce((sum, p) => sum + Number(p.amount || 0), 0)).toLocaleString("en-IN")}</strong></span>
+                        <span>All Semesters Paid: <strong>₹{Number(fee?.historicalPaid ?? (fee?.payments || []).reduce((sum, p) => sum + Number(p.amount || 0), 0)).toLocaleString("en-IN")}</strong></span>
+                        <span>Current Semester Due: <strong>₹{Number(fee?.due ?? Math.max(0, Number(fee?.payable ?? (Number(fee?.totalFee || 0) - Number(fee?.discount || 0) + Number(fee?.admissionFee || 0) + Number(fee?.registrationFee || 0) + Number(fee?.lateFine || 0))) - Number(fee?.paid ?? (fee?.payments || []).reduce((sum, p) => sum + Number(p.amount || 0), 0)))).toLocaleString("en-IN")}</strong></span>
                       </div>
                     </section>
                   </div>
