@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { connectMongoDB } from "@/lib/mongodb";
 import Course from "@/models/Course";
 import { COURSE_CATALOG, suggestedClassesPerWeek } from "@/data/courseCatalog";
@@ -6,7 +7,7 @@ async function ensureCatalog(){
   for(const item of COURSE_CATALOG){
     await Course.updateOne({code:item.code},{$setOnInsert:{...item,classesPerWeek:suggestedClassesPerWeek(item.durationMonths),source:"RCLD Islampur website/catalog"}},{upsert:true});
   }
-  const db = (await import("mongoose")).default.connection.db;
+  const db = mongoose.connection.db;
   const migrations = db.collection("rcld_data_migrations");
   const marker = "official-course-fees-and-cfk-semesters-v1";
   if (!(await migrations.findOne({_id:marker}))) {
