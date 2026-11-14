@@ -1029,7 +1029,7 @@ export default function StudentDetailsPage({ params }) {
       )}
       {student && (
         <main className="student-details student-profile-page">
-          {String(student.courseCode || "").toUpperCase() === "KIDS" && (
+          {(String(student.courseCode || "").toUpperCase() === "KIDS" || /coding\s*for\s*kids/i.test(String(student.courseName || ""))) && (
             <section className="detail-section">
               <div className="detail-section-title">
                 <CalendarDays size={17} />
