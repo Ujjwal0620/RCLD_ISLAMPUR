@@ -7,7 +7,7 @@ import RCLDLogo from "@/components/RCLDLogo";
 import indiaLocations from "@/lib/indiaStatesDistricts.json";
 
 const initial = {
-  formNo: "", aecCode: "RCLD/ISL-001", regnNo: "", enrollmentNo: "", admissionDate: new Date().toISOString().slice(0,10), courseName: "", courseCode: "", applicantName: "", email: "", aadhaarNumber: "", referralId: "",
+  formNo: "", aecCode: "RCLD/ISL-001", regnNo: "", enrollmentNo: "", currentSemester: 1, admissionDate: new Date().toISOString().slice(0,10), courseName: "", courseCode: "", applicantName: "", email: "", aadhaarNumber: "", referralId: "",
   nationality: "", dateOfBirth: "", sex: "", fatherOrHusbandName: "", address: "", presentAddress: "", permanentAddress: "", sameAsPresentAddress: true, district: "", state: "", postOffice: "", policeStation: "", nearestLandmark: "", permanentPin: "", permanentDistrict: "", permanentState: "", permanentPostOffice: "", permanentNearestLandmark: "", guardianContactNumber: "", photoUrl: "", signatureUrl: "",
   pin: "", whatsappNumber: "", mobileNumber: "",
   qualifications: [{ examCourse: "", boardUniversity: "", collegeInstitute: "", year: "", percentage: "" }],
@@ -60,7 +60,7 @@ export default function RegisterStudentPage() {
 
   useEffect(() => { fetch("/api/courses",{cache:"no-store"}).then(r=>r.json()).then(d=>setCourses(d.courses||[])).catch(()=>{}); fetch("/api/referrals",{cache:"no-store"}).then(r=>r.json()).then(d=>setReferrals((d.referrals||[]).filter(x=>x.status==="Active"))).catch(()=>{}); }, []);
 
-  const selectCourse = (code) => { const c = courses.find(x=>x.code===code); setSelectedCourse(c||null); setForm(current=>({...current,courseCode:c?.code||"",courseName:c?.name||""})); };
+  const selectCourse = (code) => { const c = courses.find(x=>x.code===code); setSelectedCourse(c||null); setForm(current=>({...current,courseCode:c?.code||"",courseName:c?.name||"",currentSemester:1})); };
 
   const update = (key, value) => {
     setForm((current) => ({ ...current, [key]: value }));
@@ -177,7 +177,7 @@ export default function RegisterStudentPage() {
             <Field label="Course Code" name="courseCode" value={form.courseCode} onChange={update}/>
             <label className="form-field"><span>Referral / Marketing Source</span><select value={form.referralId} onChange={e=>update("referralId",e.target.value)}><option value="">Direct / No referral</option>{referrals.map(r=><option key={r._id} value={r._id}>{r.name} — {r.marketingEmployeeName}</option>)}</select></label>
           </div>
-          {selectedCourse&&<div className="course-fee-summary"><div><span>Course Fee</span><strong>₹{Number(selectedCourse.fee||0).toLocaleString("en-IN")}</strong></div><div><span>Admission Fee</span><strong>₹{Number(selectedCourse.admissionFee||0).toLocaleString("en-IN")}</strong></div><div><span>Initial Payable</span><strong>₹{(Number(selectedCourse.fee||0)+Number(selectedCourse.admissionFee||0)).toLocaleString("en-IN")}</strong></div></div>}
+          {selectedCourse?.code === "KIDS" ? <div className="course-fee-summary"><div><span>Initial Semester</span><strong><select aria-label="Initial Coding for Kids semester" value={form.currentSemester} onChange={e=>update("currentSemester",Number(e.target.value))}>{(selectedCourse.semesterPlans||[]).map(plan=><option key={plan.semester} value={plan.semester}>SEM {plan.semester}</option>)}</select></strong></div>{(() => { const plan=(selectedCourse.semesterPlans||[]).find(x=>x.semester===Number(form.currentSemester)); return plan ? <><div><span>Admission Fee</span><strong>₹{Number(plan.admissionFee).toLocaleString("en-IN")}</strong></div><div><span>Monthly × 6</span><strong>₹{Number(plan.monthlyFee).toLocaleString("en-IN")} × 6</strong></div><div><span>Semester Total</span><strong>₹{Number(plan.totalFee).toLocaleString("en-IN")}</strong></div></> : null; })()}</div> : selectedCourse ? <div className="course-fee-summary"><div><span>Total Course Fee (Admission Included)</span><strong>₹{Number(selectedCourse.fee||0).toLocaleString("en-IN")}</strong></div><div><span>Initial Payable</span><strong>₹{(Number(selectedCourse.fee||0)+Number(selectedCourse.admissionFee||0)).toLocaleString("en-IN")}</strong></div></div> : null}
         </section>
 
         <section className="form-section rcld-form-section rcld-applicant-section">

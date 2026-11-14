@@ -16,6 +16,7 @@ const StudentSchema = new mongoose.Schema({
   qualifications:[{examCourse:String,boardUniversity:String,collegeInstitute:String,year:String,percentage:String}],
   enclosures:{stampPhoto:Boolean,qualifyingCertificates:Boolean,matricAdmitCard:Boolean},
   declarationDate:String,declarationPlace:String,signatureApplicant:String,signatureUrl:String,photoUrl:String,
+  currentSemester:{type:Number,min:1,max:6},semesterStatus:{type:String,enum:["Not Started","Active","Completed"],default:"Not Started"},semesterHistory:{type:[mongoose.Schema.Types.Mixed],default:[]},
   status:{type:String,default:"Admission Pending"}
 },{timestamps:true});
 const Student=mongoose.models.Student||mongoose.model("Student",StudentSchema);
@@ -45,7 +46,7 @@ export async function PATCH(req,{params}){
     const allowed=[
       "formNo","aecCode","regnNo","enrollmentNo","admissionDate","guardianContactNumber","dueAmount","paymentStatus","sourceCourseLabel","importSource","courseName","courseCode","applicantName","nationality","dateOfBirth","sex","fatherOrHusbandName",
       "address","presentAddress","permanentAddress","sameAsPresentAddress","postOffice","policeStation","nearestLandmark","district","state","permanentPostOffice","permanentNearestLandmark","permanentPin","permanentDistrict","permanentState","pin","whatsappNumber","guardianContactNumber","mobileNumber","email","aadhaarNumber","referralId","referralName","marketingEmployeeId","marketingEmployeeName","qualifications","batchId","batchCode",
-      "enclosures","declarationDate","declarationPlace","signatureApplicant","signatureUrl","photoUrl","status"
+      "enclosures","declarationDate","declarationPlace","signatureApplicant","signatureUrl","photoUrl","currentSemester","semesterStatus","semesterHistory","status"
     ];
     const update={};
     for(const k of allowed)if(body[k]!==undefined)update[k]=body[k];
