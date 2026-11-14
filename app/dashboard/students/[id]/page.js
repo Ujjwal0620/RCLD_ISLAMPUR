@@ -517,6 +517,7 @@ export default function StudentDetailsPage({ params }) {
     const distLine = student.district ? `Dist. ${student.district}` : "";
     const stateLine = [student.state, student.pin ? `PIN ${student.pin}` : ""].filter(Boolean).join(" - ");
     const addressLines = [addrMain, poLine, distLine, stateLine].filter((x) => String(x).trim());
+    const cfkAddressLines = [addrMain, poLine, distLine].filter((x) => String(x).trim());
 
     const icon = (type, color) => {
       const c = esc(color);
@@ -560,11 +561,11 @@ export default function StudentDetailsPage({ params }) {
             <path d="M0 195L176 332L0 281Z" fill="#ec008c"/>
             <path d="M490 195L314 332L490 281Z" fill="#ec008c"/>
             <path d="M0 556C36 548 88 560 91 594C94 630 55 654 0 656Z" fill="#ec008c"/>
-            <path d="M0 666L62 704H0Z" fill="#ec008c"/>
-            <path d="M490 666L428 704H490Z" fill="#ec008c"/>
-            <rect x="0" y="704" width="490" height="46" fill="#ec008c"/>
-            <path d="M0 724L34 750H13L0 740Z" fill="#fff"/>
-            <path d="M490 724L456 750H477L490 740Z" fill="#fff"/>
+            <path d="M0 680L43 716H0Z" fill="#ec008c"/>
+            <path d="M490 680L447 716H490Z" fill="#ec008c"/>
+            <rect x="0" y="716" width="490" height="34" fill="#ec008c"/>
+            <path d="M0 716L35 750H13L0 738Z" fill="#fff"/>
+            <path d="M490 716L455 750H477L490 738Z" fill="#fff"/>
           </svg>
           <div class="cfk-top"><img class="cfk-logo" src="${logoUrl}" alt="RCLD"/><span class="cfk-rcld">RCLD</span></div>
           <div class="cfk-tag"><b>Rashtriya Computer Literacy Drive</b><span>A mission encouraged by</span><b>Govt. of India</b></div>
@@ -575,7 +576,7 @@ export default function StudentDetailsPage({ params }) {
             <div class="r"><b>ID No :</b><span>${idPrefix}${idNumber ? `<em>${idNumber}</em>` : ""}</span></div>
             <div class="r"><b>Date of Admn. :</b><span>${issueDate}</span></div>
             <div class="r"><b>Father's Name :</b><span>${esc(student.fatherOrHusbandName)}</span></div>
-            <div class="r"><b>Address :</b><span>${addressLines.map((l) => esc(l)).join("<br/>")}</span></div>
+            <div class="r"><b>Address :</b><span>${cfkAddressLines.map((l) => esc(l)).join("<br/>")}</span></div>
           </div>
           <div class="cfk-badge">${badgeHtml}</div>
           <div class="cfk-sign">${scribble("#1c2b4a")}<small>Issuing Authority</small></div>
@@ -630,30 +631,31 @@ export default function StudentDetailsPage({ params }) {
         .scribble{display:block;width:8mm;height:3.2mm;margin:0 auto}
 
         /* ===================== CODING FOR KIDS ===================== */
-        .cfk-top{top:3mm;left:0;right:0;display:flex;justify-content:center;align-items:center;gap:1mm}
+        .cfk{border:.15mm solid #aeb4b8}
+        .cfk-top{top:2.7mm;left:0;right:0;display:flex;justify-content:center;align-items:center;gap:1mm}
         .cfk-logo{width:5.2mm;height:5.2mm;object-fit:contain;background:transparent;border-radius:0}
         .cfk-rcld{font-family:"Arial Black",Arial,Helvetica,sans-serif;font-weight:900;font-size:7.4mm;line-height:1;letter-spacing:.3mm;color:#fff}
-        .cfk-tag{top:10.1mm;left:0;right:0;text-align:center;color:#fff;line-height:2.1mm}
+        .cfk-tag{top:9mm;left:0;right:0;text-align:center;color:#fff;line-height:2.1mm}
         .cfk-tag b{display:block;font-size:1.6mm;font-weight:700;letter-spacing:.02mm}
         .cfk-tag span{display:block;font-size:1.45mm}
-        .cfk-photo{left:14.6mm;top:15.8mm;width:25.8mm;height:25.8mm;border-radius:50%;border:.8mm solid #fff;overflow:hidden;background:#fff}
-        .cfk-name{left:1mm;right:1mm;top:41.8mm;text-align:center;font-weight:700;line-height:1.15;color:#3f4b53;white-space:nowrap}
-        .cfk-course{left:0;right:0;top:48.9mm;text-align:center;font-size:2mm;line-height:1.8mm;font-weight:800;letter-spacing:.12mm;color:#3f4b53}
-        .cfk-info{left:0;right:1.5mm;top:53.5mm;font-size:1.72mm;line-height:2.36mm}
+        .cfk-photo{left:14.6mm;top:15.4mm;width:25.8mm;height:25.8mm;border-radius:50%;border:.8mm solid #fff;overflow:hidden;background:#fff}
+        .cfk-name{left:1mm;right:1mm;top:41.6mm;text-align:center;font-weight:700;line-height:1.15;color:#3f4b53;white-space:nowrap}
+        .cfk-course{left:0;right:0;top:47.8mm;text-align:center;font-size:2.15mm;line-height:1.8mm;font-weight:800;letter-spacing:.12mm;color:#3f4b53}
+        .cfk-info{left:0;right:1.5mm;top:52.1mm;font-size:1.82mm;line-height:2.36mm}
         .cfk-info .r{display:grid;grid-template-columns:24.9mm minmax(0,1fr);column-gap:1.6mm;align-items:start}
         .cfk-info b{text-align:right;white-space:nowrap;font-weight:700;color:var(--sem)}
         .cfk-info span{font-weight:600;color:#3a3a3a;overflow-wrap:anywhere;min-width:0}
         .cfk-info em{font-style:normal;font-size:2.15mm;font-weight:800;color:#333}
-        .cfk-badge{left:0;top:63.8mm;width:11.4mm;height:11.2mm;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-weight:800;line-height:1;padding-right:.6mm}
+        .cfk-badge{left:0;top:63.2mm;width:11.4mm;height:11.2mm;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-weight:800;line-height:1;padding-right:.6mm}
         .cfk-badge small{font-size:2.1mm;line-height:2.2mm}
         .cfk-badge strong{font-size:4.6mm;line-height:4.4mm}
         .cfk-badge .robo{font-size:2.5mm;line-height:2.7mm;text-align:center}
-        .cfk-sign{right:4.5mm;top:69.4mm;width:12mm;text-align:center}
+        .cfk-sign{right:2.5mm;top:69.4mm;width:12mm;text-align:center}
         .cfk-sign small{display:block;font-size:1.35mm;font-style:italic;color:#1c2b4a;line-height:1.5mm;margin-top:.2mm}
-        .cfk-foot1{left:0;right:0;top:75.6mm;text-align:center;font-size:1.68mm;line-height:1.8mm;font-weight:700;color:#2f2f2f;white-space:nowrap}
-        .cfk-foot2{left:0;right:0;top:77.7mm;display:flex;justify-content:center;align-items:center;font-size:1.62mm;line-height:1.8mm;font-weight:700;color:#2f2f2f;white-space:nowrap}
+        .cfk-foot1{left:0;right:0;top:75.6mm;text-align:center;font-size:1.82mm;line-height:1.8mm;font-weight:700;color:#2f2f2f;white-space:nowrap}
+        .cfk-foot2{left:0;right:0;top:77.9mm;display:flex;justify-content:center;align-items:center;font-size:1.7mm;line-height:1.8mm;font-weight:700;color:#2f2f2f;white-space:nowrap}
         .cfk-foot2 i{display:inline-block;width:1.6mm}
-        .cfk-band{left:0;right:0;top:80.8mm;height:4.2mm;display:flex;align-items:center;justify-content:center;color:#fff;font-size:2.7mm;font-weight:800;letter-spacing:.15mm}
+        .cfk-band{left:0;right:0;top:81.2mm;height:3.8mm;display:flex;align-items:center;justify-content:center;color:#fff;font-size:3mm;font-weight:800;letter-spacing:.15mm}
 
         /* ===================== STANDARD (OTHER COURSES) ===================== */
         .std{font-family:"Times New Roman",Times,"Liberation Serif",serif;color:#222}
