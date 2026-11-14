@@ -408,7 +408,290 @@ export default function StudentDetailsPage({ params }) {
     }
   }
 
- 
+  function printStudentICard(selectedSemester = "") {
+    if (!student || !isIcardEligible(student)) {
+      setMessage(
+        "I-Card is unavailable until all required details are complete and admission is not pending.",
+      );
+      return;
+    }
+
+    // ---------- Settings you may want to edit ----------
+    const DEFAULT_SESSION = "2025-2026"; // used when the student record has no session
+    const AEC_LINE_1 = "AEC: CYBER WORLD, DESHBANDHU PARA, ISLAMPUR"; // Coding For Kids card
+    const AEC_STD_1 = "AEC: CYBER WORLD, DESHBANDHUPARA, ISLAMPUR,";
+    const AEC_STD_2 = "Uttar Dinajpur, West Bengal, PIN-733202";
+    const CONTACT_EMAIL = "islampur.cyberworld@gmail.com";
+    const CONTACT_PHONE = "9851775891";
+    const CONTACT_PHONE_STD = "+91 98517 75891";
+    const CONTACT_WEB = "rcldgov.in";
+    // ---------------------------------------------------
+
+    const esc = (v) =>
+      String(v ?? "—").replace(/[&<>"']/g, (ch) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+      })[ch]);
+    const upper = (v) => esc(String(v ?? "").trim().toUpperCase());
+    const courseText = String(student.courseName || student.courseCode || "").trim();
+    const isCFK = /coding\s*for\s*kids|\bCFK\b/i.test(courseText);
+    const semesterOptions = ["SEM 1", "SEM 2", "SEM 3", "SEM 4", "SEM 5", "SEM 6", "Robotics"];
+    const semesterColors = {
+      "SEM 1": "#ec008c",
+      "SEM 2": "#269b52",
+      "SEM 3": "#f1c40f",
+      "SEM 4": "#858585",
+      "SEM 5": "#1688d4",
+      "SEM 6": "#e53935",
+      Robotics: "#777777",
+    };
+
+    // CFK semester is selected in the in-app dialog before this print function runs.
+    if (isCFK && !semesterOptions.includes(selectedSemester)) {
+      setMessage("Please select a valid Coding For Kids semester/module.");
+      return;
+    }
+
+    const w = window.open("", "_blank");
+    if (!w) {
+      setMessage("Please allow pop-ups to print the I-Card.");
+      return;
+    }
+
+    const studentName = esc(student.applicantName);
+    const admissionDate = student.admissionDate || student.createdAt || "";
+    const formatDate = (date) => {
+      if (!date) return "—";
+      const m = String(date).slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      return m ? `${m[3]}-${m[2]}-${m[1]}` : esc(date);
+    };
+    const issueDate = formatDate(admissionDate);
+    const sessionLabel = esc(student.session || student.academicSession || DEFAULT_SESSION);
+
+    // ID number: small prefix + larger running number (e.g. RCLD/ISL-001/ + 21363)
+    const enrollRaw = String(student.enrollmentNo || student.studentId || student.admissionNo || "").trim() || "—";
+    const idMatch = enrollRaw.match(/^(.*?)(\d+)$/);
+    const idPrefix = idMatch ? esc(idMatch[1]) : esc(enrollRaw);
+    const idNumber = idMatch ? esc(idMatch[2]) : "";
+
+    const photoUrl = student.photoUrl ? esc(student.photoUrl) : "";
+    const photoImg = photoUrl
+      ? `<img class="photo-img" src="${photoUrl}" alt="Student photo"/>`
+      : '<div class="photo-ph">PHOTO</div>';
+    const logoUrl = new URL("/assets/logo.png", window.location.origin).href;
+
+    const addrMain = student.presentAddress || student.address || "";
+    const poLine = [
+      student.postOffice ? `P.O. ${student.postOffice}` : "",
+      student.policeStation ? `P.S. ${student.policeStation}` : "",
+    ].filter(Boolean).join(", ");
+    const distLine = student.district ? `Dist. ${student.district}` : "";
+    const stateLine = [student.state, student.pin ? `PIN ${student.pin}` : ""].filter(Boolean).join(" - ");
+    const addressLines = [addrMain, poLine, distLine, stateLine].filter((x) => String(x).trim());
+
+    const icon = (type, color) => {
+      const c = esc(color);
+      if (type === "mail")
+        return `<svg class="ic" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2" fill="none" stroke="${c}" stroke-width="2.4"/><path d="M3 7l9 7 9-7" fill="none" stroke="${c}" stroke-width="2.4"/></svg>`;
+      if (type === "phone")
+        return `<svg class="ic" viewBox="0 0 24 24"><path d="M6.6 10.8a15 15 0 006.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 013 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z" fill="${c}"/></svg>`;
+      return `<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="${c}" stroke-width="2.2"/><ellipse cx="12" cy="12" rx="4" ry="9" fill="none" stroke="${c}" stroke-width="1.8"/><path d="M3 12h18" stroke="${c}" stroke-width="1.8"/></svg>`;
+    };
+    const scribble = (color) =>
+      `<svg class="scribble" viewBox="0 0 60 24"><path d="M2 18 C8 4 14 2 12 12 C10 22 20 4 24 8 C28 12 22 20 30 14 C36 9 40 6 44 12 C48 18 52 8 58 10" fill="none" stroke="${color}" stroke-width="1.7" stroke-linecap="round"/></svg>`;
+
+    let cardMarkup = "";
+
+    if (isCFK) {
+      // ===== CODING FOR KIDS : pink/semester-coloured design =====
+      const sem = semesterColors[selectedSemester];
+      const dark = "#3f4b53";
+      const fullName = String(student.applicantName || "").trim().toUpperCase();
+      const words = fullName.split(/\s+/).filter(Boolean);
+      const lastWord = words.length > 1 ? words.pop() : "";
+      const firstPart = words.join(" ");
+      const nameHtml = lastWord
+        ? `${esc(firstPart)} <span style="color:${sem}">${esc(lastWord)}</span>`
+        : `<span style="color:${sem}">${esc(firstPart)}</span>`;
+      // fits inside 51 mm, max 4.25 mm (matches sample proportions)
+      const nameSize = Math.min(4.25, 51 / (Math.max(fullName.length, 8) * 0.69)).toFixed(2);
+      const semMatch = String(selectedSemester).match(/^SEM\s*(\d+)$/i);
+      const badgeHtml = semMatch
+        ? `<small>SEM</small><strong>${semMatch[1]}</strong>`
+        : '<small class="robo">ROBO<br/>TICS</small>';
+
+      cardMarkup = `
+        <article class="card cfk" style="--sem:${sem}">
+          <svg class="bg" viewBox="0 0 490 750" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="490" height="750" fill="#fff"/>
+            <polygon points="0,0 490,0 490,255 245,365 0,255" fill="${sem}"/>
+            <polygon points="0,192 245,302 490,192 490,225 245,335 0,225" fill="#fff"/>
+            <polygon points="0,0 490,0 490,160 245,270 0,160" fill="${dark}"/>
+            <path d="M0 552 C55 548 105 565 102 600 C100 632 70 648 0 648 Z" fill="${sem}"/>
+            <polygon points="0,668 62,700 0,700" fill="${sem}"/>
+            <polygon points="490,668 428,700 490,700" fill="${sem}"/>
+            <rect x="0" y="700" width="490" height="50" fill="${sem}"/>
+            <polygon points="0,718 36,750 14,750 0,735" fill="#fff"/>
+            <polygon points="490,718 454,750 476,750 490,735" fill="#fff"/>
+          </svg>
+          <div class="cfk-top"><img class="cfk-logo" src="${logoUrl}" alt="RCLD"/><span class="cfk-rcld">RCLD</span></div>
+          <div class="cfk-tag"><b>Rashtriya Computer Literacy Drive</b><span>A mission encouraged by</span><b>Govt. of India</b></div>
+          <div class="cfk-photo">${photoImg}</div>
+          <div class="cfk-name" style="font-size:${nameSize}mm">${nameHtml}</div>
+          <div class="cfk-course">CODING FOR KIDS</div>
+          <div class="cfk-info">
+            <div class="r"><b>ID No :</b><span>${idPrefix}${idNumber ? `<em>${idNumber}</em>` : ""}</span></div>
+            <div class="r"><b>Date of Admn. :</b><span>${issueDate}</span></div>
+            <div class="r"><b>Father's Name :</b><span>${esc(student.fatherOrHusbandName)}</span></div>
+            <div class="r"><b>Address :</b><span>${addressLines.map((l) => esc(l)).join("<br/>")}</span></div>
+          </div>
+          <div class="cfk-badge">${badgeHtml}</div>
+          <div class="cfk-sign">${scribble("#1c2b4a")}<small>Issuing Authority</small></div>
+          <div class="cfk-foot1">${esc(AEC_LINE_1)}</div>
+          <div class="cfk-foot2">${icon("mail", sem)}<span>${esc(CONTACT_EMAIL)}</span><i></i>${icon("phone", sem)}<span>${esc(CONTACT_PHONE)}</span></div>
+          <div class="cfk-band">STUDENT ID CARD</div>
+        </article>`;
+    } else {
+      // ===== STANDARD (all other courses) : refined navy / red design =====
+      const fullName = String(student.applicantName || "").trim();
+      const nameSize = Math.min(2.2, 34 / (Math.max(fullName.length, 8) * 0.64)).toFixed(2);
+      const addrFlat = addressLines.map((l) => upper(l)).join(", ");
+      const navy = "#1b1f6b";
+      cardMarkup = `
+        <article class="card std">
+          <svg class="bg" viewBox="0 0 55 85" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="pg" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#ffffff"/><stop offset=".55" stop-color="#ffffff"/><stop offset="1" stop-color="#e6ecf8"/>
+              </linearGradient>
+              <linearGradient id="tg" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stop-color="#1b1f6b"/><stop offset=".72" stop-color="#26236b"/><stop offset="1" stop-color="#c8102e"/>
+              </linearGradient>
+            </defs>
+            <rect width="55" height="85" fill="url(#pg)"/>
+            <rect x="0" y="0" width="55" height="1.7" fill="url(#tg)"/>
+            <polygon points="0,1.7 9,1.7 0,10.7" fill="#e3e8f7"/>
+            <polygon points="55,1.7 46,1.7 55,10.7" fill="#fbe3e7"/>
+            <rect x="1.1" y="2.9" width="52.8" height="71.5" rx="1.4" fill="none" stroke="#c4cde6" stroke-width=".22"/>
+            <polygon points="0,65 0,74.4 9,74.4" fill="#e3e8f7"/>
+            <polygon points="55,65 55,74.4 46,74.4" fill="#fbe3e7"/>
+          </svg>
+          <img class="std-wm" src="${logoUrl}" alt=""/>
+          <div class="std-id"><div class="l">ID NO.:</div><div class="p">${idPrefix}</div>${idNumber ? `<div class="n">${idNumber}</div>` : ""}</div>
+          <img class="std-logo" src="${logoUrl}" alt="RCLD logo"/>
+          <div class="std-session"><div class="l">Session:</div><div class="v">${sessionLabel}</div></div>
+          <div class="std-rcld">RCLD</div>
+          <div class="std-title">Rashtriya Computer Literacy Drive</div>
+          <div class="std-mission">(A mission encouraged by National IT Task Force, GOVT. OF INDIA)</div>
+          <div class="std-photo">${photoImg}</div>
+          <div class="std-details">
+            <div class="r"><b>Name:</b><span class="nm" style="font-size:${nameSize}mm">${upper(fullName)}</span></div>
+            <div class="r"><b>Father's Name:</b><span class="c1">${upper(student.fatherOrHusbandName)}</span></div>
+            <div class="r"><b>Address:</b><span class="c2 ad">${addrFlat}</span></div>
+            <div class="r"><b>Course:</b><span class="c2">${esc(courseText || "—")}</span></div>
+            <div class="r"><b>Date of Issue:</b><span>${issueDate}</span></div>
+          </div>
+          <div class="std-sign">${scribble(navy)}<small>Auth. Signatory</small></div>
+          <div class="std-foot">
+            <div>${esc(AEC_STD_1)}</div>
+            <div>${esc(AEC_STD_2)} ${icon("phone", navy)}${esc(CONTACT_PHONE_STD)}</div>
+            <div>${icon("mail", navy)}${esc(CONTACT_EMAIL)} &nbsp; ${icon("web", navy)}${esc(CONTACT_WEB)}</div>
+          </div>
+          <div class="std-band"><i></i>IDENTITY CARD<i></i></div>
+        </article>`;
+    }
+
+    const html = `<!doctype html><html><head><meta charset="utf-8"/><title>RCLD Student I-Card - ${studentName}</title>
+      <style>
+        /* Card size: 5.5 cm wide x 8.5 cm tall (portrait).
+           In the print dialog choose: Margins = None, Scale = 100%, Background graphics = ON. */
+        @page{size:55mm 85mm;margin:0}
+        *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+        html,body{width:55mm;height:85mm;background:#fff;font-family:Arial,Helvetica,sans-serif}
+        body{overflow:hidden}
+        .card{position:relative;width:55mm;height:85mm;overflow:hidden;background:#fff;break-after:avoid;page-break-after:avoid;break-inside:avoid}
+        .card>*{position:absolute}
+        .card .bg{left:0;top:0;width:55mm;height:85mm}
+        .photo-img{display:block;width:100%;height:100%;object-fit:cover;object-position:center top}
+        .photo-ph{display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:#999;font-size:2mm;background:#fff}
+        .ic{display:inline-block;width:1.7mm;height:1.7mm;vertical-align:middle;margin-right:.45mm;position:relative;top:-.08mm}
+        .scribble{display:block;width:8mm;height:3.2mm;margin:0 auto}
+
+        /* ===================== CODING FOR KIDS ===================== */
+        .cfk-top{top:3.6mm;left:0;right:0;display:flex;justify-content:center;align-items:center;gap:1.2mm}
+        .cfk-logo{width:5.4mm;height:5.4mm;object-fit:contain;background:#fff;border-radius:50%}
+        .cfk-rcld{font-family:"Arial Black",Arial,Helvetica,sans-serif;font-weight:900;font-size:7mm;line-height:1;letter-spacing:.35mm;color:#fff}
+        .cfk-tag{top:9.9mm;left:0;right:0;text-align:center;color:#fff;line-height:2.1mm}
+        .cfk-tag b{display:block;font-size:1.62mm;font-weight:700;letter-spacing:.02mm}
+        .cfk-tag span{display:block;font-size:1.45mm}
+        .cfk-photo{left:15.7mm;top:18.1mm;width:23.6mm;height:23.6mm;border-radius:50%;border:.8mm solid #fff;overflow:hidden;background:#fff}
+        .cfk-name{left:1.5mm;right:1.5mm;top:41.7mm;text-align:center;font-weight:700;line-height:1.2;color:#3f4b53;white-space:nowrap}
+        .cfk-course{left:0;right:0;top:47.4mm;text-align:center;font-size:2.05mm;line-height:1.9mm;font-weight:800;letter-spacing:.12mm;color:#3f4b53}
+        .cfk-info{left:0;right:1.5mm;top:50.8mm;font-size:1.78mm;line-height:2.4mm}
+        .cfk-info .r{display:grid;grid-template-columns:24.9mm minmax(0,1fr);column-gap:1.6mm;align-items:start}
+        .cfk-info b{text-align:right;white-space:nowrap;font-weight:700;color:var(--sem)}
+        .cfk-info span{font-weight:600;color:#3a3a3a;overflow-wrap:anywhere;min-width:0}
+        .cfk-info em{font-style:normal;font-size:2.2mm;font-weight:800;color:#333}
+        .cfk-badge{left:0;top:62.2mm;width:11.5mm;height:10.4mm;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-weight:800;line-height:1;padding-right:.6mm}
+        .cfk-badge small{font-size:2.1mm;line-height:2.2mm}
+        .cfk-badge strong{font-size:4.8mm;line-height:4.4mm}
+        .cfk-badge .robo{font-size:2.5mm;line-height:2.7mm;text-align:center}
+        .cfk-sign{right:5mm;top:67.6mm;width:12mm;text-align:center}
+        .cfk-sign small{display:block;font-size:1.35mm;font-style:italic;color:#1c2b4a;line-height:1.5mm;margin-top:.2mm}
+        .cfk-foot1{left:0;right:0;top:74.2mm;text-align:center;font-size:1.7mm;line-height:1.8mm;font-weight:700;color:#2f2f2f;white-space:nowrap}
+        .cfk-foot2{left:0;right:0;top:76.3mm;display:flex;justify-content:center;align-items:center;font-size:1.64mm;line-height:1.8mm;font-weight:700;color:#2f2f2f;white-space:nowrap}
+        .cfk-foot2 i{display:inline-block;width:1.6mm}
+        .cfk-band{left:0;right:0;top:79.2mm;height:5.8mm;display:flex;align-items:center;justify-content:center;color:#fff;font-size:2.75mm;font-weight:800;letter-spacing:.15mm}
+
+        /* ===================== STANDARD (OTHER COURSES) ===================== */
+        .std{font-family:"Times New Roman",Times,"Liberation Serif",serif;color:#222}
+        .std-wm{left:12mm;top:52mm;width:31mm;height:auto;opacity:.06;z-index:0}
+        .std-id{left:3.4mm;top:4.8mm;width:17mm}
+        .std-id .l{font-size:1.8mm;line-height:2.2mm;font-weight:700;color:#1b1f6b}
+        .std-id .p{font-size:1.75mm;line-height:2mm;font-weight:700}
+        .std-id .n{font-size:2.9mm;line-height:3.1mm;font-weight:800;color:#c8102e}
+        .std-logo{left:21.25mm;top:2.6mm;width:12.5mm;height:13mm;object-fit:contain}
+        .std-session{right:3.4mm;top:5.2mm;width:17mm;text-align:right}
+        .std-session .l{font-size:1.85mm;line-height:2.4mm;font-weight:700;color:#1b1f6b}
+        .std-session .v{font-size:2.9mm;line-height:3.2mm;font-weight:800;color:#c1272d}
+        .std-rcld{left:0;right:0;top:15.6mm;text-align:center;font-family:"Arial Black",Arial,Helvetica,sans-serif;font-weight:900;font-size:9.2mm;line-height:9.2mm;color:#c8102e;text-shadow:.3mm .3mm 0 #7b0f1c}
+        .std-title{left:0;right:0;top:23.9mm;text-align:center;font-size:2.95mm;line-height:2.8mm;font-weight:700;color:#1b1f6b;white-space:nowrap}
+        .std-mission{left:0;right:0;top:27.3mm;text-align:center;font-size:1.62mm;line-height:1.8mm;font-weight:700;color:#1b1f6b;white-space:nowrap}
+        .std-photo{left:19.25mm;top:29.9mm;width:16.5mm;height:19.8mm;border:.45mm solid #1b1f6b;border-radius:.8mm;overflow:hidden;background:#fff;outline:.28mm solid #c8102e;outline-offset:.3mm}
+        .std-details{left:3.8mm;right:2.8mm;top:51.3mm;z-index:1}
+        .std-details .r{display:grid;grid-template-columns:14.4mm minmax(0,1fr);column-gap:.6mm;align-items:start;margin-bottom:.3mm;padding-bottom:.15mm;border-bottom:.15mm dotted #b8c2de;line-height:2.1mm}
+        .std-details .r:last-child{border-bottom:0}
+        .std-details b{font-size:1.75mm;font-weight:700;color:#1b1f6b;white-space:nowrap}
+        .std-details span{font-size:1.95mm;font-weight:700;color:#1d1d1d;min-width:0;overflow-wrap:anywhere}
+        .std-details .ad{font-size:1.6mm;font-weight:600;line-height:1.95mm}
+        .std-details .c1{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+        .std-details .c2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+        .std-details .c3{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+        .std-sign{right:3.2mm;top:69.8mm;width:12mm;text-align:center}
+        .std-sign small{display:block;font-size:1.3mm;font-style:italic;color:#1b1f6b;line-height:1.4mm}
+        .std-foot{left:0;right:0;top:74.4mm;height:6.4mm;border-top:.25mm solid #1b1f6b;padding-top:.35mm;text-align:center;font-weight:700;font-size:1.6mm;line-height:1.95mm;color:#222;white-space:nowrap;overflow:hidden}
+        .std-band{left:0;right:0;bottom:0;height:4.4mm;background:linear-gradient(90deg,#1b1f6b 0%,#2e2a86 50%,#1b1f6b 100%);border-top:.45mm solid #c8102e;color:#fff;display:flex;align-items:center;justify-content:center;gap:1.4mm;font-weight:700;font-size:2.8mm;line-height:4mm;letter-spacing:.25mm}
+        .std-band i{display:inline-block;width:1.1mm;height:1.1mm;background:#c8102e;transform:rotate(45deg)}
+
+        @media screen{
+          html,body{width:auto;height:auto;background:#e5e9f0}
+          body{display:flex;justify-content:center;padding:8mm 0;overflow:auto}
+          .card{flex:none;box-shadow:0 1px 10px rgba(0,0,0,.3)}
+        }
+        @media print{
+          html,body{width:55mm;height:85mm;margin:0!important;padding:0!important;overflow:hidden}
+          body{display:block}
+          .card{box-shadow:none}
+        }
+      </style></head><body>${cardMarkup}<script>
+        window.addEventListener('load',async()=>{
+          await Promise.all([...document.images].map(img=>img.decode?img.decode().catch(()=>{}):Promise.resolve()));
+          setTimeout(()=>window.print(),300);
+        });
+      </script></body></html>`;
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+  }
 
   function printStudentForm() {
     if (!student) return;
