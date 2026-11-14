@@ -257,7 +257,9 @@ export default function StudentDetailsPage({ params }) {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Unable to update semester.");
-      setStudent(current => ({ ...current, currentSemester: data.currentSemester, semesterStatus: data.semesterStatus }));
+      const studentResponse = await fetch("/api/students/" + student._id, { cache: "no-store" });
+      const studentData = await studentResponse.json();
+      if (studentResponse.ok) setStudent(studentData.student);
       setSelectedCfkSemester("SEM " + data.currentSemester);
       await loadOperational(student._id);
       setMessage(data.message || "Semester updated.");
@@ -278,10 +280,10 @@ export default function StudentDetailsPage({ params }) {
       setFee(fj.fee);
       setFeeForm((f) => ({
         ...f,
-        totalFee: f.totalFee || fj.fee.totalFee || "",
-        discount: f.discount || fj.fee.discount || "",
-        admissionFee: f.admissionFee || fj.fee.admissionFee || "",
-        registrationFee: f.registrationFee || fj.fee.registrationFee || "",
+        totalFee: fj.fee.totalFee ?? "",
+        discount: fj.fee.discount ?? "",
+        admissionFee: fj.fee.admissionFee ?? "",
+        registrationFee: fj.fee.registrationFee ?? "",
       }));
     }
     if (ar.ok) setAttendance(aj);
