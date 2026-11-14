@@ -521,15 +521,20 @@ export default function StudentDetailsPage({ params }) {
         <article class="card cfk">
           <svg class="bg" viewBox="0 0 490 750" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
             <rect width="490" height="750" fill="#fff"/>
-            <polygon points="0,0 490,0 490,255 245,365 0,255" fill="${sem}"/>
-            <polygon points="0,192 245,302 490,192 490,225 245,335 0,225" fill="#fff"/>
-            <polygon points="0,0 490,0 490,160 245,270 0,160" fill="${dark}"/>
-            <path d="M0 552 C55 548 105 565 102 600 C100 632 70 648 0 648 Z" fill="${sem}"/>
-            <polygon points="0,668 62,700 0,700" fill="${sem}"/>
-            <polygon points="490,668 428,700 490,700" fill="${sem}"/>
-            <rect x="0" y="700" width="490" height="50" fill="${sem}"/>
-            <polygon points="0,718 36,750 14,750 0,735" fill="#fff"/>
-            <polygon points="490,718 454,750 476,750 490,735" fill="#fff"/>
+            <rect x="0" y="0" width="490" height="750" fill="#fff"/>
+            <path d="M0 0H490V34L326 176H164L0 34Z" fill="${dark}"/>
+            <path d="M0 34L176 176L0 310Z" fill="#ec008c"/>
+            <path d="M490 34L314 176L490 310Z" fill="#ec008c"/>
+            <path d="M0 173L176 310L0 259Z" fill="#fff"/>
+            <path d="M490 173L314 310L490 259Z" fill="#fff"/>
+            <path d="M0 195L176 332L0 281Z" fill="#ec008c"/>
+            <path d="M490 195L314 332L490 281Z" fill="#ec008c"/>
+            <path d="M0 556C36 548 88 560 91 594C94 630 55 654 0 656Z" fill="#ec008c"/>
+            <path d="M0 666L62 704H0Z" fill="#ec008c"/>
+            <path d="M490 666L428 704H490Z" fill="#ec008c"/>
+            <rect x="0" y="704" width="490" height="46" fill="#ec008c"/>
+            <path d="M0 724L34 750H13L0 740Z" fill="#fff"/>
+            <path d="M490 724L456 750H477L490 740Z" fill="#fff"/>
           </svg>
           <div class="cfk-top"><img class="cfk-logo" src="${logoUrl}" alt="RCLD"/><span class="cfk-rcld">RCLD</span></div>
           <div class="cfk-tag"><b>Rashtriya Computer Literacy Drive</b><span>A mission encouraged by</span><b>Govt. of India</b></div>
@@ -596,29 +601,29 @@ export default function StudentDetailsPage({ params }) {
 
         /* ===================== CODING FOR KIDS ===================== */
         .cfk-top{top:3mm;left:0;right:0;display:flex;justify-content:center;align-items:center;gap:1mm}
-        .cfk-logo{width:5.2mm;height:5.2mm;object-fit:contain;background:#fff;border-radius:50%}
+        .cfk-logo{width:5.2mm;height:5.2mm;object-fit:contain;background:transparent;border-radius:0}
         .cfk-rcld{font-family:"Arial Black",Arial,Helvetica,sans-serif;font-weight:900;font-size:7.4mm;line-height:1;letter-spacing:.3mm;color:#fff}
         .cfk-tag{top:10.1mm;left:0;right:0;text-align:center;color:#fff;line-height:2.1mm}
         .cfk-tag b{display:block;font-size:1.6mm;font-weight:700;letter-spacing:.02mm}
         .cfk-tag span{display:block;font-size:1.45mm}
-        .cfk-photo{left:16.4mm;top:16.2mm;width:22.4mm;height:22.4mm;border-radius:50%;border:.8mm solid #fff;overflow:hidden;background:#fff}
-        .cfk-name{left:1mm;right:1mm;top:40.9mm;text-align:center;font-weight:700;line-height:1.15;color:#3f4b53;white-space:nowrap}
-        .cfk-course{left:0;right:0;top:46.1mm;text-align:center;font-size:2mm;line-height:1.8mm;font-weight:800;letter-spacing:.12mm;color:#3f4b53}
-        .cfk-info{left:0;right:1.5mm;top:51mm;font-size:1.72mm;line-height:2.36mm}
+        .cfk-photo{left:14.6mm;top:15.8mm;width:25.8mm;height:25.8mm;border-radius:50%;border:.8mm solid #fff;overflow:hidden;background:#fff}
+        .cfk-name{left:1mm;right:1mm;top:41.8mm;text-align:center;font-weight:700;line-height:1.15;color:#3f4b53;white-space:nowrap}
+        .cfk-course{left:0;right:0;top:48.9mm;text-align:center;font-size:2mm;line-height:1.8mm;font-weight:800;letter-spacing:.12mm;color:#3f4b53}
+        .cfk-info{left:0;right:1.5mm;top:53.5mm;font-size:1.72mm;line-height:2.36mm}
         .cfk-info .r{display:grid;grid-template-columns:24.9mm minmax(0,1fr);column-gap:1.6mm;align-items:start}
         .cfk-info b{text-align:right;white-space:nowrap;font-weight:700;color:var(--sem)}
         .cfk-info span{font-weight:600;color:#3a3a3a;overflow-wrap:anywhere;min-width:0}
         .cfk-info em{font-style:normal;font-size:2.15mm;font-weight:800;color:#333}
-        .cfk-badge{left:0;top:61.7mm;width:11.4mm;height:11.2mm;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-weight:800;line-height:1;padding-right:.6mm}
+        .cfk-badge{left:0;top:63.8mm;width:11.4mm;height:11.2mm;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-weight:800;line-height:1;padding-right:.6mm}
         .cfk-badge small{font-size:2.1mm;line-height:2.2mm}
         .cfk-badge strong{font-size:4.6mm;line-height:4.4mm}
         .cfk-badge .robo{font-size:2.5mm;line-height:2.7mm;text-align:center}
-        .cfk-sign{right:4.5mm;top:67mm;width:12mm;text-align:center}
+        .cfk-sign{right:4.5mm;top:69.4mm;width:12mm;text-align:center}
         .cfk-sign small{display:block;font-size:1.35mm;font-style:italic;color:#1c2b4a;line-height:1.5mm;margin-top:.2mm}
-        .cfk-foot1{left:0;right:0;top:73.5mm;text-align:center;font-size:1.68mm;line-height:1.8mm;font-weight:700;color:#2f2f2f;white-space:nowrap}
-        .cfk-foot2{left:0;right:0;top:75.6mm;display:flex;justify-content:center;align-items:center;font-size:1.62mm;line-height:1.8mm;font-weight:700;color:#2f2f2f;white-space:nowrap}
+        .cfk-foot1{left:0;right:0;top:75.6mm;text-align:center;font-size:1.68mm;line-height:1.8mm;font-weight:700;color:#2f2f2f;white-space:nowrap}
+        .cfk-foot2{left:0;right:0;top:77.7mm;display:flex;justify-content:center;align-items:center;font-size:1.62mm;line-height:1.8mm;font-weight:700;color:#2f2f2f;white-space:nowrap}
         .cfk-foot2 i{display:inline-block;width:1.6mm}
-        .cfk-band{left:0;right:0;top:78.9mm;height:6.1mm;display:flex;align-items:center;justify-content:center;color:#fff;font-size:2.7mm;font-weight:800;letter-spacing:.15mm}
+        .cfk-band{left:0;right:0;top:80.8mm;height:4.2mm;display:flex;align-items:center;justify-content:center;color:#fff;font-size:2.7mm;font-weight:800;letter-spacing:.15mm}
 
         /* ===================== STANDARD (OTHER COURSES) ===================== */
         .std{font-family:"Times New Roman",Times,"Liberation Serif",serif;color:#222}
