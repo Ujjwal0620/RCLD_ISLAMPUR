@@ -238,7 +238,7 @@ export default function StudentDetailsPage({ params }) {
   const [transition, setTransition] = useState({ action: "", batchId: "", remark: "" });
   const [transitioning, setTransitioning] = useState(false);
   const [icardDialogOpen, setIcardDialogOpen] = useState(false);
-  const [selectedCfkSemester, setSelectedCfkSemester] = useState("SEM 1");
+  const [semesterBusy, setSemesterBusy] = useState(false);
 
   async function loadOperational(id) {
     const [fr, ar] = await Promise.all([
@@ -257,6 +257,33 @@ export default function StudentDetailsPage({ params }) {
       }));
     }
     if (ar.ok) setAttendance(aj);
+  }
+
+  async function updateCfkSemester(action) {
+    if (!student || semesterBusy) return;
+    setSemesterBusy(true);
+    setMessage("");
+    try {
+      const response = await fetch("/api/students/" + student._id + "/semester", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to update the semester.");
+      const studentResponse = await fetch("/api/students/" + student._id, { cache: "no-store" });
+      const studentData = await studentResponse.json();
+      await loadOperational(student._id);
+      if (studentResponse.ok) {
+        setStudent(studentData.student);
+        setEditForm(studentData.student);
+      }
+      setMessage(data.message || "Coding for Kids semester updated.");
+    } catch (error) {
+      setMessage(error.message || "Unable to update the semester.");
+    } finally {
+      setSemesterBusy(false);
+    }
   }
 
   useEffect(() => {
@@ -434,7 +461,8 @@ export default function StudentDetailsPage({ params }) {
     const upper = (v) => esc(String(v ?? "").trim().toUpperCase());
     const courseText = String(student.courseName || student.courseCode || "").trim();
     const isCFK = /coding\s*for\s*kids|\bCFK\b/i.test(courseText);
-    const semesterOptions = ["SEM 1", "SEM 2", "SEM 3", "SEM 4", "SEM 5", "SEM 6", "Robotics"];
+    const activeSemester = isCFK ? `SEM ${Math.min(6, Math.max(1, Number(student.currentSemester || 1)))}` : selectedSemester;
+    const semesterOptions = ["SEM 1", "SEM 2", "SEM 3", "SEM 4", "SEM 5", "SEM 6"];
     const semesterColors = {
       "SEM 1": "#ec008c",
       "SEM 2": "#269b52",
@@ -445,8 +473,8 @@ export default function StudentDetailsPage({ params }) {
       Robotics: "#777777",
     };
 
-    // CFK semester is selected in the in-app dialog before this print function runs.
-    if (isCFK && !semesterOptions.includes(selectedSemester)) {
+    // The I-Card always reflects the semester saved on the student record.
+    if (isCFK && !semesterOptions.includes(activeSemester)) {
       setMessage("Please select a valid Coding For Kids semester/module.");
       return;
     }
@@ -503,7 +531,7 @@ export default function StudentDetailsPage({ params }) {
 
     if (isCFK) {
       // ===== CODING FOR KIDS : pink/semester-coloured design =====
-      const sem = semesterColors[selectedSemester];
+      const sem = semesterColors[activeSemester];
       const dark = "#3f4b53";
       const fullName = String(student.applicantName || "").trim().toUpperCase();
       const words = fullName.split(/\s+/).filter(Boolean);
@@ -514,7 +542,7 @@ export default function StudentDetailsPage({ params }) {
         : `<span style="color:${sem}">${esc(firstPart)}</span>`;
       // fits inside 51 mm, max 4.25 mm (matches sample proportions)
       const nameSize = Math.min(4.25, 51 / (Math.max(fullName.length, 8) * 0.69)).toFixed(2);
-      const semMatch = String(selectedSemester).match(/^SEM\s*(\d+)$/i);
+      const semMatch = String(activeSemester).match(/^SEM\s*(\d+)$/i);
       const badgeHtml = semMatch
         ? `<small>SEM</small><strong>${semMatch[1]}</strong>`
         : '<small class="robo">ROBO<br/>TICS</small>';
@@ -958,7 +986,7 @@ export default function StudentDetailsPage({ params }) {
         .cfk-dialog-heading h2{margin:0;font-size:19px;font-weight:750}.cfk-dialog-heading p{margin:5px 0 0;font-size:13px;opacity:.72}
         .cfk-dialog-close{position:absolute;right:-8px;top:-8px;border:0;background:transparent;font-size:27px;line-height:1;cursor:pointer;color:inherit}
         .cfk-dialog-student{display:flex;justify-content:space-between;gap:12px;margin:22px 0 18px;padding:12px 14px;border:1px solid var(--border-color,#e3e8ef);border-radius:11px;background:rgba(127,127,127,.045);font-size:13px}
-        .cfk-dialog-student span{opacity:.7;text-align:right}.cfk-semester-field{display:flex;flex-direction:column;gap:8px}.cfk-semester-field select{width:100%;min-height:44px;border:1px solid var(--border-color,#d7deea);border-radius:9px;padding:0 12px;background:var(--input-bg,#fff);color:inherit;font:inherit}
+        .cfk-dialog-student span{opacity:.7;text-align:right}.cfk-dialog-current-semester{display:flex;flex-direction:column;gap:5px;padding:14px 16px;border:1px solid var(--border-color,#d7deea);border-radius:12px;background:var(--panel-bg,#f8f9fc)}.cfk-dialog-current-semester>span{font-size:12px;opacity:.7}.cfk-dialog-current-semester strong{font-size:22px}.cfk-dialog-current-semester small{font-size:12px;opacity:.75}
         .cfk-dialog-note{margin-top:12px;font-size:12px;line-height:1.5;opacity:.7}
         .cfk-dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:24px}
         @media(max-width:520px){.cfk-dialog{padding:19px}.cfk-dialog-student{flex-direction:column;gap:4px}.cfk-dialog-student span{text-align:left}}
@@ -979,7 +1007,6 @@ export default function StudentDetailsPage({ params }) {
                 onClick={() => {
                   const courseText = String(student.courseName || student.courseCode || "");
                   if (/coding\s*for\s*kids|\bCFK\b/i.test(courseText)) {
-                    setSelectedCfkSemester("SEM 1");
                     setIcardDialogOpen(true);
                   } else {
                     printStudentICard();
@@ -1022,6 +1049,26 @@ export default function StudentDetailsPage({ params }) {
       )}
       {student && (
         <main className="student-details student-profile-page">
+          {(/coding\s*for\s*kids|\bKIDS\b/i.test(String(student.courseName || student.courseCode || ""))) && (
+            <section className="detail-section cfk-semester-management">
+              <div className="detail-section-title">
+                <BookOpen size={17} />
+                <div><h3>Coding for Kids — Semester Progression</h3><span>Six semesters · six months each · readmission advances one semester and preserves payment history</span></div>
+              </div>
+              <div className="student-summary-grid compact">
+                <div className="summary-card"><span>Current Semester</span><strong>SEM {Math.min(6, Math.max(1, Number(student.currentSemester || 1)))}</strong></div>
+                <div className="summary-card"><span>Semester Status</span><strong>{student.semesterStatus || "Active"}</strong></div>
+                <div className="summary-card"><span>Semester Fee</span><strong>₹{Number((courses.find((course) => course.code === "KIDS")?.semesterPlans || []).find((plan) => Number(plan.semester) === Number(student.currentSemester || 1))?.totalFee || 0).toLocaleString("en-IN")}</strong></div>
+              </div>
+              <div className="top-actions">
+                <button type="button" className="secondary-btn" disabled={semesterBusy || student.semesterStatus === "Completed"} onClick={() => updateCfkSemester("complete")}>Mark SEM {student.currentSemester || 1} Completed</button>
+                <button type="button" className="primary-btn" disabled={semesterBusy || student.semesterStatus !== "Completed" || Number(student.currentSemester || 1) >= 6} onClick={() => updateCfkSemester("readmit")}>{semesterBusy ? "Updating…" : Number(student.currentSemester || 1) >= 6 ? "Final Semester Completed" : "Readmit to SEM " + (Number(student.currentSemester || 1) + 1)}</button>
+              </div>
+              {(student.semesterHistory || []).length > 0 && (
+                <div className="table-wrap"><table><thead><tr><th>Semester</th><th>Status</th><th>Admission Date</th><th>Semester Fee</th></tr></thead><tbody>{student.semesterHistory.map((item, index) => <tr key={item.semester + "-" + index}><td>SEM {item.semester}</td><td>{item.status || "Active"}</td><td>{item.admittedAt || item.completedAt || "—"}</td><td>₹{Number(item.totalFee || 0).toLocaleString("en-IN")}</td></tr>)}</tbody></table></div>
+              )}
+            </section>
+          )}
           {icardDialogOpen && (
             <div className="cfk-dialog-backdrop" role="presentation" onMouseDown={(event) => {
               if (event.target === event.currentTarget) setIcardDialogOpen(false);
@@ -1039,20 +1086,17 @@ export default function StudentDetailsPage({ params }) {
                   <strong>{student.applicantName}</strong>
                   <span>{student.enrollmentNo || student.studentId || student.admissionNo || "Student ID not available"}</span>
                 </div>
-                <label className="form-field cfk-semester-field">
-                  <span>Semester / Module</span>
-                  <select value={selectedCfkSemester} onChange={(event) => setSelectedCfkSemester(event.target.value)}>
-                    {["SEM 1", "SEM 2", "SEM 3", "SEM 4", "SEM 5", "SEM 6", "Robotics"].map((semester) => (
-                      <option key={semester} value={semester}>{semester}</option>
-                    ))}
-                  </select>
-                </label>
-                <div className="cfk-dialog-note">The selected module's colour and label will be applied to the Coding For Kids I-Card (5.5 cm × 8.5 cm). In the print dialog set Margins to None and Scale to 100%.</div>
+                <div className="cfk-dialog-current-semester">
+                  <span>Saved current semester</span>
+                  <strong>SEM {Math.min(6, Math.max(1, Number(student.currentSemester || 1)))}</strong>
+                  <small>The I-Card uses the student's recorded semester. It cannot be changed from the print dialog.</small>
+                </div>
+                <div className="cfk-dialog-note">The semester label and colour are taken from the student's current academic record. In the print dialog set Margins to None and Scale to 100%.</div>
                 <footer className="cfk-dialog-actions">
                   <button type="button" className="ghost-btn" onClick={() => setIcardDialogOpen(false)}>Cancel</button>
                   <button type="button" className="primary-btn" onClick={() => {
                     setIcardDialogOpen(false);
-                    printStudentICard(selectedCfkSemester);
+                    printStudentICard();
                   }}><Printer size={16} /> Continue to Print</button>
                 </footer>
               </section>
