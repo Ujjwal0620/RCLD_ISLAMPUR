@@ -470,7 +470,6 @@ export default function StudentDetailsPage({ params }) {
       "SEM 4": "#858585",
       "SEM 5": "#1688d4",
       "SEM 6": "#e53935",
-      Robotics: "#777777",
     };
 
     // The I-Card always reflects the semester saved on the student record.
