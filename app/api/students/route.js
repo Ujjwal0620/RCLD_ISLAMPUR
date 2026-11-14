@@ -185,7 +185,7 @@ export async function POST(request) {
       if (!referral) return NextResponse.json({ error: "Selected referral is no longer active. Refresh the referral list." }, { status: 400 });
       referralFields = { referralId: String(referral._id), referralName: referral.name, marketingEmployeeId: referral.marketingEmployeeId, marketingEmployeeName: referral.marketingEmployeeName };
     }
-    const isKidsCourse = String(body.courseCode || "").toUpperCase() === "KIDS";
+    const isKidsCourse = String(body.courseCode || "").toUpperCase() === "KIDS" || /coding\s*for\s*kids/i.test(String(body.courseName || ""));
     const initialSemester = Number(body.currentSemester || 1);
     if (isKidsCourse && (!Number.isInteger(initialSemester) || initialSemester < 1 || initialSemester > 6)) return NextResponse.json({ error: "Select a valid Coding for Kids semester from 1 to 6." }, { status: 400 });
     const student = await Student.create({
