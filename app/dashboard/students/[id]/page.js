@@ -525,10 +525,13 @@ export default function StudentDetailsPage({ params }) {
             <rect width="490" height="750" fill="#fff"/>
             <polygon points="0,0 490,0 490,255 245,365 0,255" fill="${sem}"/>
             <polygon points="0,192 245,302 490,192 490,225 245,335 0,225" fill="#fff"/>
+            <!-- Two paired diagonal accents terminate at the outer edge of the student photo. -->
+            <path d="M0 174 L133 266 M357 266 L490 174" fill="none" stroke="#fff" stroke-width="11" stroke-linecap="butt"/>
+            <path d="M0 163 L128 253 M362 253 L490 163" fill="none" stroke="${sem}" stroke-width="2.4" stroke-linecap="butt"/>
             <polygon points="0,0 490,0 490,160 245,270 0,160" fill="${dark}"/>
-            <path d="M0 552 C55 548 105 565 102 600 C100 632 70 648 0 648 Z" fill="${sem}"/>
-            <polygon points="0,668 62,700 0,700" fill="${sem}"/>
-            <polygon points="490,668 428,700 490,700" fill="${sem}"/>
+            <path d="M0 574 C42 570 76 582 74 606 C72 627 48 638 0 638 Z" fill="${sem}"/>
+            <polygon points="0,680 44,700 0,700" fill="${sem}"/>
+            <polygon points="490,680 446,700 490,700" fill="${sem}"/>
             <rect x="0" y="700" width="490" height="50" fill="${sem}"/>
             <polygon points="0,718 36,750 14,750 0,735" fill="#fff"/>
             <polygon points="490,718 454,750 476,750 490,735" fill="#fff"/>
@@ -618,7 +621,7 @@ export default function StudentDetailsPage({ params }) {
 
         /* ===================== CODING FOR KIDS ===================== */
         .cfk-top{top:3.6mm;left:0;right:0;display:flex;justify-content:center;align-items:center;gap:1.2mm}
-        .cfk-logo{width:5.4mm;height:5.4mm;object-fit:contain;background:#fff;border-radius:50%}
+        .cfk-logo{width:5.4mm;height:5.4mm;object-fit:contain;background:#fff;border-radius:0}
         .cfk-rcld{font-family:"Arial Black",Arial,Helvetica,sans-serif;font-weight:900;font-size:7mm;line-height:1;letter-spacing:.35mm;color:#fff}
         .cfk-tag{top:9.9mm;left:0;right:0;text-align:center;color:#fff;line-height:2.1mm}
         .cfk-tag b{display:block;font-size:1.62mm;font-weight:700;letter-spacing:.02mm}
