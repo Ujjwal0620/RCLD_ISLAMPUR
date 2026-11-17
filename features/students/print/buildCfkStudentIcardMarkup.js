@@ -40,13 +40,13 @@ export function buildCfkStudentIcardMarkup({
   return `
     <div class="icard-page cfk-card" style="--theme-color:${themeColor};--label-color:${labelColor};">
       <svg class="cfk-bg-svg" viewBox="0 0 550 850" preserveAspectRatio="none" aria-hidden="true">
-        <polygon points="0,0 550,0 550,36 275,248 0,36" fill="#464E56"/>
-        <polygon points="0,36 275,248 550,36 550,192 275,392 0,192" fill="${themeColor}"/>
-        <polygon points="0,206 275,406 550,206 550,221 275,421 0,221" fill="${themeColor}"/>
-        <polygon points="0,765 52,803 498,803 550,765 550,775 502,810 48,810 0,775" fill="${themeColor}"/>
-        <polygon points="0,783 45,816 505,816 550,783 550,813 500,850 50,850 0,813" fill="${themeColor}"/>
-        <polygon points="0,821 40,850 0,850" fill="#464E56"/>
-        <polygon points="550,821 550,850 510,850" fill="#464E56"/>
+        <rect x="0" y="0" width="550" height="850" fill="#FFFFFF"/>
+        <path d="M0 0H550V38L275 246L0 38Z" fill="#464E56"/>
+        <path d="M0 38L275 246L550 38V190L275 395L0 190Z" fill="${themeColor}"/>
+        <path d="M0 199L275 401L550 199V214L275 416L0 214Z" fill="#FFFFFF"/>
+        <path d="M0 211L275 413L550 211V224L275 426L0 224Z" fill="${themeColor}"/>
+        <path d="M0 780L48 815H502L550 780V850H0Z" fill="${themeColor}"/>
+        <path d="M0 768L48 803H502L550 768V780L502 815H48L0 780Z" fill="#FFFFFF"/>
       </svg>
 
       <div class="cfk-header">
