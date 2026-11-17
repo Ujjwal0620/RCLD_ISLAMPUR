@@ -36,7 +36,7 @@ export async function POST(req,{params}){
   const progress=await BatchContentProgress.findOne({batchId:batch._id});
   if(!progress)return NextResponse.json({error:"Batch course progress is not initialized. Open Course Content first and try again."},{status:404});
   let topic=null;
-  for(const module of progress.modules||[])for(const item of module.topics||[])if(String(item.contentTopicId)===topicId)topic=item;
+  for(const courseModule of progress.modules||[])for(const item of courseModule.topics||[])if(String(item.contentTopicId)===topicId)topic=item;
   if(!topic)return NextResponse.json({error:"Topic not found in this batch course."},{status:404});
   const buffer=Buffer.from(await file.arrayBuffer());
   const mime=file.type||"application/octet-stream";
