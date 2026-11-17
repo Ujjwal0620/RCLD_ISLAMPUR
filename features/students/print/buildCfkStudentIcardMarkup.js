@@ -17,15 +17,18 @@ export function buildCfkStudentIcardMarkup({
   CONTACT_EMAIL,
   CONTACT_PHONE,
 }) {
-  const themeColor = semesterColors[activeSemester] || "#EC008C";
-  const labelColor = semesterLabelColors[activeSemester] || "#C81B78";
+  // Fixed reference palette: semester changes the number, not the card colour.
+  const themeColor = "#F6801E";
+  const labelColor = "#F6801E";
   const semNumber = String(activeSemester).replace(/[^0-9]/g, "") || "1";
 
   // First name remains charcoal; the remaining name is highlighted by semester colour.
   const rawName = String(student.applicantName || "").trim().toUpperCase();
   const nameParts = rawName.split(/\s+/).filter(Boolean);
-  const firstName = esc(nameParts[0] || "");
-  const lastName = esc(nameParts.slice(1).join(" "));
+  const firstName = esc(nameParts.slice(0, -1).join(" ") || nameParts[0] || "");
+  const lastName = esc(nameParts.length > 1 ? nameParts[nameParts.length - 1] : "");
+  const nameSizeMm = Math.min(3.55, 43 / Math.max(rawName.length * 0.56, 1)).toFixed(2);
+  const courseLabel = esc(String(student.courseName || student.course?.name || "CODING FOR KIDS").toUpperCase());
   const fatherName = esc(toTitleCase(
     student.fatherOrHusbandName || student.fatherName || student.guardianName || student.father_name || ""
   ));
@@ -46,18 +49,17 @@ export function buildCfkStudentIcardMarkup({
 
   return `
     <div class="icard-page cfk-card" style="--theme-color:${themeColor};--label-color:${labelColor};">
-      <svg class="cfk-bg-svg" viewBox="0 0 550 850" preserveAspectRatio="none" aria-hidden="true">
-        <rect x="0" y="0" width="550" height="850" fill="#FFFFFF"/>
-        <path d="M0 0H550V38L275 246L0 38Z" fill="#464E56"/>
-        <!-- Split side wings keep the colour away from the centre below the portrait. -->
-        <path d="M0 38L275 246L125 330L0 190Z" fill="${themeColor}"/>
-        <path d="M550 38L275 246L425 330L550 190Z" fill="${themeColor}"/>
-        <!-- Parallel diagonal white keylines, matching the supplied reference. -->
-        <path d="M0 176L145 310L154 300L0 166Z" fill="#FFFFFF"/>
-        <path d="M550 176L405 310L396 300L550 166Z" fill="#FFFFFF"/>
-        <!-- One single angular white line above the solid colour footer. -->
-        <path d="M0 790L275 810L550 790L550 798L275 818L0 798Z" fill="#FFFFFF"/>
-        <path d="M0 798L275 818L550 798V850H0Z" fill="${themeColor}"/>
+      <svg class="cfk-bg-svg" viewBox="0 0 550 880" preserveAspectRatio="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+        <rect x="0" y="0" width="550" height="880" fill="#FFFFFF"/>
+        <path d="M0 0H550V38L275 246L0 38Z" fill="#44515A"/>
+        <path d="M0 38L275 246L145 332L0 190Z" fill="#F6801E"/>
+        <path d="M550 38L275 246L405 332L550 190Z" fill="#F6801E"/>
+        <path d="M0 174L145 307L153 299L0 164Z" fill="#FFFFFF"/>
+        <path d="M0 190L136 315L143 308L0 180Z" fill="#FFFFFF"/>
+        <path d="M550 174L405 307L397 299L550 164Z" fill="#FFFFFF"/>
+        <path d="M550 190L414 315L407 308L550 180Z" fill="#FFFFFF"/>
+        <path d="M0 815L275 835L550 815V880H0Z" fill="#F6801E"/>
+        <path d="M0 801L275 821L550 801V811L275 831L0 811Z" fill="#FFFFFF"/>
       </svg>
 
       <div class="cfk-header">
@@ -75,10 +77,10 @@ export function buildCfkStudentIcardMarkup({
       </div>
 
       <div class="cfk-name-block">
-        <div class="cfk-student-name">
+        <div class="cfk-student-name" style="font-size:${nameSizeMm}mm">
           <span class="cfk-fname">${firstName}</span>${lastName ? `<span class="cfk-lname"> ${lastName}</span>` : ""}
         </div>
-        <div class="cfk-course-name">CODING FOR KIDS</div>
+        <div class="cfk-course-name">${courseLabel}</div>
       </div>
 
       <div class="cfk-details">
