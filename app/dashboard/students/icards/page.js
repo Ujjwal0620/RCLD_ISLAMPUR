@@ -78,7 +78,10 @@ export default function StudentICardsPage() {
   }, []);
 
   useEffect(() => {
-    load(1, EMPTY_FILTERS);
+    const timer = window.setTimeout(() => {
+      void load(1, EMPTY_FILTERS);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [load]);
 
   const pageNumbers = useMemo(
