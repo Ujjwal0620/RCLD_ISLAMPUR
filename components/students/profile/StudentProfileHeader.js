@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft, IdCard, Pencil, Printer, Trash2 } from "lucide-react";
+import Link from "next/link";
 
 export default function StudentProfileHeader({
   student,
@@ -46,9 +47,9 @@ export default function StudentProfileHeader({
             </button>
           </>
         )}
-        <a className="ghost-btn" href="/dashboard/students">
+        <Link className="ghost-btn" href="/dashboard/students">
           <ArrowLeft size={17} /> Back
-        </a>
+        </Link>
       </div>
     </header>
   );
