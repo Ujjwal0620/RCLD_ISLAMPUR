@@ -33,7 +33,7 @@ export function printStudentICard(student, setMessage, selectedSemester = "") {
   // -------------------------------------------------
 
   const firstNonEmpty = (...values) => values.find((value) => value !== null && value !== undefined && String(value).trim() !== "");
-  const courseText = String(firstNonEmpty(student.courseName, student.courseCode, student.course?.name, "")).trim();
+  const courseText = String(firstNonEmpty(student.courseName, student.course?.name, student.courseCode, "")).trim();
   const isCFK = /coding\s*for\s*kids|\bCFK\b|\bKIDS\b/i.test(courseText);
   const semesterRaw = firstNonEmpty(student.currentSemester, student.semester, student.activeSemester, 1);
   const semesterNumber = Number(String(semesterRaw).match(/\d+/)?.[0] || 1);
@@ -81,7 +81,13 @@ export function printStudentICard(student, setMessage, selectedSemester = "") {
   const idPrefix = idMatch ? esc(idMatch[1]) : esc(enrollRaw);
   const idNumber = idMatch ? esc(idMatch[2]) : "";
 
-  const rawPhoto = firstNonEmpty(student.photoUrl, student.photo, student.studentPhoto, student.profilePhoto, student.imageUrl, "");
+  const rawPhoto = firstNonEmpty(
+    student.photoUrl,
+    typeof student.photo === "string" ? student.photo : student.photo?.url || student.photo?.secure_url,
+    typeof student.studentPhoto === "string" ? student.studentPhoto : student.studentPhoto?.url || student.studentPhoto?.secure_url,
+    student.profilePhoto,
+    student.imageUrl,
+  );
   const photoUrl = rawPhoto ? esc(rawPhoto) : "";
   const photoImg = photoUrl
     ? `<img class="photo-img" src="${photoUrl}" alt="Student photo"/>`
