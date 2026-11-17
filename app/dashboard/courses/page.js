@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { BookOpen, RefreshCw, Plus, Clock3, CalendarDays, Pencil, Trash2, Search, SlidersHorizontal, Filter, RotateCcw, X } from "lucide-react";
 import ERPLayout from "@/components/ERPLayout";
+import { formatCurrencyINR as money } from "@/lib/formatters";
 
 const empty = {
   code: "",
@@ -15,8 +16,6 @@ const empty = {
   description: "",
   requiredSkills: [],
 };
-
-const money = (value) => "₹" + Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 });
 
 export default function CoursesPage() {
   const [courses, setCourses] = useState([]);
