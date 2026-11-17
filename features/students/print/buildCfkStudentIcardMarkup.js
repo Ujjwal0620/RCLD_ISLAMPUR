@@ -26,7 +26,9 @@ export function buildCfkStudentIcardMarkup({
   const nameParts = rawName.split(/\s+/).filter(Boolean);
   const firstName = esc(nameParts[0] || "");
   const lastName = esc(nameParts.slice(1).join(" "));
-  const fatherName = esc(toTitleCase(student.fatherName || student.guardianName || ""));
+  const fatherName = esc(toTitleCase(
+    student.fatherOrHusbandName || student.fatherName || student.guardianName || student.father_name || ""
+  ));
 
   const addrLines = addrMain
     .split(/[,|\n]+/)
