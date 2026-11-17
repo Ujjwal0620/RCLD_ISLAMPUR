@@ -103,7 +103,7 @@ export function printStudentBill(student, fee, courses, selectedPayment = null) 
           .join("");
         const feeRows = [
           ["Course Fee Total (after discount)", payable],
-          ["Total Course Fee Paid Till Date", paid],
+          ["Total Course Fee Paid Till Date (incl. discount)", paid],
           ["Course Fee Amount Due", due],
         ];
         const feeHtml = feeRows
