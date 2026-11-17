@@ -73,5 +73,6 @@ export default function StudentPresentAddressLocationFields({ editForm, setEditF
                                         }
                                       />
                                     </label>
+    </div>
   );
 }
