@@ -1,3 +1,5 @@
+"use client";
+
 export default function StudentProfileStyles() {
   return (
           <style jsx global>{`
