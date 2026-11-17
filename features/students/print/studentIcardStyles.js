@@ -60,7 +60,7 @@ export function getStudentIcardStyles(cardHeight = "88mm") {
     .cfk-header {
       position: relative;
       z-index: 3;
-      padding-top: 2.1mm;
+      padding-top: 1.8mm;
       text-align: center;
       color: #fff;
     }
@@ -81,7 +81,7 @@ export function getStudentIcardStyles(cardHeight = "88mm") {
     }
     .cfk-title {
       font-family: "Arial Black", Impact, sans-serif;
-      font-size: 7.4mm;
+      font-size: 7.1mm;
       font-weight: 900;
       letter-spacing: .45mm;
       color: #fff;
@@ -89,30 +89,30 @@ export function getStudentIcardStyles(cardHeight = "88mm") {
     }
     .cfk-subtitle {
       margin-top: .7mm;
-      font-size: 1.85mm;
+      font-size: 1.72mm;
       font-weight: 700;
       letter-spacing: .14mm;
       color: #fff;
     }
     .cfk-encouraged {
       margin-top: .5mm;
-      font-size: 1.55mm;
+      font-size: 1.42mm;
       font-weight: 400;
       color: #f0f0f0;
     }
     .cfk-govt {
       margin-top: .35mm;
-      font-size: 2.1mm;
+      font-size: 1.85mm;
       font-weight: 700;
       color: #fff;
     }
     .cfk-photo-wrap {
       position: absolute;
-      top: 15.2mm;
+      top: 15.8mm;
       left: 50%;
       transform: translateX(-50%);
-      width: 25.4mm;
-      height: 25.4mm;
+      width: 25.8mm;
+      height: 25.8mm;
       border-radius: 50%;
       background: #fff;
       padding: .5mm;
@@ -135,15 +135,15 @@ export function getStudentIcardStyles(cardHeight = "88mm") {
     .cfk-photo-inner .photo-ph { font-size:2.5mm;font-weight:700;color:#888; }
     .cfk-name-block {
       position: absolute;
-      top: 41.3mm;
+      top: 41.8mm;
       left: 0;
       right: 0;
       text-align: center;
       z-index: 4;
-      padding: 0 2mm;
+      padding: 0 1.5mm;
     }
     .cfk-student-name {
-      font-size: 4.15mm;
+      font-size: 3.75mm;
       font-weight: 800;
       letter-spacing: .05mm;
       line-height: 1.05;
@@ -154,8 +154,8 @@ export function getStudentIcardStyles(cardHeight = "88mm") {
     .cfk-fname { color: #464E56; }
     .cfk-lname { color: var(--theme-color); }
     .cfk-course-name {
-      margin-top: 1.35mm;
-      font-size: 2.15mm;
+      margin-top: 1.1mm;
+      font-size: 1.95mm;
       font-weight: 600;
       letter-spacing: .12mm;
       color: #464E56;
@@ -163,32 +163,32 @@ export function getStudentIcardStyles(cardHeight = "88mm") {
     }
     .cfk-details {
       position: absolute;
-      top: 50.8mm;
-      left: 9.8mm;
-      right: 2.5mm;
+      top: 52.0mm;
+      left: 6.2mm;
+      right: 2mm;
       z-index: 4;
-      font-size: 2.15mm;
-      line-height: 1.26;
+      font-size: 1.75mm;
+      line-height: 1.2;
     }
     .cfk-row { display:flex;align-items:baseline;margin-bottom:.25mm; }
     .cfk-lbl {
-      width: 15.2mm;
+      width: 18mm;
       flex-shrink: 0;
       text-align: right;
-      padding-right: 1.3mm;
+      padding-right: .8mm;
       font-weight: 700;
       color: var(--label-color);
     }
     .cfk-val { flex:1;font-weight:700;color:#3B4248;word-break:break-word;min-width:0; }
-    .cfk-id-val { font-size:2.15mm;font-weight:700; }
-    .cfk-id-num { font-size:2.55mm;font-weight:800; }
+    .cfk-id-val { font-size:1.95mm;font-weight:700; }
+    .cfk-id-num { font-size:2.2mm;font-weight:800; }
     .cfk-addr-lines div { line-height:1.22; }
     .cfk-sem-badge {
       position: absolute;
-      left: -3.2mm;
-      top: 62.6mm;
-      width: 13.5mm;
-      height: 11.4mm;
+      left: -1.8mm;
+      top: 63.5mm;
+      width: 10.8mm;
+      height: 9.4mm;
       background: var(--theme-color);
       border-radius: 50%;
       transform: rotate(-22deg);
@@ -198,37 +198,37 @@ export function getStudentIcardStyles(cardHeight = "88mm") {
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding-left: 2.2mm;
+      padding-left: 1.1mm;
       color: #fff;
     }
     .cfk-sem-word {
       transform: rotate(22deg);
       font-family: Georgia, "Times New Roman", serif;
-      font-size: 2.35mm;
+      font-size: 2.0mm;
       font-weight: 900;
       letter-spacing: .1mm;
       line-height: 1;
     }
     .cfk-sem-num {
       transform: rotate(22deg);
-      font-size: 4.1mm;
+      font-size: 3.4mm;
       font-weight: 900;
       line-height: 1;
       margin-top: .3mm;
     }
     .cfk-sign-block {
       position: absolute;
-      right: 3.6mm;
-      top: 68.6mm;
+      right: 3.2mm;
+      top: 69.2mm;
       text-align: center;
       z-index: 5;
     }
-    .cfk-sign-svg { height:3.4mm;display:flex;align-items:center;justify-content:center; }
-    .cfk-sign-svg svg { height:3.4mm;width:auto; }
+    .cfk-sign-svg { height:2.8mm;display:flex;align-items:center;justify-content:center; }
+    .cfk-sign-svg svg { height:2.8mm;width:auto; }
     .cfk-sign-text { font-size:1.55mm;font-style:italic;color:#464E56;margin-top:.15mm; }
     .cfk-contact-block {
       position: absolute;
-      bottom: 6.2mm;
+      bottom: 5.6mm;
       left: 0;
       right: 0;
       text-align: center;
@@ -247,20 +247,20 @@ export function getStudentIcardStyles(cardHeight = "88mm") {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 2.2mm;
-      font-size: 2.05mm;
+      gap: 1.4mm;
+      font-size: 1.65mm;
       font-weight: 700;
       color: #363C42;
     }
     .cfk-c-item { display:inline-flex;align-items:center;gap:.7mm; }
-    .cfk-c-icon { color:#D32F2F;display:inline-flex;align-items:center;font-size:2.1mm; }
-    .cfk-c-icon svg { width:2.2mm;height:2.2mm;fill:#D32F2F; }
+    .cfk-c-icon { color:#D32F2F;display:inline-flex;align-items:center;font-size:1.8mm; }
+    .cfk-c-icon svg { width:1.8mm;height:1.8mm;fill:#D32F2F; }
     .cfk-footer-banner {
       position: absolute;
-      bottom: .65mm;
+      bottom: 0;
       left: 0;
       right: 0;
-      height: 3.9mm;
+      height: 3.5mm;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -268,7 +268,7 @@ export function getStudentIcardStyles(cardHeight = "88mm") {
     }
     .cfk-footer-title {
       color: #fff;
-      font-size: 3.1mm;
+      font-size: 2.85mm;
       font-weight: 900;
       letter-spacing: .25mm;
       line-height: 1;
@@ -300,7 +300,7 @@ export function getStudentIcardStyles(cardHeight = "88mm") {
                 .std-details{left:1.8mm;right:1.5mm;top:54.8mm;z-index:3;overflow:hidden}
                 .std-details .r{display:grid;grid-template-columns:14.8mm minmax(0,1fr);column-gap:.8mm;align-items:baseline;margin-bottom:.55mm;line-height:2.45mm}
                 .std-details b{font-size:2.05mm;font-weight:700;color:#1B1F6B;white-space:nowrap}
-                .std-details span{font-size:2.1mm;font-weight:700;color:#111;min-width:0}
+                .std-details span{font-size:1.8mm;font-weight:700;color:#111;min-width:0}
                 .std-details .nm{font-weight:800;letter-spacing:.02mm}
                 .std-details .ad{font-size:1.88mm;font-weight:700;line-height:2.35mm;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
                 .std-details .crs{font-size:2.05mm;font-weight:700;line-height:2.3mm;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
