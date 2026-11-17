@@ -27,7 +27,7 @@ import indiaLocations from "@/lib/indiaStatesDistricts.json";
 import { DetailField as Detail } from "@/components/students/DetailField";
 import DigitBoxes from "@/components/students/DigitBoxes";
 import { isIcardEligible } from "@/features/students/utils/studentProfile";
-import { formatDisplayValue as value, numberToIndianWords } from "@/lib/formatters";
+import { formatDisplayValue as value } from "@/lib/formatters";
 export default function StudentDetailsPage({ params }) {
   const [student, setStudent] = useState(null),
     [error, setError] = useState(""),
