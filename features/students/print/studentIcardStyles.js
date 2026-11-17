@@ -236,7 +236,7 @@ export function getStudentIcardStyles(cardHeight = "88mm") {
       padding: 0 2mm;
     }
     .cfk-aec-line {
-      font-size: 2.15mm;
+      font-size: 1.78mm;
       font-weight: 700;
       color: #363C42;
       letter-spacing: .02mm;
