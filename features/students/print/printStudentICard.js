@@ -3,7 +3,6 @@
 import { isIcardEligible } from "@/features/students/utils/studentProfile";
 
 export function printStudentICard(student, setMessage, selectedSemester = "") {
-  function printStudentICard(selectedSemester = "") {
         if (!student || !isIcardEligible(student)) {
           setMessage(
             "I-Card is unavailable until all required details are complete and admission is not pending.",
@@ -473,5 +472,4 @@ export function printStudentICard(student, setMessage, selectedSemester = "") {
         w.document.open();
         w.document.write(html);
         w.document.close();
-      }
 }
