@@ -25,7 +25,7 @@ export default function CodingForKidsIcardDialog({ open, student, onClose, onPri
           </div>
           <div>
             <h2 id="cfk-dialog-title">Coding For Kids I-Card</h2>
-            <p>Select the student's current semester or learning module.</p>
+            <p>Select the student&apos;s current semester or learning module.</p>
           </div>
           <button
             type="button"
@@ -49,12 +49,12 @@ export default function CodingForKidsIcardDialog({ open, student, onClose, onPri
           <span>Saved current semester</span>
           <strong>SEM {Math.min(6, Math.max(1, Number(student.currentSemester || 1)))}</strong>
           <small>
-            The I-Card uses the student's recorded semester. It cannot be changed from the
+            The I-Card uses the student&apos;s recorded semester. It cannot be changed from the
             print dialog.
           </small>
         </div>
         <div className="cfk-dialog-note">
-          The semester label and colour are taken from the student's current academic
+          The semester label and colour are taken from the student&apos;s current academic
           record. In the print dialog set Margins to None and Scale to 100%.
         </div>
         <footer className="cfk-dialog-actions">
