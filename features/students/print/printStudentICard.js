@@ -102,16 +102,13 @@ export function printStudentICard(student, setMessage, selectedSemester = "") {
     if (addressParts.some((part) => part.normalized === normalized || part.normalized.includes(normalized) || normalized.includes(part.normalized))) return;
     addressParts.push({ value: prefix ? `${prefix} ${text}` : text, normalized });
   };
-  if (rawAddressText) {
-    rawAddressText.split(/[,|\\n]+/).forEach((part) => addAddressPart(part));
-  } else {
-    [
-      addressObject.addressLine1, addressObject.addressLine2, addressObject.houseNo,
-      addressObject.locality, addressObject.village, addressObject.area,
-      student.addressLine1, student.addressLine2, student.houseNo,
-      student.locality, student.village, student.area,
-    ].forEach((part) => addAddressPart(part));
-  }
+  if (rawAddressText) rawAddressText.split(/[,|\\n]+/).forEach((part) => addAddressPart(part));
+  [
+    addressObject.addressLine1, addressObject.addressLine2, addressObject.houseNo,
+    addressObject.locality, addressObject.village, addressObject.area,
+    student.addressLine1, student.addressLine2, student.houseNo,
+    student.locality, student.village, student.area,
+  ].forEach((part) => addAddressPart(part));
   addAddressPart(firstNonEmpty(addressObject.postOffice, student.postOffice, student.post_office), "P.O.");
   addAddressPart(firstNonEmpty(addressObject.policeStation, student.policeStation, student.police_station), "P.S.");
   addAddressPart(firstNonEmpty(addressObject.district, student.district), "Dist.");
