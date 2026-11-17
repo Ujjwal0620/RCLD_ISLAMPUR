@@ -125,6 +125,5 @@ export default function StudentPaymentHistorySection({ fee, printBill }) {
                                 </span>
                               </div>
                             </section>
-                          </div>
   );
 }
