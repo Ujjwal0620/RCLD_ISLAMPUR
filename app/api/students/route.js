@@ -150,7 +150,8 @@ export async function GET(request) {
             { formNo: { $exists: true, $nin: ["", null] } },
           ],
         },
-        { status: { $nin: ["Admission Pending", "Cancelled"] } },
+        // Keep pending/cancelled records visible in the directory; printing is
+        // separately disabled for these statuses in the UI and print helper.
       ];
     }
 
