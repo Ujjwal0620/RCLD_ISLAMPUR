@@ -1,8 +1,9 @@
 "use client";
 
 import { BookOpen, CalendarDays, ClipboardCheck, WalletCards } from "lucide-react";
+import { formatDisplayValue as value } from "@/lib/formatters";
 
-export default function StudentSummaryCards({ fee, attendance, student, value }) {
+export default function StudentSummaryCards({ fee, attendance, student }) {
   return (
     <section className="student-summary-grid">
             <div className="summary-card">
