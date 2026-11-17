@@ -74,7 +74,7 @@ export function getStudentIcardStyles(cardHeight = "88mm") {
     .cfk-sign-svg { height:3.6mm;display:flex;align-items:center;justify-content:center; }
     .cfk-sign-svg svg { width:9.2mm;height:3.6mm; }
     .cfk-sign-text { font-size:1.55mm;font-style:italic;color:#44515A;margin-top:.15mm;white-space:nowrap; }
-    .cfk-contact-block { position:absolute;bottom:6.3mm;left:0;right:0;text-align:center;z-index:5;padding:0 1.2mm; }
+    .cfk-contact-block { position:absolute;bottom:7mm;left:0;right:0;text-align:center;z-index:5;padding:0 1.2mm; }
     .cfk-aec-line { font-size:1.72mm;font-weight:700;color:#44515A;letter-spacing:0;white-space:nowrap; }
     .cfk-contact-line { margin-top:.35mm;display:flex;align-items:center;justify-content:center;gap:1.8mm;font-size:1.62mm;font-weight:600;color:#44515A;white-space:nowrap; }
     .cfk-c-item { display:inline-flex;align-items:center;gap:.5mm; }
