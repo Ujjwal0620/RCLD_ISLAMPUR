@@ -76,8 +76,22 @@ function feeSummary(record) {
     const purpose = String(item.purpose || item.type || "").trim().toLowerCase();
     return ["course fee", "admission fee", "installment", "tuition fee"].includes(purpose);
   };
+  const paymentItemsForAccounting = (payment) => {
+    const stored = Array.isArray(payment.items) ? payment.items : [];
+    const hasPurpose = stored.some(item => {
+      const purpose = String(item.purpose || item.type || "").trim().toLowerCase();
+      return purpose && purpose !== "other";
+    });
+    if (hasPurpose) return stored;
+    const match = String(payment.note || "").match(/Fee sections:\s*([\\s\\S]*)$/i);
+    if (!match) return stored;
+    return match[1].split(/;\\s*/).map(part => {
+      const item = part.match(/^(.*?):\\s*₹([\\d,.]+)(?:\\s*\\((.*?)\\))?$/);
+      return item ? { purpose: item[1].trim(), amount: Number(item[2].replace(/,/g, "")), installmentMonth: item[3] || "" } : null;
+    }).filter(Boolean);
+  };
   const coursePaidForPayment = (payment) => {
-    const items = Array.isArray(payment.items) ? payment.items : [];
+    const items = paymentItemsForAccounting(payment);
     if (items.length) return items.filter(classifyItem).reduce((sum, item) => sum + Number(item.amount || 0), 0);
     const type = String(payment.paymentType || "").toLowerCase();
     return ["late fine", "lab charge", "registration fee"].some(label => type.includes(label))
@@ -89,13 +103,13 @@ function feeSummary(record) {
   const totalCollected = semesterPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
   const separateChargesPaid = Math.max(0, totalCollected - paid);
   const due = Math.max(0, courseFeePayable - paid);
-  const lateFine = semesterPayments.reduce((sum, payment) => sum + (payment.items || [])
+  const lateFine = semesterPayments.reduce((sum, payment) => sum + paymentItemsForAccounting(payment)
     .filter(item => String(item.purpose || item.type || "").toLowerCase() === "late fine")
     .reduce((itemSum, item) => itemSum + Number(item.amount || 0), 0), 0);
-  const labCharges = semesterPayments.reduce((sum, payment) => sum + (payment.items || [])
+  const labCharges = semesterPayments.reduce((sum, payment) => sum + paymentItemsForAccounting(payment)
     .filter(item => String(item.purpose || item.type || "").toLowerCase() === "lab charge")
     .reduce((itemSum, item) => itemSum + Number(item.amount || 0), 0), 0);
-  const registrationCharges = semesterPayments.reduce((sum, payment) => sum + (payment.items || [])
+  const registrationCharges = semesterPayments.reduce((sum, payment) => sum + paymentItemsForAccounting(payment)
     .filter(item => String(item.purpose || item.type || "").toLowerCase() === "registration fee")
     .reduce((itemSum, item) => itemSum + Number(item.amount || 0), 0), 0);
   return {
