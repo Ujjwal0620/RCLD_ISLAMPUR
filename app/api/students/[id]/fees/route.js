@@ -83,10 +83,10 @@ function feeSummary(record) {
       return purpose && purpose !== "other";
     });
     if (hasPurpose) return stored;
-    const match = String(payment.note || "").match(/Fee sections:\s*([\\s\\S]*)$/i);
+    const match = String(payment.note || "").match(/Fee sections:\s*([\s\S]*)$/i);
     if (!match) return stored;
-    return match[1].split(/;\\s*/).map(part => {
-      const item = part.match(/^(.*?):\\s*₹([\\d,.]+)(?:\\s*\\((.*?)\\))?$/);
+    return match[1].split(/;\s*/).map(part => {
+      const item = part.match(/^(.*?):\s*₹([\\d,.]+)(?:\s*\\((.*?)\\))?$/);
       return item ? { purpose: item[1].trim(), amount: Number(item[2].replace(/,/g, "")), installmentMonth: item[3] || "" } : null;
     }).filter(Boolean);
   };
