@@ -32,10 +32,13 @@ export function printStudentICard(student, setMessage, selectedSemester = "") {
   const CONTACT_WEB = "rcldgov.in";
   // -------------------------------------------------
 
-  const courseText = String(student.courseName || student.courseCode || "").trim();
+  const firstNonEmpty = (...values) => values.find((value) => value !== null && value !== undefined && String(value).trim() !== "");
+  const courseText = String(firstNonEmpty(student.courseName, student.courseCode, student.course?.name, "")).trim();
   const isCFK = /coding\s*for\s*kids|\bCFK\b|\bKIDS\b/i.test(courseText);
+  const semesterRaw = firstNonEmpty(student.currentSemester, student.semester, student.activeSemester, 1);
+  const semesterNumber = Number(String(semesterRaw).match(/\d+/)?.[0] || 1);
   const activeSemester = isCFK
-    ? `SEM ${Math.min(6, Math.max(1, Number(student.currentSemester || 1)))}`
+    ? `SEM ${Math.min(6, Math.max(1, semesterNumber))}`
     : selectedSemester;
 
   const semesterOptions = ["SEM 1", "SEM 2", "SEM 3", "SEM 4", "SEM 5", "SEM 6"];
@@ -73,17 +76,21 @@ export function printStudentICard(student, setMessage, selectedSemester = "") {
   const sessionLabel = esc(student.session || student.academicSession || DEFAULT_SESSION);
 
   const enrollRaw =
-    String(student.enrollmentNo || student.studentId || student.admissionNo || "").trim() || "—";
+    String(firstNonEmpty(student.enrollmentNo, student.studentId, student.admissionNo, student.regnNo, student.formNo, "—")).trim();
   const idMatch = enrollRaw.match(/^(.*?)(\d+)$/);
   const idPrefix = idMatch ? esc(idMatch[1]) : esc(enrollRaw);
   const idNumber = idMatch ? esc(idMatch[2]) : "";
 
-  const photoUrl = student.photoUrl ? esc(student.photoUrl) : "";
+  const rawPhoto = firstNonEmpty(student.photoUrl, student.photo, student.studentPhoto, student.profilePhoto, student.imageUrl, "");
+  const photoUrl = rawPhoto ? esc(rawPhoto) : "";
   const photoImg = photoUrl
     ? `<img class="photo-img" src="${photoUrl}" alt="Student photo"/>`
     : '<div class="photo-ph">PHOTO</div>';
   const logoUrl = new URL("/assets/logo.png", window.location.origin).href;
-  const addrMain = String(student.presentAddress || student.address || "").trim();
+  const rawAddress = firstNonEmpty(student.presentAddress, student.address, student.permanentAddress, student.currentAddress, "");
+  const addrMain = typeof rawAddress === "object"
+    ? [rawAddress.addressLine1, rawAddress.addressLine2, rawAddress.village, rawAddress.postOffice, rawAddress.policeStation, rawAddress.district, rawAddress.state, rawAddress.pinCode].filter(Boolean).join(", ")
+    : String(rawAddress).trim();
 
   const cardHeight = isCFK ? "85mm" : "88mm";
   let cardMarkup = "";
