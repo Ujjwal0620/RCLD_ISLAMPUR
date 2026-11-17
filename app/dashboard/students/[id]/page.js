@@ -77,7 +77,6 @@ export default function StudentDetailsPage({ params }) {
           <StudentEditPanel
             editing={editing}
             setEditing={setEditing}
-            student={student}
             editForm={editForm}
             setEditForm={setEditForm}
             courses={courses}
@@ -85,6 +84,7 @@ export default function StudentDetailsPage({ params }) {
             referrals={referrals}
             saveStudent={saveStudent}
             indiaLocations={indiaLocations}
+            setMessage={setMessage}
           />
           <StudentProfileHero student={student} />
           <StudentTransitionPanel
