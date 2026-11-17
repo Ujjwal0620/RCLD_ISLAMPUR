@@ -1,7 +1,6 @@
 "use client";
 
 export function printStudentBill(student, fee, courses, selectedPayment = null) {
-  function printBill(selectedPayment = null) {
         if (!student || !fee) return;
         const esc = (v) =>
           String(v ?? "").replace(
@@ -156,5 +155,4 @@ export function printStudentBill(student, fee, courses, selectedPayment = null) 
         w.document.open();
         w.document.write(html);
         w.document.close();
-      }
 }
