@@ -66,14 +66,15 @@ export function getStudentIcardStyles(cardHeight = "88mm") {
     .cfk-addr-lines { font-size:1.7mm;line-height:1.2;font-weight:500; }
     .cfk-addr-lines div { line-height:1.2; }
     .cfk-sem-badge { position:absolute;left:0;top:65.2mm;width:10.6mm;height:9.4mm;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#FFFFFF; }
-    .cfk-sem-badge svg { position:absolute;inset:0;width:100%;height:100%;z-index:-1; }
+    .cfk-sem-badge svg { position:absolute;inset:0;width:100%;height:100%;z-index:0; }
+    .cfk-sem-word, .cfk-sem-num { position:relative;z-index:1; }
     .cfk-sem-word { font-family:Arial,Helvetica,sans-serif;font-size:1.9mm;font-weight:800;line-height:1;color:#FFFFFF; }
     .cfk-sem-num { margin-top:.45mm;font-size:3.5mm;font-weight:900;line-height:1;color:#FFFFFF; }
     .cfk-sign-block { position:absolute;right:3mm;top:70.8mm;width:13mm;text-align:center;z-index:5; }
     .cfk-sign-svg { height:3.6mm;display:flex;align-items:center;justify-content:center; }
     .cfk-sign-svg svg { width:9.2mm;height:3.6mm; }
     .cfk-sign-text { font-size:1.55mm;font-style:italic;color:#44515A;margin-top:.15mm;white-space:nowrap; }
-    .cfk-contact-block { position:absolute;bottom:5.7mm;left:0;right:0;text-align:center;z-index:5;padding:0 1.2mm; }
+    .cfk-contact-block { position:absolute;bottom:6.3mm;left:0;right:0;text-align:center;z-index:5;padding:0 1.2mm; }
     .cfk-aec-line { font-size:1.72mm;font-weight:700;color:#44515A;letter-spacing:0;white-space:nowrap; }
     .cfk-contact-line { margin-top:.35mm;display:flex;align-items:center;justify-content:center;gap:1.8mm;font-size:1.62mm;font-weight:600;color:#44515A;white-space:nowrap; }
     .cfk-c-item { display:inline-flex;align-items:center;gap:.5mm; }
