@@ -4,21 +4,9 @@ import { useEffect, useState } from "react";
 import {
   ArrowLeft,
   UserRound,
-  MapPin,
-  BookOpen,
-  FileText,
-  CreditCard,
-  CalendarDays,
-  ClipboardCheck,
-  WalletCards,
-  Save,
   Pencil,
   Trash2,
   Printer,
-  ArrowRightLeft,
-  UserX,
-  History,
-  Phone as PhoneIcon,
   IdCard,
 } from "lucide-react";
 import ERPLayout from "@/components/ERPLayout";
@@ -36,8 +24,6 @@ import StudentAcademicDetails from "@/components/students/profile/StudentAcademi
 import useStudentPrint from "@/features/students/hooks/useStudentPrint";
 import RCLDLogo from "@/components/RCLDLogo";
 import indiaLocations from "@/lib/indiaStatesDistricts.json";
-import { DetailField as Detail } from "@/components/students/DetailField";
-import DigitBoxes from "@/components/students/DigitBoxes";
 import { isIcardEligible } from "@/features/students/utils/studentProfile";
 import { formatDisplayValue as value } from "@/lib/formatters";
 export default function StudentDetailsPage({ params }) {
@@ -450,7 +436,7 @@ export default function StudentDetailsPage({ params }) {
           <section className="student-profile-card student-profile-hero">
             <div className="student-profile-brand">
               <RCLDLogo className="student-profile-logo" />
-              <div>
+          <div>
                 <span>RASHTRIYA COMPUTER LITERACY DRIVE</span>
                 <strong>STUDENT PROFILE</strong>
                 <small>RCLD ISLAMPUR EDUCATION ERP</small>
@@ -474,7 +460,12 @@ export default function StudentDetailsPage({ params }) {
             editForm={editForm} setEditForm={setEditForm} setStudent={setStudent}
             transition={transition} setTransition={setTransition}
             transitioning={transitioning} setTransitioning={setTransitioning} setMessage={setMessage}
-          />          <StudentContactHistory contactLogs={contactLogs} />          <StudentSummaryCards fee={fee} attendance={attendance} student={student} value={value} />          <StudentPersonalDetails student={student} />          <StudentAcademicDetails student={student} />          <StudentFeeWorkspace
+          />
+          <StudentContactHistory contactLogs={contactLogs} />
+          <StudentSummaryCards fee={fee} attendance={attendance} student={student} value={value} />
+          <StudentPersonalDetails student={student} />
+          <StudentAcademicDetails student={student} />
+          <StudentFeeWorkspace
             student={student}
             fee={fee}
             value={value}
