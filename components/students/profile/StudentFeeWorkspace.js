@@ -140,7 +140,9 @@ export default function StudentFeeWorkspace({
                           proofUploading={proofUploading}
                           uploadPaymentProof={uploadPaymentProof}
                         />
-                        <StudentPaymentHistorySection fee={fee} printBill={printBill} />                      <footer className="fee-modal-footer">
+                        <StudentPaymentHistorySection fee={fee} printBill={printBill} />
+                      </div>
+                      <footer className="fee-modal-footer">
                         <span>Print format remains a compact half-page receipt.</span>
                         <button
                           type="button"
