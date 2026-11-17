@@ -31,7 +31,6 @@ export function printStudentBill(student, fee, courses, selectedPayment = null) 
         const course = courses.find(
           (x) => String(x.code || "").toUpperCase() === String(student.courseCode || "").toUpperCase(),
         );
-        const duration = student.courseDuration || course?.duration || course?.durationText || "";
         const dateKey = String(payment?.date || new Date().toISOString().slice(0, 10)).replace(
           /\D/g,
           "",
