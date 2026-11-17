@@ -1,7 +1,7 @@
 "use client";
 
 export default function StudentTransitionForm({
-  student, batches, setStudent, setEditForm, history, setHistory,
+  student, batches, setStudent, setEditForm, setHistory,
   transition, setTransition, transitioning, setTransitioning, setMessage,
 }) {
   return (
