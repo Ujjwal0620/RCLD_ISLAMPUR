@@ -98,11 +98,11 @@ export function printStudentICard(student, setMessage, selectedSemester = "") {
     if (value === null || value === undefined) return;
     const text = String(value).trim();
     if (!text) return;
-    const normalized = text.toLowerCase().replace(/[.,\\s]+/g, " ").trim();
+    const normalized = text.toLowerCase().replace(/[.,\s]+/g, " ").trim();
     if (addressParts.some((part) => part.normalized === normalized || part.normalized.includes(normalized) || normalized.includes(part.normalized))) return;
     addressParts.push({ value: prefix ? `${prefix} ${text}` : text, normalized });
   };
-  if (rawAddressText) rawAddressText.split(/[,|\\n]+/).forEach((part) => addAddressPart(part));
+  if (rawAddressText) rawAddressText.split(/[,|\n]+/).forEach((part) => addAddressPart(part));
   [
     addressObject.addressLine1, addressObject.addressLine2, addressObject.houseNo,
     addressObject.locality, addressObject.village, addressObject.area,
@@ -114,7 +114,7 @@ export function printStudentICard(student, setMessage, selectedSemester = "") {
   addAddressPart(firstNonEmpty(addressObject.district, student.district), "Dist.");
   addAddressPart(firstNonEmpty(addressObject.state, student.state));
   addAddressPart(firstNonEmpty(addressObject.pinCode, addressObject.pincode, student.pinCode, student.pincode, student.postalCode));
-  const addrMain = addressParts.map((part) => part.value).join("\\n");
+  const addrMain = addressParts.map((part) => part.value).join("\n");
 
   const cardHeight = isCFK ? "85mm" : "88mm";
   let cardMarkup = "";
