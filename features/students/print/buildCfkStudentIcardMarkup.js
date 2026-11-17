@@ -59,8 +59,8 @@ export function buildCfkStudentIcardMarkup({
         <path d="M0 190L136 315L143 308L0 180Z" fill="#FFFFFF"/>
         <path d="M550 174L405 307L397 299L550 164Z" fill="#FFFFFF"/>
         <path d="M550 190L414 315L407 308L550 180Z" fill="#FFFFFF"/>
-        <path d="M0 815L275 835L550 815V880H0Z" fill="#F6801E"/>
-        <path d="M0 801L275 821L550 801V811L275 831L0 811Z" fill="#FFFFFF"/>
+        <path d="M0 835L275 850L550 835V880H0Z" fill="#F6801E"/>
+        <path d="M0 820L275 835L550 820V830L275 845L0 830Z" fill="#FFFFFF"/>
       </svg>
 
       <div class="cfk-header">
