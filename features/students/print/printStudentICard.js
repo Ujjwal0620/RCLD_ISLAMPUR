@@ -71,7 +71,7 @@ export function printStudentICard(student, setMessage, selectedSemester = "") {
   }
 
   const studentName = esc(student.applicantName);
-  const admissionDate = student.admissionDate || student.createdAt || "";
+  const admissionDate = firstNonEmpty(student.admissionDate, student.dateOfAdmission, student.admissionOn, student.dateOfJoining, student.createdAt, "");
   const issueDate = formatIcardDate(admissionDate);
   const sessionLabel = esc(student.session || student.academicSession || DEFAULT_SESSION);
 
