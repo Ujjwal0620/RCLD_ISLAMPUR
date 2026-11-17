@@ -31,7 +31,7 @@ export function buildCfkStudentIcardMarkup({
   ));
 
   const addrLines = addrMain
-    .split(/[,|\n]+/)
+    .split(/\n+/)
     .map((line) => line.trim())
     .filter(Boolean);
 
