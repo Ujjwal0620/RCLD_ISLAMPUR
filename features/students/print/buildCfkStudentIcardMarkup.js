@@ -34,8 +34,7 @@ export function buildCfkStudentIcardMarkup({
             const fatherFormatted = student.fatherOrHusbandName
               ? esc(toTitleCase(student.fatherOrHusbandName))
               : "—";
-      
-            cardMarkup = `
+  const cardMarkup = `
               <article class="card cfk" style="--sem:${sem};--lbl:${labelColor};--charcoal:${charcoal}">
                 <svg class="bg" viewBox="0 0 55 88" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
                   <rect width="55" height="88" fill="#FFFFFF"/>
