@@ -5,7 +5,7 @@ import { getSession, roleOfEmployee } from "@/lib/auth";
 
 const PaymentSchema = new mongoose.Schema({
   amount: { type: Number, required: true, min: 0 },
-  items: { type: [{ type: { type: String, required: true }, amount: { type: Number, required: true, min: 0 } }], default: [] },
+  items: { type: [{ purpose: String, type: String, amount: { type: Number, required: true, min: 0 }, installmentMonth: String }], default: [] },
   date: { type: String, required: true },
   method: { type: String, default: "Cash" },
   reference: String,
@@ -65,27 +65,54 @@ async function getFeeActor() {
 }
 
 function feeSummary(record) {
-  const tuitionAfterDiscount = Math.max(0, Number(record.totalFee || 0) - Number(record.discount || 0));
-  const oneTimeFees = Number(record.admissionFee || 0) + Number(record.registrationFee || 0);
-  const payable = tuitionAfterDiscount + oneTimeFees;
+  const courseFeeTotal = Math.max(0, Number(record.totalFee || 0));
+  const discount = Math.max(0, Number(record.discount || 0));
+  const courseFeePayable = Math.max(0, courseFeeTotal - discount);
   const allPayments = record.payments || [];
-  const semesterPayments = record.currentSemester ? allPayments.filter(payment => Number(payment.semester || (record.currentSemester === 1 ? 1 : 0)) === Number(record.currentSemester)) : allPayments;
-  const paid = semesterPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
-  const historicalPaid = allPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
-  const dueBeforeFine = Math.max(0, payable - paid);
-  const start = record.admissionDate ? new Date(record.admissionDate + "T00:00:00") : null;
-  const now = new Date();
-  let lateMonths = 0;
-  if (dueBeforeFine > 0 && start && !Number.isNaN(start.getTime())) {
-    const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
-    while (cursor <= new Date(now.getFullYear(), now.getMonth(), 1)) {
-      const afterTenth = now.getFullYear() > cursor.getFullYear() || now.getMonth() > cursor.getMonth() || now.getDate() > 10;
-      if (afterTenth && (cursor.getFullYear() > start.getFullYear() || cursor.getMonth() > start.getMonth() || start.getDate() <= 10)) lateMonths += 1;
-      cursor.setMonth(cursor.getMonth() + 1);
-    }
-  }
-  const lateFine = lateMonths * 50;
-  return { ...record, tuitionAfterDiscount, oneTimeFees, payable, paid, historicalPaid, lateFine, due: dueBeforeFine + lateFine };
+  const semesterPayments = record.currentSemester
+    ? allPayments.filter(payment => Number(payment.semester || 0) === Number(record.currentSemester))
+    : allPayments;
+  const classifyItem = (item) => {
+    const purpose = String(item.purpose || item.type || "").trim().toLowerCase();
+    return ["course fee", "admission fee", "installment", "tuition fee"].includes(purpose);
+  };
+  const coursePaidForPayment = (payment) => {
+    const items = Array.isArray(payment.items) ? payment.items : [];
+    if (items.length) return items.filter(classifyItem).reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    const type = String(payment.paymentType || "").toLowerCase();
+    return ["late fine", "lab charge", "registration fee"].some(label => type.includes(label))
+      ? 0
+      : Number(payment.amount || 0);
+  };
+  const paid = semesterPayments.reduce((sum, payment) => sum + coursePaidForPayment(payment), 0);
+  const historicalPaid = allPayments.reduce((sum, payment) => sum + coursePaidForPayment(payment), 0);
+  const totalCollected = semesterPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+  const separateChargesPaid = Math.max(0, totalCollected - paid);
+  const due = Math.max(0, courseFeePayable - paid);
+  const lateFine = semesterPayments.reduce((sum, payment) => sum + (payment.items || [])
+    .filter(item => String(item.purpose || item.type || "").toLowerCase() === "late fine")
+    .reduce((itemSum, item) => itemSum + Number(item.amount || 0), 0), 0);
+  const labCharges = semesterPayments.reduce((sum, payment) => sum + (payment.items || [])
+    .filter(item => String(item.purpose || item.type || "").toLowerCase() === "lab charge")
+    .reduce((itemSum, item) => itemSum + Number(item.amount || 0), 0), 0);
+  const registrationCharges = semesterPayments.reduce((sum, payment) => sum + (payment.items || [])
+    .filter(item => String(item.purpose || item.type || "").toLowerCase() === "registration fee")
+    .reduce((itemSum, item) => itemSum + Number(item.amount || 0), 0), 0);
+  return {
+    ...record,
+    courseFeeTotal,
+    tuitionAfterDiscount: courseFeePayable,
+    oneTimeFees: Number(record.admissionFee || 0) + Number(record.registrationFee || 0),
+    payable: courseFeePayable,
+    paid,
+    historicalPaid,
+    totalCollected,
+    separateChargesPaid,
+    lateFine,
+    labCharges,
+    registrationCharges,
+    due,
+  };
 }
 
 export async function GET(request, { params }) {
@@ -163,8 +190,10 @@ export async function POST(request, { params }) {
     let paymentUpdate = {};
     if (body.payment) {
       const items = Array.isArray(body.payment.items) ? body.payment.items.map((item) => ({
-        type: String(item.type || "Other").trim(),
+        purpose: String(item.purpose || item.type || "Other").trim(),
+        type: String(item.purpose || item.type || "Other").trim(),
         amount: Number(item.amount),
+        installmentMonth: String(item.installmentMonth || "").trim(),
       })) : [];
       const amount = items.length
         ? items.reduce((sum, item) => sum + item.amount, 0)
