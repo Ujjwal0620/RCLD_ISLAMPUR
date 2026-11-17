@@ -1,9 +1,9 @@
 "use client";
 
-import { UserRound } from "lucide-react";
 import ERPLayout from "@/components/ERPLayout";
 import StudentProfileStyles from "@/components/students/profile/StudentProfileStyles";
 import StudentProfileHeader from "@/components/students/profile/StudentProfileHeader";
+import StudentProfileHero from "@/components/students/profile/StudentProfileHero";
 import CodingForKidsSemesterPanel from "@/components/students/profile/CodingForKidsSemesterPanel";
 import CodingForKidsIcardDialog from "@/components/students/profile/CodingForKidsIcardDialog";
 import StudentEditPanel from "@/components/students/profile/StudentEditPanel";
@@ -16,7 +16,6 @@ import StudentSummaryCards from "@/components/students/profile/StudentSummaryCar
 import StudentPersonalDetails from "@/components/students/profile/StudentPersonalDetails";
 import StudentAcademicDetails from "@/components/students/profile/StudentAcademicDetails";
 import useStudentProfile from "@/features/students/hooks/useStudentProfile";
-import RCLDLogo from "@/components/RCLDLogo";
 import indiaLocations from "@/lib/indiaStatesDistricts.json";
 import { isIcardEligible } from "@/features/students/utils/studentProfile";
 import { formatDisplayValue as value } from "@/lib/formatters";
@@ -88,28 +87,7 @@ export default function StudentDetailsPage({ params }) {
             saveStudent={saveStudent}
             indiaLocations={indiaLocations}
           />
-          <section className="student-profile-card student-profile-hero">
-            <div className="student-profile-brand">
-              <RCLDLogo className="student-profile-logo" />
-          <div>
-                <span>RASHTRIYA COMPUTER LITERACY DRIVE</span>
-                <strong>STUDENT PROFILE</strong>
-                <small>RCLD ISLAMPUR EDUCATION ERP</small>
-              </div>
-            </div>
-            <div className="student-avatar">
-              {student.photoUrl ? <img src={student.photoUrl} alt="" /> : <UserRound size={30} />}
-            </div>
-            <div className="student-profile-identity">
-              <div className="eyebrow">STUDENT RECORD / REGISTRATION</div>
-              <h2>{student.applicantName}</h2>
-              <p>
-                Form No. {value(student.formNo)} · {value(student.courseName)} ·{" "}
-                {value(student.mobileNumber)}
-              </p>
-            </div>
-            <span className="badge profile-status">{value(student.status)}</span>
-          </section>
+          <StudentProfileHero student={student} />
           <StudentTransitionPanel
             student={student} batches={batches} history={history} setHistory={setHistory}
             editForm={editForm} setEditForm={setEditForm} setStudent={setStudent}
