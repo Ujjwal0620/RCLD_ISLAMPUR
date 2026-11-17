@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, CreditCard, WalletCards } from "lucide-react";
+import { ArrowLeft, CreditCard, Printer, Save, WalletCards } from "lucide-react";
 
 export default function StudentFeeWorkspace({
   student,
