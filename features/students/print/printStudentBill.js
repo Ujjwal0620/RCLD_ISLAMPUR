@@ -54,18 +54,25 @@ export function printStudentBill(student, fee, courses, selectedPayment = null) 
               })
               .filter(Boolean)
           : [];
+        const storedItems = Array.isArray(payment?.items) ? payment.items : [];
+        const storedItemsHavePurpose = storedItems.some((item) => {
+          const purpose = String(item.purpose || item.type || "").trim().toLowerCase();
+          return purpose && purpose !== "other";
+        });
         const items =
-          Array.isArray(payment?.items) && payment.items.length
-            ? payment.items
+          storedItemsHavePurpose
+            ? storedItems
             : parsedNoteItems.length
               ? parsedNoteItems
-              : [
-                  {
-                    purpose: payment?.paymentType || "Payment",
-                    amount: payment?.amount,
-                    installmentMonth: payment?.installmentMonth || "",
-                  },
-                ];
+              : storedItems.length
+                ? storedItems
+                : [
+                    {
+                      purpose: payment?.paymentType || "Payment",
+                      amount: payment?.amount,
+                      installmentMonth: payment?.installmentMonth || "",
+                    },
+                  ];
         const itemRows = items
           .map(
             (item) =>
