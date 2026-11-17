@@ -1,6 +1,6 @@
 "use client";
 
-export default function StudentCourseFeeFields({ student, editForm, setEditForm, courses, batches, referrals, indiaLocations }) {
+export default function StudentCourseFeeFields({ editForm, setEditForm, courses, batches }) {
   return (
     <div className="edit-card">
                             <h4>Course & Fee</h4>
