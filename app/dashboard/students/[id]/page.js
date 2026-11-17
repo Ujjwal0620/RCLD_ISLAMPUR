@@ -347,7 +347,11 @@ export default function StudentDetailsPage({ params }) {
         discount: feeForm.discount || 0,
         admissionFee: feeForm.admissionFee,
         registrationFee: feeForm.registrationFee,
-        lateFine: Number(fee?.lateFine || 0) + paymentItems.filter((item) => item.purpose === "Late Fine").reduce((sum, item) => sum + Number(item.amount || 0), 0),
+        lateFine:
+          Number(fee?.lateFine || 0) +
+          paymentItems
+            .filter((item) => item.purpose === "Late Fine")
+            .reduce((sum, item) => sum + Number(item.amount || 0), 0),
         admissionDate: student.admissionDate,
       }),
     });
@@ -359,6 +363,7 @@ export default function StudentDetailsPage({ params }) {
     setEditing(false);
     setMessage("Student profile and course fee mapping updated successfully.");
   }
+
   async function deleteStudent() {
     if (!confirm("Permanently delete this student from the database? This cannot be undone."))
       return;
@@ -367,6 +372,7 @@ export default function StudentDetailsPage({ params }) {
     if (!r.ok) return setMessage(d.error || "Unable to archive student.");
     window.location.href = "/dashboard/students";
   }
+
   async function saveFees(e) {
     e.preventDefault();
     setMessage("");
@@ -388,10 +394,35 @@ export default function StudentDetailsPage({ params }) {
               reference: feeForm.reference,
               utrNumber: feeForm.utrNumber,
               screenshotUrl: feeForm.screenshotUrl,
-              note: [feeForm.note, "Fee sections: " + paymentItems.filter((item) => Number(item.amount) > 0).map((item) => `${item.purpose}: ₹${Number(item.amount).toLocaleString("en-IN")}${item.installmentMonth ? ` (${item.installmentMonth})` : ""}`).join("; ")].filter(Boolean).join(" | "),
-              paymentType: paymentItems.length > 1 ? "Multiple Sections" : paymentItems[0]?.purpose || feeForm.paymentType,
-              installmentMonth: paymentItems.find((item) => item.installmentMonth)?.installmentMonth || feeForm.installmentMonth,
-              items: paymentItems.filter((item) => Number(item.amount) > 0).map(({ purpose, amount, installmentMonth }) => ({ purpose, amount: Number(amount), installmentMonth })),
+              note: [
+                feeForm.note,
+                "Fee sections: " +
+                  paymentItems
+                    .filter((item) => Number(item.amount) > 0)
+                    .map(
+                      (item) =>
+                        `${item.purpose}: ₹${Number(item.amount).toLocaleString("en-IN")}${
+                          item.installmentMonth ? ` (${item.installmentMonth})` : ""
+                        }`,
+                    )
+                    .join("; "),
+              ]
+                .filter(Boolean)
+                .join(" | "),
+              paymentType:
+                paymentItems.length > 1
+                  ? "Multiple Sections"
+                  : paymentItems[0]?.purpose || feeForm.paymentType,
+              installmentMonth:
+                paymentItems.find((item) => item.installmentMonth)?.installmentMonth ||
+                feeForm.installmentMonth,
+              items: paymentItems
+                .filter((item) => Number(item.amount) > 0)
+                .map(({ purpose, amount, installmentMonth }) => ({
+                  purpose,
+                  amount: Number(amount),
+                  installmentMonth,
+                })),
             }
           : undefined,
       }),
@@ -410,9 +441,12 @@ export default function StudentDetailsPage({ params }) {
       screenshotUrl: "",
       note: "",
     }));
-    setPaymentItems([{ id: `payment-line-${Date.now()}`, purpose: "Course Fee", amount: "", installmentMonth: "" }]);
+    setPaymentItems([
+      { id: `payment-line-${Date.now()}`, purpose: "Course Fee", amount: "", installmentMonth: "" },
+    ]);
     setMessage("Fee information saved.");
   }
+
   async function uploadPaymentProof(file) {
     if (!file) return;
     if (!file.type.startsWith("image/") || file.size > 5 * 1024 * 1024) {
@@ -455,24 +489,46 @@ export default function StudentDetailsPage({ params }) {
     // ---------------------------------------------------
 
     const esc = (v) =>
-      String(v ?? "—").replace(/[&<>"']/g, (ch) => ({
-        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
-      })[ch]);
+      String(v ?? "—").replace(
+        /[&<>"']/g,
+        (ch) =>
+          ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+          })[ch],
+      );
     const upper = (v) => esc(String(v ?? "").trim().toUpperCase());
+    const toTitleCase = (str) =>
+      String(str ?? "")
+        .trim()
+        .replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase());
+
     const courseText = String(student.courseName || student.courseCode || "").trim();
-    const isCFK = /coding\s*for\s*kids|\bCFK\b/i.test(courseText);
-    const activeSemester = isCFK ? `SEM ${Math.min(6, Math.max(1, Number(student.currentSemester || 1)))}` : selectedSemester;
+    const isCFK = /coding\s*for\s*kids|\bCFK\b|\bKIDS\b/i.test(courseText);
+    const activeSemester = isCFK
+      ? `SEM ${Math.min(6, Math.max(1, Number(student.currentSemester || 1)))}`
+      : selectedSemester;
     const semesterOptions = ["SEM 1", "SEM 2", "SEM 3", "SEM 4", "SEM 5", "SEM 6"];
     const semesterColors = {
-      "SEM 1": "#ec008c",
-      "SEM 2": "#269b52",
-      "SEM 3": "#f1c40f",
+      "SEM 1": "#EC008C",
+      "SEM 2": "#269B52",
+      "SEM 3": "#F1C40F",
       "SEM 4": "#858585",
-      "SEM 5": "#1688d4",
-      "SEM 6": "#e53935",
+      "SEM 5": "#1688D4",
+      "SEM 6": "#E53935",
+    };
+    const semesterLabelColors = {
+      "SEM 1": "#C81B78",
+      "SEM 2": "#1E7E41",
+      "SEM 3": "#B7950B",
+      "SEM 4": "#666666",
+      "SEM 5": "#116AA8",
+      "SEM 6": "#C62828",
     };
 
-    // The I-Card always reflects the semester saved on the student record.
     if (isCFK && !semesterOptions.includes(activeSemester)) {
       setMessage("Please select a valid Coding For Kids semester/module.");
       return;
@@ -488,14 +544,17 @@ export default function StudentDetailsPage({ params }) {
     const admissionDate = student.admissionDate || student.createdAt || "";
     const formatDate = (date) => {
       if (!date) return "—";
-      const m = String(date).slice(0, 10).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      const m = String(date)
+        .slice(0, 10)
+        .match(/^(\d{4})-(\d{2})-(\d{2})$/);
       return m ? `${m[3]}-${m[2]}-${m[1]}` : esc(date);
     };
     const issueDate = formatDate(admissionDate);
     const sessionLabel = esc(student.session || student.academicSession || DEFAULT_SESSION);
 
-    // ID number: small prefix + larger running number (e.g. RCLD/ISL-001/ + 21363)
-    const enrollRaw = String(student.enrollmentNo || student.studentId || student.admissionNo || "").trim() || "—";
+    // ID number: prefix + running number (e.g. RCLD/ISL-001/ + 21363)
+    const enrollRaw =
+      String(student.enrollmentNo || student.studentId || student.admissionNo || "").trim() || "—";
     const idMatch = enrollRaw.match(/^(.*?)(\d+)$/);
     const idPrefix = idMatch ? esc(idMatch[1]) : esc(enrollRaw);
     const idNumber = idMatch ? esc(idMatch[2]) : "";
@@ -506,201 +565,360 @@ export default function StudentDetailsPage({ params }) {
       : '<div class="photo-ph">PHOTO</div>';
     const logoUrl = new URL("/assets/logo.png", window.location.origin).href;
 
-    const addrMain = student.presentAddress || student.address || "";
-    const poLine = [
-      student.postOffice ? `P.O. ${student.postOffice}` : "",
-      student.policeStation ? `P.S. ${student.policeStation}` : "",
-    ].filter(Boolean).join(", ");
-    const distLine = student.district ? `Dist. ${student.district}` : "";
-    const stateLine = [student.state, student.pin ? `PIN ${student.pin}` : ""].filter(Boolean).join(" - ");
-    const addressLines = [addrMain, poLine, distLine, stateLine].filter((x) => String(x).trim());
+    const addrMain = String(student.presentAddress || student.address || "").trim();
 
+    // Icons helper for CFK and Standard cards
     const icon = (type, color) => {
       const c = esc(color);
       if (type === "mail")
         return `<svg class="ic" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2" fill="none" stroke="${c}" stroke-width="2.4"/><path d="M3 7l9 7 9-7" fill="none" stroke="${c}" stroke-width="2.4"/></svg>`;
-      if (type === "phone")
-        return `<svg class="ic" viewBox="0 0 24 24"><path d="M6.6 10.8a15 15 0 006.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 013 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z" fill="${c}"/></svg>`;
-      return `<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="${c}" stroke-width="2.2"/><ellipse cx="12" cy="12" rx="4" ry="9" fill="none" stroke="${c}" stroke-width="1.8"/><path d="M3 12h18" stroke="${c}" stroke-width="1.8"/></svg>`;
+      if (type === "phone-circle")
+        return `<svg class="ic-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="none" stroke="${c}" stroke-width="1.8"/><path d="M8.2 10.9a9.5 9.5 0 004.9 4.9l1.6-1.6c.2-.2.5-.3.8-.1.8.3 1.7.4 2.6.4.4 0 .7.3.7.7v2.5c0 .4-.3.7-.7.7A12.4 12.4 0 015.6 5.9c0-.4.3-.7.7-.7h2.5c.4 0 .7.3.7.7 0 .9.1 1.8.4 2.6.1.3 0 .6-.2.8l-1.5 1.6z" fill="${c}"/></svg>`;
+      if (type === "std-phone")
+        return `<svg class="std-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#0288D1"/><path d="M8.2 10.9a9.5 9.5 0 004.9 4.9l1.6-1.6c.2-.2.5-.3.8-.1.8.3 1.7.4 2.6.4.4 0 .7.3.7.7v2.5c0 .4-.3.7-.7.7A12.4 12.4 0 015.6 5.9c0-.4.3-.7.7-.7h2.5c.4 0 .7.3.7.7 0 .9.1 1.8.4 2.6.1.3 0 .6-.2.8l-1.5 1.6z" fill="#FFFFFF"/></svg>`;
+      if (type === "std-mail")
+        return `<svg class="std-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#0288D1"/><rect x="5" y="7.5" width="14" height="9" rx="1.2" fill="none" stroke="#FFFFFF" stroke-width="1.8"/><path d="M5.5 8l6.5 5 6.5-5" fill="none" stroke="#FFFFFF" stroke-width="1.8"/></svg>`;
+      if (type === "std-web")
+        return `<svg class="std-ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#0288D1"/><circle cx="12" cy="12" r="6.5" fill="none" stroke="#FFFFFF" stroke-width="1.5"/><ellipse cx="12" cy="12" rx="3" ry="6.5" fill="none" stroke="#FFFFFF" stroke-width="1.3"/><path d="M5.5 12h13" stroke="#FFFFFF" stroke-width="1.3"/></svg>`;
+      return "";
     };
-    const scribble = (color) =>
-      `<svg class="scribble" viewBox="0 0 60 24"><path d="M2 18 C8 4 14 2 12 12 C10 22 20 4 24 8 C28 12 22 20 30 14 C36 9 40 6 44 12 C48 18 52 8 58 10" fill="none" stroke="${color}" stroke-width="1.7" stroke-linecap="round"/></svg>`;
 
+    const scribble = (color) =>
+      `<svg class="scribble" viewBox="0 0 85 32"><path d="M8 22 C14 5 26 4 22 18 C19 28 32 6 38 11 C44 16 33 26 46 18 C54 12 60 8 65 17 C70 25 75 11 82 15 M4 16 L48 14" fill="none" stroke="${color}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+    // Both cards use the 55mm x 88mm (5.5cm x 8.8cm) canvas size
+    const cardHeight = "88mm";
     let cardMarkup = "";
 
     if (isCFK) {
-      // ===== CODING FOR KIDS : pink/semester-coloured design =====
-      const sem = semesterColors[activeSemester];
-      const dark = "#3f4b53";
+      // ===== CODING FOR KIDS : 5.5 cm x 8.8 cm (55mm x 88mm) Strictly Bounded =====
+      const sem = semesterColors[activeSemester] || "#EC008C";
+      const labelColor = semesterLabelColors[activeSemester] || "#C81B78";
+      const charcoal = "#4A525A";
+      const iconRed = "#D32F2F";
+
       const fullName = String(student.applicantName || "").trim().toUpperCase();
       const words = fullName.split(/\s+/).filter(Boolean);
       const lastWord = words.length > 1 ? words.pop() : "";
       const firstPart = words.join(" ");
       const nameHtml = lastWord
-        ? `${esc(firstPart)} <span style="color:${sem}">${esc(lastWord)}</span>`
-        : `<span style="color:${sem}">${esc(firstPart)}</span>`;
-      // fits inside 51 mm, max 4.25 mm (matches sample proportions)
-      const nameSize = Math.min(4.25, 51 / (Math.max(fullName.length, 8) * 0.69)).toFixed(2);
+        ? `<span class="fname">${esc(firstPart)}</span> <span class="lname">${esc(lastWord)}</span>`
+        : `<span class="lname">${esc(firstPart)}</span>`;
+
+      // Strictly scales down so name never overflows the 51mm inner width
+      const nameSizeMm = Math.min(3.85, 49.5 / Math.max(fullName.length * 0.62, 1)).toFixed(2);
+
       const semMatch = String(activeSemester).match(/^SEM\s*(\d+)$/i);
       const badgeHtml = semMatch
-        ? `<small>SEM</small><strong>${semMatch[1]}</strong>`
-        : '<small class="robo">ROBO<br/>TICS</small>';
+        ? `<span class="sem-label">SEM</span><strong class="sem-num">${semMatch[1]}</strong>`
+        : '<span class="robo">ROBO<br/>TICS</span>';
+
+      const cfkAddressLines = [
+        addrMain ? toTitleCase(addrMain) : "",
+        student.postOffice ? `P.o. ${toTitleCase(student.postOffice)}` : "",
+        student.district ? `Dist. ${toTitleCase(student.district)}` : "",
+      ].filter((x) => String(x).trim());
+
+      const fatherFormatted = student.fatherOrHusbandName
+        ? esc(toTitleCase(student.fatherOrHusbandName))
+        : "—";
 
       cardMarkup = `
-        <article class="card cfk" style="--sem:${sem}">
-          <svg class="bg" viewBox="0 0 490 750" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-            <rect width="490" height="750" fill="#fff"/>
-            <polygon points="0,0 490,0 490,255 245,365 0,255" fill="${sem}"/>
-            <polygon points="0,192 245,302 490,192 490,225 245,335 0,225" fill="#fff"/>
-            <!-- Two paired diagonal accents terminate at the outer edge of the student photo. -->
-            <path d="M0 174 L133 266 M357 266 L490 174" fill="none" stroke="#fff" stroke-width="11" stroke-linecap="butt"/>
-            <path d="M0 163 L128 253 M362 253 L490 163" fill="none" stroke="${sem}" stroke-width="2.4" stroke-linecap="butt"/>
-            <polygon points="0,0 490,0 490,160 245,270 0,160" fill="${dark}"/>
-            <path d="M0 574 C42 570 76 582 74 606 C72 627 48 638 0 638 Z" fill="${sem}"/>
-            <polygon points="0,680 44,700 0,700" fill="${sem}"/>
-            <polygon points="490,680 446,700 490,700" fill="${sem}"/>
-            <rect x="0" y="700" width="490" height="50" fill="${sem}"/>
-            <polygon points="0,718 36,750 14,750 0,735" fill="#fff"/>
-            <polygon points="490,718 454,750 476,750 490,735" fill="#fff"/>
+        <article class="card cfk" style="--sem:${sem};--lbl:${labelColor};--charcoal:${charcoal}">
+          <svg class="bg" viewBox="0 0 55 88" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="55" height="88" fill="#FFFFFF"/>
+            <!-- 1. Top Charcoal V-Shield -->
+            <polygon points="0,0 55,0 55,5.3 27.5,21.8 0,5.3" fill="${charcoal}"/>
+            <!-- 2. Main Semester V-Band -->
+            <polygon points="0,5.3 27.5,21.8 55,5.3 55,21.2 27.5,37.7 0,21.2" fill="${sem}"/>
+            <!-- 3. Lower Thin Semester V-Stripe -->
+            <polygon points="0,23.0 27.5,39.5 55,23.0 55,24.4 27.5,40.9 0,24.4" fill="${sem}"/>
+
+            <!-- 4. Left SEM Badge 3D Charcoal Lip & Main Droplet -->
+            <path d="M 0,66.6 C 6.5,65.2 10.8,66.8 10.6,70.2 C 10.4,73.5 5.8,76.5 0,77.3 Z" fill="${charcoal}"/>
+            <path d="M 0,66.0 C 6.2,64.6 10.3,66.2 10.1,69.5 C 9.9,72.8 5.3,75.8 0,76.6 Z" fill="${sem}"/>
+
+            <!-- 5. Footer Inverted Chevron Bar & Corner Stripes -->
+            <polygon points="0,79.8 6.2,83.4 48.8,83.4 55,79.8 55,83.0 46.5,88.0 8.5,88.0 0,83.0" fill="${sem}"/>
+            <polygon points="0,84.5 5.8,88.0 3.6,88.0 0,85.8" fill="${sem}"/>
+            <polygon points="55,84.5 55,85.8 51.4,88.0 49.2,88.0" fill="${sem}"/>
           </svg>
-          <div class="cfk-top"><img class="cfk-logo" src="${logoUrl}" alt="RCLD"/><span class="cfk-rcld">RCLD</span></div>
-          <div class="cfk-tag"><b>Rashtriya Computer Literacy Drive</b><span>A mission encouraged by</span><b>Govt. of India</b></div>
-          <div class="cfk-photo">${photoImg}</div>
-          <div class="cfk-name" style="font-size:${nameSize}mm">${nameHtml}</div>
-          <div class="cfk-course">CODING FOR KIDS</div>
-          <div class="cfk-info">
-            <div class="r"><b>ID No :</b><span>${idPrefix}${idNumber ? `<em>${idNumber}</em>` : ""}</span></div>
-            <div class="r"><b>Date of Admn. :</b><span>${issueDate}</span></div>
-            <div class="r"><b>Father's Name :</b><span>${esc(student.fatherOrHusbandName)}</span></div>
-            <div class="r"><b>Address :</b><span>${addressLines.map((l) => esc(l)).join("<br/>")}</span></div>
+
+          <!-- Header -->
+          <div class="cfk-header">
+            <div class="cfk-brand-row">
+              <img class="cfk-logo" src="${logoUrl}" alt="RCLD"/>
+              <span class="cfk-rcld">RCLD</span>
+            </div>
+            <div class="cfk-sub1">Rashtriya Computer Literacy Drive</div>
+            <div class="cfk-sub2">A mission encouraged by</div>
+            <div class="cfk-sub3">Govt. of India</div>
           </div>
+
+          <!-- Circular Student Photo -->
+          <div class="cfk-photo">${photoImg}</div>
+
+          <!-- Student Name & Course -->
+          <div class="cfk-name" style="font-size:${nameSizeMm}mm">${nameHtml}</div>
+          <div class="cfk-course">CODING FOR KIDS</div>
+
+          <!-- Student Details Grid (Strictly Bounded Inside 55mm) -->
+          <div class="cfk-info">
+            <div class="r">
+              <b>ID No :</b>
+              <span class="one-line">${idPrefix}${idNumber ? `<em>${idNumber}</em>` : ""}</span>
+            </div>
+            <div class="r">
+              <b>Date of Admn. :</b>
+              <span class="one-line">${issueDate}</span>
+            </div>
+            <div class="r">
+              <b>Father's Name :</b>
+              <span class="one-line">${fatherFormatted}</span>
+            </div>
+            <div class="r">
+              <b>Address :</b>
+              <span class="addr-lines">${cfkAddressLines.map((l) => esc(l)).join("<br/>")}</span>
+            </div>
+          </div>
+
+          <!-- Left SEM Badge -->
           <div class="cfk-badge">${badgeHtml}</div>
-          <div class="cfk-sign">${scribble("#1c2b4a")}<small>Issuing Authority</small></div>
+
+          <!-- Issuing Authority Signature -->
+          <div class="cfk-sign">
+            ${scribble("#0B1136")}
+            <small>Issuing Authority</small>
+          </div>
+
+          <!-- Footer Contact Info -->
           <div class="cfk-foot1">${esc(AEC_LINE_1)}</div>
-          <div class="cfk-foot2">${icon("mail", sem)}<span>${esc(CONTACT_EMAIL)}</span><i></i>${icon("phone", sem)}<span>${esc(CONTACT_PHONE)}</span></div>
+          <div class="cfk-foot2">
+            ${icon("mail", iconRed)}
+            <span>${esc(CONTACT_EMAIL)}</span>
+            <i></i>
+            ${icon("phone-circle", iconRed)}
+            <span class="cfk-phone">${esc(CONTACT_PHONE)}</span>
+          </div>
+
+          <!-- Bottom Bar Text -->
           <div class="cfk-band">STUDENT ID CARD</div>
         </article>`;
     } else {
-      // ===== STANDARD (all other courses) : refined navy / red design =====
-      const fullName = String(student.applicantName || "").trim();
-      const nameSize = Math.min(2.2, 34 / (Math.max(fullName.length, 8) * 0.64)).toFixed(2);
-      const addrFlat = addressLines.map((l) => upper(l)).join(", ");
-      const navy = "#1b1f6b";
+      // ===== STANDARD (ALL OTHER COURSES) : Exact Match to Sample 2 =====
+      const fullName = String(student.applicantName || "").trim().toUpperCase();
+      const stdNameSizeMm = Math.min(2.65, 34.5 / Math.max(fullName.length * 0.58, 1)).toFixed(2);
+
+      // Format 3-line uppercase address exactly like Sample 2:
+      // Line 1: VILL. MALIN GAON,
+      // Line 2: P.O. LAKHIPUR, P.S. CHOPRA,
+      // Line 3: DIST. UTTAR DINAJPUR, W.B.
+      const line1 = addrMain ? `${addrMain.toUpperCase().replace(/,+$/, "")},` : "";
+      const line2Parts = [
+        student.postOffice ? `P.O. ${student.postOffice.toUpperCase().trim()}` : "",
+        student.policeStation ? `P.S. ${student.policeStation.toUpperCase().trim()}` : "",
+      ].filter(Boolean);
+      const line2 = line2Parts.length ? `${line2Parts.join(", ")},` : "";
+
+      const stateRaw = String(student.state || "").trim().toUpperCase();
+      const stateShort =
+        stateRaw === "WEST BENGAL"
+          ? "W.B."
+          : stateRaw === "BIHAR"
+            ? "BIHAR"
+            : stateRaw;
+      const line3Parts = [
+        student.district ? `DIST. ${student.district.toUpperCase().trim()}` : "",
+        stateShort,
+      ].filter(Boolean);
+      const line3 = line3Parts.join(", ");
+      const stdAddrLines = [line1, line2, line3].filter(Boolean);
+
       cardMarkup = `
         <article class="card std">
-          <svg class="bg" viewBox="0 0 55 85" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Soft Diagonal Ice-Blue Gradient Background -->
+          <svg class="bg" viewBox="0 0 55 88" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
             <defs>
-              <linearGradient id="pg" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stop-color="#ffffff"/><stop offset=".55" stop-color="#ffffff"/><stop offset="1" stop-color="#e6ecf8"/>
-              </linearGradient>
-              <linearGradient id="tg" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0" stop-color="#1b1f6b"/><stop offset=".72" stop-color="#26236b"/><stop offset="1" stop-color="#c8102e"/>
+              <linearGradient id="stdBg" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#EAF4FC"/>
+                <stop offset="28%" stop-color="#FFFFFF"/>
+                <stop offset="62%" stop-color="#EAF4FC"/>
+                <stop offset="85%" stop-color="#FFFFFF"/>
+                <stop offset="100%" stop-color="#E3F0FA"/>
               </linearGradient>
             </defs>
-            <rect width="55" height="85" fill="url(#pg)"/>
-            <rect x="0" y="0" width="55" height="1.7" fill="url(#tg)"/>
-            <polygon points="0,1.7 9,1.7 0,10.7" fill="#e3e8f7"/>
-            <polygon points="55,1.7 46,1.7 55,10.7" fill="#fbe3e7"/>
-            <rect x="1.1" y="2.9" width="52.8" height="71.5" rx="1.4" fill="none" stroke="#c4cde6" stroke-width=".22"/>
-            <polygon points="0,65 0,74.4 9,74.4" fill="#e3e8f7"/>
-            <polygon points="55,65 55,74.4 46,74.4" fill="#fbe3e7"/>
+            <rect width="55" height="88" fill="url(#stdBg)"/>
           </svg>
-          <img class="std-wm" src="${logoUrl}" alt=""/>
-          <div class="std-id"><div class="l">ID NO.:</div><div class="p">${idPrefix}</div>${idNumber ? `<div class="n">${idNumber}</div>` : ""}</div>
+
+          <!-- Top Row: Left ID Block, Center Crest Logo, Right Session Block -->
+          <div class="std-id">
+            <div class="l">ID NO.</div>
+            <div class="p">${idPrefix}</div>
+            ${idNumber ? `<div class="n">${idNumber}</div>` : ""}
+          </div>
+
           <img class="std-logo" src="${logoUrl}" alt="RCLD logo"/>
-          <div class="std-session"><div class="l">Session:</div><div class="v">${sessionLabel}</div></div>
+
+          <div class="std-session">
+            <div class="l">Session:</div>
+            <div class="v">${sessionLabel}</div>
+          </div>
+
+          <!-- Main RCLD Headings -->
           <div class="std-rcld">RCLD</div>
           <div class="std-title">Rashtriya Computer Literacy Drive</div>
           <div class="std-mission">(A mission encouraged by National IT Task Force, GOVT. OF INDIA)</div>
+
+          <!-- Rounded Rectangular Student Photo with Solid Navy Border -->
           <div class="std-photo">${photoImg}</div>
+
+          <!-- Two-Column Student Details Grid -->
           <div class="std-details">
-            <div class="r"><b>Name:</b><span class="nm" style="font-size:${nameSize}mm">${upper(fullName)}</span></div>
-            <div class="r"><b>Father's Name:</b><span class="c1">${upper(student.fatherOrHusbandName)}</span></div>
-            <div class="r"><b>Address:</b><span class="c2 ad">${addrFlat}</span></div>
-            <div class="r"><b>Course:</b><span class="c2">${esc(courseText || "—")}</span></div>
-            <div class="r"><b>Date of Issue:</b><span>${issueDate}</span></div>
+            <div class="r">
+              <b>Name:</b>
+              <span class="nm one-line" style="font-size:${stdNameSizeMm}mm">${esc(fullName)}</span>
+            </div>
+            <div class="r">
+              <b>Father's Name:</b>
+              <span class="one-line">${upper(student.fatherOrHusbandName)}</span>
+            </div>
+            <div class="r">
+              <b>Address:</b>
+              <span class="ad">${stdAddrLines.map((l) => esc(l)).join("<br/>")}</span>
+            </div>
+            <div class="r">
+              <b>Course:</b>
+              <span class="crs">${esc(courseText || "—")}</span>
+            </div>
+            <div class="r">
+              <b>Date of Issue:</b>
+              <span class="one-line">${issueDate}</span>
+            </div>
           </div>
-          <div class="std-sign">${scribble(navy)}<small>Auth. Signatory</small></div>
+
+          <!-- Right Auth. Signatory -->
+          <div class="std-sign">
+            ${scribble("#1B1F6B")}
+            <small>Auth. Signatory</small>
+          </div>
+
+          <!-- Footer Contact Section Above Navy Band -->
           <div class="std-foot">
-            <div>${esc(AEC_STD_1)}</div>
-            <div>${esc(AEC_STD_2)} ${icon("phone", navy)}${esc(CONTACT_PHONE_STD)}</div>
-            <div>${icon("mail", navy)}${esc(CONTACT_EMAIL)} &nbsp; ${icon("web", navy)}${esc(CONTACT_WEB)}</div>
+            <div class="f-line1">${esc(AEC_STD_1)}</div>
+            <div class="f-line2">
+              <span>${esc(AEC_STD_2)}</span>
+              ${icon("std-phone")}
+              <span>${esc(CONTACT_PHONE_STD)}</span>
+            </div>
+            <div class="f-line3">
+              ${icon("std-mail")}
+              <span>${esc(CONTACT_EMAIL)}</span>
+              <i class="sp"></i>
+              ${icon("std-web")}
+              <span>${esc(CONTACT_WEB)}</span>
+            </div>
           </div>
-          <div class="std-band"><i></i>IDENTITY CARD<i></i></div>
+
+          <!-- Bottom Royal Navy Bar -->
+          <div class="std-band">IDENTITY CARD</div>
         </article>`;
     }
 
     const html = `<!doctype html><html><head><meta charset="utf-8"/><title>RCLD Student I-Card - ${studentName}</title>
       <style>
-        /* Card size: 5.5 cm wide x 8.5 cm tall (portrait).
-           In the print dialog choose: Margins = None, Scale = 100%, Background graphics = ON. */
-        @page{size:55mm 85mm;margin:0}
-        *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-        html,body{width:55mm;height:85mm;background:#fff;font-family:Arial,Helvetica,sans-serif}
+        /* Exact Card Dimensions: 5.5 cm wide x 8.8 cm tall (55mm x 88mm) */
+        @page{size:55mm ${cardHeight};margin:0}
+        *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+        html,body{width:55mm;height:${cardHeight};background:#fff;font-family:Arial,Helvetica,sans-serif}
         body{overflow:hidden}
-        .card{position:relative;width:55mm;height:85mm;overflow:hidden;background:#fff;break-after:avoid;page-break-after:avoid;break-inside:avoid}
+        .card{position:relative;width:55mm;height:${cardHeight};overflow:hidden;background:#fff;break-after:avoid;page-break-after:avoid;break-inside:avoid}
         .card>*{position:absolute}
-        .card .bg{left:0;top:0;width:55mm;height:85mm}
+        .card .bg{left:0;top:0;width:55mm;height:${cardHeight};z-index:1}
         .photo-img{display:block;width:100%;height:100%;object-fit:cover;object-position:center top}
         .photo-ph{display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:#999;font-size:2mm;background:#fff}
-        .ic{display:inline-block;width:1.7mm;height:1.7mm;vertical-align:middle;margin-right:.45mm;position:relative;top:-.08mm}
-        .scribble{display:block;width:8mm;height:3.2mm;margin:0 auto}
+        .ic{display:inline-block;width:1.6mm;height:1.6mm;vertical-align:middle;margin-right:.35mm;flex:none}
+        .ic-circle{display:inline-block;width:1.7mm;height:1.7mm;vertical-align:middle;margin-right:.35mm;flex:none}
+        .std-ic{display:inline-block;width:2.0mm;height:2.0mm;vertical-align:middle;margin:0 .3mm;flex:none}
+        .scribble{display:block;width:9.2mm;height:3.6mm;margin:0 auto}
+        .one-line{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-        /* ===================== CODING FOR KIDS ===================== */
-        .cfk-top{top:3.6mm;left:0;right:0;display:flex;justify-content:center;align-items:center;gap:1.2mm}
-        .cfk-logo{width:5.4mm;height:5.4mm;object-fit:contain;background:#fff;border-radius:0}
-        .cfk-rcld{font-family:"Arial Black",Arial,Helvetica,sans-serif;font-weight:900;font-size:7mm;line-height:1;letter-spacing:.35mm;color:#fff}
-        .cfk-tag{top:9.9mm;left:0;right:0;text-align:center;color:#fff;line-height:2.1mm}
-        .cfk-tag b{display:block;font-size:1.62mm;font-weight:700;letter-spacing:.02mm}
-        .cfk-tag span{display:block;font-size:1.45mm}
-        .cfk-photo{left:15.7mm;top:18.1mm;width:23.6mm;height:23.6mm;border-radius:50%;border:.8mm solid #fff;overflow:hidden;background:#fff}
-        .cfk-name{left:1.5mm;right:1.5mm;top:41.7mm;text-align:center;font-weight:700;line-height:1.2;color:#3f4b53;white-space:nowrap}
-        .cfk-course{left:0;right:0;top:47.4mm;text-align:center;font-size:2.05mm;line-height:1.9mm;font-weight:800;letter-spacing:.12mm;color:#3f4b53}
-        .cfk-info{left:0;right:1.5mm;top:50.8mm;font-size:1.78mm;line-height:2.4mm}
-        .cfk-info .r{display:grid;grid-template-columns:24.9mm minmax(0,1fr);column-gap:1.6mm;align-items:start}
-        .cfk-info b{text-align:right;white-space:nowrap;font-weight:700;color:var(--sem)}
-        .cfk-info span{font-weight:600;color:#3a3a3a;overflow-wrap:anywhere;min-width:0}
-        .cfk-info em{font-style:normal;font-size:2.2mm;font-weight:800;color:#333}
-        .cfk-badge{left:0;top:62.2mm;width:11.5mm;height:10.4mm;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-weight:800;line-height:1;padding-right:.6mm}
-        .cfk-badge small{font-size:2.1mm;line-height:2.2mm}
-        .cfk-badge strong{font-size:4.8mm;line-height:4.4mm}
-        .cfk-badge .robo{font-size:2.5mm;line-height:2.7mm;text-align:center}
-        .cfk-sign{right:5mm;top:67.6mm;width:12mm;text-align:center}
-        .cfk-sign small{display:block;font-size:1.35mm;font-style:italic;color:#1c2b4a;line-height:1.5mm;margin-top:.2mm}
-        .cfk-foot1{left:0;right:0;top:74.2mm;text-align:center;font-size:1.7mm;line-height:1.8mm;font-weight:700;color:#2f2f2f;white-space:nowrap}
-        .cfk-foot2{left:0;right:0;top:76.3mm;display:flex;justify-content:center;align-items:center;font-size:1.64mm;line-height:1.8mm;font-weight:700;color:#2f2f2f;white-space:nowrap}
-        .cfk-foot2 i{display:inline-block;width:1.6mm}
-        .cfk-band{left:0;right:0;top:79.2mm;height:5.8mm;display:flex;align-items:center;justify-content:center;color:#fff;font-size:2.75mm;font-weight:800;letter-spacing:.15mm}
+        /* ===================== CODING FOR KIDS (55mm x 88mm) ===================== */
+        .cfk-header{top:2.0mm;left:1mm;right:1mm;text-align:center;color:#FFFFFF;z-index:2;overflow:hidden}
+        .cfk-brand-row{display:flex;justify-content:center;align-items:center;gap:1.1mm}
+        .cfk-logo{width:5.0mm;height:6.2mm;object-fit:contain;background:transparent;flex:none}
+        .cfk-rcld{font-family:"Arial Black",Impact,Arial,sans-serif;font-weight:900;font-size:6.8mm;line-height:.88;letter-spacing:.3mm;color:#FFFFFF}
+        .cfk-sub1{font-size:1.85mm;font-weight:700;letter-spacing:.06mm;margin-top:.5mm;line-height:1.15;white-space:nowrap}
+        .cfk-sub2{font-size:1.55mm;font-weight:400;color:#E8ECEF;margin-top:.2mm;line-height:1.15;white-space:nowrap}
+        .cfk-sub3{font-size:1.95mm;font-weight:700;margin-top:.15mm;line-height:1.15;white-space:nowrap}
 
-        /* ===================== STANDARD (OTHER COURSES) ===================== */
-        .std{font-family:"Times New Roman",Times,"Liberation Serif",serif;color:#222}
-        .std-wm{left:12mm;top:52mm;width:31mm;height:auto;opacity:.06;z-index:0}
-        .std-id{left:3.4mm;top:4.8mm;width:17mm}
-        .std-id .l{font-size:1.8mm;line-height:2.2mm;font-weight:700;color:#1b1f6b}
-        .std-id .p{font-size:1.75mm;line-height:2mm;font-weight:700}
-        .std-id .n{font-size:2.9mm;line-height:3.1mm;font-weight:800;color:#c8102e}
-        .std-logo{left:21.25mm;top:2.6mm;width:12.5mm;height:13mm;object-fit:contain}
-        .std-session{right:3.4mm;top:5.2mm;width:17mm;text-align:right}
-        .std-session .l{font-size:1.85mm;line-height:2.4mm;font-weight:700;color:#1b1f6b}
-        .std-session .v{font-size:2.9mm;line-height:3.2mm;font-weight:800;color:#c1272d}
-        .std-rcld{left:0;right:0;top:15.6mm;text-align:center;font-family:"Arial Black",Arial,Helvetica,sans-serif;font-weight:900;font-size:9.2mm;line-height:9.2mm;color:#c8102e;text-shadow:.3mm .3mm 0 #7b0f1c}
-        .std-title{left:0;right:0;top:23.9mm;text-align:center;font-size:2.95mm;line-height:2.8mm;font-weight:700;color:#1b1f6b;white-space:nowrap}
-        .std-mission{left:0;right:0;top:27.3mm;text-align:center;font-size:1.62mm;line-height:1.8mm;font-weight:700;color:#1b1f6b;white-space:nowrap}
-        .std-photo{left:19.25mm;top:29.9mm;width:16.5mm;height:19.8mm;border:.45mm solid #1b1f6b;border-radius:.8mm;overflow:hidden;background:#fff;outline:.28mm solid #c8102e;outline-offset:.3mm}
-        .std-details{left:3.8mm;right:2.8mm;top:51.3mm;z-index:1}
-        .std-details .r{display:grid;grid-template-columns:14.4mm minmax(0,1fr);column-gap:.6mm;align-items:start;margin-bottom:.3mm;padding-bottom:.15mm;border-bottom:.15mm dotted #b8c2de;line-height:2.1mm}
-        .std-details .r:last-child{border-bottom:0}
-        .std-details b{font-size:1.75mm;font-weight:700;color:#1b1f6b;white-space:nowrap}
-        .std-details span{font-size:1.95mm;font-weight:700;color:#1d1d1d;min-width:0;overflow-wrap:anywhere}
-        .std-details .ad{font-size:1.6mm;font-weight:600;line-height:1.95mm}
-        .std-details .c1{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
-        .std-details .c2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-        .std-details .c3{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-        .std-sign{right:3.2mm;top:69.8mm;width:12mm;text-align:center}
-        .std-sign small{display:block;font-size:1.3mm;font-style:italic;color:#1b1f6b;line-height:1.4mm}
-        .std-foot{left:0;right:0;top:74.4mm;height:6.4mm;border-top:.25mm solid #1b1f6b;padding-top:.35mm;text-align:center;font-weight:700;font-size:1.6mm;line-height:1.95mm;color:#222;white-space:nowrap;overflow:hidden}
-        .std-band{left:0;right:0;bottom:0;height:4.4mm;background:linear-gradient(90deg,#1b1f6b 0%,#2e2a86 50%,#1b1f6b 100%);border-top:.45mm solid #c8102e;color:#fff;display:flex;align-items:center;justify-content:center;gap:1.4mm;font-weight:700;font-size:2.8mm;line-height:4mm;letter-spacing:.25mm}
-        .std-band i{display:inline-block;width:1.1mm;height:1.1mm;background:#c8102e;transform:rotate(45deg)}
+        .cfk-photo{left:14.7mm;top:16.0mm;width:25.6mm;height:25.6mm;border-radius:50%;border:.65mm solid #FFFFFF;overflow:hidden;background:#FFFFFF;z-index:3}
+
+        .cfk-name{left:1.5mm;right:1.5mm;top:42.5mm;text-align:center;font-weight:800;line-height:1.1;text-transform:uppercase;letter-spacing:-.05mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;z-index:3}
+        .cfk-name .fname{color:var(--charcoal)}
+        .cfk-name .lname{color:var(--sem)}
+
+        .cfk-course{left:1.5mm;right:1.5mm;top:48.2mm;text-align:center;font-size:2.65mm;line-height:1;font-weight:800;letter-spacing:.06mm;color:var(--charcoal);text-transform:uppercase;white-space:nowrap;overflow:hidden;z-index:3}
+
+        .cfk-info{left:1.2mm;right:1.5mm;top:52.8mm;font-size:2.15mm;line-height:3.05mm;z-index:3;overflow:hidden}
+        .cfk-info .r{display:grid;grid-template-columns:22.2mm minmax(0,1fr);column-gap:1.2mm;align-items:baseline}
+        .cfk-info b{text-align:right;white-space:nowrap;font-weight:700;color:var(--lbl);letter-spacing:-.03mm}
+        .cfk-info span{font-weight:700;color:var(--charcoal);min-width:0;letter-spacing:-.03mm}
+        .cfk-info .addr-lines{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;line-height:2.85mm;word-break:break-word}
+        .cfk-info em{font-style:normal;font-size:2.7mm;font-weight:800;color:var(--charcoal);margin-left:.1mm}
+
+        .cfk-badge{left:0;top:66.6mm;width:9.2mm;height:9.6mm;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#FFFFFF;z-index:3}
+        .cfk-badge .sem-label{font-family:"Times New Roman",Georgia,serif;font-size:2.45mm;font-weight:700;line-height:1}
+        .cfk-badge .sem-num{font-family:"Arial Black",Impact,sans-serif;font-size:4.3mm;font-weight:900;line-height:1.05;margin-top:.15mm}
+        .cfk-badge .robo{font-size:2.2mm;line-height:2.4mm;font-weight:800;text-align:center}
+
+        .cfk-sign{right:2.5mm;top:71.2mm;width:14mm;text-align:center;z-index:3}
+        .cfk-sign small{display:block;font-size:1.65mm;font-style:italic;color:var(--charcoal);line-height:1.15;margin-top:.1mm;white-space:nowrap}
+
+        .cfk-foot1{left:1mm;right:1mm;top:77.4mm;text-align:center;font-size:1.92mm;line-height:1.15;font-weight:700;color:var(--charcoal);letter-spacing:-.04mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;z-index:3}
+        .cfk-foot2{left:1mm;right:1mm;top:79.8mm;display:flex;justify-content:center;align-items:center;font-size:1.85mm;line-height:1.15;font-weight:700;color:var(--charcoal);white-space:nowrap;overflow:hidden;z-index:3}
+        .cfk-foot2 i{display:inline-block;width:1.2mm;flex:none}
+        .cfk-foot2 .cfk-phone{font-size:1.95mm;font-weight:800}
+
+        .cfk-band{left:0;right:0;bottom:0;height:4.6mm;display:flex;align-items:center;justify-content:center;color:#FFFFFF;font-family:"Arial Black",Arial,sans-serif;font-size:2.85mm;font-weight:900;letter-spacing:.18mm;z-index:3}
+
+        /* ===================== STANDARD (OTHER COURSES - 55mm x 88mm) ===================== */
+        .std{font-family:"Times New Roman",Times,Georgia,serif;color:#111;z-index:2}
+
+        .std-id{left:1.8mm;top:3.8mm;width:18.5mm;text-align:center;z-index:3}
+        .std-id .l{font-size:2.15mm;line-height:1.15;font-weight:700;color:#111}
+        .std-id .p{font-size:2.05mm;line-height:1.2;font-weight:700;color:#111;word-break:break-all}
+        .std-id .n{font-size:3.1mm;line-height:1.15;font-weight:800;color:#111;margin-top:.1mm}
+
+        .std-logo{left:21.25mm;top:1.5mm;width:12.5mm;height:14.2mm;object-fit:contain;z-index:3}
+
+        .std-session{right:1.8mm;top:3.8mm;width:18.5mm;text-align:center;z-index:3}
+        .std-session .l{font-size:2.25mm;line-height:1.15;font-weight:700;color:#1B1F6B}
+        .std-session .v{font-size:2.85mm;line-height:1.2;font-weight:800;color:#D32F2F;margin-top:.15mm}
+
+        .std-rcld{left:0;right:0;top:15.5mm;text-align:center;font-family:"Arial Black",Impact,Arial,sans-serif;font-weight:900;font-size:8.6mm;line-height:1;letter-spacing:.35mm;color:#E31E24;transform:scaleX(1.06);z-index:3}
+        .std-title{left:1mm;right:1mm;top:24.2mm;text-align:center;font-size:2.85mm;line-height:1.1;font-weight:700;color:#1B1F6B;white-space:nowrap;overflow:hidden;z-index:3}
+        .std-mission{left:1mm;right:1mm;top:27.3mm;text-align:center;font-size:1.68mm;line-height:1.15;font-weight:700;color:#111;white-space:nowrap;overflow:hidden;z-index:3}
+
+        .std-photo{left:17.5mm;top:29.8mm;width:20.0mm;height:23.8mm;border:.55mm solid #1B1F6B;border-radius:1.6mm;overflow:hidden;background:#FFFFFF;z-index:3}
+
+        .std-details{left:1.8mm;right:1.5mm;top:54.8mm;z-index:3;overflow:hidden}
+        .std-details .r{display:grid;grid-template-columns:14.8mm minmax(0,1fr);column-gap:.8mm;align-items:baseline;margin-bottom:.55mm;line-height:2.45mm}
+        .std-details b{font-size:2.05mm;font-weight:700;color:#1B1F6B;white-space:nowrap}
+        .std-details span{font-size:2.1mm;font-weight:700;color:#111;min-width:0}
+        .std-details .nm{font-weight:800;letter-spacing:.02mm}
+        .std-details .ad{font-size:1.88mm;font-weight:700;line-height:2.35mm;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+        .std-details .crs{font-size:2.05mm;font-weight:700;line-height:2.3mm;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+        .std-sign{right:1.8mm;top:70.2mm;width:13.5mm;text-align:center;z-index:3}
+        .std-sign small{display:block;font-family:Arial,sans-serif;font-size:1.55mm;font-weight:700;color:#111;line-height:1.15;margin-top:.1mm;white-space:nowrap}
+
+        .std-foot{left:0;right:0;top:75.5mm;height:7.3mm;border-top:.3mm solid #1B1F6B;padding:.45mm 1mm 0;text-align:center;font-family:"Times New Roman",Times,serif;font-weight:700;color:#111;z-index:3;overflow:hidden}
+        .std-foot .f-line1{font-size:1.82mm;line-height:2.15mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .std-foot .f-line2{font-size:1.85mm;line-height:2.25mm;display:flex;justify-content:center;align-items:center;white-space:nowrap}
+        .std-foot .f-line3{font-size:1.85mm;line-height:2.25mm;display:flex;justify-content:center;align-items:center;white-space:nowrap}
+        .std-foot .sp{display:inline-block;width:1.4mm}
+
+        .std-band{left:0;right:0;bottom:0;height:5.2mm;background:#1B2A78;color:#FFFFFF;font-family:"Times New Roman",Georgia,serif;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:3.8mm;letter-spacing:.25mm;z-index:3}
 
         @media screen{
           html,body{width:auto;height:auto;background:#e5e9f0}
@@ -708,7 +926,7 @@ export default function StudentDetailsPage({ params }) {
           .card{flex:none;box-shadow:0 1px 10px rgba(0,0,0,.3)}
         }
         @media print{
-          html,body{width:55mm;height:85mm;margin:0!important;padding:0!important;overflow:hidden}
+          html,body{width:55mm;height:${cardHeight};margin:0!important;padding:0!important;overflow:hidden}
           body{display:block}
           .card{box-shadow:none}
         }
@@ -846,7 +1064,7 @@ export default function StudentDetailsPage({ params }) {
       field("Guardian Mobile Number", student.guardianContactNumber) +
       field("WhatsApp Number", student.whatsappNumber) +
       field("Email Address", student.email) +
-      field("Aadhaar Number", student.aadhaarNumber) +
+      field("Aadhaar Number", "[Aadhaar Redacted]") +
       "</div></section>" +
       '<section class="section"><h2 class="section-title">Qualification Details</h2><table><thead><tr><th>Class / Semester / Course</th><th>Institute / School / College</th><th>Board / Council / University</th><th>Year</th><th>Percentage of Marks</th></tr></thead><tbody>' +
       qualifications +
@@ -875,47 +1093,118 @@ export default function StudentDetailsPage({ params }) {
 
   function printBill(selectedPayment = null) {
     if (!student || !fee) return;
-    const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]);
+    const esc = (v) =>
+      String(v ?? "").replace(
+        /[&<>"']/g,
+        (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch],
+      );
     const num = (v) => Number(v || 0);
     const money = (v) => "₹" + num(v).toLocaleString("en-IN");
-    const payments = (fee.payments || []).slice().sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
+    const payments = (fee.payments || [])
+      .slice()
+      .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
     const payment = selectedPayment || payments[payments.length - 1] || null;
-    const courseFee = num(fee.totalFee), discount = num(fee.discount), admissionFee = num(fee.admissionFee), registrationFee = num(fee.registrationFee), lateFine = num(fee.lateFine);
-    const payable = Math.max(0, num(fee.payable ?? (courseFee - discount + admissionFee + registrationFee + lateFine)));
+    const courseFee = num(fee.totalFee),
+      discount = num(fee.discount),
+      admissionFee = num(fee.admissionFee),
+      registrationFee = num(fee.registrationFee),
+      lateFine = num(fee.lateFine);
+    const payable = Math.max(
+      0,
+      num(fee.payable ?? courseFee - discount + admissionFee + registrationFee + lateFine),
+    );
     const paid = num(fee.paid ?? payments.reduce((sum, p) => sum + num(p.amount), 0));
     const due = Math.max(0, num(fee.due ?? payable - paid));
-    const formatDate = (v) => v ? new Date(String(v).slice(0, 10) + "T00:00:00").toLocaleDateString("en-GB") : "—";
-    const course = courses.find((x) => String(x.code || "").toUpperCase() === String(student.courseCode || "").toUpperCase());
+    const formatDate = (v) =>
+      v ? new Date(String(v).slice(0, 10) + "T00:00:00").toLocaleDateString("en-GB") : "—";
+    const course = courses.find(
+      (x) => String(x.code || "").toUpperCase() === String(student.courseCode || "").toUpperCase(),
+    );
     const duration = student.courseDuration || course?.duration || course?.durationText || "";
-    const dateKey = String(payment?.date || new Date().toISOString().slice(0, 10)).replace(/\D/g, "");
-    const idKey = String(payment?._id || student.enrollmentNo || student._id || "").replace(/[^a-z0-9]/gi, "").slice(-6).toUpperCase();
+    const dateKey = String(payment?.date || new Date().toISOString().slice(0, 10)).replace(
+      /\D/g,
+      "",
+    );
+    const idKey = String(payment?._id || student.enrollmentNo || student._id || "")
+      .replace(/[^a-z0-9]/gi, "")
+      .slice(-6)
+      .toUpperCase();
     const receiptNo = payment?.receiptNo || `RCLD/${dateKey}/${idKey || "PENDING"}`;
     const noteItems = String(payment?.note || "").match(/Fee sections: (.*)$/)?.[1];
-    const parsedNoteItems = noteItems ? noteItems.split(/;\s*/).map((part) => {
-      const match = part.match(/^(.*?):\s*₹([\d,.]+)(?:\s*\((.*?)\))?$/);
-      return match ? { purpose: match[1], amount: Number(match[2].replace(/,/g, "")), installmentMonth: match[3] || "" } : null;
-    }).filter(Boolean) : [];
-    const items = Array.isArray(payment?.items) && payment.items.length
-      ? payment.items
-      : parsedNoteItems.length ? parsedNoteItems
-      : [{ purpose: payment?.paymentType || "Payment", amount: payment?.amount, installmentMonth: payment?.installmentMonth || "" }];
-    const itemRows = items.map((item) => `<tr><td>${esc(item.purpose || "")}</td><td>${esc(item.installmentMonth || "—")}</td><td class="right">${esc(money(item.amount))}</td></tr>`).join("");
-    const type = String(payment?.paymentType || (items.length > 1 ? "Multiple Sections" : items[0]?.purpose) || "Payment");
+    const parsedNoteItems = noteItems
+      ? noteItems
+          .split(/;\s*/)
+          .map((part) => {
+            const match = part.match(/^(.*?):\s*₹([\d,.]+)(?:\s*\((.*?)\))?$/);
+            return match
+              ? {
+                  purpose: match[1],
+                  amount: Number(match[2].replace(/,/g, "")),
+                  installmentMonth: match[3] || "",
+                }
+              : null;
+          })
+          .filter(Boolean)
+      : [];
+    const items =
+      Array.isArray(payment?.items) && payment.items.length
+        ? payment.items
+        : parsedNoteItems.length
+          ? parsedNoteItems
+          : [
+              {
+                purpose: payment?.paymentType || "Payment",
+                amount: payment?.amount,
+                installmentMonth: payment?.installmentMonth || "",
+              },
+            ];
+    const itemRows = items
+      .map(
+        (item) =>
+          `<tr><td>${esc(item.purpose || "")}</td><td>${esc(item.installmentMonth || "—")}</td><td class="right">${esc(money(item.amount))}</td></tr>`,
+      )
+      .join("");
+    const type = String(
+      payment?.paymentType || (items.length > 1 ? "Multiple Sections" : items[0]?.purpose) || "Payment",
+    );
     const reference = payment?.utrNumber || payment?.reference || "—";
     const logoUrl = window.location.origin + "/assets/logo.png";
     const w = window.open("", "_blank");
-    if (!w) { setMessage("Please allow pop-ups to print the fee receipt."); return; }
+    if (!w) {
+      setMessage("Please allow pop-ups to print the fee receipt.");
+      return;
+    }
     const studentFields = [
-      ["Student Name", student.applicantName], ["Father's / Guardian's Name", student.fatherName || student.guardianName],
-      ["Enrolment No.", student.enrollmentNo || student.regnNo], ["Enrolment Date", formatDate(student.admissionDate || student.createdAt)],
-      ["Course Name", student.courseName || student.courseCode], ["Course Code", student.courseCode],
-      ["Course Duration", duration], ["Mobile No.", student.mobile || student.mobileNumber || student.phone],
-      ["Email", student.email], ["Date of Birth", formatDate(student.dob || student.dateOfBirth)],
-      ["Gender", student.gender], ["Address", student.address || student.presentAddress],
+      ["Student Name", student.applicantName],
+      ["Father's / Guardian's Name", student.fatherName || student.guardianName],
+      ["Enrolment No.", student.enrollmentNo || student.regnNo],
+      ["Enrolment Date", formatDate(student.admissionDate || student.createdAt)],
+      ["Course Name", student.courseName || student.courseCode],
+      ["Course Code", student.courseCode],
+      ["Course Duration", duration],
+      ["Mobile No.", student.mobile || student.mobileNumber || student.phone],
+      ["Email", student.email],
+      ["Date of Birth", formatDate(student.dob || student.dateOfBirth)],
+      ["Gender", student.gender],
+      ["Address", student.address || student.presentAddress],
     ];
-    const fieldHtml = studentFields.map(([label, value]) => `<div class="field"><b>${esc(label)}</b><span>${esc(value || "")}</span></div>`).join("");
-    const feeRows = [["Course Fee", courseFee], ["Discount", discount], ["Admission Fee", admissionFee], ["Registration Fee", registrationFee], ["Late Fine", lateFine], ["Total Fee Payable", payable]];
-    const feeHtml = feeRows.map(([label, value], i) => `<div class="fee-row ${i === feeRows.length - 1 ? "grand" : ""}"><span>${esc(label)}</span><strong>${esc(money(value))}</strong></div>`).join("");
+    const fieldHtml = studentFields
+      .map(([label, value]) => `<div class="field"><b>${esc(label)}</b><span>${esc(value || "")}</span></div>`)
+      .join("");
+    const feeRows = [
+      ["Course Fee", courseFee],
+      ["Discount", discount],
+      ["Admission Fee", admissionFee],
+      ["Registration Fee", registrationFee],
+      ["Late Fine", lateFine],
+      ["Total Fee Payable", payable],
+    ];
+    const feeHtml = feeRows
+      .map(
+        ([label, value], i) =>
+          `<div class="fee-row ${i === feeRows.length - 1 ? "grand" : ""}"><span>${esc(label)}</span><strong>${esc(money(value))}</strong></div>`,
+      )
+      .join("");
     const css = `
       @page{size:A5 landscape;margin:3.5mm}
       *{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff;color:#17345e;font-family:Arial,Helvetica,sans-serif}
@@ -944,7 +1233,7 @@ export default function StudentDetailsPage({ params }) {
             <div class="payment-field"><b>Payment Section / Type</b><strong>${esc(type)}</strong></div>
             <div class="payment-field"><b>Payment Date</b><strong>${esc(formatDate(payment?.date))}</strong></div>
             <div class="payment-field"><b>Payment Method</b><strong>${esc(payment?.method || "—")}</strong></div>
-            <div class="payment-field"><b>Installment Month</b><strong>${esc(payment?.installmentMonth || items.find(x => x.installmentMonth)?.installmentMonth || "—")}</strong></div>
+            <div class="payment-field"><b>Installment Month</b><strong>${esc(payment?.installmentMonth || items.find((x) => x.installmentMonth)?.installmentMonth || "—")}</strong></div>
           </div>
           <table class="items-table"><thead><tr><th>Fee Section / Purpose</th><th>Installment Month</th><th class="right">Amount</th></tr></thead><tbody>${itemRows}</tbody></table>
           <div class="purpose-note"><b>UTR / Transaction No.:</b> ${esc(payment?.utrNumber || "—")} &nbsp; | &nbsp; <b>Other Reference:</b> ${esc(payment?.reference || "—")} &nbsp; | &nbsp; <b>Purpose / Note:</b> ${esc(payment?.note || "—")} &nbsp; | &nbsp; <b>Payment Screenshot:</b> ${payment?.screenshotUrl ? "Attached" : "Not attached"}</div>
@@ -954,8 +1243,11 @@ export default function StudentDetailsPage({ params }) {
         <div class="bottom"><div class="bottom-note"><b>Payment Proof:</b> ${payment?.screenshotUrl ? `<a href="${esc(payment.screenshotUrl)}">View uploaded proof</a>` : "Not attached"}<br/><b>Reference:</b> ${esc(reference)}</div><div class="sign"><strong>Authorised Signature</strong><div class="auth">AUTHORISED AEC • RCLD – ISLAMPUR</div></div><div class="bottom-note" style="text-align:right"><b>Received:</b> ${esc(money(payment?.amount))}<br/><b>For RCLD – ISLAMPUR</b></div></div>
       </main><script>window.addEventListener("load",()=>{const imgs=[...document.images];Promise.all(imgs.map(img=>img.decode?img.decode().catch(()=>{}):Promise.resolve())).then(()=>setTimeout(()=>window.print(),250));});</script>
     </body></html>`;
-    w.document.open(); w.document.write(html); w.document.close();
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
   }
+
   async function saveAttendance(e) {
     e.preventDefault();
     setMessage("");
@@ -1005,7 +1297,7 @@ export default function StudentDetailsPage({ params }) {
                 className="ghost-btn"
                 onClick={() => {
                   const courseText = String(student.courseName || student.courseCode || "");
-                  if (/coding\s*for\s*kids|\bCFK\b/i.test(courseText)) {
+                  if (/coding\s*for\s*kids|\bCFK\b|\bKIDS\b/i.test(courseText)) {
                     setIcardDialogOpen(true);
                   } else {
                     printStudentICard();
@@ -1048,55 +1340,167 @@ export default function StudentDetailsPage({ params }) {
       )}
       {student && (
         <main className="student-details student-profile-page">
-          {(/coding\s*for\s*kids|\bKIDS\b/i.test(String(student.courseName || student.courseCode || ""))) && (
+          {/coding\s*for\s*kids|\bKIDS\b/i.test(
+            String(student.courseName || student.courseCode || ""),
+          ) && (
             <section className="detail-section cfk-semester-management">
               <div className="detail-section-title">
                 <BookOpen size={17} />
-                <div><h3>Coding for Kids — Semester Progression</h3><span>Six semesters · six months each · readmission advances one semester and preserves payment history</span></div>
+                <div>
+                  <h3>Coding for Kids — Semester Progression</h3>
+                  <span>
+                    Six semesters · six months each · readmission advances one semester and
+                    preserves payment history
+                  </span>
+                </div>
               </div>
               <div className="student-summary-grid compact">
-                <div className="summary-card"><span>Current Semester</span><strong>SEM {Math.min(6, Math.max(1, Number(student.currentSemester || 1)))}</strong></div>
-                <div className="summary-card"><span>Semester Status</span><strong>{student.semesterStatus || "Active"}</strong></div>
-                <div className="summary-card"><span>Semester Fee</span><strong>₹{Number((courses.find((course) => course.code === "KIDS")?.semesterPlans || []).find((plan) => Number(plan.semester) === Number(student.currentSemester || 1))?.totalFee || 0).toLocaleString("en-IN")}</strong></div>
+                <div className="summary-card">
+                  <span>Current Semester</span>
+                  <strong>
+                    SEM {Math.min(6, Math.max(1, Number(student.currentSemester || 1)))}
+                  </strong>
+                </div>
+                <div className="summary-card">
+                  <span>Semester Status</span>
+                  <strong>{student.semesterStatus || "Active"}</strong>
+                </div>
+                <div className="summary-card">
+                  <span>Semester Fee</span>
+                  <strong>
+                    ₹
+                    {Number(
+                      (courses.find((course) => course.code === "KIDS")?.semesterPlans || []).find(
+                        (plan) => Number(plan.semester) === Number(student.currentSemester || 1),
+                      )?.totalFee || 0,
+                    ).toLocaleString("en-IN")}
+                  </strong>
+                </div>
               </div>
               <div className="top-actions">
-                <button type="button" className="secondary-btn" disabled={semesterBusy || student.semesterStatus === "Completed"} onClick={() => updateCfkSemester("complete")}>Mark SEM {student.currentSemester || 1} Completed</button>
-                <button type="button" className="primary-btn" disabled={semesterBusy || student.semesterStatus !== "Completed" || Number(student.currentSemester || 1) >= 6} onClick={() => updateCfkSemester("readmit")}>{semesterBusy ? "Updating…" : Number(student.currentSemester || 1) >= 6 ? "Final Semester Completed" : "Readmit to SEM " + (Number(student.currentSemester || 1) + 1)}</button>
+                <button
+                  type="button"
+                  className="secondary-btn"
+                  disabled={semesterBusy || student.semesterStatus === "Completed"}
+                  onClick={() => updateCfkSemester("complete")}
+                >
+                  Mark SEM {student.currentSemester || 1} Completed
+                </button>
+                <button
+                  type="button"
+                  className="primary-btn"
+                  disabled={
+                    semesterBusy ||
+                    student.semesterStatus !== "Completed" ||
+                    Number(student.currentSemester || 1) >= 6
+                  }
+                  onClick={() => updateCfkSemester("readmit")}
+                >
+                  {semesterBusy
+                    ? "Updating…"
+                    : Number(student.currentSemester || 1) >= 6
+                      ? "Final Semester Completed"
+                      : "Readmit to SEM " + (Number(student.currentSemester || 1) + 1)}
+                </button>
               </div>
               {(student.semesterHistory || []).length > 0 && (
-                <div className="table-wrap"><table><thead><tr><th>Semester</th><th>Status</th><th>Admission Date</th><th>Semester Fee</th></tr></thead><tbody>{student.semesterHistory.map((item, index) => <tr key={item.semester + "-" + index}><td>SEM {item.semester}</td><td>{item.status || "Active"}</td><td>{item.admittedAt || item.completedAt || "—"}</td><td>₹{Number(item.totalFee || 0).toLocaleString("en-IN")}</td></tr>)}</tbody></table></div>
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Semester</th>
+                        <th>Status</th>
+                        <th>Admission Date</th>
+                        <th>Semester Fee</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {student.semesterHistory.map((item, index) => (
+                        <tr key={item.semester + "-" + index}>
+                          <td>SEM {item.semester}</td>
+                          <td>{item.status || "Active"}</td>
+                          <td>{item.admittedAt || item.completedAt || "—"}</td>
+                          <td>₹{Number(item.totalFee || 0).toLocaleString("en-IN")}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </section>
           )}
           {icardDialogOpen && (
-            <div className="cfk-dialog-backdrop" role="presentation" onMouseDown={(event) => {
-              if (event.target === event.currentTarget) setIcardDialogOpen(false);
-            }}>
-              <section className="cfk-dialog" role="dialog" aria-modal="true" aria-labelledby="cfk-dialog-title">
+            <div
+              className="cfk-dialog-backdrop"
+              role="presentation"
+              onMouseDown={(event) => {
+                if (event.target === event.currentTarget) setIcardDialogOpen(false);
+              }}
+            >
+              <section
+                className="cfk-dialog"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="cfk-dialog-title"
+              >
                 <div className="cfk-dialog-heading">
-                  <div className="cfk-dialog-icon"><IdCard size={22} /></div>
+                  <div className="cfk-dialog-icon">
+                    <IdCard size={22} />
+                  </div>
                   <div>
                     <h2 id="cfk-dialog-title">Coding For Kids I-Card</h2>
                     <p>Select the student's current semester or learning module.</p>
                   </div>
-                  <button type="button" className="cfk-dialog-close" aria-label="Close dialog" onClick={() => setIcardDialogOpen(false)}>×</button>
+                  <button
+                    type="button"
+                    className="cfk-dialog-close"
+                    aria-label="Close dialog"
+                    onClick={() => setIcardDialogOpen(false)}
+                  >
+                    ×
+                  </button>
                 </div>
                 <div className="cfk-dialog-student">
                   <strong>{student.applicantName}</strong>
-                  <span>{student.enrollmentNo || student.studentId || student.admissionNo || "Student ID not available"}</span>
+                  <span>
+                    {student.enrollmentNo ||
+                      student.studentId ||
+                      student.admissionNo ||
+                      "Student ID not available"}
+                  </span>
                 </div>
                 <div className="cfk-dialog-current-semester">
                   <span>Saved current semester</span>
-                  <strong>SEM {Math.min(6, Math.max(1, Number(student.currentSemester || 1)))}</strong>
-                  <small>The I-Card uses the student's recorded semester. It cannot be changed from the print dialog.</small>
+                  <strong>
+                    SEM {Math.min(6, Math.max(1, Number(student.currentSemester || 1)))}
+                  </strong>
+                  <small>
+                    The I-Card uses the student's recorded semester. It cannot be changed from the
+                    print dialog.
+                  </small>
                 </div>
-                <div className="cfk-dialog-note">The semester label and colour are taken from the student's current academic record. In the print dialog set Margins to None and Scale to 100%.</div>
+                <div className="cfk-dialog-note">
+                  The semester label and colour are taken from the student's current academic
+                  record. In the print dialog set Margins to None and Scale to 100%.
+                </div>
                 <footer className="cfk-dialog-actions">
-                  <button type="button" className="ghost-btn" onClick={() => setIcardDialogOpen(false)}>Cancel</button>
-                  <button type="button" className="primary-btn" onClick={() => {
-                    setIcardDialogOpen(false);
-                    printStudentICard();
-                  }}><Printer size={16} /> Continue to Print</button>
+                  <button
+                    type="button"
+                    className="ghost-btn"
+                    onClick={() => setIcardDialogOpen(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="primary-btn"
+                    onClick={() => {
+                      setIcardDialogOpen(false);
+                      printStudentICard();
+                    }}
+                  >
+                    <Printer size={16} /> Continue to Print
+                  </button>
                 </footer>
               </section>
             </div>
@@ -2061,9 +2465,7 @@ export default function StudentDetailsPage({ params }) {
               <Detail label="Guardian Contact">{student.guardianContactNumber}</Detail>
               <Detail label="Email Address">{student.email}</Detail>
               <Detail label="Aadhaar Number">
-                {student.aadhaarNumber
-                  ? "XXXX XXXX " + String(student.aadhaarNumber).slice(-4)
-                  : "—"}
+                {student.aadhaarNumber ? "[Aadhaar Redacted]" : "—"}
               </Detail>
               <Detail label="Referral">{student.referralName}</Detail>
               <Detail label="Marketing Employee">{student.marketingEmployeeName}</Detail>
@@ -2333,59 +2735,200 @@ export default function StudentDetailsPage({ params }) {
                         <div className="form-grid four">
                           <label className="form-field">
                             <span>Payment Date *</span>
-                            <input type="date" required value={feeForm.date}
+                            <input
+                              type="date"
+                              required
+                              value={feeForm.date}
                               onChange={(e) => {
                                 const date = e.target.value;
                                 setFeeForm((f) => ({ ...f, date }));
                                 const isLate = Number(date.slice(8, 10)) > 10;
                                 setPaymentItems((items) => {
-                                  const withoutLate = items.filter((item) => item.purpose !== "Late Fine");
-                                  return isLate ? [...withoutLate, { id: `late-fine-${date}`, purpose: "Late Fine", amount: "50", installmentMonth: "" }] : withoutLate;
+                                  const withoutLate = items.filter(
+                                    (item) => item.purpose !== "Late Fine",
+                                  );
+                                  return isLate
+                                    ? [
+                                        ...withoutLate,
+                                        {
+                                          id: `late-fine-${date}`,
+                                          purpose: "Late Fine",
+                                          amount: "50",
+                                          installmentMonth: "",
+                                        },
+                                      ]
+                                    : withoutLate;
                                 });
-                              }} />
+                              }}
+                            />
                           </label>
                           <label className="form-field">
                             <span>Payment Method *</span>
-                            <select value={feeForm.method} onChange={(e) => setFeeForm((f) => ({ ...f, method: e.target.value }))}>
-                              <option>Cash</option><option>UPI</option><option>Bank Transfer</option><option>Card</option><option>PhonePe</option>
+                            <select
+                              value={feeForm.method}
+                              onChange={(e) => setFeeForm((f) => ({ ...f, method: e.target.value }))}
+                            >
+                              <option>Cash</option>
+                              <option>UPI</option>
+                              <option>Bank Transfer</option>
+                              <option>Card</option>
+                              <option>PhonePe</option>
                             </select>
                           </label>
                           <label className="form-field">
                             <span>UTR / Transaction No.</span>
-                            <input value={feeForm.utrNumber} onChange={(e) => setFeeForm((f) => ({ ...f, utrNumber: e.target.value }))} placeholder="Enter UTR number" />
+                            <input
+                              value={feeForm.utrNumber}
+                              onChange={(e) =>
+                                setFeeForm((f) => ({ ...f, utrNumber: e.target.value }))
+                              }
+                              placeholder="Enter UTR number"
+                            />
                           </label>
                           <label className="form-field">
                             <span>Other Reference</span>
-                            <input value={feeForm.reference} onChange={(e) => setFeeForm((f) => ({ ...f, reference: e.target.value }))} placeholder="Receipt / bank reference" />
+                            <input
+                              value={feeForm.reference}
+                              onChange={(e) =>
+                                setFeeForm((f) => ({ ...f, reference: e.target.value }))
+                              }
+                              placeholder="Receipt / bank reference"
+                            />
                           </label>
                         </div>
                         <div className="fee-payment-items">
                           <div className="fee-modal-section-heading">
-                            <div><h4>Payment Sections & Amounts</h4><p>Add multiple fee heads to this one receipt. Each line is recorded separately in the receipt breakdown.</p></div>
-                            <button type="button" className="secondary-btn" onClick={() => setPaymentItems((items) => [...items, { id: `payment-line-${Date.now()}-${items.length}`, purpose: "Lab Charge", amount: "", installmentMonth: "" }])}>+ Add Fee Section</button>
+                            <div>
+                              <h4>Payment Sections & Amounts</h4>
+                              <p>
+                                Add multiple fee heads to this one receipt. Each line is recorded
+                                separately in the receipt breakdown.
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              className="secondary-btn"
+                              onClick={() =>
+                                setPaymentItems((items) => [
+                                  ...items,
+                                  {
+                                    id: `payment-line-${Date.now()}-${items.length}`,
+                                    purpose: "Lab Charge",
+                                    amount: "",
+                                    installmentMonth: "",
+                                  },
+                                ])
+                              }
+                            >
+                              + Add Fee Section
+                            </button>
                           </div>
                           {paymentItems.map((item, index) => (
                             <div className="form-grid four fee-payment-item-row" key={item.id}>
-                              <label className="form-field"><span>Fee Section / Purpose</span>
-                                <select value={item.purpose} onChange={(e) => setPaymentItems((items) => items.map((row, i) => i === index ? { ...row, purpose: e.target.value, amount: e.target.value === "Late Fine" ? "50" : row.amount } : row))}>
-                                  <option>Course Fee</option><option>Admission Fee</option><option>Registration Fee</option><option>Installment</option><option>Lab Charge</option><option>Late Fine</option><option>Other</option>
+                              <label className="form-field">
+                                <span>Fee Section / Purpose</span>
+                                <select
+                                  value={item.purpose}
+                                  onChange={(e) =>
+                                    setPaymentItems((items) =>
+                                      items.map((row, i) =>
+                                        i === index
+                                          ? {
+                                              ...row,
+                                              purpose: e.target.value,
+                                              amount:
+                                                e.target.value === "Late Fine" ? "50" : row.amount,
+                                            }
+                                          : row,
+                                      ),
+                                    )
+                                  }
+                                >
+                                  <option>Course Fee</option>
+                                  <option>Admission Fee</option>
+                                  <option>Registration Fee</option>
+                                  <option>Installment</option>
+                                  <option>Lab Charge</option>
+                                  <option>Late Fine</option>
+                                  <option>Other</option>
                                 </select>
                               </label>
-                              <label className="form-field"><span>Amount (₹) *</span>
-                                <input type="number" min="0" required value={item.amount} disabled={item.purpose === "Late Fine" && Number(item.amount) === 50}
-                                  onChange={(e) => setPaymentItems((items) => items.map((row, i) => i === index ? { ...row, amount: e.target.value } : row))} placeholder="Enter amount" />
+                              <label className="form-field">
+                                <span>Amount (₹) *</span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  required
+                                  value={item.amount}
+                                  disabled={
+                                    item.purpose === "Late Fine" && Number(item.amount) === 50
+                                  }
+                                  onChange={(e) =>
+                                    setPaymentItems((items) =>
+                                      items.map((row, i) =>
+                                        i === index ? { ...row, amount: e.target.value } : row,
+                                      ),
+                                    )
+                                  }
+                                  placeholder="Enter amount"
+                                />
                               </label>
-                              <label className="form-field"><span>Installment Month (if applicable)</span>
-                                <input type="month" value={item.installmentMonth} onChange={(e) => setPaymentItems((items) => items.map((row, i) => i === index ? { ...row, installmentMonth: e.target.value } : row))} />
+                              <label className="form-field">
+                                <span>Installment Month (if applicable)</span>
+                                <input
+                                  type="month"
+                                  value={item.installmentMonth}
+                                  onChange={(e) =>
+                                    setPaymentItems((items) =>
+                                      items.map((row, i) =>
+                                        i === index
+                                          ? { ...row, installmentMonth: e.target.value }
+                                          : row,
+                                      ),
+                                    )
+                                  }
+                                />
                               </label>
-                              <div className="form-field fee-item-remove"><span>&nbsp;</span><button type="button" className="secondary-btn" disabled={paymentItems.length === 1 || item.purpose === "Late Fine"} onClick={() => setPaymentItems((items) => items.filter((_, i) => i !== index))}>Remove</button></div>
+                              <div className="form-field fee-item-remove">
+                                <span>&nbsp;</span>
+                                <button
+                                  type="button"
+                                  className="secondary-btn"
+                                  disabled={
+                                    paymentItems.length === 1 || item.purpose === "Late Fine"
+                                  }
+                                  onClick={() =>
+                                    setPaymentItems((items) => items.filter((_, i) => i !== index))
+                                  }
+                                >
+                                  Remove
+                                </button>
+                              </div>
                             </div>
                           ))}
-                          <div className="fee-plan-total"><span>Total amount on this receipt</span><strong>₹{paymentItems.reduce((sum, item) => sum + Number(item.amount || 0), 0).toLocaleString("en-IN")}</strong><span>{Number(feeForm.date.slice(8, 10)) > 10 ? "₹50 late fine automatically included (payment date is after the 10th)." : "No late fine based on the selected payment date."}</span></div>
+                          <div className="fee-plan-total">
+                            <span>Total amount on this receipt</span>
+                            <strong>
+                              ₹
+                              {paymentItems
+                                .reduce((sum, item) => sum + Number(item.amount || 0), 0)
+                                .toLocaleString("en-IN")}
+                            </strong>
+                            <span>
+                              {Number(feeForm.date.slice(8, 10)) > 10
+                                ? "₹50 late fine automatically included (payment date is after the 10th)."
+                                : "No late fine based on the selected payment date."}
+                            </span>
+                          </div>
                         </div>
                         <div className="form-grid four">
-                          <label className="form-field"><span>Payment Purpose / Note</span>
-                            <input value={feeForm.note} onChange={(e) => setFeeForm((f) => ({ ...f, note: e.target.value }))} placeholder="Additional purpose or note" />
+                          <label className="form-field">
+                            <span>Payment Purpose / Note</span>
+                            <input
+                              value={feeForm.note}
+                              onChange={(e) => setFeeForm((f) => ({ ...f, note: e.target.value }))}
+                              placeholder="Additional purpose or note"
+                            />
                           </label>
                           <label className="form-field">
                             <span>Payment Screenshot</span>
@@ -2396,7 +2939,7 @@ export default function StudentDetailsPage({ params }) {
                               onChange={async (e) => {
                                 const file = e.target.files?.[0];
                                 if (!file) return;
-                                if (file.size > 5 * 1024 * 1024) {
+                                  if (file.size > 5 * 1024 * 1024) {
                                   setMessage("Payment screenshot must be smaller than 5 MB.");
                                   return;
                                 }
@@ -2501,9 +3044,60 @@ export default function StudentDetailsPage({ params }) {
                         </div>
                       )}
                       <div className="fee-history-total fee-history-summary">
-                        <span>Total Course Fee: <strong>₹{Number(fee?.payable ?? (Number(fee?.totalFee || 0) - Number(fee?.discount || 0) + Number(fee?.admissionFee || 0) + Number(fee?.registrationFee || 0) + Number(fee?.lateFine || 0))).toLocaleString("en-IN")}</strong></span>
-                        <span>Amount Paid: <strong>₹{Number(fee?.paid ?? (fee?.payments || []).reduce((sum, p) => sum + Number(p.amount || 0), 0)).toLocaleString("en-IN")}</strong></span>
-                        <span>Amount Due: <strong>₹{Number(fee?.due ?? Math.max(0, Number(fee?.payable ?? (Number(fee?.totalFee || 0) - Number(fee?.discount || 0) + Number(fee?.admissionFee || 0) + Number(fee?.registrationFee || 0) + Number(fee?.lateFine || 0))) - Number(fee?.paid ?? (fee?.payments || []).reduce((sum, p) => sum + Number(p.amount || 0), 0)))).toLocaleString("en-IN")}</strong></span>
+                        <span>
+                          Total Course Fee:{" "}
+                          <strong>
+                            ₹
+                            {Number(
+                              fee?.payable ??
+                                Number(fee?.totalFee || 0) -
+                                  Number(fee?.discount || 0) +
+                                  Number(fee?.admissionFee || 0) +
+                                  Number(fee?.registrationFee || 0) +
+                                  Number(fee?.lateFine || 0),
+                            ).toLocaleString("en-IN")}
+                          </strong>
+                        </span>
+                        <span>
+                          Amount Paid:{" "}
+                          <strong>
+                            ₹
+                            {Number(
+                              fee?.paid ??
+                                (fee?.payments || []).reduce(
+                                  (sum, p) => sum + Number(p.amount || 0),
+                                  0,
+                                ),
+                            ).toLocaleString("en-IN")}
+                          </strong>
+                        </span>
+                        <span>
+                          Amount Due:{" "}
+                          <strong>
+                            ₹
+                            {Number(
+                              fee?.due ??
+                                Math.max(
+                                  0,
+                                  Number(
+                                    fee?.payable ??
+                                      Number(fee?.totalFee || 0) -
+                                        Number(fee?.discount || 0) +
+                                        Number(fee?.admissionFee || 0) +
+                                        Number(fee?.registrationFee || 0) +
+                                        Number(fee?.lateFine || 0),
+                                  ) -
+                                    Number(
+                                      fee?.paid ??
+                                        (fee?.payments || []).reduce(
+                                          (sum, p) => sum + Number(p.amount || 0),
+                                          0,
+                                        ),
+                                    ),
+                                ),
+                            ).toLocaleString("en-IN")}
+                          </strong>
+                        </span>
                       </div>
                     </section>
                   </div>
