@@ -135,40 +135,22 @@ export async function GET(request) {
     }
 
     if (searchParams.get("icardEligible") === "1") {
-      const requiredFields = [
-        "applicantName", "fatherOrHusbandName", "dateOfBirth", "sex", "nationality",
-        "photoUrl", "postOffice", "policeStation", "state", "district", "pin",
-        "nearestLandmark", "mobileNumber", "guardianContactNumber", "whatsappNumber",
-        "email", "aadhaarNumber", "qualifications.0.examCourse",
-        "qualifications.0.collegeInstitute", "qualifications.0.boardUniversity",
-        "qualifications.0.year", "qualifications.0.percentage",
-      ];
+      // Keep the directory inclusive. The print templates can render optional
+      // details as blanks/fallbacks; requiring every admission-form field hid
+      // almost all existing students from the I-card directory.
       filter.$and = [
         ...(filter.$and || []),
-        ...requiredFields.map((field) => ({
-          [field]: { $exists: true, $nin: ["", null] },
-        })),
+        { applicantName: { $exists: true, $nin: ["", null] } },
         {
           $or: [
-            {
-              sameAsPresentAddress: true,
-              $or: [
-                { presentAddress: { $exists: true, $nin: ["", null] } },
-                { address: { $exists: true, $nin: ["", null] } },
-              ],
-            },
-            {
-              sameAsPresentAddress: { $ne: true },
-              permanentAddress: { $exists: true, $nin: ["", null] },
-              permanentPostOffice: { $exists: true, $nin: ["", null] },
-              permanentState: { $exists: true, $nin: ["", null] },
-              permanentDistrict: { $exists: true, $nin: ["", null] },
-              permanentPin: { $exists: true, $nin: ["", null] },
-              permanentNearestLandmark: { $exists: true, $nin: ["", null] },
-            },
+            { enrollmentNo: { $exists: true, $nin: ["", null] } },
+            { studentId: { $exists: true, $nin: ["", null] } },
+            { admissionNo: { $exists: true, $nin: ["", null] } },
+            { regnNo: { $exists: true, $nin: ["", null] } },
+            { formNo: { $exists: true, $nin: ["", null] } },
           ],
         },
-        { status: { $ne: "Admission Pending" } },
+        { status: { $nin: ["Admission Pending", "Cancelled"] } },
       ];
     }
 
