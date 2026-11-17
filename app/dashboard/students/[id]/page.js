@@ -22,6 +22,8 @@ import {
   IdCard,
 } from "lucide-react";
 import ERPLayout from "@/components/ERPLayout";
+import CodingForKidsSemesterPanel from "@/components/students/profile/CodingForKidsSemesterPanel";
+import CodingForKidsIcardDialog from "@/components/students/profile/CodingForKidsIcardDialog";
 import RCLDLogo from "@/components/RCLDLogo";
 import indiaLocations from "@/lib/indiaStatesDistricts.json";
 import { DetailField as Detail } from "@/components/students/DetailField";
@@ -1180,172 +1182,21 @@ export default function StudentDetailsPage({ params }) {
       )}
       {student && (
         <main className="student-details student-profile-page">
-          {/coding\s*for\s*kids|\bKIDS\b/i.test(
-            String(student.courseName || student.courseCode || ""),
-          ) && (
-            <section className="detail-section cfk-semester-management">
-              <div className="detail-section-title">
-                <BookOpen size={17} />
-                <div>
-                  <h3>Coding for Kids — Semester Progression</h3>
-                  <span>
-                    Six semesters · six months each · readmission advances one semester and
-                    preserves payment history
-                  </span>
-                </div>
-              </div>
-              <div className="student-summary-grid compact">
-                <div className="summary-card">
-                  <span>Current Semester</span>
-                  <strong>
-                    SEM {Math.min(6, Math.max(1, Number(student.currentSemester || 1)))}
-                  </strong>
-                </div>
-                <div className="summary-card">
-                  <span>Semester Status</span>
-                  <strong>{student.semesterStatus || "Active"}</strong>
-                </div>
-                <div className="summary-card">
-                  <span>Semester Fee</span>
-                  <strong>
-                    ₹
-                    {Number(
-                      (courses.find((course) => course.code === "KIDS")?.semesterPlans || []).find(
-                        (plan) => Number(plan.semester) === Number(student.currentSemester || 1),
-                      )?.totalFee || 0,
-                    ).toLocaleString("en-IN")}
-                  </strong>
-                </div>
-              </div>
-              <div className="top-actions">
-                <button
-                  type="button"
-                  className="secondary-btn"
-                  disabled={semesterBusy || student.semesterStatus === "Completed"}
-                  onClick={() => updateCfkSemester("complete")}
-                >
-                  Mark SEM {student.currentSemester || 1} Completed
-                </button>
-                <button
-                  type="button"
-                  className="primary-btn"
-                  disabled={
-                    semesterBusy ||
-                    student.semesterStatus !== "Completed" ||
-                    Number(student.currentSemester || 1) >= 6
-                  }
-                  onClick={() => updateCfkSemester("readmit")}
-                >
-                  {semesterBusy
-                    ? "Updating…"
-                    : Number(student.currentSemester || 1) >= 6
-                      ? "Final Semester Completed"
-                      : "Readmit to SEM " + (Number(student.currentSemester || 1) + 1)}
-                </button>
-              </div>
-              {(student.semesterHistory || []).length > 0 && (
-                <div className="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Semester</th>
-                        <th>Status</th>
-                        <th>Admission Date</th>
-                        <th>Semester Fee</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {student.semesterHistory.map((item, index) => (
-                        <tr key={item.semester + "-" + index}>
-                          <td>SEM {item.semester}</td>
-                          <td>{item.status || "Active"}</td>
-                          <td>{item.admittedAt || item.completedAt || "—"}</td>
-                          <td>₹{Number(item.totalFee || 0).toLocaleString("en-IN")}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </section>
-          )}
-          {icardDialogOpen && (
-            <div
-              className="cfk-dialog-backdrop"
-              role="presentation"
-              onMouseDown={(event) => {
-                if (event.target === event.currentTarget) setIcardDialogOpen(false);
-              }}
-            >
-              <section
-                className="cfk-dialog"
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="cfk-dialog-title"
-              >
-                <div className="cfk-dialog-heading">
-                  <div className="cfk-dialog-icon">
-                    <IdCard size={22} />
-                  </div>
-                  <div>
-                    <h2 id="cfk-dialog-title">Coding For Kids I-Card</h2>
-                    <p>Select the student's current semester or learning module.</p>
-                  </div>
-                  <button
-                    type="button"
-                    className="cfk-dialog-close"
-                    aria-label="Close dialog"
-                    onClick={() => setIcardDialogOpen(false)}
-                  >
-                    ×
-                  </button>
-                </div>
-                <div className="cfk-dialog-student">
-                  <strong>{student.applicantName}</strong>
-                  <span>
-                    {student.enrollmentNo ||
-                      student.studentId ||
-                      student.admissionNo ||
-                      "Student ID not available"}
-                  </span>
-                </div>
-                <div className="cfk-dialog-current-semester">
-                  <span>Saved current semester</span>
-                  <strong>
-                    SEM {Math.min(6, Math.max(1, Number(student.currentSemester || 1)))}
-                  </strong>
-                  <small>
-                    The I-Card uses the student's recorded semester. It cannot be changed from the
-                    print dialog.
-                  </small>
-                </div>
-                <div className="cfk-dialog-note">
-                  The semester label and colour are taken from the student's current academic
-                  record. In the print dialog set Margins to None and Scale to 100%.
-                </div>
-                <footer className="cfk-dialog-actions">
-                  <button
-                    type="button"
-                    className="ghost-btn"
-                    onClick={() => setIcardDialogOpen(false)}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    className="primary-btn"
-                    onClick={() => {
-                      setIcardDialogOpen(false);
-                      printStudentICard();
-                    }}
-                  >
-                    <Printer size={16} /> Continue to Print
-                  </button>
-                </footer>
-              </section>
-            </div>
-          )}
-
+          <CodingForKidsSemesterPanel
+            student={student}
+            courses={courses}
+            semesterBusy={semesterBusy}
+            onUpdateSemester={updateCfkSemester}
+          />
+          <CodingForKidsIcardDialog
+            open={icardDialogOpen}
+            student={student}
+            onClose={() => setIcardDialogOpen(false)}
+            onPrint={() => {
+              setIcardDialogOpen(false);
+              printStudentICard();
+            }}
+          />
           {editing && (
             <section className="detail-section student-edit-panel">
               <div className="detail-section-title">
