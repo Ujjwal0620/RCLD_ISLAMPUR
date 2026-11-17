@@ -1,6 +1,6 @@
 "use client";
 
-export default function StudentStatusEnclosureFields({ student, editForm, setEditForm, courses, batches, referrals, indiaLocations }) {
+export default function StudentStatusEnclosureFields({ student, editForm, setEditForm }) {
   return (
     <div className="edit-card">
                             <h4>Status & Enclosures</h4>
