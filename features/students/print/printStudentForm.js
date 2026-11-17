@@ -1,7 +1,6 @@
 "use client";
 
 export function printStudentForm(student) {
-  function printStudentForm() {
         if (!student) return;
         const esc = (value) =>
           String(value ?? "").replace(
@@ -149,5 +148,4 @@ export function printStudentForm(student) {
         w.document.open();
         w.document.write(html);
         w.document.close();
-      }
 }
