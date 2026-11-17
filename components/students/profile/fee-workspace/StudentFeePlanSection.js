@@ -37,7 +37,7 @@ export default function StudentFeePlanSection({ fee, feeForm, setFeeForm, saveFe
                                     />
                                   </label>
                                   <label className="form-field">
-                                    <span>Admission Fee (₹)</span>
+                                    <span>Admission Fee (included in course total) (₹)</span>
                                     <input
                                       type="number"
                                       min="0"
