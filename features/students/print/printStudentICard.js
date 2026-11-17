@@ -112,12 +112,12 @@ export function printStudentICard(student, setMessage, selectedSemester = "") {
     if (value === null || value === undefined) return;
     const text = String(value).trim();
     if (!text) return;
-    const normalized = text.toLowerCase().replace(/[.,\\s]+/g, " ").trim();
+    const normalized = text.toLowerCase().replace(/[.,\s]+/g, " ").trim();
     if (addressParts.some((part) => part.normalized === normalized || part.normalized.includes(normalized) || normalized.includes(part.normalized))) return;
     addressParts.push({ value: prefix ? `${prefix} ${text}` : text, normalized });
   };
   if (typeof primaryAddress === "string") {
-    primaryAddress.split(/[,|\\n]+/).forEach((part) => addAddressPart(part));
+    primaryAddress.split(/[,|\n]+/).forEach((part) => addAddressPart(part));
   }
   addAddressPart(
     usePermanentAddress ? student.permanentNearestLandmark : student.nearestLandmark,
