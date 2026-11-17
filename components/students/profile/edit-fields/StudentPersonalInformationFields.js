@@ -3,7 +3,7 @@
 import DigitBoxes from "@/components/students/DigitBoxes";
 import StudentAddressFields from "@/components/students/profile/edit-fields/StudentAddressFields";
 
-export default function StudentPersonalInformationFields({ student, editForm, setEditForm, referrals, indiaLocations }) {
+export default function StudentPersonalInformationFields({ editForm, setEditForm, referrals, indiaLocations }) {
   return (
     <div className="edit-card">
                             <h4>Personal Information</h4>
