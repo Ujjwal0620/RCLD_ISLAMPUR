@@ -32,7 +32,7 @@ export default function StudentPaymentItemsEditor({ feeForm, paymentItems, setPa
                                         </button>
                                       </div>
                                       {paymentItems.map((item, index) => (
-                                        <StudentPaymentItemRow item={item} index={index} paymentItems={paymentItems} setPaymentItems={setPaymentItems} />
+                                        <StudentPaymentItemRow key={item.id} item={item} index={index} paymentItems={paymentItems} setPaymentItems={setPaymentItems} />
                                       ))}
                                       <div className="fee-plan-total">
                                         <span>Total amount on this receipt</span>
