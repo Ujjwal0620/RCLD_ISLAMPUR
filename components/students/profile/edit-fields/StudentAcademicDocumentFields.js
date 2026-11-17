@@ -1,6 +1,6 @@
 "use client";
 
-export default function StudentAcademicDocumentFields({ student, editForm, setEditForm, courses, batches, referrals, indiaLocations }) {
+export default function StudentAcademicDocumentFields({ editForm, setEditForm }) {
   return (
     <div className="edit-card">
                             <h4>Academic & Documents</h4>
