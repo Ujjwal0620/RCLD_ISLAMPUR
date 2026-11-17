@@ -1,5 +1,6 @@
 export function buildCfkStudentIcardMarkup({
   student,
+  courseText,
   activeSemester,
   semesterColors,
   semesterLabelColors,
@@ -28,13 +29,13 @@ export function buildCfkStudentIcardMarkup({
   const firstName = esc(nameParts.slice(0, -1).join(" ") || nameParts[0] || "");
   const lastName = esc(nameParts.length > 1 ? nameParts[nameParts.length - 1] : "");
   const nameSizeMm = Math.min(3.55, 43 / Math.max(rawName.length * 0.56, 1)).toFixed(2);
-  const courseLabel = esc(String(student.courseName || student.course?.name || "CODING FOR KIDS").toUpperCase());
+  const courseLabel = esc(String(courseText || student.courseName || student.course?.name || "CODING FOR KIDS").toUpperCase());
   const fatherName = esc(toTitleCase(
     student.fatherOrHusbandName || student.fatherName || student.guardianName || student.father_name || ""
   ));
 
   const addrLines = addrMain
-    .split(/\n+/)
+    .split(/[,|\n]+/)
     .map((line) => line.trim())
     .filter(Boolean);
 
@@ -103,6 +104,9 @@ export function buildCfkStudentIcardMarkup({
       </div>
 
       <div class="cfk-sem-badge">
+        <svg viewBox="0 0 106 94" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0 2 C26 -1 72 0 91 20 C108 38 105 61 86 77 C66 94 27 95 0 92 Z" fill="#F6801E" stroke="#44515A" stroke-width="1.6"/>
+        </svg>
         <div class="cfk-sem-word">SEM</div>
         <div class="cfk-sem-num">${semNumber}</div>
       </div>
