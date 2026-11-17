@@ -5,7 +5,8 @@ export default function StudentTransitionForm({
   transition, setTransition, transitioning, setTransitioning, setMessage,
 }) {
   return (
-    {transition.action && (
+    <>
+      {transition.action && (
                   <div className="transition-form">
                     <div className="transition-form-head">
                       <strong>
@@ -112,6 +113,7 @@ export default function StudentTransitionForm({
                       {transitioning ? "Saving…" : "Confirm Movement"}
                     </button>
                   </div>
-                )}
+      )}
+    </>
   );
 }
