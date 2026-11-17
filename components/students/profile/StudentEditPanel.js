@@ -48,6 +48,7 @@ export default function StudentEditPanel({
                         <Save size={16} /> Save Changes
                       </button>
                     </div>
+                    </div>
                   </form>
                 </section>
   );
