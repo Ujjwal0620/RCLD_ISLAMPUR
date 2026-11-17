@@ -18,6 +18,8 @@ import StudentAcademicDetails from "@/components/students/profile/StudentAcademi
 import useStudentProfile from "@/features/students/hooks/useStudentProfile";
 import indiaLocations from "@/lib/indiaStatesDistricts.json";
 import { isIcardEligible } from "@/features/students/utils/studentProfile";
+import { formatDisplayValue as value } from "@/lib/formatters";
+
 export default function StudentDetailsPage({ params }) {
   const {
     student, setStudent, error, loading, fee, courses, batches, referrals, attendance,
@@ -33,7 +35,6 @@ export default function StudentDetailsPage({ params }) {
   return (
     <ERPLayout active="/dashboard/students">
       <StudentProfileStyles />
-
       <StudentProfileHeader
         student={student}
         printStudentForm={printStudentForm}
@@ -48,23 +49,18 @@ export default function StudentDetailsPage({ params }) {
         isIcardEligible={isIcardEligible}
       />
       {loading && (
-        <section className="panel">
+        <section className="panel student-profile-loading" aria-live="polite">
           <div className="empty">Loading student details…</div>
         </section>
       )}
       {error && (
-        <section className="panel">
+        <section className="panel student-profile-error" role="alert">
           <div className="empty error-text">{error}</div>
         </section>
       )}
       {student && (
         <main className="student-details student-profile-page">
-          <CodingForKidsSemesterPanel
-            student={student}
-            courses={courses}
-            semesterBusy={semesterBusy}
-            onUpdateSemester={updateCfkSemester}
-          />
+          <CodingForKidsSemesterPanel student={student} courses={courses} semesterBusy={semesterBusy} onUpdateSemester={updateCfkSemester} />
           <CodingForKidsIcardDialog
             open={icardDialogOpen}
             student={student}
@@ -112,14 +108,9 @@ export default function StudentDetailsPage({ params }) {
             uploadPaymentProof={uploadPaymentProof}
             printBill={printBill}
           />
-          <StudentAttendanceSection
-            attendance={attendance}
-            attForm={attForm}
-            setAttForm={setAttForm}
-            saveAttendance={saveAttendance}
-          />
+          <StudentAttendanceSection attendance={attendance} attForm={attForm} setAttForm={setAttForm} saveAttendance={saveAttendance} />
           <StudentQualificationSection student={student} />
-          {message && <div className="success-msg">{message}</div>}
+          {message && <div className="success-msg student-profile-feedback" role="status">{message}</div>}
         </main>
       )}
     </ERPLayout>
