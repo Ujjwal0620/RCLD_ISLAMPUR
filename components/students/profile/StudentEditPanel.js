@@ -1,6 +1,11 @@
 "use client";
 
 import { Pencil, Save } from "lucide-react";
+import StudentIdentityRegistrationFields from "@/components/students/profile/edit-fields/StudentIdentityRegistrationFields";
+import StudentCourseFeeFields from "@/components/students/profile/edit-fields/StudentCourseFeeFields";
+import StudentPersonalInformationFields from "@/components/students/profile/edit-fields/StudentPersonalInformationFields";
+import StudentAcademicDocumentFields from "@/components/students/profile/edit-fields/StudentAcademicDocumentFields";
+import StudentStatusEnclosureFields from "@/components/students/profile/edit-fields/StudentStatusEnclosureFields";
 
 export default function StudentEditPanel({
   editing,
