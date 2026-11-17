@@ -43,7 +43,7 @@ export default function StudentICardsPage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
-  const load = useCallback(async (page = 1, activeFilters = filters) => {
+  const load = useCallback(async (page = 1, activeFilters = EMPTY_FILTERS) => {
     setLoading(true);
     setError("");
     try {
@@ -75,11 +75,11 @@ export default function StudentICardsPage() {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, []);
 
   useEffect(() => {
     load(1, EMPTY_FILTERS);
-  }, []);
+  }, [load]);
 
   const pageNumbers = useMemo(
     () => getPageNumbers(pagination.page, pagination.totalPages),
@@ -112,7 +112,7 @@ export default function StudentICardsPage() {
         </div>
         <div className="top-actions">
           <span className="badge">{pagination.total.toLocaleString("en-IN")} eligible students</span>
-          <button type="button" className="ghost-btn" onClick={() => load(pagination.page)}>
+          <button type="button" className="ghost-btn" onClick={() => load(pagination.page, filters)}>
             <RefreshCw size={15} /> Refresh
           </button>
         </div>
@@ -279,7 +279,7 @@ export default function StudentICardsPage() {
         <nav className="icard-pagination" aria-label="Student I-Card pages">
           <span>Showing {firstRecord}–{lastRecord} of {pagination.total}</span>
           <div className="icard-pagination-controls">
-            <button type="button" aria-label="Previous page" disabled={loading || pagination.page <= 1} onClick={() => load(pagination.page - 1)}>
+            <button type="button" aria-label="Previous page" disabled={loading || pagination.page <= 1} onClick={() => load(pagination.page - 1, filters)}>
               <ChevronLeft size={17} />
             </button>
             {pageNumbers.map((page) => typeof page === "number" ? (
@@ -288,13 +288,13 @@ export default function StudentICardsPage() {
                 key={page}
                 className={page === pagination.page ? "active" : ""}
                 aria-current={page === pagination.page ? "page" : undefined}
-                onClick={() => load(page)}
+                onClick={() => load(page, filters)}
                 disabled={loading}
               >
                 {page}
               </button>
-            ) : <span className="icard-pagination-ellipsis" key={page}><X size={11} /></span>)}
-            <button type="button" aria-label="Next page" disabled={loading || pagination.page >= pagination.totalPages} onClick={() => load(pagination.page + 1)}>
+            ) : <span className="icard-pagination-ellipsis" key={page}>…</span>)}
+            <button type="button" aria-label="Next page" disabled={loading || pagination.page >= pagination.totalPages} onClick={() => load(pagination.page + 1, filters)}>
               <ChevronRight size={17} />
             </button>
           </div>
