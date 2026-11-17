@@ -1,6 +1,6 @@
 "use client";
 
-export default function StudentIdentityRegistrationFields({ student, editForm, setEditForm, courses, batches, referrals, indiaLocations }) {
+export default function StudentIdentityRegistrationFields({ editForm, setEditForm }) {
   return (
     <div className="edit-card">
                             <h4>Identity & Registration</h4>
