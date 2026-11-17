@@ -10,7 +10,6 @@ import StudentStatusEnclosureFields from "@/components/students/profile/edit-fie
 export default function StudentEditPanel({
   editing,
   setEditing,
-  student,
   editForm,
   setEditForm,
   courses,
@@ -18,6 +17,7 @@ export default function StudentEditPanel({
   referrals,
   saveStudent,
   indiaLocations,
+  setMessage,
 }) {
   if (!editing) return null;
 
@@ -35,11 +35,11 @@ export default function StudentEditPanel({
                   </div>
                   <form onSubmit={saveStudent}>
                     <div className="student-edit-grid">
-                      <StudentIdentityRegistrationFields student={student} editForm={editForm} setEditForm={setEditForm} courses={courses} batches={batches} referrals={referrals} indiaLocations={indiaLocations} />
-                    <StudentCourseFeeFields student={student} editForm={editForm} setEditForm={setEditForm} courses={courses} batches={batches} referrals={referrals} indiaLocations={indiaLocations} />
-                    <StudentPersonalInformationFields student={student} editForm={editForm} setEditForm={setEditForm} courses={courses} batches={batches} referrals={referrals} indiaLocations={indiaLocations} />
-                    <StudentAcademicDocumentFields student={student} editForm={editForm} setEditForm={setEditForm} courses={courses} batches={batches} referrals={referrals} indiaLocations={indiaLocations} />
-                    <StudentStatusEnclosureFields student={student} editForm={editForm} setEditForm={setEditForm} courses={courses} batches={batches} referrals={referrals} indiaLocations={indiaLocations} />
+                      <StudentIdentityRegistrationFields editForm={editForm} setEditForm={setEditForm} />
+                    <StudentCourseFeeFields editForm={editForm} setEditForm={setEditForm} courses={courses} batches={batches} />
+                    <StudentPersonalInformationFields editForm={editForm} setEditForm={setEditForm} referrals={referrals} indiaLocations={indiaLocations} />
+                    <StudentAcademicDocumentFields editForm={editForm} setEditForm={setEditForm} />
+                    <StudentStatusEnclosureFields editForm={editForm} setEditForm={setEditForm} setMessage={setMessage} />
                     <div className="form-actions sticky-edit-actions">
                       <button type="button" className="ghost-btn" onClick={() => setEditing(false)}>
                         Cancel
