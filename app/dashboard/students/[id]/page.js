@@ -41,7 +41,7 @@ export default function StudentDetailsPage({ params }) {
         printStudentForm={printStudentForm}
         onPrintIcard={() => {
           const courseText = String(student.courseName || student.courseCode || "");
-          if (/coding\\s*for\\s*kids|\\bCFK\\b|\\bKIDS\\b/i.test(courseText)) setIcardDialogOpen(true);
+          if (/coding\s*for\s*kids|\bCFK\b|\bKIDS\b/i.test(courseText)) setIcardDialogOpen(true);
           else printStudentICard();
         }}
         printBill={printBill}
