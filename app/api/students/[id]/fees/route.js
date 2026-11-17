@@ -98,10 +98,11 @@ function feeSummary(record) {
       ? 0
       : Number(payment.amount || 0);
   };
-  const paid = Math.min(courseFeeTotal, discount + semesterPayments.reduce((sum, payment) => sum + coursePaidForPayment(payment), 0));
+  const coursePaymentsReceived = semesterPayments.reduce((sum, payment) => sum + coursePaidForPayment(payment), 0);
+  const paid = Math.min(courseFeeTotal, discount + coursePaymentsReceived);
   const historicalPaid = Math.min(courseFeeTotal, discount + allPayments.reduce((sum, payment) => sum + coursePaidForPayment(payment), 0));
   const totalCollected = semesterPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
-  const separateChargesPaid = Math.max(0, totalCollected - paid);
+  const separateChargesPaid = Math.max(0, totalCollected - coursePaymentsReceived);
   const due = Math.max(0, courseFeeTotal - paid);
   const lateFine = semesterPayments.reduce((sum, payment) => sum + paymentItemsForAccounting(payment)
     .filter(item => String(item.purpose || item.type || "").toLowerCase() === "late fine")
