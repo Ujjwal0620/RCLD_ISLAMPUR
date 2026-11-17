@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  ArrowLeft,
-  UserRound,
-  Pencil,
-  Trash2,
-  Printer,
-  IdCard,
-} from "lucide-react";
+import { UserRound } from "lucide-react";
 import ERPLayout from "@/components/ERPLayout";
 import StudentProfileStyles from "@/components/students/profile/StudentProfileStyles";
 import StudentProfileHeader from "@/components/students/profile/StudentProfileHeader";
@@ -51,7 +44,6 @@ export default function StudentDetailsPage({ params }) {
           if (/coding\\s*for\\s*kids|\\bCFK\\b|\\bKIDS\\b/i.test(courseText)) setIcardDialogOpen(true);
           else printStudentICard();
         }}
-        printStudentICard={printStudentICard}
         printBill={printBill}
         onEdit={() => setEditing(true)}
         deleteStudent={deleteStudent}
