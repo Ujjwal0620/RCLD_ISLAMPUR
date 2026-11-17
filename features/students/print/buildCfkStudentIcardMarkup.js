@@ -47,8 +47,8 @@ export function buildCfkStudentIcardMarkup({
         <path d="M0 38L275 246L550 38V190L275 395L0 190Z" fill="${themeColor}"/>
         <path d="M0 199L275 401L550 199V214L275 416L0 214Z" fill="#FFFFFF"/>
         <path d="M0 211L275 413L550 211V224L275 426L0 224Z" fill="${themeColor}"/>
-        <path d="M0 780L48 815H502L550 780V850H0Z" fill="${themeColor}"/>
-        <path d="M0 768L48 803H502L550 768V780L502 815H48L0 780Z" fill="#FFFFFF"/>
+        <path d="M0 783L48 818H502L550 783V850H0Z" fill="${themeColor}"/>
+        <path d="M0 765L48 800H502L550 765V783L502 818H48L0 783Z" fill="#FFFFFF"/>
       </svg>
 
       <div class="cfk-header">
