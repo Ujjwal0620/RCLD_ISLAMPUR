@@ -38,8 +38,8 @@ export function buildCfkStudentIcardMarkup({
   const addrHtml = addrLines.length
     ? addrLines.map((line) => {
         const formatted = toTitleCase(line)
-          .replace(/\\bP\\.o\\./gi, "P.O.")
-          .replace(/\\bP\\.s\\./gi, "P.S.");
+          .replace(/\bP\.o\./gi, "P.O.")
+          .replace(/\bP\.s\./gi, "P.S.");
         return `<div>${esc(formatted)}</div>`;
       }).join("")
     : "<div>—</div>";
