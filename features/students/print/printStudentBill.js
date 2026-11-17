@@ -102,7 +102,7 @@ export function printStudentBill(student, fee, courses, selectedPayment = null) 
           .map(([label, value]) => `<div class="field"><b>${esc(label)}</b><span>${esc(value || "")}</span></div>`)
           .join("");
         const feeRows = [
-          ["Course Fee Total (after discount)", payable],
+          ["Course Fee Total", courseFee],
           ["Total Course Fee Paid Till Date (incl. discount)", paid],
           ["Course Fee Amount Due", due],
         ];
