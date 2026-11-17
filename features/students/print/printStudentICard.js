@@ -143,8 +143,6 @@ export function printStudentICard(student, setMessage, selectedSemester = "") {
       student,
       courseText,
       activeSemester,
-      semesterColors,
-      semesterLabelColors,
       addrMain,
       idPrefix,
       idNumber,
