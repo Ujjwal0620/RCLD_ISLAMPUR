@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil } from "lucide-react";
+import { Pencil, Save } from "lucide-react";
 import { DetailField as Detail } from "@/components/students/DetailField";
 import DigitBoxes from "@/components/students/DigitBoxes";
 import { formatDisplayValue as value } from "@/lib/formatters";
