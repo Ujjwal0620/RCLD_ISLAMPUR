@@ -27,7 +27,6 @@ export default function StudentTransitionPanel({
               batches={batches}
               setStudent={setStudent}
               setEditForm={setEditForm}
-              history={history}
               setHistory={setHistory}
               transition={transition}
               setTransition={setTransition}
