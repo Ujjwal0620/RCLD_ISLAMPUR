@@ -29,7 +29,7 @@ export function buildCfkStudentIcardMarkup({
   const firstName = esc(nameParts.slice(0, -1).join(" ") || nameParts[0] || "");
   const lastName = esc(nameParts.length > 1 ? nameParts[nameParts.length - 1] : "");
   const nameSizeMm = Math.min(3.55, 43 / Math.max(rawName.length * 0.56, 1)).toFixed(2);
-  const courseLabel = esc(String(courseText || student.courseName || student.course?.name || "CODING FOR KIDS").toUpperCase());
+  const courseLabel = esc(String(student.courseName || student.course?.name || courseText || "CODING FOR KIDS").toUpperCase());
   const fatherName = esc(toTitleCase(
     student.fatherOrHusbandName || student.fatherName || student.guardianName || student.father_name || ""
   ));
