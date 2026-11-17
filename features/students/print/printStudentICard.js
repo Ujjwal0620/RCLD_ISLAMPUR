@@ -93,42 +93,46 @@ export function printStudentICard(student, setMessage, selectedSemester = "") {
     ? `<img class="photo-img" src="${photoUrl}" alt="Student photo"/>`
     : '<div class="photo-ph">PHOTO</div>';
   const logoUrl = new URL("/assets/logo.png", window.location.origin).href;
-  // Build the complete postal address from both the free-text address and
-  // the structured registration fields. Do not stop at presentAddress alone.
-  const addressObjects = [student.presentAddress, student.address, student.permanentAddress, student.currentAddress]
-    .filter((value) => value && typeof value === "object" && !Array.isArray(value));
-  const rawAddressTexts = [
-    student.presentAddress, student.address, student.permanentAddress, student.currentAddress,
-    student.completeAddress, student.fullAddress, student.applicantAddress,
-    ...addressObjects.flatMap((address) => [address.completeAddress, address.fullAddress, address.address]),
-  ].filter((value) => typeof value === "string" && value.trim());
+  // Use the actual Student model fields from the registration API.
+  // Prefer the present/complete address; use permanent address only as a fallback.
+  const primaryAddress = firstNonEmpty(
+    student.presentAddress,
+    student.address,
+    student.completeAddress,
+    student.fullAddress,
+    student.applicantAddress,
+    student.permanentAddress,
+    "",
+  );
+  const usePermanentAddress = !firstNonEmpty(
+    student.presentAddress, student.address, student.completeAddress, student.fullAddress, student.applicantAddress,
+  ) && Boolean(student.permanentAddress);
   const addressParts = [];
   const addAddressPart = (value, prefix = "") => {
     if (value === null || value === undefined) return;
     const text = String(value).trim();
     if (!text) return;
-    const normalized = text.toLowerCase().replace(/[.,\s]+/g, " ").trim();
+    const normalized = text.toLowerCase().replace(/[.,\\s]+/g, " ").trim();
     if (addressParts.some((part) => part.normalized === normalized || part.normalized.includes(normalized) || normalized.includes(part.normalized))) return;
     addressParts.push({ value: prefix ? `${prefix} ${text}` : text, normalized });
   };
-  rawAddressTexts.forEach((address) => address.split(/[,|\n]+/).forEach((part) => addAddressPart(part)));
-  [
-    ...addressObjects.flatMap((address) => [
-      address.addressLine1, address.addressLine2, address.houseNo,
-      address.locality, address.village, address.area,
-    ]),
-    student.addressLine1, student.addressLine2, student.houseNo,
-    student.locality, student.village, student.area,
-  ].forEach((part) => addAddressPart(part));
-  const addressField = (...keys) => firstNonEmpty(
-    ...addressObjects.flatMap((address) => keys.map((key) => address[key])),
-    ...keys.map((key) => student[key]),
+  if (typeof primaryAddress === "string") {
+    primaryAddress.split(/[,|\\n]+/).forEach((part) => addAddressPart(part));
+  }
+  addAddressPart(
+    usePermanentAddress ? student.permanentNearestLandmark : student.nearestLandmark,
   );
-  addAddressPart(addressField("postOffice", "post_office"), "P.O.");
-  addAddressPart(addressField("policeStation", "police_station"), "P.S.");
-  addAddressPart(addressField("district"), "Dist.");
-  addAddressPart(addressField("state"));
-  addAddressPart(addressField("pinCode", "pincode", "postalCode"));
+  addAddressPart(
+    usePermanentAddress ? student.permanentPostOffice : student.postOffice,
+    "P.O.",
+  );
+  if (!usePermanentAddress) addAddressPart(student.policeStation, "P.S.");
+  addAddressPart(
+    usePermanentAddress ? student.permanentDistrict : student.district,
+    "Dist.",
+  );
+  addAddressPart(usePermanentAddress ? student.permanentState : student.state);
+  addAddressPart(usePermanentAddress ? student.permanentPin : student.pin);
   const addrMain = addressParts.map((part) => part.value).join(", ");
 
   const cardHeight = "88mm";
