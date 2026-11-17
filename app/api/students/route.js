@@ -134,6 +134,44 @@ export async function GET(request) {
       if (value === "no") filter.$and = [...(filter.$and || []), { $or: [{ [field]: { $exists: false } }, { [field]: "" }, { [field]: null }] }];
     }
 
+    if (searchParams.get("icardEligible") === "1") {
+      const requiredFields = [
+        "applicantName", "fatherOrHusbandName", "dateOfBirth", "sex", "nationality",
+        "photoUrl", "postOffice", "policeStation", "state", "district", "pin",
+        "nearestLandmark", "mobileNumber", "guardianContactNumber", "whatsappNumber",
+        "email", "aadhaarNumber", "qualifications.0.examCourse",
+        "qualifications.0.collegeInstitute", "qualifications.0.boardUniversity",
+        "qualifications.0.year", "qualifications.0.percentage",
+      ];
+      filter.$and = [
+        ...(filter.$and || []),
+        ...requiredFields.map((field) => ({
+          [field]: { $exists: true, $nin: ["", null] },
+        })),
+        {
+          $or: [
+            {
+              sameAsPresentAddress: true,
+              $or: [
+                { presentAddress: { $exists: true, $nin: ["", null] } },
+                { address: { $exists: true, $nin: ["", null] } },
+              ],
+            },
+            {
+              sameAsPresentAddress: { $ne: true },
+              permanentAddress: { $exists: true, $nin: ["", null] },
+              permanentPostOffice: { $exists: true, $nin: ["", null] },
+              permanentState: { $exists: true, $nin: ["", null] },
+              permanentDistrict: { $exists: true, $nin: ["", null] },
+              permanentPin: { $exists: true, $nin: ["", null] },
+              permanentNearestLandmark: { $exists: true, $nin: ["", null] },
+            },
+          ],
+        },
+        { status: { $ne: "Admission Pending" } },
+      ];
+    }
+
     const qualification = (searchParams.get("qualification") || "").trim();
     if (qualification) {
       const qualificationRx = new RegExp(escapeRegex(qualification), "i");
@@ -142,18 +180,19 @@ export async function GET(request) {
 
     const studentQuery = Student.find(filter).sort({ createdAt: -1 });
     if (searchParams.get("globalSearch") === "1") studentQuery.select("applicantName formNo enrollmentNo mobileNumber courseCode courseName status");
-    const [students, total, dbCourses, statuses, sexes] = await Promise.all([
+    const [students, total, dbCourses, statuses, sexes, batchCodes] = await Promise.all([
       studentQuery.skip((page - 1) * limit).limit(limit).lean(),
       Student.countDocuments(filter),
       Student.distinct("courseName"),
       Student.distinct("status"),
-      Student.distinct("sex")
+      Student.distinct("sex"),
+      Student.distinct("batchCode")
     ]);
     const courses = [...new Set([...DEFAULT_COURSES, ...dbCourses.filter(Boolean)])].sort();
     return NextResponse.json({
       students,
       pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
-      filterOptions: { courses, statuses: statuses.filter(Boolean).sort(), sexes: sexes.filter(Boolean).sort() }
+      filterOptions: { courses, statuses: statuses.filter(Boolean).sort(), sexes: sexes.filter(Boolean).sort(), batchCodes: batchCodes.filter(Boolean).sort() }
     });
   } catch (error) {
     return NextResponse.json({ error: "Unable to load students.", detail: error.message }, { status: 500 });
