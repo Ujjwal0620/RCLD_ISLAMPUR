@@ -28,9 +28,7 @@ export function printStudentBill(student, fee, courses, selectedPayment = null) 
         };
         const formatDate = (v) =>
           v ? new Date(String(v).slice(0, 10) + "T00:00:00").toLocaleDateString("en-GB") : "—";
-        const course = courses.find(
-          (x) => String(x.code || "").toUpperCase() === String(student.courseCode || "").toUpperCase(),
-        );
+        void courses;
         const dateKey = String(payment?.date || new Date().toISOString().slice(0, 10)).replace(
           /\D/g,
           "",
