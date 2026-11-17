@@ -8,14 +8,14 @@ export default function StudentFeePlanSection({ fee, feeForm, setFeeForm, saveFe
                               <div className="fee-modal-section-heading">
                                 <div>
                                   <h3>Fee Plan & Breakdown</h3>
-                                  <p>Update the approved student fee structure</p>
+                                  <p>Course fee total includes admission fee; discount reduces the course fee balance</p>
                                 </div>
                                 <span className="fee-section-tag">FEE SETUP</span>
                               </div>
                               <form className="inline-operation-form fee-modal-form" onSubmit={saveFees}>
                                 <div className="form-grid four">
                                   <label className="form-field">
-                                    <span>Course Fee (₹)</span>
+                                    <span>Total Course Fee Including Admission (₹)</span>
                                     <input
                                       type="number"
                                       min="0"
@@ -60,7 +60,7 @@ export default function StudentFeePlanSection({ fee, feeForm, setFeeForm, saveFe
                                   </label>
                                 </div>
                                 <div className="fee-plan-total">
-                                  <span>Current payable amount</span>
+                                  <span>Course fee payable after discount</span>
                                   <strong>₹{Number(fee?.payable || 0).toLocaleString("en-IN")}</strong>
                                   <span>
                                     Late fine: ₹{Number(fee?.lateFine || 0).toLocaleString("en-IN")}
