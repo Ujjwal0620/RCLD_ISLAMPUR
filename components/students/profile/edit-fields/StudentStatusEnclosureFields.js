@@ -89,6 +89,5 @@ export default function StudentStatusEnclosureFields({ student, editForm, setEdi
                               ))}
                             </div>
                           </div>
-                        </div>
   );
 }
