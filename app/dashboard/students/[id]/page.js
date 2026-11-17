@@ -18,7 +18,6 @@ import StudentAcademicDetails from "@/components/students/profile/StudentAcademi
 import useStudentProfile from "@/features/students/hooks/useStudentProfile";
 import indiaLocations from "@/lib/indiaStatesDistricts.json";
 import { isIcardEligible } from "@/features/students/utils/studentProfile";
-import { formatDisplayValue as value } from "@/lib/formatters";
 export default function StudentDetailsPage({ params }) {
   const {
     student, setStudent, error, loading, fee, courses, batches, referrals, attendance,
@@ -95,7 +94,7 @@ export default function StudentDetailsPage({ params }) {
             transitioning={transitioning} setTransitioning={setTransitioning} setMessage={setMessage}
           />
           <StudentContactHistory contactLogs={contactLogs} />
-          <StudentSummaryCards fee={fee} attendance={attendance} student={student} value={value} />
+          <StudentSummaryCards fee={fee} attendance={attendance} student={student} />
           <StudentPersonalDetails student={student} />
           <StudentAcademicDetails student={student} />
           <StudentFeeWorkspace
