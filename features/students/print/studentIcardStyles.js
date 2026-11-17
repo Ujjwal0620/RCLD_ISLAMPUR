@@ -182,7 +182,9 @@ export function getStudentIcardStyles(cardHeight = "88mm") {
     .cfk-val { flex:1;font-weight:700;color:#3B4248;word-break:break-word;min-width:0; }
     .cfk-id-val { font-size:1.95mm;font-weight:700; }
     .cfk-id-num { font-size:2.2mm;font-weight:800; }
-    .cfk-addr-lines div { line-height:1.22; }
+    .cfk-addr-row { align-items:flex-start; }
+    .cfk-addr-lines { font-size:1.65mm; }
+    .cfk-addr-lines div { line-height:1.16; }
     .cfk-sem-badge {
       position: absolute;
       left: -1.8mm;
@@ -228,7 +230,7 @@ export function getStudentIcardStyles(cardHeight = "88mm") {
     .cfk-sign-text { font-size:1.55mm;font-style:italic;color:#464E56;margin-top:.15mm; }
     .cfk-contact-block {
       position: absolute;
-      bottom: 5.6mm;
+      bottom: 6.2mm;
       left: 0;
       right: 0;
       text-align: center;
