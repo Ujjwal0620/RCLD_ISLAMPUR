@@ -87,10 +87,37 @@ export function printStudentICard(student, setMessage, selectedSemester = "") {
     ? `<img class="photo-img" src="${photoUrl}" alt="Student photo"/>`
     : '<div class="photo-ph">PHOTO</div>';
   const logoUrl = new URL("/assets/logo.png", window.location.origin).href;
-  const rawAddress = firstNonEmpty(student.presentAddress, student.address, student.permanentAddress, student.currentAddress, "");
-  const addrMain = typeof rawAddress === "object"
-    ? [rawAddress.addressLine1, rawAddress.addressLine2, rawAddress.village, rawAddress.postOffice, rawAddress.policeStation, rawAddress.district, rawAddress.state, rawAddress.pinCode].filter(Boolean).join(", ")
-    : String(rawAddress).trim();
+  // Build the complete postal address from both the free-text address and
+  // the structured registration fields. Do not stop at presentAddress alone.
+  const addressObject = [student.presentAddress, student.address, student.permanentAddress, student.currentAddress]
+    .find((value) => value && typeof value === "object" && !Array.isArray(value)) || {};
+  const rawAddressText = [student.presentAddress, student.address, student.permanentAddress, student.currentAddress]
+    .find((value) => typeof value === "string" && value.trim()) || "";
+  const addressParts = [];
+  const addAddressPart = (value, prefix = "") => {
+    if (value === null || value === undefined) return;
+    const text = String(value).trim();
+    if (!text) return;
+    const normalized = text.toLowerCase().replace(/[.,\\s]+/g, " ").trim();
+    if (addressParts.some((part) => part.normalized === normalized || part.normalized.includes(normalized) || normalized.includes(part.normalized))) return;
+    addressParts.push({ value: prefix ? `${prefix} ${text}` : text, normalized });
+  };
+  if (rawAddressText) {
+    rawAddressText.split(/[,|\\n]+/).forEach((part) => addAddressPart(part));
+  } else {
+    [
+      addressObject.addressLine1, addressObject.addressLine2, addressObject.houseNo,
+      addressObject.locality, addressObject.village, addressObject.area,
+      student.addressLine1, student.addressLine2, student.houseNo,
+      student.locality, student.village, student.area,
+    ].forEach((part) => addAddressPart(part));
+  }
+  addAddressPart(firstNonEmpty(addressObject.postOffice, student.postOffice, student.post_office), "P.O.");
+  addAddressPart(firstNonEmpty(addressObject.policeStation, student.policeStation, student.police_station), "P.S.");
+  addAddressPart(firstNonEmpty(addressObject.district, student.district), "Dist.");
+  addAddressPart(firstNonEmpty(addressObject.state, student.state));
+  addAddressPart(firstNonEmpty(addressObject.pinCode, addressObject.pincode, student.pinCode, student.pincode, student.postalCode));
+  const addrMain = addressParts.map((part) => part.value).join("\\n");
 
   const cardHeight = isCFK ? "85mm" : "88mm";
   let cardMarkup = "";
