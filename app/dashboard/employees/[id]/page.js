@@ -4,8 +4,7 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, UserRound, CalendarDays, WalletCards, BadgeCheck, Pencil, Trash2, Save } from "lucide-react";
 import ERPLayout from "@/components/ERPLayout";
 import { ALL_EMPLOYEE_SKILLS } from "@/lib/access-control";
-
-const v=(x)=>x===undefined||x===null||x===""?"—":x;
+import { formatDisplayValue as v } from "@/lib/formatters";
 
 export default function EmployeeDetailsPage({params}){
  const [employee,setEmployee]=useState(null); const [error,setError]=useState(""); const [loading,setLoading]=useState(true); const [editing,setEditing]=useState(false); const [form,setForm]=useState({});
