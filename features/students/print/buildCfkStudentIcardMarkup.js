@@ -2,8 +2,6 @@ export function buildCfkStudentIcardMarkup({
   student,
   courseText,
   activeSemester,
-  semesterColors,
-  semesterLabelColors,
   addrMain,
   idPrefix,
   idNumber,
