@@ -66,7 +66,7 @@ async function getFeeActor() {
 
 function feeSummary(record) {
   const courseFeeTotal = Math.max(0, Number(record.totalFee || 0));
-  const discount = Math.max(0, Number(record.discount || 0));
+  const discount = Math.min(courseFeeTotal, Math.max(0, Number(record.discount || 0)));
   const courseFeePayable = Math.max(0, courseFeeTotal - discount);
   const allPayments = record.payments || [];
   const semesterPayments = record.currentSemester
@@ -98,11 +98,11 @@ function feeSummary(record) {
       ? 0
       : Number(payment.amount || 0);
   };
-  const paid = semesterPayments.reduce((sum, payment) => sum + coursePaidForPayment(payment), 0);
-  const historicalPaid = allPayments.reduce((sum, payment) => sum + coursePaidForPayment(payment), 0);
+  const paid = Math.min(courseFeeTotal, discount + semesterPayments.reduce((sum, payment) => sum + coursePaidForPayment(payment), 0));
+  const historicalPaid = Math.min(courseFeeTotal, discount + allPayments.reduce((sum, payment) => sum + coursePaidForPayment(payment), 0));
   const totalCollected = semesterPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
   const separateChargesPaid = Math.max(0, totalCollected - paid);
-  const due = Math.max(0, courseFeePayable - paid);
+  const due = Math.max(0, courseFeeTotal - paid);
   const lateFine = semesterPayments.reduce((sum, payment) => sum + paymentItemsForAccounting(payment)
     .filter(item => String(item.purpose || item.type || "").toLowerCase() === "late fine")
     .reduce((itemSum, item) => itemSum + Number(item.amount || 0), 0), 0);
