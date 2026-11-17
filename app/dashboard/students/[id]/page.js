@@ -26,6 +26,8 @@ import CodingForKidsSemesterPanel from "@/components/students/profile/CodingForK
 import CodingForKidsIcardDialog from "@/components/students/profile/CodingForKidsIcardDialog";
 import StudentEditPanel from "@/components/students/profile/StudentEditPanel";
 import StudentFeeWorkspace from "@/components/students/profile/StudentFeeWorkspace";
+import StudentAttendanceSection from "@/components/students/profile/StudentAttendanceSection";
+import StudentQualificationSection from "@/components/students/profile/StudentQualificationSection";
 import RCLDLogo from "@/components/RCLDLogo";
 import indiaLocations from "@/lib/indiaStatesDistricts.json";
 import { DetailField as Detail } from "@/components/students/DetailField";
@@ -1659,158 +1661,13 @@ export default function StudentDetailsPage({ params }) {
             uploadPaymentProof={uploadPaymentProof}
             printBill={printBill}
           />
-          <section className="detail-section">
-            <div className="detail-section-title">
-              <ClipboardCheck size={17} />
-              <h3>Attendance</h3>
-            </div>
-            <div className="student-summary-grid compact">
-              <div className="summary-card">
-                <span>Present</span>
-                <strong>{attendance.summary?.present || 0}</strong>
-              </div>
-              <div className="summary-card">
-                <span>Absent</span>
-                <strong>{attendance.summary?.absent || 0}</strong>
-              </div>
-              <div className="summary-card">
-                <span>Leave</span>
-                <strong>{attendance.summary?.leave || 0}</strong>
-              </div>
-              <div className="summary-card">
-                <span>Percentage</span>
-                <strong>{attendance.summary?.percentage || 0}%</strong>
-              </div>
-            </div>
-            <form className="inline-operation-form" onSubmit={saveAttendance}>
-              <h4>Mark / Update Attendance</h4>
-              <div className="form-grid four">
-                <label className="form-field">
-                  <span>Date</span>
-                  <input
-                    type="date"
-                    value={attForm.date}
-                    onChange={(e) => setAttForm((f) => ({ ...f, date: e.target.value }))}
-                  />
-                </label>
-                <label className="form-field">
-                  <span>Status</span>
-                  <select
-                    value={attForm.status}
-                    onChange={(e) => setAttForm((f) => ({ ...f, status: e.target.value }))}
-                  >
-                    <option>Present</option>
-                    <option>Absent</option>
-                    <option>Leave</option>
-                  </select>
-                </label>
-                <label className="form-field">
-                  <span>Subject</span>
-                  <input
-                    value={attForm.subject}
-                    onChange={(e) => setAttForm((f) => ({ ...f, subject: e.target.value }))}
-                    placeholder="Subject"
-                  />
-                </label>
-                <label className="form-field">
-                  <span>Batch</span>
-                  <input
-                    value={attForm.batch}
-                    onChange={(e) => setAttForm((f) => ({ ...f, batch: e.target.value }))}
-                    placeholder="Batch / Series"
-                  />
-                </label>
-                <button className="primary-btn operation-btn">
-                  <Save size={16} /> Save Attendance
-                </button>
-              </div>
-            </form>
-            {(attendance.records || []).length > 0 && (
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Subject</th>
-                      <th>Batch</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {attendance.records.map((r) => (
-                      <tr key={r._id}>
-                        <td>{r.date}</td>
-                        <td>{r.subject || "—"}</td>
-                        <td>{r.batch || "—"}</td>
-                        <td>
-                          <span className="badge">{r.status}</span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
-
-          <section className="detail-section">
-            <div className="detail-section-title">
-              <FileText size={17} />
-              <h3>Qualification, Documents & Declaration</h3>
-            </div>
-            {(student.qualifications || []).length ? (
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Exam / Course</th>
-                      <th>Board / University</th>
-                      <th>College / Institute</th>
-                      <th>Year</th>
-                      <th>Percentage</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {student.qualifications.map((q, i) => (
-                      <tr key={i}>
-                        <td>{value(q.examCourse)}</td>
-                        <td>{value(q.boardUniversity)}</td>
-                        <td>{value(q.collegeInstitute)}</td>
-                        <td>{value(q.year)}</td>
-                        <td>{value(q.percentage)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="empty">No qualification information available.</div>
-            )}
-            <div className="student-detail-grid">
-              <Detail label="Declaration Date">{student.declarationDate}</Detail>
-              <Detail label="Declaration Place">{student.declarationPlace}</Detail>
-              <Detail label="Applicant Signature">
-                {student.signatureUrl ? (
-                  <img
-                    src={student.signatureUrl}
-                    alt="Student signature"
-                    style={{ maxWidth: 180, maxHeight: 64, objectFit: "contain" }}
-                  />
-                ) : (
-                  student.signatureApplicant
-                )}
-              </Detail>
-              <Detail label="Photo">
-                {student.enclosures?.stampPhoto ? "Attached" : "Not attached"}
-              </Detail>
-              <Detail label="Certificates">
-                {student.enclosures?.qualifyingCertificates ? "Attached" : "Not attached"}
-              </Detail>
-              <Detail label="Matric Admit Card">
-                {student.enclosures?.matricAdmitCard ? "Attached" : "Not attached"}
-              </Detail>
-            </div>
-          </section>
+          <StudentAttendanceSection
+            attendance={attendance}
+            attForm={attForm}
+            setAttForm={setAttForm}
+            saveAttendance={saveAttendance}
+          />
+          <StudentQualificationSection student={student} />
           {message && <div className="success-msg">{message}</div>}
         </main>
       )}
