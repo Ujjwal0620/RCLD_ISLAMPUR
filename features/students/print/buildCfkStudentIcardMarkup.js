@@ -23,7 +23,7 @@ export function buildCfkStudentIcardMarkup({
   const labelColor = "#F6801E";
   const semNumber = String(activeSemester).replace(/[^0-9]/g, "") || "1";
 
-  // First name remains charcoal; the remaining name is highlighted by semester colour.
+  // First and middle names remain slate; the surname is highlighted in reference orange.
   const rawName = String(student.applicantName || "").trim().toUpperCase();
   const nameParts = rawName.split(/\s+/).filter(Boolean);
   const firstName = esc(nameParts.slice(0, -1).join(" ") || nameParts[0] || "");
@@ -59,8 +59,9 @@ export function buildCfkStudentIcardMarkup({
         <path d="M0 190L136 315L143 308L0 180Z" fill="#FFFFFF"/>
         <path d="M550 174L405 307L397 299L550 164Z" fill="#FFFFFF"/>
         <path d="M550 190L414 315L407 308L550 180Z" fill="#FFFFFF"/>
-        <path d="M0 835L275 850L550 835V880H0Z" fill="#F6801E"/>
-        <path d="M0 820L275 835L550 820V830L275 845L0 830Z" fill="#FFFFFF"/>
+        <path d="M0 837L275 852L550 837V880H0Z" fill="#F6801E"/>
+        <path d="M0 810L275 825L550 810V816L275 831L0 816Z" fill="#FFFFFF"/>
+        <path d="M0 827L275 842L550 827V833L275 848L0 833Z" fill="#FFFFFF"/>
       </svg>
 
       <div class="cfk-header">
