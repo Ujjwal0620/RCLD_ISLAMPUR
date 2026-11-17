@@ -93,7 +93,8 @@ export function printStudentICard(student, setMessage, selectedSemester = "") {
     .filter((value) => value && typeof value === "object" && !Array.isArray(value));
   const rawAddressTexts = [
     student.presentAddress, student.address, student.permanentAddress, student.currentAddress,
-    student.completeAddress, student.fullAddress,
+    student.completeAddress, student.fullAddress, student.applicantAddress,
+    ...addressObjects.flatMap((address) => [address.completeAddress, address.fullAddress, address.address]),
   ].filter((value) => typeof value === "string" && value.trim());
   const addressParts = [];
   const addAddressPart = (value, prefix = "") => {
