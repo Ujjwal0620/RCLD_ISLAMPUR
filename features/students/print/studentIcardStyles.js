@@ -1,61 +1,283 @@
-export function getStudentIcardStyles(cardHeight) {
+export function getStudentIcardStyles(cardHeight = "88mm") {
   return `
-                /* Exact Card Dimensions: 5.5 cm wide x 8.8 cm tall (55mm x 88mm) */
-                @page{size:55mm ${cardHeight};margin:0}
-                *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
-                html,body{width:55mm;height:${cardHeight};background:#fff;font-family:Arial,Helvetica,sans-serif}
-                body{overflow:hidden}
-                .card{position:relative;width:55mm;height:${cardHeight};overflow:hidden;background:#fff;break-after:avoid;page-break-after:avoid;break-inside:avoid}
-                .card>*{position:absolute}
-                .card .bg{left:0;top:0;width:55mm;height:${cardHeight};z-index:1}
-                .photo-img{display:block;width:100%;height:100%;object-fit:cover;object-position:center top}
-                .photo-ph{display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:#999;font-size:2mm;background:#fff}
-                .ic{display:inline-block;width:1.6mm;height:1.6mm;vertical-align:middle;margin-right:.35mm;flex:none}
-                .ic-circle{display:inline-block;width:1.7mm;height:1.7mm;vertical-align:middle;margin-right:.35mm;flex:none}
-                .std-ic{display:inline-block;width:2.0mm;height:2.0mm;vertical-align:middle;margin:0 .3mm;flex:none}
-                .scribble{display:block;width:9.2mm;height:3.6mm;margin:0 auto}
-                .one-line{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-        
-                /* ===================== CODING FOR KIDS (55mm x 88mm) ===================== */
-                .cfk-header{top:2.0mm;left:1mm;right:1mm;text-align:center;color:#FFFFFF;z-index:2;overflow:hidden}
-                .cfk-brand-row{display:flex;justify-content:center;align-items:center;gap:1.1mm}
-                .cfk-logo{width:5.0mm;height:6.2mm;object-fit:contain;background:transparent;flex:none}
-                .cfk-rcld{font-family:"Arial Black",Impact,Arial,sans-serif;font-weight:900;font-size:6.8mm;line-height:.88;letter-spacing:.3mm;color:#FFFFFF}
-                .cfk-sub1{font-size:1.85mm;font-weight:700;letter-spacing:.06mm;margin-top:.5mm;line-height:1.15;white-space:nowrap}
-                .cfk-sub2{font-size:1.55mm;font-weight:400;color:#E8ECEF;margin-top:.2mm;line-height:1.15;white-space:nowrap}
-                .cfk-sub3{font-size:1.95mm;font-weight:700;margin-top:.15mm;line-height:1.15;white-space:nowrap}
-        
-                .cfk-photo{left:14.7mm;top:16.0mm;width:25.6mm;height:25.6mm;border-radius:50%;border:.65mm solid #FFFFFF;overflow:hidden;background:#FFFFFF;z-index:3}
-        
-                .cfk-name{left:1.5mm;right:1.5mm;top:42.5mm;text-align:center;font-weight:800;line-height:1.1;text-transform:uppercase;letter-spacing:-.05mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;z-index:3}
-                .cfk-name .fname{color:var(--charcoal)}
-                .cfk-name .lname{color:var(--sem)}
-        
-                .cfk-course{left:1.5mm;right:1.5mm;top:48.2mm;text-align:center;font-size:2.65mm;line-height:1;font-weight:800;letter-spacing:.06mm;color:var(--charcoal);text-transform:uppercase;white-space:nowrap;overflow:hidden;z-index:3}
-        
-                .cfk-info{left:1.2mm;right:1.5mm;top:52.8mm;font-size:2.15mm;line-height:3.05mm;z-index:3;overflow:hidden}
-                .cfk-info .r{display:grid;grid-template-columns:22.2mm minmax(0,1fr);column-gap:1.2mm;align-items:baseline}
-                .cfk-info b{text-align:right;white-space:nowrap;font-weight:700;color:var(--lbl);letter-spacing:-.03mm}
-                .cfk-info span{font-weight:700;color:var(--charcoal);min-width:0;letter-spacing:-.03mm}
-                .cfk-info .addr-lines{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;line-height:2.85mm;word-break:break-word}
-                .cfk-info em{font-style:normal;font-size:2.7mm;font-weight:800;color:var(--charcoal);margin-left:.1mm}
-        
-                .cfk-badge{left:0;top:66.6mm;width:9.2mm;height:9.6mm;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#FFFFFF;z-index:3}
-                .cfk-badge .sem-label{font-family:"Times New Roman",Georgia,serif;font-size:2.45mm;font-weight:700;line-height:1}
-                .cfk-badge .sem-num{font-family:"Arial Black",Impact,sans-serif;font-size:4.3mm;font-weight:900;line-height:1.05;margin-top:.15mm}
-                .cfk-badge .robo{font-size:2.2mm;line-height:2.4mm;font-weight:800;text-align:center}
-        
-                .cfk-sign{right:2.5mm;top:71.2mm;width:14mm;text-align:center;z-index:3}
-                .cfk-sign small{display:block;font-size:1.65mm;font-style:italic;color:var(--charcoal);line-height:1.15;margin-top:.1mm;white-space:nowrap}
-        
-                .cfk-foot1{left:1mm;right:1mm;top:77.4mm;text-align:center;font-size:1.92mm;line-height:1.15;font-weight:700;color:var(--charcoal);letter-spacing:-.04mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;z-index:3}
-                .cfk-foot2{left:1mm;right:1mm;top:79.8mm;display:flex;justify-content:center;align-items:center;font-size:1.85mm;line-height:1.15;font-weight:700;color:var(--charcoal);white-space:nowrap;overflow:hidden;z-index:3}
-                .cfk-foot2 i{display:inline-block;width:1.2mm;flex:none}
-                .cfk-foot2 .cfk-phone{font-size:1.95mm;font-weight:800}
-        
-                .cfk-band{left:0;right:0;bottom:0;height:4.6mm;display:flex;align-items:center;justify-content:center;color:#FFFFFF;font-family:"Arial Black",Arial,sans-serif;font-size:2.85mm;font-weight:900;letter-spacing:.18mm;z-index:3}
-        
-                /* ===================== STANDARD (OTHER COURSES - 55mm x 88mm) ===================== */
+    @page { size: 55mm ${cardHeight}; margin: 0; }
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 55mm;
+      height: ${cardHeight};
+      background: #fff;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+    .photo-img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center top;
+    }
+    .photo-ph {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      color: #999;
+      font-size: 2mm;
+      background: #f3f4f6;
+    }
+    .ic { display:inline-block;width:1.6mm;height:1.6mm;vertical-align:middle;margin-right:.35mm;flex:none; }
+    .ic-circle { display:inline-block;width:1.7mm;height:1.7mm;vertical-align:middle;margin-right:.35mm;flex:none; }
+    .std-ic { display:inline-block;width:2mm;height:2mm;vertical-align:middle;margin:0 .3mm;flex:none; }
+    .scribble { display:block;width:9.2mm;height:3.6mm;margin:0 auto; }
+    .one-line { white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+
+    /* ================ CODING FOR KIDS: 55mm x 85mm ================ */
+    .icard-page.cfk-card {
+      position: relative;
+      width: 55mm;
+      height: 85mm;
+      overflow: hidden;
+      background: #fff;
+      user-select: none;
+      break-after: avoid;
+      page-break-after: avoid;
+      break-inside: avoid;
+    }
+    .cfk-bg-svg {
+      position: absolute;
+      inset: 0;
+      width: 55mm;
+      height: 85mm;
+      z-index: 1;
+      pointer-events: none;
+    }
+    .cfk-header {
+      position: relative;
+      z-index: 3;
+      padding-top: 2.1mm;
+      text-align: center;
+      color: #fff;
+    }
+    .cfk-brand-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.4mm;
+      line-height: 1;
+    }
+    .cfk-logo {
+      width: 5.8mm;
+      height: 5.8mm;
+      object-fit: contain;
+      border-radius: .6mm;
+      background: #fff;
+      padding: .2mm;
+    }
+    .cfk-title {
+      font-family: "Arial Black", Impact, sans-serif;
+      font-size: 7.4mm;
+      font-weight: 900;
+      letter-spacing: .45mm;
+      color: #fff;
+      line-height: .9;
+    }
+    .cfk-subtitle {
+      margin-top: .7mm;
+      font-size: 1.85mm;
+      font-weight: 700;
+      letter-spacing: .14mm;
+      color: #fff;
+    }
+    .cfk-encouraged {
+      margin-top: .5mm;
+      font-size: 1.55mm;
+      font-weight: 400;
+      color: #f0f0f0;
+    }
+    .cfk-govt {
+      margin-top: .35mm;
+      font-size: 2.1mm;
+      font-weight: 700;
+      color: #fff;
+    }
+    .cfk-photo-wrap {
+      position: absolute;
+      top: 15.2mm;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 25.4mm;
+      height: 25.4mm;
+      border-radius: 50%;
+      background: #fff;
+      padding: .5mm;
+      z-index: 4;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .cfk-photo-inner {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      overflow: hidden;
+      background: #f3f4f6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .cfk-photo-inner .photo-img { width:100%;height:100%;object-fit:cover;object-position:center top; }
+    .cfk-photo-inner .photo-ph { font-size:2.5mm;font-weight:700;color:#888; }
+    .cfk-name-block {
+      position: absolute;
+      top: 41.3mm;
+      left: 0;
+      right: 0;
+      text-align: center;
+      z-index: 4;
+      padding: 0 2mm;
+    }
+    .cfk-student-name {
+      font-size: 4.15mm;
+      font-weight: 800;
+      letter-spacing: .05mm;
+      line-height: 1.05;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .cfk-fname { color: #464E56; }
+    .cfk-lname { color: var(--theme-color); }
+    .cfk-course-name {
+      margin-top: 1.35mm;
+      font-size: 2.15mm;
+      font-weight: 600;
+      letter-spacing: .12mm;
+      color: #464E56;
+      text-transform: uppercase;
+    }
+    .cfk-details {
+      position: absolute;
+      top: 50.8mm;
+      left: 9.8mm;
+      right: 2.5mm;
+      z-index: 4;
+      font-size: 2.15mm;
+      line-height: 1.26;
+    }
+    .cfk-row { display:flex;align-items:baseline;margin-bottom:.25mm; }
+    .cfk-lbl {
+      width: 15.2mm;
+      flex-shrink: 0;
+      text-align: right;
+      padding-right: 1.3mm;
+      font-weight: 700;
+      color: var(--label-color);
+    }
+    .cfk-val { flex:1;font-weight:700;color:#3B4248;word-break:break-word;min-width:0; }
+    .cfk-id-val { font-size:2.15mm;font-weight:700; }
+    .cfk-id-num { font-size:2.55mm;font-weight:800; }
+    .cfk-addr-lines div { line-height:1.22; }
+    .cfk-sem-badge {
+      position: absolute;
+      left: -3.2mm;
+      top: 62.6mm;
+      width: 13.5mm;
+      height: 11.4mm;
+      background: var(--theme-color);
+      border-radius: 50%;
+      transform: rotate(-22deg);
+      box-shadow: .35mm .45mm 0 #262A2E;
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding-left: 2.2mm;
+      color: #fff;
+    }
+    .cfk-sem-word {
+      transform: rotate(22deg);
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 2.35mm;
+      font-weight: 900;
+      letter-spacing: .1mm;
+      line-height: 1;
+    }
+    .cfk-sem-num {
+      transform: rotate(22deg);
+      font-size: 4.1mm;
+      font-weight: 900;
+      line-height: 1;
+      margin-top: .3mm;
+    }
+    .cfk-sign-block {
+      position: absolute;
+      right: 3.6mm;
+      top: 68.6mm;
+      text-align: center;
+      z-index: 5;
+    }
+    .cfk-sign-svg { height:3.4mm;display:flex;align-items:center;justify-content:center; }
+    .cfk-sign-svg svg { height:3.4mm;width:auto; }
+    .cfk-sign-text { font-size:1.55mm;font-style:italic;color:#464E56;margin-top:.15mm; }
+    .cfk-contact-block {
+      position: absolute;
+      bottom: 6.2mm;
+      left: 0;
+      right: 0;
+      text-align: center;
+      z-index: 5;
+      padding: 0 2mm;
+    }
+    .cfk-aec-line {
+      font-size: 2.15mm;
+      font-weight: 700;
+      color: #363C42;
+      letter-spacing: .02mm;
+      white-space: nowrap;
+    }
+    .cfk-contact-line {
+      margin-top: .35mm;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2.2mm;
+      font-size: 2.05mm;
+      font-weight: 700;
+      color: #363C42;
+    }
+    .cfk-c-item { display:inline-flex;align-items:center;gap:.7mm; }
+    .cfk-c-icon { color:#D32F2F;display:inline-flex;align-items:center;font-size:2.1mm; }
+    .cfk-c-icon svg { width:2.2mm;height:2.2mm;fill:#D32F2F; }
+    .cfk-footer-banner {
+      position: absolute;
+      bottom: .65mm;
+      left: 0;
+      right: 0;
+      height: 3.9mm;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 5;
+    }
+    .cfk-footer-title {
+      color: #fff;
+      font-size: 3.1mm;
+      font-weight: 900;
+      letter-spacing: .25mm;
+      line-height: 1;
+      display: inline-block;
+      transform: scaleY(1.24);
+      transform-origin: center;
+    }
+
+    /* ===================== STANDARD (OTHER COURSES - 55mm x 88mm) ===================== */
                 .std{font-family:"Times New Roman",Times,Georgia,serif;color:#111;z-index:2}
         
                 .std-id{left:1.8mm;top:3.8mm;width:18.5mm;text-align:center;z-index:3}
@@ -94,16 +316,17 @@ export function getStudentIcardStyles(cardHeight) {
         
                 .std-band{left:0;right:0;bottom:0;height:5.2mm;background:#1B2A78;color:#FFFFFF;font-family:"Times New Roman",Georgia,serif;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:3.8mm;letter-spacing:.25mm;z-index:3}
         
-                @media screen{
-                  html,body{width:auto;height:auto;background:#e5e9f0}
-                  body{display:flex;justify-content:center;padding:8mm 0;overflow:auto}
-                  .card{flex:none;box-shadow:0 1px 10px rgba(0,0,0,.3)}
-                }
-                @media print{
-                  html,body{width:55mm;height:${cardHeight};margin:0!important;padding:0!important;overflow:hidden}
-                  body{display:block}
-                  .card{box-shadow:none}
-                }
-    
+                
+
+    @media screen {
+      html, body { width:auto;height:auto;background:#e5e9f0; }
+      body { display:flex;justify-content:center;padding:8mm 0;overflow:auto; }
+      .card, .icard-page.cfk-card { flex:none;box-shadow:0 1px 10px rgba(0,0,0,.3); }
+    }
+    @media print {
+      html, body { width:55mm;height:${cardHeight};margin:0!important;padding:0!important;overflow:hidden; }
+      body { display:block; }
+      .card, .icard-page.cfk-card { box-shadow:none; }
+    }
   `;
 }
