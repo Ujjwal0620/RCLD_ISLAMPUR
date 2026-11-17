@@ -44,11 +44,15 @@ export function buildCfkStudentIcardMarkup({
       <svg class="cfk-bg-svg" viewBox="0 0 550 850" preserveAspectRatio="none" aria-hidden="true">
         <rect x="0" y="0" width="550" height="850" fill="#FFFFFF"/>
         <path d="M0 0H550V38L275 246L0 38Z" fill="#464E56"/>
-        <path d="M0 38L275 246L550 38V190L275 395L0 190Z" fill="${themeColor}"/>
-        <path d="M0 199L275 401L550 199V214L275 416L0 214Z" fill="#FFFFFF"/>
-        <path d="M0 211L275 413L550 211V224L275 426L0 224Z" fill="${themeColor}"/>
-        <path d="M0 783L48 818H502L550 783V850H0Z" fill="${themeColor}"/>
-        <path d="M0 765L48 800H502L550 765V783L502 818H48L0 783Z" fill="#FFFFFF"/>
+        <!-- Split side wings keep the colour away from the centre below the portrait. -->
+        <path d="M0 38L275 246L150 330L0 190Z" fill="${themeColor}"/>
+        <path d="M550 38L275 246L400 330L550 190Z" fill="${themeColor}"/>
+        <!-- Parallel diagonal white keylines, matching the supplied reference. -->
+        <path d="M0 176L145 310L154 300L0 166Z" fill="#FFFFFF"/>
+        <path d="M550 176L405 310L396 300L550 166Z" fill="#FFFFFF"/>
+        <!-- One single angular white line above the solid colour footer. -->
+        <path d="M0 775L275 805L550 775L550 784L275 814L0 784Z" fill="#FFFFFF"/>
+        <path d="M0 784L275 814L550 784V850H0Z" fill="${themeColor}"/>
       </svg>
 
       <div class="cfk-header">
