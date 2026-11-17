@@ -122,7 +122,7 @@ export function printStudentICard(student, setMessage, selectedSemester = "") {
   addAddressPart(addressField("district"), "Dist.");
   addAddressPart(addressField("state"));
   addAddressPart(addressField("pinCode", "pincode", "postalCode"));
-  const addrMain = addressParts.map((part) => part.value).join("\n");
+  const addrMain = addressParts.map((part) => part.value).join(", ");
 
   const cardHeight = isCFK ? "85mm" : "88mm";
   let cardMarkup = "";
