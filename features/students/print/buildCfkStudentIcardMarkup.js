@@ -179,7 +179,7 @@ export function buildCfkStudentIcardMarkup({
       }
       .id-card .id-highlight { font-size: 5.1pt; font-weight: 800; color: #3B4248; }
       .id-card .sem-badge-text {
-        position: absolute; top: 65.3mm; left: 0; width: 9.2mm;
+        position: absolute; top: 65.3mm; left: auto; right: 0; width: 9.2mm;
         text-align: center; color: #FFFFFF; z-index: 4; line-height: 1;
       }
       .id-card .sem-label { font-size: 5.2pt; font-weight: 800; letter-spacing: 0.1mm; }
@@ -224,8 +224,6 @@ export function buildCfkStudentIcardMarkup({
         <polygon points="0,5.1 27.5,21.0 55,5.1 55,20.5 27.5,36.4 0,20.5" fill="#9B1B81"/>
         <polygon points="0,20.5 27.5,36.4 55,20.5 55,22.2 27.5,38.1 0,22.2" fill="#FFFFFF"/>
         <polygon points="0,22.2 27.5,38.1 55,22.2 55,23.6 27.5,39.5 0,23.6" fill="#9B1B81"/>
-        <path d="M 0,63.4 C 6.5,62.0 10.8,63.6 10.6,67.0 C 10.4,70.3 5.8,73.3 0,74.1 Z" fill="#4A525A"/>
-        <path d="M 0,62.8 C 6.2,61.4 10.3,63.0 10.1,66.3 C 9.9,69.6 5.3,72.6 0,73.4 Z" fill="#9B1B81"/>
         <path d="M 55,63.4 C 48.5,62.0 44.2,63.6 44.4,67.0 C 44.6,70.3 49.2,73.3 55,74.1 Z" fill="#4A525A"/>
         <path d="M 55,62.8 C 48.8,61.4 44.7,63.0 44.9,66.3 C 45.1,69.6 49.7,72.6 55,73.4 Z" fill="#9B1B81"/>
         <polygon points="0,76.8 6.2,80.4 48.8,80.4 55,76.8 55,80.0 46.5,85.0 8.5,85.0 0,80.0" fill="#9B1B81"/>
