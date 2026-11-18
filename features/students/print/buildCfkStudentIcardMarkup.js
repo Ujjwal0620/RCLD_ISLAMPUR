@@ -21,13 +21,13 @@ export function buildCfkStudentIcardMarkup({
       (t) => t.charAt(0).toUpperCase() + t.slice(1).toLowerCase()
     ),
   icon,
-  scribble = (color = "#0B1136") => \`
+  scribble = (color = "#0B1136") => `
     <svg viewBox="0 0 90 32" xmlns="http://www.w3.org/2000/svg">
       <path d="M12,24 C18,8 28,6 30,22 C31,27 20,25 18,17 C16,10 29,8 37,19 C41,25 46,13 50,15 C54,17 53,24 58,22 C63,20 67,14 72,18 C75,21 79,22 83,19"
-            fill="none" stroke="\${color}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M22,28 L44,6" fill="none" stroke="\${color}" stroke-width="1.8" stroke-linecap="round"/>
+            fill="none" stroke="${color}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M22,28 L44,6" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round"/>
     </svg>
-  \`,
+  `,
   AEC_LINE_1 = "AEC: CYBER WORLD, DESHBANDHU PARA, ISLAMPUR",
   CONTACT_EMAIL = "islampur.cyberworld@gmail.com",
   CONTACT_PHONE = "9851775891",
@@ -65,7 +65,7 @@ export function buildCfkStudentIcardMarkup({
     ? lines.map((line) => esc(toTitleCase(line))).join("<br>")
     : "—";
 
-  return \`
+  return `
     <style>
       @page { size: 5.5cm 8.5cm; margin: 0; }
       .id-card, .id-card * {
@@ -189,7 +189,7 @@ export function buildCfkStudentIcardMarkup({
 
       <div class="header">
         <div class="brand-row">
-          <img src="\${logoUrl}" class="brand-logo" alt="Logo"/>
+          <img src="${logoUrl}" class="brand-logo" alt="Logo"/>
           <span class="brand-title">RCLD</span>
         </div>
         <div class="sub-1">Rashtriya Computer Literacy Drive</div>
@@ -197,34 +197,34 @@ export function buildCfkStudentIcardMarkup({
         <div class="sub-3">Govt. of India</div>
       </div>
 
-      <div class="photo-wrap">\${photoImg}</div>
+      <div class="photo-wrap">${photoImg}</div>
       <div class="student-name">
-        <span class="fname">\${firstName}</span> <span class="lname">\${lastName}</span>
+        <span class="fname">${firstName}</span> <span class="lname">${lastName}</span>
       </div>
-      <div class="course-title">\${courseLabel}</div>
+      <div class="course-title">${courseLabel}</div>
 
       <div class="details-grid">
-        <div class="detail-row"><div class="detail-label">ID No :</div><div class="detail-val">\${idPrefix}\${idNumber ? \`<span class="id-highlight">\${idNumber}</span>\` : ""}</div></div>
-        <div class="detail-row"><div class="detail-label">Date of Admn. :</div><div class="detail-val">\${issueDate}</div></div>
-        <div class="detail-row"><div class="detail-label">Father's Name :</div><div class="detail-val">\${fatherName || "—"}</div></div>
-        <div class="detail-row"><div class="detail-label">Address :</div><div class="detail-val">\${addrHtml}</div></div>
+        <div class="detail-row"><div class="detail-label">ID No :</div><div class="detail-val">${idPrefix}${idNumber ? `<span class="id-highlight">${idNumber}</span>` : ""}</div></div>
+        <div class="detail-row"><div class="detail-label">Date of Admn. :</div><div class="detail-val">${issueDate}</div></div>
+        <div class="detail-row"><div class="detail-label">Father's Name :</div><div class="detail-val">${fatherName || "—"}</div></div>
+        <div class="detail-row"><div class="detail-label">Address :</div><div class="detail-val">${addrHtml}</div></div>
       </div>
 
       <div class="sem-badge-text">
-        <div class="sem-label">SEM</div><div class="sem-num">\${semNumber}</div>
+        <div class="sem-label">SEM</div><div class="sem-num">${semNumber}</div>
       </div>
       <div class="sig-block">
-        \${scribble ? scribble("#0B1136") : ""}
+        ${scribble ? scribble("#0B1136") : ""}
         <div class="sig-text">Issuing Authority</div>
       </div>
       <div class="contact-block">
-        <div class="aec-line">\${esc(AEC_LINE_1)}</div>
+        <div class="aec-line">${esc(AEC_LINE_1)}</div>
         <div class="contact-row">
-          <span class="icon-red">&#9993;</span><span>\${esc(CONTACT_EMAIL)}</span>
-          <span class="icon-red">&#9742;</span><span>\${esc(CONTACT_PHONE)}</span>
+          <span class="icon-red">&#9993;</span><span>${esc(CONTACT_EMAIL)}</span>
+          <span class="icon-red">&#9742;</span><span>${esc(CONTACT_PHONE)}</span>
         </div>
       </div>
       <div class="footer-title">STUDENT ID CARD</div>
     </div>
-  \`;
+  `;
 }
