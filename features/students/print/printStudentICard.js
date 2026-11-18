@@ -135,7 +135,7 @@ export function printStudentICard(student, setMessage, selectedSemester = "") {
   addAddressPart(usePermanentAddress ? student.permanentPin : student.pin);
   const addrMain = addressParts.map((part) => part.value).join(", ");
 
-  const cardHeight = "88mm";
+  // CFK uses the requested 55 x 85mm stock; all other course cards retain 55 x 88mm.\n  const cardHeight = isCFK ? "85mm" : "88mm";
   let cardMarkup = "";
 
   if (isCFK) {
