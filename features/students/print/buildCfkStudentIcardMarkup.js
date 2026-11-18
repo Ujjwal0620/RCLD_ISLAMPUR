@@ -219,10 +219,10 @@ export function buildCfkStudentIcardMarkup({
 
     <div class="id-card">
       <svg class="bg-vectors" viewBox="0 0 55 85" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M 0,0 H 55 V 4.0 C 47.8,8.4 38.6,13.7 27.5,17.8 C 16.4,13.7 7.2,8.4 0,4.0 Z" fill="#4A525A"/>
+        <path d="M 0,0 H 55 V 4.0 C 47.5,9.0 38.0,14.3 27.5,18.0 C 17.0,14.3 7.5,9.0 0,4.0 Z" fill="#4A525A"/>
         <polygon points="0,4.0 27.5,17.8 55,4.0 55,22.8 27.5,34.8 0,22.8" fill="#9B1B81"/>
-        <polygon points="0,24.7 27.5,37.0 55,24.7 55,26.0 27.5,38.3 0,26.0" fill="#FFFFFF"/>
-        <polygon points="0,26.0 27.5,38.3 55,26.0 55,27.3 27.5,39.6 0,27.3" fill="#9B1B81"/>
+        <polygon points="0,22.8 27.5,34.8 55,22.8 55,24.1 27.5,36.1 0,24.1" fill="#FFFFFF"/>
+        <polygon points="0,24.1 27.5,36.1 55,24.1 55,25.4 27.5,37.4 0,25.4" fill="#9B1B81"/>
         <path d="M 0,63.4 C 6.5,62.0 10.8,63.6 10.6,67.0 C 10.4,70.3 5.8,73.3 0,74.1 Z" fill="#4A525A"/>
         <path d="M 0,62.8 C 6.2,61.4 10.3,63.0 10.1,66.3 C 9.9,69.6 5.3,72.6 0,73.4 Z" fill="#9B1B81"/>
         <polygon points="0,76.8 6.2,80.4 48.8,80.4 55,76.8 55,80.0 46.5,85.0 8.5,85.0 0,80.0" fill="#9B1B81"/>
