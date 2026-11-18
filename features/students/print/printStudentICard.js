@@ -14,6 +14,49 @@ import {
 import { buildCfkStudentIcardMarkup } from "@/features/students/print/buildCfkStudentIcardMarkup";
 import { buildStandardStudentIcardMarkup } from "@/features/students/print/buildStandardStudentIcardMarkup";
 
+
+async function getLogoWithoutWhiteBackground(src) {
+  if (!src || typeof window === "undefined") return src;
+  try {
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.src = src;
+    await new Promise((resolve, reject) => { image.onload = resolve; image.onerror = reject; });
+    const canvas = document.createElement("canvas");
+    canvas.width = image.naturalWidth; canvas.height = image.naturalHeight;
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    if (!context || !canvas.width || !canvas.height) return src;
+    context.drawImage(image, 0, 0);
+    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+    const { data, width, height } = imageData;
+    const total = width * height, visited = new Uint8Array(total), queue = new Int32Array(total);
+    let head = 0, tail = 0;
+    const isWhite = (index) => {
+      const p = index * 4, r = data[p], g = data[p + 1], b = data[p + 2];
+      return r >= 238 && g >= 238 && b >= 238 && Math.max(r, g, b) - Math.min(r, g, b) <= 20;
+    };
+    const add = (index) => {
+      if (index < 0 || index >= total || visited[index] || !isWhite(index)) return;
+      visited[index] = 1; queue[tail++] = index;
+    };
+    for (let x = 0; x < width; x += 1) { add(x); add((height - 1) * width + x); }
+    for (let y = 0; y < height; y += 1) { add(y * width); add(y * width + width - 1); }
+    while (head < tail) {
+      const index = queue[head++], x = index % width;
+      data[index * 4 + 3] = 0;
+      if (x > 0) add(index - 1);
+      if (x < width - 1) add(index + 1);
+      if (index >= width) add(index - width);
+      if (index < total - width) add(index + width);
+    }
+    context.putImageData(imageData, 0, 0);
+    return canvas.toDataURL("image/png");
+  } catch (error) {
+    console.warn("Could not remove the logo's white background; using original logo.", error);
+    return src;
+  }
+}
+
 export async function printStudentICard(student, setMessage, selectedSemester = "", outputMode = "print") {
   if (!student || !isIcardEligible(student)) {
     setMessage(
@@ -87,7 +130,8 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
   const photoImg = photoUrl
     ? `<img class="photo-img" src="${photoUrl}" alt="Student photo"/>`
     : '<div class="photo-ph">PHOTO</div>';
-  const logoUrl = new URL("/assets/logo.png", window.location.origin).href;
+  const logoSourceUrl = new URL("/assets/logo.png", window.location.origin).href;
+  const logoUrl = await getLogoWithoutWhiteBackground(logoSourceUrl);
   // Use the actual Student model fields from the registration API.
   // Prefer the present/complete address; use permanent address only as a fallback.
   const primaryAddress = firstNonEmpty(
