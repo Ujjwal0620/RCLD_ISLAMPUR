@@ -38,7 +38,7 @@ export function printStudentICard(student, setMessage, selectedSemester = "") {
   const semesterRaw = firstNonEmpty(student.currentSemester, student.semester, student.activeSemester, 1);
   const semesterNumber = Number(String(semesterRaw).match(/\d+/)?.[0] || 1);
   const activeSemester = isCFK
-    ? \`SEM \${Math.min(6, Math.max(1, semesterNumber))}\`
+    ? `SEM ${Math.min(6, Math.max(1, semesterNumber))}`
     : selectedSemester;
 
   const semesterOptions = ["SEM 1", "SEM 2", "SEM 3", "SEM 4", "SEM 5", "SEM 6"];
@@ -90,7 +90,7 @@ export function printStudentICard(student, setMessage, selectedSemester = "") {
   );
   const photoUrl = rawPhoto ? esc(rawPhoto) : "";
   const photoImg = photoUrl
-    ? \`<img class="photo-img" src="\${photoUrl}" alt="Student photo"/>\`
+    ? `<img class="photo-img" src="${photoUrl}" alt="Student photo"/>`
     : '<div class="photo-ph">PHOTO</div>';
   const logoUrl = new URL("/assets/logo.png", window.location.origin).href;
   // Use the actual Student model fields from the registration API.
@@ -114,7 +114,7 @@ export function printStudentICard(student, setMessage, selectedSemester = "") {
     if (!text) return;
     const normalized = text.toLowerCase().replace(/[.,\s]+/g, " ").trim();
     if (addressParts.some((part) => part.normalized === normalized || part.normalized.includes(normalized) || normalized.includes(part.normalized))) return;
-    addressParts.push({ value: prefix ? \`\${prefix} \${text}\` : text, normalized });
+    addressParts.push({ value: prefix ? `${prefix} ${text}` : text, normalized });
   };
   if (typeof primaryAddress === "string") {
     primaryAddress.split(/[,|\n]+/).forEach((part) => addAddressPart(part));
@@ -183,16 +183,16 @@ export function printStudentICard(student, setMessage, selectedSemester = "") {
     });
   }
 
-  const html = \`<!doctype html>
+  const html = `<!doctype html>
 <html>
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>RCLD Student I-Card - \${studentName}</title>
-  <style>\${getStudentIcardStyles(cardHeight)}</style>
+  <title>RCLD Student I-Card - ${studentName}</title>
+  <style>${getStudentIcardStyles(cardHeight)}</style>
 </head>
 <body>
-  \${cardMarkup}
+  ${cardMarkup}
   <script>
     window.addEventListener("load", async () => {
       await Promise.all(
@@ -204,7 +204,7 @@ export function printStudentICard(student, setMessage, selectedSemester = "") {
     });
   </script>
 </body>
-</html>\`;
+</html>`;
 
   printWindow.document.open();
   printWindow.document.write(html);
