@@ -18,7 +18,8 @@ import StudentAcademicDetails from "@/components/students/profile/StudentAcademi
 import useStudentProfile from "@/features/students/hooks/useStudentProfile";
 import indiaLocations from "@/lib/indiaStatesDistricts.json";
 import { isIcardEligible } from "@/features/students/utils/studentProfile";
-import { formatDisplayValue as value } from "@/lib/formatters";\nimport React from "react";
+import { formatDisplayValue as value } from "@/lib/formatters";
+import { useState } from "react";
 
 export default function StudentDetailsPage({ params }) {
   const {
@@ -31,6 +32,7 @@ export default function StudentDetailsPage({ params }) {
     saveFees, uploadPaymentProof, printStudentICard, downloadStudentICardJpg, printStudentForm, printBill,
     saveAttendance,
   } = useStudentProfile(params);
+  const [icardOutputMode, setIcardOutputMode] = useState("print");
 
   return (
     <ERPLayout active="/dashboard/students">
@@ -38,11 +40,19 @@ export default function StudentDetailsPage({ params }) {
       <StudentProfileHeader
         student={student}
         printStudentForm={printStudentForm}
-        onDownloadIcardJpg={downloadStudentICardJpg}
+        onDownloadIcardJpg={() => {
+          const courseText = String(student.courseName || student.courseCode || "");
+          if (/coding\s*for\s*kids|\bCFK\b|\bKIDS\b/i.test(courseText)) {
+            setIcardOutputMode("jpg");
+            setIcardDialogOpen(true);
+          } else downloadStudentICardJpg();
+        }}
         onPrintIcard={() => {
           const courseText = String(student.courseName || student.courseCode || "");
-          if (/coding\s*for\s*kids|\bCFK\b|\bKIDS\b/i.test(courseText)) setIcardDialogOpen(true);
-          else printStudentICard();
+          if (/coding\s*for\s*kids|\bCFK\b|\bKIDS\b/i.test(courseText)) {
+            setIcardOutputMode("print");
+            setIcardDialogOpen(true);
+          } else printStudentICard();
         }}
         printBill={printBill}
         onEdit={() => setEditing(true)}
@@ -66,9 +76,9 @@ export default function StudentDetailsPage({ params }) {
             open={icardDialogOpen}
             student={student}
             onClose={() => setIcardDialogOpen(false)}
-            onPrint={() => {
+            onSelect={() => {
               setIcardDialogOpen(false);
-              printStudentICard();
+              printStudentICard("", icardOutputMode);
             }}
           />
           <StudentEditPanel
