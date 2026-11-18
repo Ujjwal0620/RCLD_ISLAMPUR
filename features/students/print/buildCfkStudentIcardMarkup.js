@@ -55,7 +55,7 @@ export function buildCfkStudentIcardMarkup({
         <!-- Bottom thin angled line, white separator, main footer and corner triangles -->
         <path d="M0 765L55 798H495L550 765V777L495 810H55L0 777Z" fill="${magenta}"/>
         <path d="M0 777L55 810H495L550 777V785L495 818H55L0 785Z" fill="#FFFFFF"/>
-        <path d="M0 785L55 812H495L550 785V850H0Z" fill="${magenta}"/>
+        <path d="M0 785L55 818H495L550 785V850H0Z" fill="${magenta}"/>
       </svg>
 
       <div class="cfk-header">
