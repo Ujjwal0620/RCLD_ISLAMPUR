@@ -3,18 +3,18 @@
 export default function StudentProfileStyles() {
   return (
           <style jsx global>{`
-            .cfk-dialog-backdrop{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(10,20,35,.62);backdrop-filter:blur(5px)}
-            .cfk-dialog{width:min(100%,460px);background:var(--panel-bg,#fff);color:var(--text-primary,#172033);border:1px solid var(--border-color,#e3e8ef);border-radius:18px;padding:24px;box-shadow:0 24px 80px rgba(0,0,0,.28)}
-            .cfk-dialog-heading{display:flex;align-items:center;gap:13px;position:relative;padding-right:25px}
-            .cfk-dialog-icon{width:44px;height:44px;display:grid;place-items:center;border-radius:13px;background:rgba(37,99,235,.1);color:#2563eb;flex:none}
-            .cfk-dialog-heading h2{margin:0;font-size:19px;font-weight:750}.cfk-dialog-heading p{margin:5px 0 0;font-size:13px;opacity:.72}
-            .cfk-dialog-close{position:absolute;right:-8px;top:-8px;border:0;background:transparent;font-size:27px;line-height:1;cursor:pointer;color:inherit}
-            .cfk-dialog-student{display:flex;justify-content:space-between;gap:12px;margin:22px 0 18px;padding:12px 14px;border:1px solid var(--border-color,#e3e8ef);border-radius:11px;background:rgba(127,127,127,.045);font-size:13px}
-            .cfk-dialog-student span{opacity:.7;text-align:right}.cfk-dialog-current-semester{display:flex;flex-direction:column;gap:5px;padding:14px 16px;border:1px solid var(--border-color,#d7deea);border-radius:12px;background:var(--panel-bg,#f8f9fc)}.cfk-dialog-current-semester>span{font-size:12px;opacity:.7}.cfk-dialog-current-semester strong{font-size:22px}.cfk-dialog-current-semester small{font-size:12px;opacity:.75}
-            .cfk-dialog-note{margin-top:12px;font-size:12px;line-height:1.5;opacity:.7}
-            .cfk-dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:24px}
-            @media(max-width:520px){.cfk-dialog{padding:19px}.cfk-dialog-student{flex-direction:column;gap:4px}.cfk-dialog-student span{text-align:left}}
-
+            .cfk-template-backdrop{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(10,20,35,.68);backdrop-filter:blur(6px)}
+            .cfk-template-dialog{width:min(100%,620px);padding:24px;border:1px solid var(--border-color,#e3e8ef);border-radius:18px;background:var(--panel-bg,#fff);color:var(--text-primary,#172033);box-shadow:0 24px 80px rgba(0,0,0,.3)}
+            .cfk-template-heading{display:flex;align-items:center;gap:13px;margin-bottom:20px;position:relative;padding-right:30px}
+            .cfk-template-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;background:rgba(37,99,235,.1);color:#2563eb}
+            .cfk-template-heading h2{margin:0;font-size:19px;font-weight:750}.cfk-template-heading p{margin:5px 0 0;font-size:13px;opacity:.7}
+            .cfk-template-close{position:absolute;right:0;top:0;border:0;background:transparent;color:inherit;cursor:pointer}
+            .cfk-template-option{width:100%;display:grid;grid-template-columns:150px 1fr auto;align-items:center;gap:18px;padding:14px;border:1px solid var(--border-color,#dce3ee);border-radius:14px;background:rgba(127,127,127,.035);color:inherit;text-align:left;cursor:pointer;transition:border-color .18s,box-shadow .18s}
+            .cfk-template-option:hover{border-color:#5677d8;box-shadow:0 8px 22px rgba(49,87,213,.12)}
+            .cfk-template-option img{width:100%;height:210px;object-fit:contain;background:#f4f5f8;border-radius:8px}
+            .cfk-template-option span{display:flex;flex-direction:column;gap:6px}.cfk-template-option small{opacity:.65}
+            .cfk-template-select{padding:9px 13px;border-radius:9px;background:#3157d5;color:white;font-size:12px;font-weight:700;white-space:nowrap}
+            @media(max-width:560px){.cfk-template-dialog{padding:16px}.cfk-template-option{grid-template-columns:100px 1fr;gap:12px}.cfk-template-option img{height:150px}.cfk-template-select{grid-column:1/-1;justify-self:start}}
       /* Student profile workspace refinement */
       .student-profile-page{width:100%;max-width:1320px;margin:22px auto 40px;gap:18px}
       .student-profile-page>.detail-section{overflow:hidden;transition:border-color .18s ease,box-shadow .18s ease}
