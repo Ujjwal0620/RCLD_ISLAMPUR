@@ -51,36 +51,38 @@ export function getStudentIcardStyles(cardHeight = "88mm") {
     .cfk-photo-inner { width:100%;height:100%;border-radius:50%;overflow:hidden;background:#FFFFFF;display:flex;align-items:center;justify-content:center;border:0; }
     .cfk-photo-inner .photo-img { width:100%;height:100%;object-fit:cover;object-position:center center;border-radius:50%; }
     .cfk-photo-inner .photo-ph { font-size:2.2mm;font-weight:700;color:#465058; }
-    .cfk-name-block { position:absolute;top:44.5mm;left:1mm;right:1mm;text-align:center;z-index:4; }
+    .cfk-v-overlay { position:absolute;inset:0;width:55mm;height:85mm;z-index:5;pointer-events:none; }
+    .cfk-name-block { position:absolute;top:44.5mm;left:1mm;right:1mm;text-align:center;z-index:6; }
     .cfk-student-name { font-family:Arial,Helvetica,sans-serif;font-weight:800;letter-spacing:0;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:clip;text-transform:uppercase; }
     .cfk-fname { color:#465058; }
     .cfk-lname { color:#9B1B81; }
-    .cfk-course-name { margin-top:1.1mm;font-size:2.65mm;font-weight:700;letter-spacing:.08mm;color:#465058;text-transform:uppercase; }
-    .cfk-details { position:absolute;top:52.8mm;left:2mm;right:2mm;z-index:4;font-size:2.3mm;line-height:1.18;color:#465058; }
-    .cfk-row { display:flex;align-items:baseline;margin-bottom:.55mm; }
-    .cfk-lbl { width:23.5mm;flex:0 0 23.5mm;text-align:right;padding-right:1mm;font-weight:700;color:#9B1B81;white-space:nowrap; }
-    .cfk-val { flex:1;font-weight:400;color:#465058;min-width:0;overflow-wrap:anywhere; }
-    .cfk-id-val { font-size:2.45mm;font-weight:400;white-space:nowrap; }
-    .cfk-id-num { font-size:2.8mm;font-weight:700; }
+    .cfk-course-name { margin-top:.7mm;font-size:1.9mm;font-weight:500;letter-spacing:.04mm;color:#465058;text-transform:uppercase;line-height:1.05; }
+    .cfk-details { position:absolute;top:52.2mm;left:1.6mm;right:1.6mm;height:10.5mm;z-index:6;font-size:1.85mm;line-height:1.12;color:#465058;overflow:hidden; }
+    .cfk-row { display:flex;align-items:baseline;margin-bottom:.25mm;min-height:1.95mm; }
+    .cfk-lbl { width:22mm;flex:0 0 22mm;text-align:right;padding-right:.8mm;font-size:1.8mm;font-weight:700;color:#9B1B81;white-space:nowrap; }
+    .cfk-val { flex:1;font-size:1.85mm;font-weight:400;color:#465058;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+    .cfk-id-val { font-size:2mm;font-weight:400; }
+    .cfk-id-num { font-size:2.15mm;font-weight:700; }
     .cfk-addr-row { align-items:flex-start; }
-    .cfk-addr-lines { font-size:2.15mm;line-height:1.18;font-weight:400; }
-    .cfk-addr-lines div { line-height:1.18; }
-    .cfk-sem-badge { position:absolute;left:0;top:62.5mm;width:10.5mm;height:11mm;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#FFFFFF; }
+    .cfk-addr-row .cfk-lbl { padding-top:.05mm; }
+    .cfk-addr-lines { font-size:1.7mm;line-height:1.12;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere; }
+    .cfk-addr-lines div { line-height:1.12; }
+    .cfk-sem-badge { position:absolute;left:0;top:62.5mm;width:10.5mm;height:11mm;z-index:7;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#FFFFFF; }
     .cfk-sem-badge svg { position:absolute;inset:0;width:100%;height:100%;z-index:0; }
     .cfk-sem-word, .cfk-sem-num { position:relative;z-index:1; }
     .cfk-sem-word { font-family:Arial,Helvetica,sans-serif;font-size:1.85mm;font-weight:800;line-height:1;color:#FFFFFF; }
     .cfk-sem-num { margin-top:.55mm;font-family:Georgia,"Times New Roman",serif;font-size:3.7mm;font-weight:700;line-height:1;color:#FFFFFF; }
-    .cfk-sign-block { position:absolute;left:38.5mm;top:68.5mm;width:12mm;text-align:center;z-index:5; }
+    .cfk-sign-block { position:absolute;left:38.5mm;top:67.3mm;width:12mm;text-align:center;z-index:7; }
     .cfk-sign-svg { height:3mm;display:flex;align-items:center;justify-content:center; }
     .cfk-sign-svg svg { width:8mm;height:3mm; }
-    .cfk-sign-text { font-family:Georgia,"Times New Roman",serif;font-size:1.8mm;font-style:italic;color:#465058;margin-top:.25mm;white-space:nowrap; }
-    .cfk-contact-block { position:absolute;top:74.6mm;left:0;right:0;text-align:center;z-index:5;padding:0 1mm; }
-    .cfk-aec-line { font-size:2.15mm;font-weight:700;color:#465058;letter-spacing:0;white-space:nowrap; }
-    .cfk-contact-line { margin-top:.45mm;display:flex;align-items:center;justify-content:center;gap:1.8mm;font-size:1.85mm;font-weight:600;color:#465058;white-space:nowrap; }
-    .cfk-c-item { display:inline-flex;align-items:center;gap:.45mm; }
-    .cfk-c-icon { color:#D32F2F;display:inline-flex;align-items:center;font-size:1.8mm; }
-    .cfk-c-icon svg { width:1.8mm;height:1.8mm;fill:none; }
-    .cfk-footer-banner { position:absolute;top:81.2mm;left:0;right:0;height:3.8mm;display:flex;align-items:center;justify-content:center;z-index:5; }
+    .cfk-sign-text { font-family:Georgia,"Times New Roman",serif;font-size:1.7mm;font-style:italic;color:#465058;margin-top:.2mm;white-space:nowrap; }
+    .cfk-contact-block { position:absolute;top:72mm;left:0;right:0;text-align:center;z-index:7;padding:0 .7mm; }
+    .cfk-aec-line { font-size:1.85mm;font-weight:700;color:#465058;letter-spacing:0;white-space:nowrap;line-height:1.1; }
+    .cfk-contact-line { margin-top:.3mm;display:flex;align-items:center;justify-content:center;gap:1.2mm;font-size:1.6mm;font-weight:500;color:#465058;white-space:nowrap;line-height:1.1; }
+    .cfk-c-item { display:inline-flex;align-items:center;gap:.35mm; }
+    .cfk-c-icon { color:#D32F2F;display:inline-flex;align-items:center;font-size:1.6mm; }
+    .cfk-c-icon svg { width:1.6mm;height:1.6mm;fill:none; }
+    .cfk-footer-banner { position:absolute;top:81.2mm;left:0;right:0;height:3.8mm;display:flex;align-items:center;justify-content:center;z-index:7; }
     .cfk-footer-title { color:#FFFFFF;font-size:2.5mm;font-weight:900;letter-spacing:.15mm;line-height:1;display:inline-block; }
     /* ===================== STANDARD (OTHER COURSES - 55mm x 88mm) ===================== */
                 .std{font-family:"Times New Roman",Times,Georgia,serif;color:#111;z-index:2}
