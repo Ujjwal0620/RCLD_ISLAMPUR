@@ -82,7 +82,7 @@ export function getStudentIcardStyles(cardHeight = "88mm") {
     .cfk-c-item { display:inline-flex;align-items:center;gap:.35mm; }
     .cfk-c-icon { color:#D32F2F;display:inline-flex;align-items:center;font-size:1.6mm; }
     .cfk-c-icon svg { width:1.6mm;height:1.6mm;fill:none; }
-    .cfk-footer-banner { position:absolute;top:81.2mm;left:0;right:0;height:3.8mm;display:flex;align-items:center;justify-content:center;z-index:7; }
+    .cfk-footer-banner { position:absolute;top:82mm;left:0;right:0;height:3mm;display:flex;align-items:center;justify-content:center;z-index:7; }
     .cfk-footer-title { color:#FFFFFF;font-size:2.5mm;font-weight:900;letter-spacing:.15mm;line-height:1;display:inline-block; }
     /* ===================== STANDARD (OTHER COURSES - 55mm x 88mm) ===================== */
                 .std{font-family:"Times New Roman",Times,Georgia,serif;color:#111;z-index:2}
