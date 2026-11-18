@@ -83,26 +83,26 @@ export function getStudentIcardStyles(cardHeight = "88mm") {
     .cfk-footer-banner { position:absolute;bottom:0;left:0;right:0;height:4.3mm;display:flex;align-items:center;justify-content:center;z-index:5; }
     .cfk-footer-title { color:#FFFFFF;font-size:2.75mm;font-weight:900;letter-spacing:.2mm;line-height:1;display:inline-block; }
     /* ===================== STANDARD (OTHER COURSES - 55mm x 88mm) ===================== */
-                .card.std{position:relative;display:block;width:55mm;height:88mm;min-width:55mm;max-width:55mm;min-height:88mm;max-height:88mm;margin:0;padding:0;overflow:hidden;box-sizing:border-box;background:#fff;break-inside:avoid;page-break-inside:avoid}.std{font-family:"Times New Roman",Times,Georgia,serif;color:#111;z-index:2}
+                .card.std>.bg{position:absolute;inset:0;width:55mm;height:88mm;display:block;z-index:1;pointer-events:none}.card.std{position:relative;display:block;width:55mm;height:88mm;min-width:55mm;max-width:55mm;min-height:88mm;max-height:88mm;margin:0;padding:0;overflow:hidden;box-sizing:border-box;background:#fff;break-inside:avoid;page-break-inside:avoid}.std{font-family:"Times New Roman",Times,Georgia,serif;color:#111;z-index:2}
         
-                .std-id{left:1.8mm;top:3.8mm;width:18.5mm;text-align:center;z-index:3}
+                .std-id{position:absolute;left:1.8mm;top:3.8mm;width:18.5mm;text-align:center;z-index:3}
                 .std-id .l{font-size:2.15mm;line-height:1.15;font-weight:700;color:#111}
                 .std-id .p{font-size:2.05mm;line-height:1.2;font-weight:700;color:#111;word-break:break-all}
                 .std-id .n{font-size:3.1mm;line-height:1.15;font-weight:800;color:#111;margin-top:.1mm}
         
-                .std-logo{left:21.25mm;top:1.5mm;width:12.5mm;height:14.2mm;object-fit:contain;z-index:3}
+                .std-logo{position:absolute;left:21.25mm;top:1.5mm;width:12.5mm;height:14.2mm;object-fit:contain;z-index:3}
         
-                .std-session{right:1.8mm;top:3.8mm;width:18.5mm;text-align:center;z-index:3}
+                .std-session{position:absolute;right:1.8mm;top:3.8mm;width:18.5mm;text-align:center;z-index:3}
                 .std-session .l{font-size:2.25mm;line-height:1.15;font-weight:700;color:#1B1F6B}
                 .std-session .v{font-size:2.85mm;line-height:1.2;font-weight:800;color:#D32F2F;margin-top:.15mm}
         
-                .std-rcld{left:0;right:0;top:15.5mm;text-align:center;font-family:"Arial Black",Impact,Arial,sans-serif;font-weight:900;font-size:8.6mm;line-height:1;letter-spacing:.35mm;color:#E31E24;transform:scaleX(1.06);z-index:3}
-                .std-title{left:1mm;right:1mm;top:24.2mm;text-align:center;font-size:2.85mm;line-height:1.1;font-weight:700;color:#1B1F6B;white-space:nowrap;overflow:hidden;z-index:3}
-                .std-mission{left:1mm;right:1mm;top:27.3mm;text-align:center;font-size:1.68mm;line-height:1.15;font-weight:700;color:#111;white-space:nowrap;overflow:hidden;z-index:3}
+                .std-rcld{position:absolute;left:0;right:0;top:15.5mm;text-align:center;font-family:"Arial Black",Impact,Arial,sans-serif;font-weight:900;font-size:8.6mm;line-height:1;letter-spacing:.35mm;color:#E31E24;transform:scaleX(1.06);z-index:3}
+                .std-title{position:absolute;left:1mm;right:1mm;top:24.2mm;text-align:center;font-size:2.85mm;line-height:1.1;font-weight:700;color:#1B1F6B;white-space:nowrap;overflow:hidden;z-index:3}
+                .std-mission{position:absolute;left:1mm;right:1mm;top:27.3mm;text-align:center;font-size:1.68mm;line-height:1.15;font-weight:700;color:#111;white-space:nowrap;overflow:hidden;z-index:3}
         
-                .std-photo{left:17.5mm;top:29.8mm;width:20.0mm;height:23.8mm;border:.55mm solid #1B1F6B;border-radius:1.6mm;overflow:hidden;background:#FFFFFF;z-index:3}
+                .std-photo{position:absolute;left:17.5mm;top:29.8mm;width:20.0mm;height:23.8mm;border:.55mm solid #1B1F6B;border-radius:1.6mm;overflow:hidden;background:#FFFFFF;z-index:3}
         
-                .std-details{left:2.5mm;right:2.5mm;width:auto;top:54.8mm;z-index:3;overflow:hidden;box-sizing:border-box}
+                .std-details{position:absolute;left:2.5mm;right:2.5mm;width:auto;top:54.8mm;z-index:3;overflow:hidden;box-sizing:border-box}
                 .std-details .r{display:grid;grid-template-columns:14.8mm minmax(0,1fr);column-gap:.8mm;align-items:baseline;margin:0 0 .55mm;width:100%;line-height:2.45mm;box-sizing:border-box}
                 .std-details b{font-size:2.05mm;font-weight:700;color:#1B1F6B;white-space:nowrap}
                 .std-details span{font-size:1.8mm;font-weight:700;color:#111;min-width:0}
@@ -110,17 +110,17 @@ export function getStudentIcardStyles(cardHeight = "88mm") {
                 .std-details .ad{font-size:1.88mm;font-weight:700;line-height:2.35mm;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
                 .std-details .crs{font-size:2.05mm;font-weight:700;line-height:2.3mm;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
         
-                .std-sign{right:1.8mm;top:70.2mm;width:13.5mm;text-align:center;z-index:3}
+                .std-sign{position:absolute;right:1.8mm;top:70.2mm;width:13.5mm;text-align:center;z-index:3}
                 .std-sign small{display:block;font-family:Arial,sans-serif;font-size:1.55mm;font-weight:700;color:#111;line-height:1.15;margin-top:.1mm;white-space:nowrap}
         
-                .std-foot{left:0;right:0;width:auto;top:75.5mm;height:7.3mm;margin:0;padding:.45mm 1.6mm 0;border-top:.3mm solid #1B1F6B;box-sizing:border-box;text-align:center;font-family:"Times New Roman",Times,serif;font-weight:700;color:#111;z-index:3;overflow:hidden}
+                .std-foot{position:absolute;left:0;right:0;width:auto;top:75.5mm;height:7.3mm;margin:0;padding:.45mm 1.6mm 0;border-top:.3mm solid #1B1F6B;box-sizing:border-box;text-align:center;font-family:"Times New Roman",Times,serif;font-weight:700;color:#111;z-index:3;overflow:hidden}
                 .std-foot .f-line1{display:block;width:100%;margin:0 auto;font-size:1.82mm;line-height:2.15mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
                 .std-foot .f-line2,.std-foot .f-line3{display:flex;width:100%;min-width:0;margin:0 auto;flex-direction:row;flex-wrap:nowrap;justify-content:center;align-items:center;gap:.65mm;font-size:1.78mm;line-height:2.25mm;white-space:nowrap;text-align:center;box-sizing:border-box}
                 .std-foot .f-line2>* ,.std-foot .f-line3>*{flex:0 0 auto;min-width:0}
                 .std-foot .sp{width:1.4mm;flex:0 0 1.4mm}
                 .std-foot .sp{display:inline-block;width:1.4mm;flex:0 0 1.4mm}
         
-                .std-band{left:0;right:0;bottom:0;height:5.2mm;background:#1B2A78;color:#FFFFFF;font-family:"Times New Roman",Georgia,serif;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:3.8mm;letter-spacing:.25mm;z-index:3}
+                .std-band{position:absolute;left:0;right:0;bottom:0;height:5.2mm;background:#1B2A78;color:#FFFFFF;font-family:"Times New Roman",Georgia,serif;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:3.8mm;letter-spacing:.25mm;z-index:3}
         
                 
 
