@@ -8,10 +8,12 @@ import { printStudentBill } from "@/features/students/print/printStudentBill";
 
 export default function useStudentPrint({ student, fee, courses, setMessage }) {
   const printStudentICard = (selectedSemester = "") =>
-    printStudentICardAction(student, setMessage, selectedSemester);
+    printStudentICardAction(student, setMessage, selectedSemester, "print");
+  const downloadStudentICardJpg = () =>
+    printStudentICardAction(student, setMessage, "", "jpg");
   const printStudentForm = () => printStudentFormAction(student);
   const printBill = (selectedPayment = null) =>
     printStudentBill(student, fee, courses, selectedPayment);
 
-  return { printStudentICard, printStudentForm, printBill };
+  return { printStudentICard, downloadStudentICardJpg, printStudentForm, printBill };
 }
