@@ -62,8 +62,8 @@ export function buildCfkStudentIcardMarkup({
     .filter(Boolean);
 
   const addrHtml = lines.length
-    ? lines.map((line) => esc(toTitleCase(line))).join("<br>")
-    : "—";
+    ? lines.slice(0, 3).map((line) => `<div>${esc(toTitleCase(line))}</div>`).join("")
+    : "<div>—</div>";
 
   return `
     <style>
@@ -114,57 +114,77 @@ export function buildCfkStudentIcardMarkup({
       }
       .id-card .photo-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
       .id-card .student-name {
-        position: absolute; top: 43.4mm; left: 2mm; right: 2mm;
-        text-align: center; font-size: 10.2pt; font-weight: 800;
-        letter-spacing: 0.12mm; line-height: 1.1; z-index: 3; white-space: nowrap;
+        position: absolute; top: 43.1mm; left: 2mm; right: 2mm;
+        text-align: center; font-size: 8.2pt; font-weight: 800;
+        letter-spacing: 0.08mm; line-height: 1.05; z-index: 3;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       }
       .id-card .student-name .fname { color: #4A525A; }
       .id-card .student-name .lname { color: #9B1B81; }
       .id-card .course-title {
-        position: absolute; top: 47.8mm; left: 2mm; right: 2mm;
-        text-align: center; font-size: 6.8pt; font-weight: 800;
-        color: #4A525A; letter-spacing: 0.15mm; z-index: 3;
+        position: absolute; top: 46.8mm; left: 3mm; right: 3mm;
+        text-align: center; font-size: 4.6pt; font-weight: 700;
+        color: #66717A; letter-spacing: 0.12mm; line-height: 1.1;
+        z-index: 3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       }
       .id-card .details-grid {
-        position: absolute; top: 52mm; left: 9.5mm; right: 2mm;
-        z-index: 3; display: flex; flex-direction: column; gap: 0.55mm;
+        position: absolute; top: 50.3mm; left: 2.2mm; right: 2.2mm;
+        height: 14.2mm; overflow: hidden; z-index: 3;
+        display: flex; flex-direction: column; gap: 0.35mm;
       }
-      .id-card .detail-row { display: flex; align-items: baseline; font-size: 6pt; line-height: 1.22; }
+      .id-card .detail-row {
+        display: grid; grid-template-columns: 15.5mm minmax(0, 1fr);
+        column-gap: 0.8mm; align-items: start; font-size: 4.7pt; line-height: 1.12;
+        min-width: 0;
+      }
       .id-card .detail-label {
-        width: 16.5mm; flex-shrink: 0; text-align: right;
-        padding-right: 1.3mm; font-weight: 800; color: #9B1B81;
+        text-align: right; padding-right: 0.5mm; font-weight: 800;
+        color: #9B1B81; white-space: nowrap;
       }
-      .id-card .detail-val { flex: 1; font-weight: 700; color: #3B4248; word-break: break-word; }
-      .id-card .id-highlight { font-size: 7.4pt; font-weight: 800; color: #3B4248; }
+      .id-card .detail-val {
+        min-width: 0; font-weight: 600; color: #3B4248;
+        overflow-wrap: anywhere; word-break: normal;
+      }
+      .id-card .detail-val.address-lines {
+        max-height: 4.2mm; overflow: hidden; font-size: 4.35pt; line-height: 1.08;
+      }
+      .id-card .detail-val.address-lines div {
+        max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      }
+      .id-card .id-highlight { font-size: 5.1pt; font-weight: 800; color: #3B4248; }
       .id-card .sem-badge-text {
-        position: absolute; top: 64.2mm; left: 0; width: 9.2mm;
+        position: absolute; top: 65.3mm; left: 0; width: 9.2mm;
         text-align: center; color: #FFFFFF; z-index: 4; line-height: 1;
       }
-      .id-card .sem-label { font-size: 6.2pt; font-weight: 800; letter-spacing: 0.15mm; }
+      .id-card .sem-label { font-size: 5.2pt; font-weight: 800; letter-spacing: 0.1mm; }
       .id-card .sem-num {
-        margin-top: 0.6mm; font-family: Georgia, "Times New Roman", serif;
-        font-size: 13pt; font-weight: 700;
+        margin-top: 0.45mm; font-family: Georgia, "Times New Roman", serif;
+        font-size: 11pt; font-weight: 700;
       }
       .id-card .sig-block {
-        position: absolute; top: 67.8mm; right: 3.8mm;
-        text-align: center; z-index: 4;
+        position: absolute; top: 68.1mm; right: 3.2mm;
+        text-align: center; z-index: 4; width: 13mm;
       }
-      .id-card .sig-block svg { width: 11mm; height: 3.8mm; display: block; margin: 0 auto; }
+      .id-card .sig-block svg { width: 9mm; height: 3mm; display: block; margin: 0 auto; }
       .id-card .sig-text {
-        margin-top: 0.2mm; font-family: Georgia, "Times New Roman", serif;
-        font-style: italic; font-size: 5pt; color: #3B4248;
+        margin-top: 0.1mm; font-family: Georgia, "Times New Roman", serif;
+        font-style: italic; font-size: 4.2pt; color: #3B4248; white-space: nowrap;
       }
       .id-card .contact-block {
-        position: absolute; top: 74.2mm; left: 1.5mm; right: 1.5mm;
-        text-align: center; z-index: 4; line-height: 1.2;
+        position: absolute; top: 73.2mm; left: 1.5mm; right: 1.5mm;
+        text-align: center; z-index: 4; line-height: 1.12;
       }
-      .id-card .aec-line { font-size: 5.7pt; font-weight: 800; color: #3B4248; letter-spacing: 0.05mm; }
+      .id-card .aec-line {
+        font-size: 4.3pt; font-weight: 800; color: #3B4248;
+        letter-spacing: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
       .id-card .contact-row {
-        margin-top: 0.2mm; display: flex; align-items: center;
-        justify-content: center; gap: 1mm; font-size: 5.7pt;
-        font-weight: 700; color: #3B4248;
+        margin-top: 0.35mm; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: 0.25mm;
+        font-size: 4.15pt; font-weight: 700; color: #3B4248; line-height: 1.1;
       }
-      .id-card .icon-red { color: #D32F2F; font-size: 6.2pt; line-height: 1; }
+      .id-card .contact-item { display: inline-flex; align-items: center; gap: 0.6mm; }
+      .id-card .icon-red { color: #D32F2F; font-size: 4.6pt; line-height: 1; }
       .id-card .footer-title {
         position: absolute; bottom: 0.8mm; left: 0; width: 100%;
         text-align: center; font-size: 8.8pt; font-weight: 800;
@@ -207,7 +227,7 @@ export function buildCfkStudentIcardMarkup({
         <div class="detail-row"><div class="detail-label">ID No :</div><div class="detail-val">${idPrefix}${idNumber ? `<span class="id-highlight">${idNumber}</span>` : ""}</div></div>
         <div class="detail-row"><div class="detail-label">Date of Admn. :</div><div class="detail-val">${issueDate}</div></div>
         <div class="detail-row"><div class="detail-label">Father's Name :</div><div class="detail-val">${fatherName || "—"}</div></div>
-        <div class="detail-row"><div class="detail-label">Address :</div><div class="detail-val">${addrHtml}</div></div>
+        <div class="detail-row"><div class="detail-label">Address :</div><div class="detail-val address-lines">${addrHtml}</div></div>
       </div>
 
       <div class="sem-badge-text">
@@ -220,8 +240,8 @@ export function buildCfkStudentIcardMarkup({
       <div class="contact-block">
         <div class="aec-line">${esc(AEC_LINE_1)}</div>
         <div class="contact-row">
-          <span class="icon-red">&#9993;</span><span>${esc(CONTACT_EMAIL)}</span>
-          <span class="icon-red">&#9742;</span><span>${esc(CONTACT_PHONE)}</span>
+          <span class="contact-item"><span class="icon-red">&#9993;</span><span>${esc(CONTACT_EMAIL)}</span></span>
+          <span class="contact-item"><span class="icon-red">&#9742;</span><span>${esc(CONTACT_PHONE)}</span></span>
         </div>
       </div>
       <div class="footer-title">STUDENT ID CARD</div>
