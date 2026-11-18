@@ -139,8 +139,8 @@ export function buildCfkStudentIcardMarkup({
 .id-card .details-grid {
     position: absolute;
     top: 52.0mm;
-    left: 9.5mm;
-    right: 2mm;
+    left: 3mm;
+    right: 3mm;
     z-index: 3;
     display: flex;
     flex-direction: column;
@@ -156,6 +156,7 @@ export function buildCfkStudentIcardMarkup({
 
 .id-card .detail-label {
     width: 16.5mm;
+    flex: 0 0 16.5mm;
     flex-shrink: 0;
     text-align: right;
     padding-right: 1.3mm;
@@ -163,14 +164,14 @@ export function buildCfkStudentIcardMarkup({
     color: #9B1B81;
 }
       .id-card .detail-val {
-        display: inline-block; flex: 0 1 auto; min-width: 0;
-        max-width: 68%; text-align: center; margin: 0; padding: 0;
+        display: block; flex: 1 1 0; min-width: 0;
+        max-width: none; text-align: left; margin: 0; padding: 0;
         font-weight: 600; color: #3B4248; line-height: 1.02;
         overflow-wrap: anywhere; word-break: normal;
       }
       .id-card .detail-val.address-lines {
-        max-height: 3.8mm; max-width: 72%; overflow: hidden;
-        font-size: 4.2pt; line-height: 1.0; text-align: center;
+        max-height: 3.8mm; max-width: none; overflow: hidden;
+        font-size: 4.2pt; line-height: 1.0; text-align: left;
       }
       .id-card .detail-val.address-lines div {
         max-width: 100%; text-align: center; overflow: hidden;
@@ -228,8 +229,7 @@ export function buildCfkStudentIcardMarkup({
         <polygon points="0,76.8 6.2,80.4 48.8,80.4 55,76.8 55,80.0 46.5,85.0 8.5,85.0 0,80.0" fill="#9B1B81"/>
         <polygon points="0,80.0 8.5,85.0 5.8,85.0 0,81.5" fill="#FFFFFF"/>
         <polygon points="55,80.0 55,81.5 49.2,85.0 46.5,85.0" fill="#FFFFFF"/>
-        <polygon points="0,81.5 0,80.9 7,85.0 -0.2,85.0" fill="#9B1B81"/>
-        <polygon points="55,81.5 55,80.9 48,85.0 55.2,85.0" fill="#9B1B81"/>
+        
       </svg>
 
       <div class="header">
