@@ -18,7 +18,7 @@ import StudentAcademicDetails from "@/components/students/profile/StudentAcademi
 import useStudentProfile from "@/features/students/hooks/useStudentProfile";
 import indiaLocations from "@/lib/indiaStatesDistricts.json";
 import { isIcardEligible } from "@/features/students/utils/studentProfile";
-import { formatDisplayValue as value } from "@/lib/formatters";
+import { formatDisplayValue as value } from "@/lib/formatters";\nimport React from "react";
 
 export default function StudentDetailsPage({ params }) {
   const {
