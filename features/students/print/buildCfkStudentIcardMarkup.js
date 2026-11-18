@@ -89,24 +89,33 @@ export function buildCfkStudentIcardMarkup({
         z-index: 1; pointer-events: none;
       }
       .id-card .header {
-        position: absolute; top: 2.5mm; left: 0; width: 100%;
-        text-align: center; z-index: 3; color: #FFFFFF;
+        position: absolute; top: 1.8mm; left: 1mm; right: 1mm;
+        width: auto; text-align: center; z-index: 3; color: #FFFFFF;
+        display: flex; flex-direction: column; align-items: center;
+        line-height: 1; overflow: hidden;
       }
       .id-card .brand-row {
         display: flex; align-items: center; justify-content: center;
-        gap: 1.5mm; line-height: 1;
+        gap: 1.2mm; height: 5mm; line-height: 1; flex: 0 0 5mm;
       }
       .id-card .brand-logo {
-        width: 5.6mm; height: 5.6mm; object-fit: contain;
+        width: 4.6mm; height: 4.6mm; flex: 0 0 4.6mm; object-fit: contain;
         border-radius: 0.6mm; background: #FFFFFF; padding: 0.2mm;
       }
       .id-card .brand-title {
-        font-size: 16pt; font-weight: 900; letter-spacing: 0.6mm;
-        color: #FFFFFF; line-height: 1;
+        font-size: 13pt; font-weight: 900; letter-spacing: 0.45mm;
+        color: #FFFFFF; line-height: 1; white-space: nowrap;
       }
-      .id-card .sub-1 { margin-top: 0.7mm; font-size: 5.8pt; font-weight: 700; letter-spacing: 0.08mm; }
-      .id-card .sub-2 { margin-top: 0.3mm; font-size: 4.8pt; font-weight: 400; }
-      .id-card .sub-3 { margin-top: 0.3mm; font-size: 5.8pt; font-weight: 700; }
+      .id-card .sub-1 {
+        margin-top: 0.55mm; font-size: 5.1pt; font-weight: 700;
+        letter-spacing: 0.04mm; line-height: 1.15; white-space: nowrap;
+      }
+      .id-card .sub-2 {
+        margin-top: 0.35mm; font-size: 4.5pt; font-weight: 400; line-height: 1.1;
+      }
+      .id-card .sub-3 {
+        margin-top: 0.3mm; font-size: 5.1pt; font-weight: 700; line-height: 1.1;
+      }
       .id-card .photo-wrap {
         position: absolute; top: 16.5mm; left: 14.75mm;
         width: 25.5mm; height: 25.5mm; border-radius: 50%;
@@ -138,18 +147,19 @@ export function buildCfkStudentIcardMarkup({
         min-width: 0;
       }
       .id-card .detail-label {
-        text-align: right; padding-right: 0.5mm; font-weight: 800;
+        text-align: center; padding: 0; font-weight: 800;
         color: #9B1B81; white-space: nowrap;
       }
       .id-card .detail-val {
-        min-width: 0; font-weight: 600; color: #3B4248;
+        min-width: 0; text-align: center; font-weight: 600; color: #3B4248;
         overflow-wrap: anywhere; word-break: normal;
       }
       .id-card .detail-val.address-lines {
         max-height: 4.2mm; overflow: hidden; font-size: 4.35pt; line-height: 1.08;
       }
       .id-card .detail-val.address-lines div {
-        max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        max-width: 100%; text-align: center; overflow: hidden;
+        text-overflow: ellipsis; white-space: nowrap;
       }
       .id-card .id-highlight { font-size: 5.1pt; font-weight: 800; color: #3B4248; }
       .id-card .sem-badge-text {
