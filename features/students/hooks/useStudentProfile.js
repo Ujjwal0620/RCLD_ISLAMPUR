@@ -284,7 +284,7 @@ export default function useStudentProfile(params) {
       }
     }
   
-    const { printStudentICard, printStudentForm, printBill } = useStudentPrint({
+    const { printStudentICard, downloadStudentICardJpg, printStudentForm, printBill } = useStudentPrint({
       student,
       fee,
       courses,
@@ -317,7 +317,7 @@ export default function useStudentProfile(params) {
     editing, setEditing, editForm, setEditForm, history, setHistory, contactLogs,
     transition, setTransition, transitioning, setTransitioning, icardDialogOpen,
     setIcardDialogOpen, semesterBusy, updateCfkSemester, saveStudent, deleteStudent,
-    saveFees, uploadPaymentProof, printStudentICard, printStudentForm, printBill,
+    saveFees, uploadPaymentProof, printStudentICard, downloadStudentICardJpg, printStudentForm, printBill,
     saveAttendance,
   };
 }
