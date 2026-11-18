@@ -1,0 +1,25 @@
+name: ERP CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, refactor/student-profile-decomposition, feature/student-icard-directory]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Run ESLint
+        run: npx eslint "app/dashboard/students/[id]/page.js" "app/dashboard/students/icards/page.js" "app/api/students/route.js" "app/api/batches/[id]/notes/route.js" components/students/profile features/students/hooks features/students/print
+      - name: Build Next.js application
+        run: npm run build

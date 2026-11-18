@@ -1,0 +1,17 @@
+"use client";
+
+import {
+  printStudentICard as printStudentICardAction,
+} from "@/features/students/print/printStudentICard";
+import { printStudentForm as printStudentFormAction } from "@/features/students/print/printStudentForm";
+import { printStudentBill } from "@/features/students/print/printStudentBill";
+
+export default function useStudentPrint({ student, fee, courses, setMessage }) {
+  const printStudentICard = (selectedSemester = "") =>
+    printStudentICardAction(student, setMessage, selectedSemester);
+  const printStudentForm = () => printStudentFormAction(student);
+  const printBill = (selectedPayment = null) =>
+    printStudentBill(student, fee, courses, selectedPayment);
+
+  return { printStudentICard, printStudentForm, printBill };
+}
