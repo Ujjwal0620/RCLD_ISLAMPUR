@@ -56,7 +56,7 @@ export function getStudentIcardStyles(cardHeight = "88mm") {
     .cfk-fname { color:#44515A; }
     .cfk-lname { color:#F6801E; }
     .cfk-course-name { margin-top:1.2mm;font-size:2.05mm;font-weight:700;letter-spacing:.1mm;color:#44515A;text-transform:uppercase; }
-    .cfk-details { position:absolute;top:51.2mm;left:5.8mm;right:2.2mm;z-index:4;font-size:1.78mm;line-height:1.22;color:#44515A; }
+    .cfk-details { position:absolute;top:51.2mm;left:3mm;right:3mm;width:auto;box-sizing:border-box;z-index:4;font-size:1.78mm;line-height:1.22;color:#44515A; }
     .cfk-row { display:flex;align-items:baseline;margin-bottom:.35mm; }
     .cfk-lbl { width:18.8mm;flex:0 0 18.8mm;text-align:right;padding-right:1mm;font-weight:700;color:#F6801E;white-space:nowrap; }
     .cfk-val { flex:1;font-weight:500;color:#44515A;min-width:0;overflow-wrap:anywhere; }
