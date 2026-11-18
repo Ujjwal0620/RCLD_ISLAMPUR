@@ -1,12 +1,13 @@
 "use client";
 
-import { ArrowLeft, IdCard, Pencil, Printer, Trash2 } from "lucide-react";
+import { ArrowLeft, Download, IdCard, Pencil, Printer, Trash2 } from "lucide-react";
 import Link from "next/link";
 
 export default function StudentProfileHeader({
   student,
   printStudentForm,
   onPrintIcard,
+  onDownloadIcardJpg,
   printBill,
   onEdit,
   deleteStudent,
@@ -23,6 +24,14 @@ export default function StudentProfileHeader({
           <>
             <button className="ghost-btn" onClick={printStudentForm}>
               <Printer size={16} /> Print Registration Form
+            </button>
+            <button
+              className="ghost-btn"
+              onClick={onDownloadIcardJpg}
+              disabled={!isIcardEligible(student)}
+              title={!isIcardEligible(student) ? "Complete all required details and clear Admission Pending status first" : "Download student I-Card as JPG"}
+            >
+              <Download size={16} /> Download JPG
             </button>
             <button
               className="ghost-btn"
