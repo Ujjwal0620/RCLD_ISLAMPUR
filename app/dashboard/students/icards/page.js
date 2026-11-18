@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, Filter, IdCard, Printer, RefreshCw, RotateCcw, Search, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Filter, IdCard, Printer, RefreshCw, RotateCcw, Search, X } from "lucide-react";
 import ERPLayout from "@/components/ERPLayout";
 import { printStudentICard } from "@/features/students/print/printStudentICard";
 
@@ -232,7 +232,7 @@ export default function StudentICardsPage() {
                   <th>Batch</th>
                   <th>Mobile</th>
                   <th>Status</th>
-                  <th>Print</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -261,18 +261,32 @@ export default function StudentICardsPage() {
                     <td>{student.mobileNumber || "—"}</td>
                     <td><span className="badge">{student.status || "—"}</span></td>
                     <td>
-                      <button
-                        type="button"
-                        className="ghost-btn icard-print-button"
-                        disabled={["Admission Pending", "Cancelled"].includes(student.status)}
-                        title={["Admission Pending", "Cancelled"].includes(student.status) ? "I-Card printing is unavailable for this status" : "Print student I-Card"}
-                        onClick={() => {
-                          setMessage("");
-                          printStudentICard(student, setMessage);
-                        }}
-                      >
-                        <Printer size={14} /> Print I-Card
-                      </button>
+                      <div className="icard-row-actions">
+                        <button
+                          type="button"
+                          className="ghost-btn icard-print-button"
+                          disabled={["Admission Pending", "Cancelled"].includes(student.status)}
+                          title={["Admission Pending", "Cancelled"].includes(student.status) ? "I-Card printing is unavailable for this status" : "Print student I-Card"}
+                          onClick={() => {
+                            setMessage("");
+                            printStudentICard(student, setMessage, "", "print");
+                          }}
+                        >
+                          <Printer size={14} /> Print
+                        </button>
+                        <button
+                          type="button"
+                          className="ghost-btn icard-print-button"
+                          disabled={["Admission Pending", "Cancelled"].includes(student.status)}
+                          title={["Admission Pending", "Cancelled"].includes(student.status) ? "I-Card download is unavailable for this status" : "Download student I-Card as JPG"}
+                          onClick={() => {
+                            setMessage("");
+                            printStudentICard(student, setMessage, "", "jpg");
+                          }}
+                        >
+                          <Download size={14} /> JPG
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -336,7 +350,7 @@ export default function StudentICardsPage() {
         :global(.icard-student-avatar){width:42px;height:42px;min-width:42px;border-radius:50%;object-fit:cover;border:1px solid var(--border-color,#e1e6ed);background:#f1f4f8}
         .icard-student-avatar-fallback{display:grid;place-items:center;font-size:12px;font-weight:700;color:#52627a}
         .icard-student-name{font-weight:650;color:var(--heading-color,inherit)}
-        .icard-print-button{white-space:nowrap}.icard-print-button:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+        .icard-row-actions{display:flex;align-items:center;gap:7px}.icard-print-button{white-space:nowrap}.icard-print-button:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
         .icard-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 20px;border-top:1px solid var(--border-color,#edf0f4);font-size:12px;color:var(--text-muted,#778397)}
         .icard-pagination-controls{display:flex;align-items:center;gap:5px}
         .icard-pagination-controls button{width:32px;height:32px;display:grid;place-items:center;border:1px solid var(--border-color,#dfe4ec);border-radius:7px;background:var(--card-bg,#fff);color:var(--text-color,inherit);cursor:pointer}
