@@ -143,22 +143,26 @@ export function buildCfkStudentIcardMarkup({
         align-items: stretch; gap: 0.12mm; padding: 0; margin: 0;
       }
       .id-card .detail-row {
-        display: grid; grid-template-columns: 15.5mm minmax(0, 1fr);
-        column-gap: 0.8mm; align-items: center; flex: 0 0 auto;
-        min-width: 0; min-height: 0; height: auto; margin: 0; padding: 0;
-        font-size: 4.55pt; line-height: 1.02;
+        display: flex; flex-direction: row; justify-content: center;
+        align-items: baseline; gap: 0.8mm; flex: 0 0 auto;
+        width: 100%; min-width: 0; min-height: 0; height: auto;
+        margin: 0; padding: 0; font-size: 4.55pt; line-height: 1.02;
+        text-align: center;
       }
       .id-card .detail-label {
-        text-align: center; padding: 0; margin: 0; font-weight: 800;
+        display: inline; flex: 0 0 auto; text-align: center;
+        padding: 0; margin: 0; font-weight: 800;
         color: #9B1B81; white-space: nowrap; line-height: 1.02;
       }
       .id-card .detail-val {
-        min-width: 0; text-align: center; margin: 0; padding: 0;
+        display: inline-block; flex: 0 1 auto; min-width: 0;
+        max-width: 68%; text-align: center; margin: 0; padding: 0;
         font-weight: 600; color: #3B4248; line-height: 1.02;
         overflow-wrap: anywhere; word-break: normal;
       }
       .id-card .detail-val.address-lines {
-        max-height: 3.8mm; overflow: hidden; font-size: 4.2pt; line-height: 1.0;
+        max-height: 3.8mm; max-width: 72%; overflow: hidden;
+        font-size: 4.2pt; line-height: 1.0; text-align: center;
       }
       .id-card .detail-val.address-lines div {
         max-width: 100%; text-align: center; overflow: hidden;
