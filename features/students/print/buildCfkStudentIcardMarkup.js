@@ -34,30 +34,30 @@ export function buildCfkStudentIcardMarkup({
         -webkit-print-color-adjust:exact!important; print-color-adjust:exact!important;
       }
       .cfk-photo {
-        position:absolute; left:27.8%; top:14.4%; width:46.8%; height:22.8%;
+        position:absolute; left:27.8%; top:19%; width:46.8%; height:30%;
         border-radius:50%; object-fit:cover; display:block;
       }
       .cfk-photo-empty { display:flex; align-items:center; justify-content:center; background:#fff; color:#777; font-size:11px; }
       .cfk-name {
-        position:absolute; top:39.2%; left:8%; width:84%; text-align:center;
+        position:absolute; top:50.8%; left:8%; width:84%; text-align:center;
         color:#343b49; font-size:4.4mm; font-weight:700; line-height:1.05;
         white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
       }
       .cfk-course {
-        position:absolute; top:43.2%; left:9%; width:82%; text-align:center;
+        position:absolute; top:55.2%; left:9%; width:82%; text-align:center;
         color:#96308f; font-size:2.1mm; font-weight:700; letter-spacing:.15px;
         white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
       }
       .cfk-fields {
-        position:absolute; left:47.5%; right:4.5%; top:47.2%;
-        display:grid; grid-template-rows:repeat(4, 1fr); height:9.5%;
+        position:absolute; left:47.5%; right:4.5%; top:61.5%;
+        display:grid; grid-template-rows:repeat(4, 1fr); height:11.2%;
         gap:0; font-size:2.35mm; line-height:1.05; font-weight:600;
       }
       .cfk-field { display:flex; align-items:center; min-width:0; }
       .cfk-field span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
       .cfk-address { white-space:normal!important; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; line-height:1.05; }
       .cfk-semester {
-        position:absolute; left:3.2%; top:59.5%; width:14%; height:8%;
+        position:absolute; left:3.2%; top:74.5%; width:14%; height:13%;
         display:flex; align-items:center; justify-content:center;
         color:#fff; font-family:Arial,sans-serif; font-weight:800; font-size:5mm;
       }
