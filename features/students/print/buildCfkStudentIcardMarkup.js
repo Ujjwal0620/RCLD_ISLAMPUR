@@ -51,7 +51,7 @@ export function buildCfkStudentIcardMarkup({
         <path d="M0 0H550V50L275 200L0 50Z" fill="${slate}"/>
         <path d="M0 50L275 200L550 50V170L275 320L0 170Z" fill="${magenta}"/>
         <path d="M0 170L275 320L550 170L550 182L275 332L0 182Z" fill="#FFFFFF"/>
-        <path d="M0 185L275 385L550 185L550 203L275 425L0 203Z" fill="${magenta}"/>
+        <path d="M0 185L275 390L550 185L550 203L275 408L0 203Z" fill="${magenta}"/>
         <!-- Bottom thin angled line, white separator, main footer and corner triangles -->
         <path d="M0 765L55 798H495L550 765V777L495 810H55L0 777Z" fill="${magenta}"/>
         <path d="M0 777L55 810H495L550 777V785L495 818H55L0 785Z" fill="#FFFFFF"/>
@@ -71,7 +71,7 @@ export function buildCfkStudentIcardMarkup({
       <div class="cfk-photo-wrap">
         <div class="cfk-photo-inner">${photoImg}</div>
       </div>
-      <svg class="cfk-v-overlay" viewBox="0 0 550 850" preserveAspectRatio="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M0 185L275 425L550 185L550 203L275 443L0 203Z" fill="#9B1B81"/></svg>
+      <svg class="cfk-v-overlay" viewBox="0 0 550 850" preserveAspectRatio="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M0 185L275 390L550 185L550 203L275 408L0 203Z" fill="#9B1B81"/></svg>
 
       <div class="cfk-name-block">
         <div class="cfk-student-name" style="font-size:${nameSizePt}pt">
