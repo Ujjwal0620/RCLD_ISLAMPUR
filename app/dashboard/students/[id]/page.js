@@ -28,7 +28,7 @@ export default function StudentDetailsPage({ params }) {
     editing, setEditing, editForm, setEditForm, history, setHistory, contactLogs,
     transition, setTransition, transitioning, setTransitioning, icardDialogOpen,
     setIcardDialogOpen, semesterBusy, updateCfkSemester, saveStudent, deleteStudent,
-    saveFees, uploadPaymentProof, printStudentICard, printStudentForm, printBill,
+    saveFees, uploadPaymentProof, printStudentICard, downloadStudentICardJpg, printStudentForm, printBill,
     saveAttendance,
   } = useStudentProfile(params);
 
@@ -38,6 +38,7 @@ export default function StudentDetailsPage({ params }) {
       <StudentProfileHeader
         student={student}
         printStudentForm={printStudentForm}
+        onDownloadIcardJpg={downloadStudentICardJpg}
         onPrintIcard={() => {
           const courseText = String(student.courseName || student.courseCode || "");
           if (/coding\s*for\s*kids|\bCFK\b|\bKIDS\b/i.test(courseText)) setIcardDialogOpen(true);

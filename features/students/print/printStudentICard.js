@@ -1,6 +1,7 @@
 "use client";
 
 import { isIcardEligible } from "@/features/students/utils/studentProfile";
+import { toJpeg } from "html-to-image";
 import { getStudentIcardStyles } from "@/features/students/print/studentIcardStyles";
 import {
   esc,
@@ -13,7 +14,7 @@ import {
 import { buildCfkStudentIcardMarkup } from "@/features/students/print/buildCfkStudentIcardMarkup";
 import { buildStandardStudentIcardMarkup } from "@/features/students/print/buildStandardStudentIcardMarkup";
 
-export function printStudentICard(student, setMessage, selectedSemester = "") {
+export async function printStudentICard(student, setMessage, selectedSemester = "", outputMode = "print") {
   if (!student || !isIcardEligible(student)) {
     setMessage(
       "I-Card is unavailable until all required details are complete and admission is not pending."
@@ -61,12 +62,6 @@ export function printStudentICard(student, setMessage, selectedSemester = "") {
 
   if (isCFK && !semesterOptions.includes(activeSemester)) {
     setMessage("Please select a valid Coding For Kids semester/module.");
-    return;
-  }
-
-  const printWindow = window.open("", "_blank");
-  if (!printWindow) {
-    setMessage("Please allow pop-ups to print the I-Card.");
     return;
   }
 
@@ -183,6 +178,17 @@ export function printStudentICard(student, setMessage, selectedSemester = "") {
     });
   }
 
+  const autoPrintScript = outputMode === "jpg" ? "" : `
+  <script>
+    window.addEventListener("load", async () => {
+      await Promise.all(
+        [...document.images].map((img) =>
+          img.decode ? img.decode().catch(() => {}) : Promise.resolve()
+        )
+      );
+      setTimeout(() => window.print(), 300);
+    });
+  </script>`;
   const html = `<!doctype html>
 <html>
 <head>
@@ -193,19 +199,70 @@ export function printStudentICard(student, setMessage, selectedSemester = "") {
 </head>
 <body>
   ${cardMarkup}
-  <script>
-    window.addEventListener("load", async () => {
-      await Promise.all(
-        [...document.images].map((img) =>
-          img.decode ? img.decode().catch(() => {}) : Promise.resolve()
-        )
-      );
-      setTimeout(() => window.print(), 300);
-    });
-  </script>
+  ${autoPrintScript}
 </body>
 </html>`;
 
+  if (outputMode === "jpg") {
+    const iframe = document.createElement("iframe");
+    iframe.setAttribute("aria-hidden", "true");
+    iframe.style.cssText = `position:fixed;left:-10000px;top:0;width:55mm;height:${cardHeight};border:0;opacity:0;pointer-events:none;`;
+    document.body.appendChild(iframe);
+
+    try {
+      await new Promise((resolve, reject) => {
+        iframe.onload = resolve;
+        iframe.onerror = reject;
+        iframe.srcdoc = html;
+      });
+
+      const frameDocument = iframe.contentDocument;
+      if (!frameDocument) throw new Error("Unable to prepare the I-Card image.");
+
+      if (frameDocument.fonts?.ready) await frameDocument.fonts.ready;
+      await Promise.all(
+        [...frameDocument.images].map((img) =>
+          img.decode ? img.decode().catch(() => {}) : Promise.resolve()
+        )
+      );
+
+      const cardElement = frameDocument.querySelector(".id-card, .card.std, .icard-page.cfk-card");
+      if (!cardElement) throw new Error("The I-Card layout could not be found.");
+
+      const jpgDataUrl = await toJpeg(cardElement, {
+        quality: 0.98,
+        pixelRatio: 4,
+        backgroundColor: "#FFFFFF",
+        cacheBust: true,
+      });
+      const safeName = String(student.applicantName || "Student")
+        .trim()
+        .replace(/[^a-z0-9]+/gi, "-")
+        .replace(/^-|-$/g, "");
+      const enrollment = String(
+        student.enrollmentNo || student.studentId || student.admissionNo || student.regnNo || student.formNo || ""
+      ).replace(/[^a-z0-9-]+/gi, "");
+      const link = document.createElement("a");
+      link.href = jpgDataUrl;
+      link.download = `RCLD-I-Card-${safeName || "Student"}${enrollment ? `-${enrollment}` : ""}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setMessage("Student I-Card JPG downloaded successfully.");
+    } catch (error) {
+      console.error("I-Card JPG export failed:", error);
+      setMessage(error?.message || "Unable to download the I-Card as JPG. Please try again.");
+    } finally {
+      iframe.remove();
+    }
+    return;
+  }
+
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) {
+    setMessage("Please allow pop-ups to print the I-Card.");
+    return;
+  }
   printWindow.document.open();
   printWindow.document.write(html);
   printWindow.document.close();
