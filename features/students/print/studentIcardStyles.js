@@ -38,7 +38,7 @@ export function getStudentIcardStyles(cardHeight = "88mm") {
     .one-line { white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
 
     /* ================ CODING FOR KIDS: 55mm x 88mm ================ */
-    .icard-page.cfk-card { position:relative;width:55mm;height:88mm;overflow:hidden;background:#FFFFFF;user-select:none;break-after:avoid;page-break-after:avoid;break-inside:avoid; }
+    .icard-page.cfk-card { position:relative;width:55mm;height:85mm;overflow:hidden;background:#FFFFFF;user-select:none;break-after:avoid;page-break-after:avoid;break-inside:avoid; }
     .cfk-bg-svg { position:absolute;inset:0;width:55mm;height:88mm;z-index:1;pointer-events:none; }
     .cfk-header { position:absolute;top:1.5mm;left:0;right:0;z-index:3;text-align:center;color:#FFFFFF; }
     .cfk-brand-row { display:flex;align-items:center;justify-content:center;gap:1.3mm;line-height:1; }
@@ -58,8 +58,8 @@ export function getStudentIcardStyles(cardHeight = "88mm") {
     .cfk-course-name { margin-top:1.2mm;font-size:2.05mm;font-weight:700;letter-spacing:.1mm;color:#44515A;text-transform:uppercase; }
     .cfk-details { position:absolute;top:51.2mm;left:3mm;right:3mm;width:auto;box-sizing:border-box;z-index:4;font-size:1.78mm;line-height:1.22;color:#44515A; }
     .cfk-row { display:flex;align-items:baseline;margin-bottom:.35mm; }
-    .cfk-lbl { width:18.8mm;flex:0 0 18.8mm;text-align:right;padding-right:1mm;font-weight:700;color:#F6801E;white-space:nowrap; }
-    .cfk-val { flex:1;font-weight:500;color:#44515A;min-width:0;overflow-wrap:anywhere; }
+    .cfk-lbl { width:16.5mm;flex:0 0 16.5mm;text-align:right;padding-right:1mm;font-weight:700;color:#F6801E;white-space:nowrap; }
+    .cfk-val { flex:1 1 0;max-width:none;text-align:left;font-weight:500;color:#44515A;min-width:0;overflow-wrap:anywhere; }
     .cfk-id-val { font-size:1.85mm;font-weight:500;white-space:nowrap; }
     .cfk-id-num { font-size:1.95mm;font-weight:700; }
     .cfk-addr-row { align-items:flex-start; }
@@ -83,7 +83,7 @@ export function getStudentIcardStyles(cardHeight = "88mm") {
     .cfk-footer-banner { position:absolute;bottom:0;left:0;right:0;height:4.3mm;display:flex;align-items:center;justify-content:center;z-index:5; }
     .cfk-footer-title { color:#FFFFFF;font-size:2.75mm;font-weight:900;letter-spacing:.2mm;line-height:1;display:inline-block; }
     /* ===================== STANDARD (OTHER COURSES - 55mm x 88mm) ===================== */
-                .std{font-family:"Times New Roman",Times,Georgia,serif;color:#111;z-index:2}
+                .card.std{position:relative;display:block;width:55mm;height:88mm;min-width:55mm;max-width:55mm;min-height:88mm;max-height:88mm;margin:0;padding:0;overflow:hidden;box-sizing:border-box;background:#fff;break-inside:avoid;page-break-inside:avoid}.std{font-family:"Times New Roman",Times,Georgia,serif;color:#111;z-index:2}
         
                 .std-id{left:1.8mm;top:3.8mm;width:18.5mm;text-align:center;z-index:3}
                 .std-id .l{font-size:2.15mm;line-height:1.15;font-weight:700;color:#111}
@@ -102,7 +102,7 @@ export function getStudentIcardStyles(cardHeight = "88mm") {
         
                 .std-photo{left:17.5mm;top:29.8mm;width:20.0mm;height:23.8mm;border:.55mm solid #1B1F6B;border-radius:1.6mm;overflow:hidden;background:#FFFFFF;z-index:3}
         
-                .std-details{left:2mm;right:2mm;width:auto;top:54.8mm;z-index:3;overflow:hidden;box-sizing:border-box}
+                .std-details{left:2.5mm;right:2.5mm;width:auto;top:54.8mm;z-index:3;overflow:hidden;box-sizing:border-box}
                 .std-details .r{display:grid;grid-template-columns:14.8mm minmax(0,1fr);column-gap:.8mm;align-items:baseline;margin:0 0 .55mm;width:100%;line-height:2.45mm;box-sizing:border-box}
                 .std-details b{font-size:2.05mm;font-weight:700;color:#1B1F6B;white-space:nowrap}
                 .std-details span{font-size:1.8mm;font-weight:700;color:#111;min-width:0}
@@ -124,15 +124,23 @@ export function getStudentIcardStyles(cardHeight = "88mm") {
         
                 
 
+
+    /* Exact card dimensions and clean screen/print boundaries. */
+    html, body { margin:0; padding:0; }
+    .card.std, .icard-page.cfk-card { flex:none; margin:0; box-sizing:border-box; overflow:hidden; }
     @media screen {
-      html, body { width:auto;height:auto;background:#e5e9f0; }
-      body { display:flex;justify-content:center;padding:8mm 0;overflow:auto; }
-      .card, .icard-page.cfk-card { flex:none;box-shadow:0 1px 10px rgba(0,0,0,.3); }
+      html, body { width:auto;height:auto;min-height:0;background:#e5e9f0; }
+      body { display:flex;align-items:flex-start;justify-content:center;padding:8mm 0;overflow:auto; }
+      .card.std, .icard-page.cfk-card { box-shadow:0 1px 10px rgba(0,0,0,.3); }
     }
     @media print {
-      html, body { width:55mm;height:${cardHeight};margin:0!important;padding:0!important;overflow:hidden; }
-      body { display:block; }
-      .card, .icard-page.cfk-card { box-shadow:none; }
+      @page { size:55mm ${cardHeight}; margin:0; }
+      html, body { width:55mm!important;height:${cardHeight}!important;min-width:55mm!important;min-height:${cardHeight}!important;max-width:55mm!important;max-height:${cardHeight}!important;margin:0!important;padding:0!important;overflow:hidden!important;background:#fff!important; }
+      body { display:block!important; }
+      .card.std, .icard-page.cfk-card { width:55mm!important;height:${cardHeight}!important;min-width:55mm!important;max-width:55mm!important;min-height:${cardHeight}!important;max-height:${cardHeight}!important;margin:0!important;padding:0!important;position:relative!important;overflow:hidden!important;box-shadow:none!important;page-break-inside:avoid!important;break-inside:avoid!important; }
+      .cfk-bg-svg, .bg-vectors { position:absolute!important;top:0!important;left:0!important;width:55mm!important;height:${cardHeight}!important;margin:0!important;padding:0!important;transform:none!important; }
+      .cfk-footer-banner, .std-band { left:0!important;right:0!important;bottom:0!important;width:55mm!important;margin:0!important;transform:none!important; }
+      .std-foot { left:0!important;right:0!important;top:75.5mm!important;bottom:auto!important;width:55mm!important;height:7.3mm!important;margin:0!important;overflow:hidden!important; }
     }
   `;
 }
