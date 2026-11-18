@@ -137,25 +137,28 @@ export function buildCfkStudentIcardMarkup({
         z-index: 3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       }
       .id-card .details-grid {
-        position: absolute; top: 50.3mm; left: 2.2mm; right: 2.2mm;
-        height: 14.2mm; overflow: hidden; z-index: 3;
-        display: flex; flex-direction: column; gap: 0.35mm;
+        position: absolute; top: 50.0mm; left: 2.2mm; right: 2.2mm;
+        height: 12.8mm; overflow: hidden; z-index: 3;
+        display: flex; flex-direction: column; justify-content: flex-start;
+        align-items: stretch; gap: 0.12mm; padding: 0; margin: 0;
       }
       .id-card .detail-row {
         display: grid; grid-template-columns: 15.5mm minmax(0, 1fr);
-        column-gap: 0.8mm; align-items: start; font-size: 4.7pt; line-height: 1.12;
-        min-width: 0;
+        column-gap: 0.8mm; align-items: center; flex: 0 0 auto;
+        min-width: 0; min-height: 0; height: auto; margin: 0; padding: 0;
+        font-size: 4.55pt; line-height: 1.02;
       }
       .id-card .detail-label {
-        text-align: center; padding: 0; font-weight: 800;
-        color: #9B1B81; white-space: nowrap;
+        text-align: center; padding: 0; margin: 0; font-weight: 800;
+        color: #9B1B81; white-space: nowrap; line-height: 1.02;
       }
       .id-card .detail-val {
-        min-width: 0; text-align: center; font-weight: 600; color: #3B4248;
+        min-width: 0; text-align: center; margin: 0; padding: 0;
+        font-weight: 600; color: #3B4248; line-height: 1.02;
         overflow-wrap: anywhere; word-break: normal;
       }
       .id-card .detail-val.address-lines {
-        max-height: 4.2mm; overflow: hidden; font-size: 4.35pt; line-height: 1.08;
+        max-height: 3.8mm; overflow: hidden; font-size: 4.2pt; line-height: 1.0;
       }
       .id-card .detail-val.address-lines div {
         max-width: 100%; text-align: center; overflow: hidden;
