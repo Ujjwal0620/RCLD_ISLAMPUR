@@ -102,8 +102,8 @@ export function getStudentIcardStyles(cardHeight = "88mm") {
         
                 .std-photo{left:17.5mm;top:29.8mm;width:20.0mm;height:23.8mm;border:.55mm solid #1B1F6B;border-radius:1.6mm;overflow:hidden;background:#FFFFFF;z-index:3}
         
-                .std-details{left:1.8mm;right:1.5mm;top:54.8mm;z-index:3;overflow:hidden}
-                .std-details .r{display:grid;grid-template-columns:14.8mm minmax(0,1fr);column-gap:.8mm;align-items:baseline;margin-bottom:.55mm;line-height:2.45mm}
+                .std-details{left:2mm;right:2mm;width:auto;top:54.8mm;z-index:3;overflow:hidden;box-sizing:border-box}
+                .std-details .r{display:grid;grid-template-columns:14.8mm minmax(0,1fr);column-gap:.8mm;align-items:baseline;margin:0 0 .55mm;width:100%;line-height:2.45mm;box-sizing:border-box}
                 .std-details b{font-size:2.05mm;font-weight:700;color:#1B1F6B;white-space:nowrap}
                 .std-details span{font-size:1.8mm;font-weight:700;color:#111;min-width:0}
                 .std-details .nm{font-weight:800;letter-spacing:.02mm}
@@ -113,10 +113,11 @@ export function getStudentIcardStyles(cardHeight = "88mm") {
                 .std-sign{right:1.8mm;top:70.2mm;width:13.5mm;text-align:center;z-index:3}
                 .std-sign small{display:block;font-family:Arial,sans-serif;font-size:1.55mm;font-weight:700;color:#111;line-height:1.15;margin-top:.1mm;white-space:nowrap}
         
-                .std-foot{left:0;right:0;top:75.5mm;width:100%;height:7.3mm;border-top:.3mm solid #1B1F6B;padding:.45mm 1.2mm 0;box-sizing:border-box;text-align:center;font-family:"Times New Roman",Times,serif;font-weight:700;color:#111;z-index:3;overflow:hidden}
-                .std-foot .f-line1{width:100%;font-size:1.82mm;line-height:2.15mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
-                .std-foot .f-line2,.std-foot .f-line3{width:100%;min-width:0;display:flex;flex-direction:row;flex-wrap:nowrap;justify-content:center;align-items:center;gap:.45mm;margin-left:auto;margin-right:auto;font-size:1.85mm;line-height:2.25mm;white-space:nowrap;text-align:center;box-sizing:border-box}
-                .std-foot .f-line2>* ,.std-foot .f-line3>*{flex:0 0 auto}
+                .std-foot{left:0;right:0;width:auto;top:75.5mm;height:7.3mm;margin:0;padding:.45mm 1.6mm 0;border-top:.3mm solid #1B1F6B;box-sizing:border-box;text-align:center;font-family:"Times New Roman",Times,serif;font-weight:700;color:#111;z-index:3;overflow:hidden}
+                .std-foot .f-line1{display:block;width:100%;margin:0 auto;font-size:1.82mm;line-height:2.15mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+                .std-foot .f-line2,.std-foot .f-line3{display:flex;width:100%;min-width:0;margin:0 auto;flex-direction:row;flex-wrap:nowrap;justify-content:center;align-items:center;gap:.65mm;font-size:1.78mm;line-height:2.25mm;white-space:nowrap;text-align:center;box-sizing:border-box}
+                .std-foot .f-line2>* ,.std-foot .f-line3>*{flex:0 0 auto;min-width:0}
+                .std-foot .sp{width:1.4mm;flex:0 0 1.4mm}
                 .std-foot .sp{display:inline-block;width:1.4mm;flex:0 0 1.4mm}
         
                 .std-band{left:0;right:0;bottom:0;height:5.2mm;background:#1B2A78;color:#FFFFFF;font-family:"Times New Roman",Georgia,serif;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:3.8mm;letter-spacing:.25mm;z-index:3}
