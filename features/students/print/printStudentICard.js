@@ -132,28 +132,20 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
   const addressLines = addressParts.map((part) => part.value);
 
   // CFK uses the requested 55 x 85mm stock; all other course cards retain 55 x 88mm.
-  const cardHeight = isCFK ? "85mm" : "88mm";
+  const cardHeight = isCFK ? "86.1mm" : "88mm";
   let cardMarkup = "";
 
   if (isCFK) {
+    const templateUrl = new URL("/assets/template I card.png", window.location.origin).href;
     cardMarkup = buildCfkStudentIcardMarkup({
       student,
-      courseText,
-      activeSemester,
-      addrMain,
-      addressLines,
-      idPrefix,
-      idNumber,
+      photoUrl: rawPhoto || "",
+      idNumber: `${idPrefix}${idNumber}`,
       issueDate,
-      photoImg,
-      logoUrl,
-      esc,
-      toTitleCase,
-      icon,
-      scribble,
-      AEC_LINE_1,
-      CONTACT_EMAIL,
-      CONTACT_PHONE,
+      address: addressLines.join(", "),
+      semester: activeSemester,
+      courseText,
+      templateUrl,
     });
   } else {
     cardMarkup = buildStandardStudentIcardMarkup({
@@ -226,7 +218,7 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
         )
       );
 
-      const cardElement = frameDocument.querySelector(".id-card, .card.std, .icard-page.cfk-card");
+      const cardElement = frameDocument.querySelector(".cfk-template-card, .id-card, .card.std, .icard-page.cfk-card");
       if (!cardElement) throw new Error("The I-Card layout could not be found.");
 
       // Lock the export node to the exact physical stock dimensions.
