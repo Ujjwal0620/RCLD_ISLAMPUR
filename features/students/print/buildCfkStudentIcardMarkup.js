@@ -79,7 +79,7 @@ export function buildCfkStudentIcardMarkup({
         height: 8.5cm;
         background: #FFFFFF;
         overflow: hidden;
-        font-family: Arial, Helvetica, sans-serif;
+        font-family: "Arial Narrow", "Liberation Sans Narrow", Arial, sans-serif;
         color: #3B4248;
         page-break-inside: avoid;
         break-inside: avoid;
@@ -100,7 +100,7 @@ export function buildCfkStudentIcardMarkup({
       }
       .id-card .brand-logo {
         width: 4.6mm; height: 4.6mm; flex: 0 0 4.6mm; object-fit: contain;
-        border-radius: 0.6mm; background: #FFFFFF; padding: 0.2mm;
+        border-radius: 0; background: transparent; padding: 0;
       }
       .id-card .brand-title {
         font-size: 13pt; font-weight: 900; letter-spacing: 0.45mm;
@@ -150,7 +150,7 @@ export function buildCfkStudentIcardMarkup({
 .id-card .detail-row {
     display: flex;
     align-items: baseline;
-    font-size: 5pt;
+    font-size: 5.7pt;
     line-height: 1.22;
 }
 
@@ -170,7 +170,7 @@ export function buildCfkStudentIcardMarkup({
       }
       .id-card .detail-val.address-lines {
         max-height: 3.8mm; max-width: none; overflow: hidden;
-        font-size: 4.2pt; line-height: 1.0; text-align: left;
+        font-size: 4.8pt; line-height: 1.0; text-align: left;
       }
       .id-card .detail-val.address-lines div {
         max-width: 100%; text-align: center; overflow: hidden;
@@ -181,7 +181,7 @@ export function buildCfkStudentIcardMarkup({
         position: absolute; top: 65.3mm; left: auto; right: 0; width: 9.2mm;
         text-align: center; color: #FFFFFF; z-index: 4; line-height: 1;
       }
-      .id-card .sem-label { font-size: 5.2pt; font-weight: 800; letter-spacing: 0.1mm; }
+      .id-card .sem-label { font-size: 5.6pt; font-weight: 800; letter-spacing: 0.1mm; }
       .id-card .sem-num {
         margin-top: 0.45mm; font-family: Georgia, "Times New Roman", serif;
         font-size: 11pt; font-weight: 700;
@@ -200,13 +200,13 @@ export function buildCfkStudentIcardMarkup({
         text-align: center; z-index: 4; line-height: 1.12;
       }
       .id-card .aec-line {
-        font-size: 4.5pt; font-weight: 800; color: #3B4248;
+        font-size: 5pt; font-weight: 800; color: #3B4248;
         letter-spacing: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       }
       .id-card .contact-row {
         margin-top: 0.35mm; display: flex; flex-direction: column;
         align-items: center; justify-content: center; gap: 0.25mm;
-        font-size: 4.15pt; font-weight: 700; color: #3B4248; line-height: 1.1;
+        font-size: 4.6pt; font-weight: 700; color: #3B4248; line-height: 1.1;
       }
       .id-card .contact-item { display: inline-flex; align-items: center; gap: 0.6mm; }
       .id-card .icon-red { color: #D32F2F; font-size: 4.6pt; line-height: 1; }
