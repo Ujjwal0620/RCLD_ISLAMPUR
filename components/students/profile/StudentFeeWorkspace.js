@@ -33,17 +33,17 @@ export default function StudentFeeWorkspace({
                   <div className="fee-overview-card fee-total">
                     <span>Total Payable</span>
                     <strong>₹{Number(fee?.payable || 0).toLocaleString("en-IN")}</strong>
-                    <small>Course + admission + registration − discount</small>
+                    <small>Admission fee and installments are included</small>
                   </div>
                   <div className="fee-overview-card fee-paid">
-                    <span>Total Collected</span>
+                    <span>Course Fee Paid (incl. discount)</span>
                     <strong>₹{Number(fee?.paid || 0).toLocaleString("en-IN")}</strong>
                     <small>{(fee?.payments || []).length} payment entries recorded</small>
                   </div>
                   <div className="fee-overview-card fee-due">
                     <span>Outstanding Due</span>
                     <strong>₹{Number(fee?.due || 0).toLocaleString("en-IN")}</strong>
-                    <small>Including applicable late fine</small>
+                    <small>Discount is counted as course-fee credit</small>
                   </div>
                 </div>
                 <div className="fee-overview-meta">
