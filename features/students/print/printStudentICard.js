@@ -229,8 +229,27 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
       const cardElement = frameDocument.querySelector(".id-card, .card.std, .icard-page.cfk-card");
       if (!cardElement) throw new Error("The I-Card layout could not be found.");
 
+      // Lock the export node to the exact physical stock dimensions.
+      // 96 CSS px = 1 inch and 25.4 mm = 1 inch.
+      const exportWidthPx = (55 / 25.4) * 96;
+      const exportHeightPx = (Number.parseFloat(cardHeight) / 25.4) * 96;
+      cardElement.style.setProperty("width", "55mm", "important");
+      cardElement.style.setProperty("height", cardHeight, "important");
+      cardElement.style.setProperty("min-width", "55mm", "important");
+      cardElement.style.setProperty("max-width", "55mm", "important");
+      cardElement.style.setProperty("min-height", cardHeight, "important");
+      cardElement.style.setProperty("max-height", cardHeight, "important");
+      cardElement.style.setProperty("margin", "0", "important");
+      cardElement.style.setProperty("transform", "none", "important");
+      cardElement.style.setProperty("overflow", "hidden", "important");
+      await new Promise((resolve) => iframe.contentWindow.requestAnimationFrame(() => iframe.contentWindow.requestAnimationFrame(resolve)));
+
       const jpgDataUrl = await toJpeg(cardElement, {
-        quality: 0.98,
+        quality: 1,
+        width: Math.ceil(exportWidthPx),
+        height: Math.ceil(exportHeightPx),
+        canvasWidth: Math.round(exportWidthPx * 4),
+        canvasHeight: Math.round(exportHeightPx * 4),
         pixelRatio: 4,
         backgroundColor: "#FFFFFF",
         cacheBust: true,
