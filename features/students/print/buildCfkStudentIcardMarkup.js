@@ -103,7 +103,7 @@ export function buildCfkStudentIcardMarkup({
         border-radius: 0; background: transparent; padding: 0;
       }
       .id-card .brand-title {
-        font-size: 13pt; font-weight: 900; letter-spacing: 0.45mm;
+        font-size: 13.5pt; font-weight: 900; letter-spacing: 0.45mm;
         color: #FFFFFF; line-height: 1; white-space: nowrap;
       }
       .id-card .sub-1 {
@@ -124,7 +124,7 @@ export function buildCfkStudentIcardMarkup({
       .id-card .photo-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
       .id-card .student-name {
         position: absolute; top: 43.1mm; left: 2mm; right: 2mm;
-        text-align: center; font-size: 8.2pt; font-weight: 800;
+        text-align: center; font-size: 9pt; font-weight: 800;
         letter-spacing: 0.08mm; line-height: 1.05; z-index: 3;
         white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       }
@@ -132,7 +132,7 @@ export function buildCfkStudentIcardMarkup({
       .id-card .student-name .lname { color: #9B1B81; }
       .id-card .course-title {
         position: absolute; top: 46.8mm; left: 3mm; right: 3mm;
-        text-align: center; font-size: 4.6pt; font-weight: 700;
+        text-align: center; font-size: 5.1pt; font-weight: 700;
         color: #66717A; letter-spacing: 0.12mm; line-height: 1.1;
         z-index: 3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       }
@@ -193,7 +193,7 @@ export function buildCfkStudentIcardMarkup({
       .id-card .sig-block svg { width: 9mm; height: 3mm; display: block; margin: 0 auto; }
       .id-card .sig-text {
         margin-top: 0.1mm; font-family: Georgia, "Times New Roman", serif;
-        font-style: italic; font-size: 4.2pt; color: #3B4248; white-space: nowrap;
+        font-style: italic; font-size: 4.6pt; color: #3B4248; white-space: nowrap;
       }
       .id-card .contact-block {
         position: absolute; top: 73.2mm; left: 1.5mm; right: 1.5mm;
@@ -212,7 +212,7 @@ export function buildCfkStudentIcardMarkup({
       .id-card .icon-red { color: #D32F2F; font-size: 4.6pt; line-height: 1; }
       .id-card .footer-title {
         position: absolute; bottom: 0.8mm; left: 0; width: 100%;
-        text-align: center; font-size: 8.8pt; font-weight: 800;
+        text-align: center; font-size: 9.3pt; font-weight: 800;
         letter-spacing: 0.25mm; color: #FFFFFF; z-index: 4; line-height: 1;
       }
     </style>
