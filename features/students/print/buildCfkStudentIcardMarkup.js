@@ -16,10 +16,7 @@ export function buildCfkStudentIcardMarkup({
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;"),
   toTitleCase = (s) =>
-    String(s ?? "").replace(
-      /\w\S*/g,
-      (t) => t.charAt(0).toUpperCase() + t.slice(1).toLowerCase()
-    ),
+    String(s ?? "").replace(/\w\S*/g, (t) => t.charAt(0).toUpperCase() + t.slice(1).toLowerCase()),
   icon,
   scribble = (color = "#0B1136") => `
     <svg viewBox="0 0 90 32" xmlns="http://www.w3.org/2000/svg">
@@ -34,15 +31,17 @@ export function buildCfkStudentIcardMarkup({
 }) {
   const semNumber = String(activeSemester).replace(/[^0-9]/g, "") || "1";
 
-  const rawName = String(student.applicantName || "").trim().toUpperCase();
+  const rawName = String(student.applicantName || "")
+    .trim()
+    .toUpperCase();
   const nameParts = rawName.split(/\s+/).filter(Boolean);
   const firstName = esc(nameParts.slice(0, -1).join(" ") || nameParts[0] || "");
   const lastName = esc(nameParts.length > 1 ? nameParts[nameParts.length - 1] : "");
 
   const courseLabel = esc(
     String(
-      student.courseName || student.course?.name || courseText || "CODING FOR KIDS"
-    ).toUpperCase()
+      student.courseName || student.course?.name || courseText || "CODING FOR KIDS",
+    ).toUpperCase(),
   );
 
   const fatherName = esc(
@@ -51,18 +50,19 @@ export function buildCfkStudentIcardMarkup({
         student.fatherName ||
         student.guardianName ||
         student.father_name ||
-        ""
-    )
+        "",
+    ),
   );
 
-  const lines = (
-    Array.isArray(addressLines) && addressLines.length ? addressLines : [addrMain]
-  )
+  const lines = (Array.isArray(addressLines) && addressLines.length ? addressLines : [addrMain])
     .map((line) => String(line || "").trim())
     .filter(Boolean);
 
   const addrHtml = lines.length
-    ? lines.slice(0, 3).map((line) => `<div>${esc(toTitleCase(line))}</div>`).join("")
+    ? lines
+        .slice(0, 3)
+        .map((line) => `<div>${esc(toTitleCase(line))}</div>`)
+        .join("")
     : "<div>—</div>";
 
   return `
@@ -136,24 +136,32 @@ export function buildCfkStudentIcardMarkup({
         color: #66717A; letter-spacing: 0.12mm; line-height: 1.1;
         z-index: 3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       }
-      .id-card .details-grid {
-        position: absolute; top: 50.0mm; left: 2.2mm; right: 2.2mm;
-        height: 12.8mm; overflow: hidden; z-index: 3;
-        display: flex; flex-direction: column; justify-content: flex-start;
-        align-items: stretch; gap: 0.12mm; padding: 0; margin: 0;
-      }
-      .id-card .detail-row {
-        display: flex; flex-direction: row; justify-content: center;
-        align-items: baseline; gap: 0.8mm; flex: 0 0 auto;
-        width: 100%; min-width: 0; min-height: 0; height: auto;
-        margin: 0; padding: 0; font-size: 4.55pt; line-height: 1.02;
-        text-align: center;
-      }
-      .id-card .detail-label {
-        display: inline; flex: 0 0 auto; text-align: center;
-        padding: 0; margin: 0; font-weight: 800;
-        color: #9B1B81; white-space: nowrap; line-height: 1.02;
-      }
+.id-card .details-grid {
+    position: absolute;
+    top: 52.0mm;
+    left: 9.5mm;
+    right: 2mm;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55mm;
+}
+
+.id-card .detail-row {
+    display: flex;
+    align-items: baseline;
+    font-size: 5pt;
+    line-height: 1.22;
+}
+
+.id-card .detail-label {
+    width: 16.5mm;
+    flex-shrink: 0;
+    text-align: right;
+    padding-right: 1.3mm;
+    font-weight: 800;
+    color: #9B1B81;
+}
       .id-card .detail-val {
         display: inline-block; flex: 0 1 auto; min-width: 0;
         max-width: 68%; text-align: center; margin: 0; padding: 0;
@@ -192,7 +200,7 @@ export function buildCfkStudentIcardMarkup({
         text-align: center; z-index: 4; line-height: 1.12;
       }
       .id-card .aec-line {
-        font-size: 4.3pt; font-weight: 800; color: #3B4248;
+        font-size: 4.5pt; font-weight: 800; color: #3B4248;
         letter-spacing: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       }
       .id-card .contact-row {
@@ -220,8 +228,8 @@ export function buildCfkStudentIcardMarkup({
         <polygon points="0,76.8 6.2,80.4 48.8,80.4 55,76.8 55,80.0 46.5,85.0 8.5,85.0 0,80.0" fill="#9B1B81"/>
         <polygon points="0,80.0 8.5,85.0 5.8,85.0 0,81.5" fill="#FFFFFF"/>
         <polygon points="55,80.0 55,81.5 49.2,85.0 46.5,85.0" fill="#FFFFFF"/>
-        <polygon points="0,81.5 5.8,85.0 3.5,85.0 0,82.9" fill="#9B1B81"/>
-        <polygon points="55,81.5 55,82.9 51.5,85.0 49.2,85.0" fill="#9B1B81"/>
+        <polygon points="0,81.5 0,80.9 7,85.0 -0.2,85.0" fill="#9B1B81"/>
+        <polygon points="55,81.5 55,80.9 48,85.0 55.2,85.0" fill="#9B1B81"/>
       </svg>
 
       <div class="header">
