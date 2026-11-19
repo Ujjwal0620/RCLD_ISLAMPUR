@@ -35,7 +35,7 @@ Run commands from the repository root. Keep `.env.local` private. See [Operation
 | Pending admissions | `app/dashboard/students/pending/page.js` | `/api/students` | Required-detail completeness and admission status |
 | Student I-Cards | `app/dashboard/students/icards/page.js` | `/api/students` | Student completeness/eligibility rules |
 | Student profile and fees | `app/dashboard/students/[id]/page.js` | `/api/students/[id]`, `/fees`, `/attendance`, `/batch-history`, `/contact-log` | Student, payment history, receipt and movement history |
-| Student import | `app/dashboard/students/import/page.js` | `/api/students/bulk-import` | `scripts/import-students.mjs` for CLI import |
+| Student import | `app/dashboard/students/import/page.js` | `/api/students/bulk-import` | Preview/import the RCLD `Student Data` worksheet; map St_Code, names, DOB, gender, father, split address, phones, qualification, form number, admission date and course. Existing CLI script remains a separate legacy utility. |
 | Employee directory | `app/dashboard/employees/page.js` | `/api/employees`, `/api/employees/bulk-delete` | Employee/login schema currently resides in route handlers |
 | Employee creation | `app/dashboard/employees/create/page.js` | `/api/employees` | Employee record and account creation rules |
 | Employee profile | `app/dashboard/employees/[id]/page.js` | `/api/employees/[id]`, `/api/employee-attendance`, `/api/back-office/tasks` | Employee attendance and assigned tasks |
