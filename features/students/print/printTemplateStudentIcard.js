@@ -58,7 +58,7 @@ function idNumberMarkup(value) {
   const match = raw.match(/^(.*\/)(\d+)$/);
   if (!match) return escapeHtml(raw);
   return escapeHtml(match[1]) +
-    '<span class="id-number-tail">' + escapeHtml(match[2]) + "</span>";
+    '<span class="id-number-tail" style="font-size:4.1cqw;font-weight:800;">' + escapeHtml(match[2]) + "</span>";
 }
 
 function titleCase(value) {
@@ -149,12 +149,12 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     '.photo-empty{background:transparent}' +
     '.overlay{position:absolute;z-index:2;font-family:Arial,"Helvetica Neue","Liberation Sans",sans-serif;color:#3E454C;overflow:hidden}' +
     '.circular-name{top:48.8%;left:3%;width:94%;text-align:center;font-weight:800;font-size:clamp(20px,6.3cqw,80px);text-transform:uppercase;letter-spacing:.3px;line-height:1.05;white-space:nowrap}' +
-    '.circular-id,.circular-registration,.circular-admission,.circular-father,.circular-address{left:46.8%;width:48.5%;font-weight:700;font-size:clamp(13px,3.1cqw,44px);line-height:1.15;text-align:left;color:#3E454C}' +
-    '.circular-id{top:61.2%}.circular-registration{top:64.1%}.circular-admission{top:66.9%}.circular-father{top:69.7%}' +
-    '.circular-address{top:72.5%;width:48.5%;line-height:1.26;word-break:break-word;overflow-wrap:anywhere}.address-line{display:block;min-height:0}' +
-    '.circular-id .id-number-tail{font-size:3.75cqw;font-weight:800;color:#3E454C}' +
+    '.circular-id,.circular-registration,.circular-admission,.circular-father,.circular-address{left:46.8%;width:48.5%;font-family:"Roboto Condensed","Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;font-weight:700;font-size:clamp(14px,3.45cqw,48px);line-height:1.15;text-align:left;color:#3E454C;transform:scaleY(1.12);transform-origin:left center}' +
+    '.circular-id{top:60.9%}.circular-registration{top:63.8%}.circular-admission{top:66.6%}.circular-father{top:69.4%}' +
+    '.circular-address{top:72.2%;left:46.8%;width:48.5%;line-height:1.3;word-break:break-word;overflow-wrap:anywhere;transform-origin:top left}.address-line{display:block;min-height:0}' +
+    '.circular-id .id-number-tail{font-size:4.1cqw;font-weight:800;color:#3E454C}' +
     '.diploma .student-photo{top:34.2%;left:32.1%;transform:none;width:35.8%;height:25%;aspect-ratio:auto;border-radius:10px;object-fit:cover}' +
-    '.diploma .overlay{font-size:clamp(12px,2.95cqw,40px);line-height:1.15;color:#1E242B;font-weight:700}' +
+    '.diploma .overlay{font-family:"Roboto Condensed","Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;font-size:clamp(13px,3.25cqw,44px);line-height:1.15;color:#1E242B;font-weight:700;transform:scaleY(1.10);transform-origin:left center}' +
     '.diploma-registration{top:2.5%;left:38.5%;font-weight:700}.diploma-session{top:2.5%;left:87.5%;font-weight:700}' +
     '.diploma-id{top:13%;left:72%;font-weight:700;font-size:clamp(12px,3cqw,40px)}' +
     '.diploma-name{top:62.5%;left:16.5%;width:80%;font-size:clamp(15px,3.6cqw,48px);font-weight:800;text-transform:uppercase;letter-spacing:.3px;line-height:1.05;white-space:nowrap;color:#1E242B}' +
