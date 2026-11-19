@@ -1,16 +1,35 @@
-
-
-const escapeHtml = (value) => String(value ?? "—").replace(/[&<>"']/g, (char) => ({
+const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
 }[char]));
 
 const firstValue = (...values) => values.find((value) => value !== undefined && value !== null && String(value).trim());
 
+const TEMPLATE_CONFIG = {
+  "ID Card Sem-1.jpg": { lastNameColor: "#E61E8C" },
+  "ID Card Sem-2.jpg": { lastNameColor: "#009846" },
+  "ID Card Sem-3.jpg": { lastNameColor: "#0095DA" },
+  "ID Card Sem-4.jpg": { lastNameColor: "#F58220" },
+  "ID Card Sem-5.jpg": { lastNameColor: "#9C2B86" },
+  "ID Card School Course.jpg": { lastNameColor: "#E31E24" },
+  "ID Card Robotics 1st year.jpg": { lastNameColor: "#D99B00" },
+  "ID Card Robotics 2nd year.jpg": { lastNameColor: "#0077B6" },
+  "ID Card Robotics 3rd year.jpg": { lastNameColor: "#4E8B22" },
+  "ID Card Diploma.jpg": { lastNameColor: "#2E3192" },
+};
+
+function getAdmissionDate(student) {
+  const source = firstValue(student.admissionDate, student.dateOfAdmission, student.admissionOn);
+  if (!source) return "";
+  const date = new Date(source);
+  if (Number.isNaN(date.getTime())) return "";
+  return [String(date.getDate()).padStart(2, "0"), String(date.getMonth() + 1).padStart(2, "0"), date.getFullYear()].join("-");
+}
+
 function getAdmissionSession(student) {
-  const source = student.admissionDate || student.dateOfAdmission || student.admissionOn || student.createdAt;
+  const source = firstValue(student.admissionDate, student.dateOfAdmission, student.admissionOn, student.createdAt);
   const date = source ? new Date(source) : new Date();
   const year = Number.isNaN(date.getTime()) ? new Date().getFullYear() : date.getFullYear();
-  return `${year}-${year + 1}`;
+  return year + "-" + (year + 1);
 }
 
 function getStudentPhoto(student) {
@@ -24,69 +43,99 @@ function getStudentPhoto(student) {
   );
 }
 
-function buildMarkup({ student, templateName, photoUrl, courseName, session, logoUrl }) {
-  const diploma = /diploma/i.test(templateName);
-  const robotics = /robotics/i.test(templateName);
-  const school = /school course/i.test(templateName);
-  const name = escapeHtml(String(student.applicantName || "STUDENT").toUpperCase());
-  const icardNumber = escapeHtml(firstValue(student.icardNumber, student.iCardNumber, student.idCardNumber, student.cardNumber, student.studentId, student.enrollmentNo, student.admissionNo));
-  const registrationNumber = escapeHtml(firstValue(student.registrationNumber, student.registrationNo, student.registrationId, student.regNo, student.regnNo, student.formNo));
-  const father = escapeHtml(firstValue(student.fatherOrHusbandName, student.fatherName, student.fatherNameAsPerRecords, student.guardianName));
-  const address = escapeHtml(firstValue(student.presentAddress, student.address, student.completeAddress, student.permanentAddress));
-  const admissionSource = firstValue(student.admissionDate, student.dateOfAdmission, student.admissionOn);
-  const admissionDate = admissionSource ? new Date(admissionSource) : null;
-  const admission = escapeHtml(admissionDate && !Number.isNaN(admissionDate.getTime()) ? admissionDate.toLocaleDateString("en-GB") : "—");
-  const course = escapeHtml(courseName || student.courseName || student.courseCode || "—");
-  const sessionText = escapeHtml(session);
-  const safePhoto = photoUrl ? escapeHtml(photoUrl) : "";
-  const photo = safePhoto
-    ? `<img class="student-photo" src="${safePhoto}" alt="Student photo">`
-    : '<div class="student-photo photo-empty">PHOTO</div>';
-  const centerImage = diploma
-    ? `<img class="center-image" src="${safePhoto || escapeHtml(logoUrl)}" alt="Student / institute image">`
-    : "";
-  const fieldRows = [["I-CARD NO.", icardNumber], ["REGISTRATION NO.", registrationNumber], ["DATE OF ADMISSION", admission], ["FATHER'S NAME", father], ["ADDRESS", address]];
-  const fields = fieldRows.map(([label, value]) => `<div class="field"><b>${label}</b><span>${value}</span></div>`).join("");
-  return `<!doctype html><html><head><meta charset="utf-8"><title>RCLD I-Card - ${name}</title>
-<style>
-@page{size:55mm 88mm;margin:0}*{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
-html,body{margin:0;padding:0;width:55mm;height:88mm;background:#fff}
-.card{position:relative;width:55mm;height:88mm;overflow:hidden;background:#fff url("/assets/icardtemplates/${encodeURIComponent(templateName)}") center/100% 100% no-repeat;color:#182238}
-.student-photo{position:absolute;left:36%;top:17%;width:28%;height:17.5%;aspect-ratio:1/1;display:block;border-radius:50%;object-fit:cover;object-position:center;overflow:hidden;clip-path:circle(50% at 50% 50%);z-index:2;border:0}
-.photo-empty{display:flex;align-items:center;justify-content:center;background:#f0f2f5;color:#777;font:700 2.2mm Arial,sans-serif}
-.student-name{position:absolute;left:5%;right:5%;top:40%;height:6%;display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;text-transform:uppercase;font:700 3.2mm "Times New Roman",serif;color:#101827;z-index:3}
-.fields{position:absolute;left:8%;right:6%;top:49%;height:38%;display:flex;flex-direction:column;justify-content:flex-start;gap:1.15mm;z-index:3;font:2.05mm/1.15 "Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;color:#172033}
-.field{display:grid;grid-template-columns:38% 62%;align-items:start;min-height:4mm;gap:1mm}
-.field b{font-weight:700;white-space:normal}.field span{font-weight:500;overflow-wrap:anywhere}
-.session{position:absolute;left:31%;right:31%;top:7%;height:6%;display:flex;align-items:center;justify-content:center;text-align:center;font:700 3mm "Arial Narrow",Arial,sans-serif;color:#172033;z-index:4}
-.center-image{position:absolute;left:34%;top:20%;width:32%;height:25%;object-fit:contain;z-index:2}
-.diploma .student-photo{display:none}.diploma .student-name{top:47%}.diploma .fields{top:54%;height:31%}
-.school .student-photo,.robotics .student-photo{top:16%;width:28%;height:17.5%;aspect-ratio:1/1;left:36%}
-.school .student-name,.robotics .student-name{top:38%}
-@media screen{body{display:flex;align-items:flex-start;justify-content:center;background:#e9edf3;padding:8mm 0}.card{box-shadow:0 2px 12px #0003}}
-@media print{html,body{width:55mm!important;height:88mm!important;overflow:hidden!important}.card{box-shadow:none!important}}
-</style></head><body><main class="card ${diploma?"diploma":robotics?"robotics":school?"school":""}">
-${diploma ? centerImage : photo}
-<div class="session">${diploma ? sessionText : ""}</div>
-<div class="student-name">${name}</div>
+function splitNameMarkup(value, lastNameColor, diploma) {
+  const parts = String(value || "").trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "";
+  const last = parts.length > 1 ? parts.pop() : "";
+  const firstColor = diploma ? "#1E242B" : "#3E454C";
+  const leading = parts.map((part) => '<span style="color:' + firstColor + '">' + escapeHtml(part) + "</span>").join(" ");
+  if (!last) return '<span style="color:' + firstColor + '">' + escapeHtml(parts[0]) + "</span>";
+  return leading + ' <span style="color:' + (diploma ? "#2E3192" : lastNameColor) + '">' + escapeHtml(last) + "</span>";
+}
 
-<div class="fields">${fields}</div>
-</main></body></html>`;
+function idNumberMarkup(value) {
+  const safe = escapeHtml(value || "—");
+  const match = safe.match(/^(.*\/)(\d+)$/);
+  return match ? match[1] + '<span class="id-number-tail">' + match[2] + "</span>" : safe;
+}
+
+function titleCase(value) {
+  return String(value || "").toLocaleLowerCase().replace(/(^|[\s'-])([a-z])/g, (_, prefix, letter) => prefix + letter.toUpperCase());
+}
+
+function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
+  const diploma = templateName === "ID Card Diploma.jpg";
+  const config = TEMPLATE_CONFIG[templateName] || { lastNameColor: "#3E454C" };
+  const fullName = firstValue(student.applicantName, student.fullName, student.name, "STUDENT");
+  const nameMarkup = splitNameMarkup(fullName, config.lastNameColor, diploma);
+  const icardNumber = firstValue(student.icardNumber, student.iCardNumber, student.idCardNumber, student.cardNumber, student.studentId, student.enrollmentNo, student.admissionNo, "—");
+  const registrationNumber = firstValue(student.registrationNumber, student.registrationNo, student.registrationId, student.regNo, student.regnNo, student.formNo, "—");
+  const fatherName = titleCase(firstValue(student.fatherOrHusbandName, student.fatherName, student.fatherNameAsPerRecords, student.guardianName, "—"));
+  const address = firstValue(student.presentAddress, student.address, student.completeAddress, student.permanentAddress, "—");
+  const admission = getAdmissionDate(student) || "—";
+  const photo = photoUrl
+    ? '<img class="student-photo" src="' + escapeHtml(photoUrl) + '" alt="Student photograph">'
+    : '<div class="student-photo photo-empty" aria-label="Student photograph unavailable"></div>';
+
+  const overlays = diploma
+    ? '<div class="overlay diploma-registration">' + escapeHtml(registrationNumber) + '</div>' +
+      '<div class="overlay diploma-session">' + escapeHtml(session) + '</div>' +
+      '<div class="overlay diploma-id">' + idNumberMarkup(icardNumber) + '</div>' +
+      '<div class="overlay diploma-name">' + nameMarkup + '</div>' +
+      '<div class="overlay diploma-father">' + escapeHtml(fatherName) + '</div>' +
+      '<div class="overlay diploma-address">' + escapeHtml(address) + '</div>' +
+      '<div class="overlay diploma-course">' + escapeHtml(courseName || firstValue(student.courseName, student.course?.name, student.courseCode, "")) + '</div>' +
+      '<div class="overlay diploma-admission">' + escapeHtml(admission) + '</div>'
+    : '<div class="overlay circular-name">' + nameMarkup + '</div>' +
+      '<div class="overlay circular-id">' + idNumberMarkup(icardNumber) + '</div>' +
+      '<div class="overlay circular-registration">' + escapeHtml(registrationNumber) + '</div>' +
+      '<div class="overlay circular-admission">' + escapeHtml(admission) + '</div>' +
+      '<div class="overlay circular-father">' + escapeHtml(fatherName) + '</div>' +
+      '<div class="overlay circular-address">' + escapeHtml(address) + '</div>';
+
+  return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<title>RCLD I-Card - ' + escapeHtml(fullName) + '</title><style>' +
+    '@page{size:54mm 85.6mm;margin:0}' +
+    '*{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}' +
+    'html,body{margin:0;padding:0;background:#fff;font-family:Inter,Roboto,Arial,sans-serif}' +
+    'body{width:100%;min-height:100vh;display:flex;justify-content:center;align-items:flex-start}' +
+    '.card{position:relative;width:min(100vw,640px);aspect-ratio:640/1016;overflow:hidden;container-type:inline-size;background:#fff;isolation:isolate;color:#3E454C}' +
+    '.template-background{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;z-index:0}' +
+    '.student-photo{position:absolute;z-index:1;top:20.3%;left:50%;transform:translateX(-50%);width:38.6%;aspect-ratio:1/1;height:auto;border-radius:50%;object-fit:cover;object-position:center;display:block}' +
+    '.photo-empty{background:transparent}' +
+    '.overlay{position:absolute;z-index:2;font-family:Inter,Roboto,Arial,sans-serif;color:#3E454C;overflow:hidden}' +
+    '.circular-name{top:49.6%;left:5%;width:90%;text-align:center;font-weight:800;font-size:clamp(16px,3.4cqw,24px);text-transform:uppercase;letter-spacing:.4px;line-height:1.1;white-space:nowrap}' +
+    '.circular-id,.circular-registration,.circular-admission,.circular-father,.circular-address{left:46.8%;width:49%;font-weight:600;font-size:clamp(10px,2.55cqw,14px);line-height:1.15;text-align:left}' +
+    '.circular-id{top:61.5%}.circular-registration{top:64.4%}.circular-admission{top:67.2%}.circular-father{top:70%}' +
+    '.circular-address{top:72.8%;width:48%;line-height:1.32;word-break:break-word;overflow-wrap:anywhere}' +
+    '.id-number-tail{font-weight:800}' +
+    '.diploma .student-photo{top:34.2%;left:32.1%;transform:none;width:35.8%;height:25%;aspect-ratio:auto;border-radius:10px;object-fit:cover}' +
+    '.diploma .overlay{font-size:clamp(9px,2.3cqw,14px);line-height:1.15;color:#1E242B}' +
+    '.diploma-registration{top:2.5%;left:38.5%;font-weight:700}.diploma-session{top:2.5%;left:87.5%;font-weight:700}' +
+    '.diploma-id{top:13%;left:72%;font-weight:700}' +
+    '.diploma-name{top:62.5%;left:16.5%;width:80%;font-size:clamp(12px,2.9cqw,18px);font-weight:800;text-transform:uppercase;white-space:nowrap}' +
+    '.diploma-father{top:66.2%;left:31%;width:66%;font-weight:600}' +
+    '.diploma-address{top:69.2%;left:20.5%;width:75%;line-height:1.3;font-weight:600;white-space:normal;overflow-wrap:anywhere}' +
+    '.diploma-course{top:77.6%;left:19%;width:76%;font-weight:700}.diploma-admission{top:81.8%;left:29.5%;width:68%;font-weight:600}' +
+    '@media screen{body{padding:24px 0;background:#e9edf3}.card{box-shadow:0 2px 14px #0002}}' +
+    '@media print{html,body{width:54mm!important;height:85.6mm!important;min-height:0!important;margin:0!important;padding:0!important;overflow:hidden!important}body{display:block!important}.card{width:54mm!important;height:85.6mm!important;aspect-ratio:auto!important;max-width:none!important;margin:0!important;box-shadow:none!important;container-type:inline-size}}' +
+    '</style></head><body><main class="card ' + (diploma ? "diploma" : "circular") + '">' +
+    '<img class="template-background" src="/assets/icardtemplates/' + encodeURIComponent(templateName) + '" alt="">' +
+    photo + overlays + '</main></body></html>';
 }
 
 export async function printTemplateStudentIcard({ student, templateName, outputMode = "print", setMessage }) {
-  if (typeof templateName !== "string" || templateName !== templateName.split(/[\\/]/).pop() || !/\.(jpe?g|png)$/i.test(templateName)) {
+  if (typeof templateName !== "string" || templateName !== templateName.split(/[\\/]/).pop() || !TEMPLATE_CONFIG[templateName]) {
     setMessage?.("Please select a valid I-card template.");
     return;
   }
-  const session = getAdmissionSession(student);
+
   const html = buildMarkup({
     student,
     templateName,
     photoUrl: getStudentPhoto(student),
     courseName: student.courseName || student.course?.name || student.courseCode || "",
-    session,
-    logoUrl: "/assets/logo.png",
+    session: getAdmissionSession(student),
   });
 
   if (outputMode !== "jpg") {
@@ -96,13 +145,13 @@ export async function printTemplateStudentIcard({ student, templateName, outputM
       return;
     }
     win.document.open();
-    win.document.write(html.replace("</body>", '<script>window.addEventListener("load",()=>setTimeout(()=>window.print(),250));</script></body>'));
+    win.document.write(html.replace("</body>", '<script>window.addEventListener("load",()=>setTimeout(()=>window.print(),300));</script></body>'));
     win.document.close();
     return;
   }
 
   const frame = document.createElement("iframe");
-  frame.style.cssText = "position:fixed;left:-10000px;top:0;width:55mm;height:88mm;border:0";
+  frame.style.cssText = "position:fixed;left:-10000px;top:0;width:640px;height:1016px;border:0";
   document.body.appendChild(frame);
   try {
     await new Promise((resolve, reject) => {
@@ -115,11 +164,11 @@ export async function printTemplateStudentIcard({ student, templateName, outputM
     await Promise.all([...doc.images].map((img) => img.decode ? img.decode().catch(() => {}) : Promise.resolve()));
     const { toJpeg } = await import("html-to-image");
     const card = doc.querySelector(".card");
-    const dataUrl = await toJpeg(card, { quality: 1, pixelRatio: 4, backgroundColor: "#fff", cacheBust: true });
+    const dataUrl = await toJpeg(card, { quality: 1, pixelRatio: 1, backgroundColor: "#fff", cacheBust: true });
     const link = document.createElement("a");
-    const base = String(student.applicantName || "Student").trim().replace(/[^a-z0-9]+/gi, "-");
+    const base = String(student.applicantName || student.fullName || "Student").trim().replace(/[^a-z0-9]+/gi, "-");
     link.href = dataUrl;
-    link.download = `RCLD-I-Card-${base}-${templateName.replace(/[^a-z0-9]+/gi,"-")}.jpg`;
+    link.download = "RCLD-I-Card-" + base + "-" + templateName.replace(/[^a-z0-9]+/gi, "-") + ".jpg";
     link.click();
     setMessage?.("Student I-card JPG downloaded successfully.");
   } catch (error) {
@@ -129,4 +178,3 @@ export async function printTemplateStudentIcard({ student, templateName, outputM
     frame.remove();
   }
 }
-
