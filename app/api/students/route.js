@@ -6,7 +6,7 @@ import { getStudentAdmissionStatus } from "@/lib/student-admission-status";
 
 const StudentSchema = new mongoose.Schema({
   formNo: { type: String, trim: true },
-  aecCode: String, regnNo: String, enrollmentNo: String, admissionDate: String, guardianContactNumber: String, dueAmount: mongoose.Schema.Types.Mixed, paymentStatus: mongoose.Schema.Types.Mixed, sourceCourseLabel: String, importSource: String, sourceStudentName: String, sourceSex: String, sourceQualification: String, sourceAddressRaw: String, courseName: String, courseCode: String, batchId: { type: mongoose.Schema.Types.ObjectId, ref: "Batch", default: null }, batchCode: String,
+  aecCode: String, regnNo: String, enrollmentNo: String, admissionDate: String, guardianContactNumber: String, dueAmount: mongoose.Schema.Types.Mixed, paymentStatus: mongoose.Schema.Types.Mixed, sourceCourseLabel: String, importSource: String, sourceStudentName: String, sourceSex: String, sourceQualification: String, sourceAddressRaw: String, sourcePhone: String, courseName: String, courseCode: String, batchId: { type: mongoose.Schema.Types.ObjectId, ref: "Batch", default: null }, batchCode: String,
   applicantName: { type: String, default: "", trim: true }, nationality: String, dateOfBirth: String, sex: String,
   fatherOrHusbandName: String, address: String, presentAddress: String, permanentAddress: String, sameAsPresentAddress: Boolean, postOffice: String, policeStation: String, nearestLandmark: String, district: String, state: String, permanentPostOffice: String, permanentNearestLandmark: String, permanentPin: String, permanentDistrict: String, permanentState: String, pin: String, whatsappNumber: String,
   mobileNumber: { type: String, default: "", trim: true },
@@ -68,7 +68,7 @@ export async function GET(request) {
         "nationality","dateOfBirth","sex","status","address","presentAddress","permanentAddress","postOffice","policeStation",
         "nearestLandmark","district","state","pin","permanentPostOffice","permanentNearestLandmark","permanentPin",
         "permanentDistrict","permanentState","referralName","marketingEmployeeName","paymentStatus","declarationPlace",
-        "sourceCourseLabel","importSource","sourceQualification","signatureApplicant","declarationDate","referralId","marketingEmployeeId",
+        "sourceCourseLabel","importSource","sourceQualification","sourcePhone","signatureApplicant","declarationDate","referralId","marketingEmployeeId",
         "qualifications.examCourse","qualifications.boardUniversity","qualifications.collegeInstitute","qualifications.year","qualifications.percentage","admissionDate"
       ];
       filter.$or = searchFields.map(field => ({ [field]: rx }));
@@ -81,7 +81,7 @@ export async function GET(request) {
       "whatsappNumber","guardianContactNumber","email","aadhaarNumber","nationality","district","state","pin",
       "postOffice","policeStation","nearestLandmark","permanentDistrict","permanentState","permanentPin",
       "permanentPostOffice","permanentNearestLandmark","courseCode","batchCode","referralName","marketingEmployeeName",
-      "paymentStatus","declarationPlace","sourceCourseLabel","importSource","sourceQualification","address","presentAddress","permanentAddress",
+      "paymentStatus","declarationPlace","sourceCourseLabel","importSource","sourceQualification","sourcePhone","address","presentAddress","permanentAddress",
       "signatureApplicant","declarationDate","referralId","marketingEmployeeId"
     ];
     for (const field of textFilters) {
