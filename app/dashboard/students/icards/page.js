@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, Download, Filter, IdCard, Printer, RefreshCw, RotateCcw, Search, X } from "lucide-react";
 import ERPLayout from "@/components/ERPLayout";
+import CodingForKidsIcardDialog from "@/components/students/profile/CodingForKidsIcardDialog";
 import { printStudentICard } from "@/features/students/print/printStudentICard";
 
 const PAGE_SIZE = 30;
@@ -42,6 +43,9 @@ export default function StudentICardsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [icardOutputMode, setIcardOutputMode] = useState("print");
 
   const load = useCallback(async (page = 1, activeFilters = EMPTY_FILTERS) => {
     setLoading(true);
@@ -120,6 +124,16 @@ export default function StudentICardsPage() {
           </button>
         </div>
       </header>
+
+      <CodingForKidsIcardDialog
+        open={templateDialogOpen}
+        student={selectedStudent}
+        onClose={() => setTemplateDialogOpen(false)}
+        onSelect={(templateName) => {
+          setTemplateDialogOpen(false);
+          if (selectedStudent) printStudentICard(selectedStudent, setMessage, "", icardOutputMode, templateName);
+        }}
+      />
 
       <section className="icard-directory-intro">
         <div className="icard-directory-icon"><IdCard size={23} /></div>
@@ -269,7 +283,9 @@ export default function StudentICardsPage() {
                           title={["Admission Pending", "Cancelled"].includes(student.status) ? "I-Card printing is unavailable for this status" : "Print student I-Card"}
                           onClick={() => {
                             setMessage("");
-                            printStudentICard(student, setMessage, "", "print");
+                            setSelectedStudent(student);
+                            setIcardOutputMode("print");
+                            setTemplateDialogOpen(true);
                           }}
                         >
                           <Printer size={14} /> Print
@@ -281,7 +297,9 @@ export default function StudentICardsPage() {
                           title={["Admission Pending", "Cancelled"].includes(student.status) ? "I-Card download is unavailable for this status" : "Download student I-Card as JPG"}
                           onClick={() => {
                             setMessage("");
-                            printStudentICard(student, setMessage, "", "jpg");
+                            setSelectedStudent(student);
+                            setIcardOutputMode("jpg");
+                            setTemplateDialogOpen(true);
                           }}
                         >
                           <Download size={14} /> JPG
