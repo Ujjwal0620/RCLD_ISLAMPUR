@@ -29,7 +29,7 @@ export default function StudentDetailsPage({ params }) {
     editing, setEditing, editForm, setEditForm, history, setHistory, contactLogs,
     transition, setTransition, transitioning, setTransitioning, icardDialogOpen,
     setIcardDialogOpen, semesterBusy, updateCfkSemester, saveStudent, deleteStudent,
-    saveFees, uploadPaymentProof, printStudentICard, downloadStudentICardJpg, printStudentForm, printBill,
+    saveFees, uploadPaymentProof, uploadStudentPhoto, photoUploading, printStudentICard, downloadStudentICardJpg, printStudentForm, printBill,
     saveAttendance,
   } = useStudentProfile(params);
   const [icardOutputMode, setIcardOutputMode] = useState("print");
@@ -92,6 +92,8 @@ export default function StudentDetailsPage({ params }) {
             saveStudent={saveStudent}
             indiaLocations={indiaLocations}
             setMessage={setMessage}
+            uploadStudentPhoto={uploadStudentPhoto}
+            photoUploading={photoUploading}
           />
           <StudentProfileHero student={student} />
           <StudentTransitionPanel
