@@ -143,3 +143,17 @@ The following UI changes are merged into main:
 These changes are an initial system-wide design pass, not completion of the full page-by-page redesign. Remaining individual reviews include the staff dashboard, student registration/profile/fees/attendance/import/pending/I-Cards, batch detail/roster/timetable interactions, employee create/profile/attendance/tasks, subjects/course content, CRM/referrals, dropouts, reports and AI Copilot. The student-specific sign-in and learning portal also remain unimplemented.
 
 **Verification status:** GitHub source checks confirm the relevant files and imports are present. No local browser screenshot review, responsive device test, npm lint, production build or real print-preview test has been completed in this remote session. The registration print/header source correction is in PR #26 (merge commit `8f43f06229100b9795f8655a8b735ccef4b7d4f7`), but visual output still requires a real print preview.
+
+
+## Student admission workbook import and profile photo — 19 November 2026
+
+**Implemented in main; local verification still required.**
+
+- Replaced the legacy import mapping that required fabricated email/Aadhaar/DOB/guardian data with a preview-first importer for the `Student Data` worksheet.
+- Mapped registration code, cleaned student name, DOB, gender, father name, village/colony/ward, PO, PS, district, PIN, mobile, guardian mobile, qualification, form number, admission date and course into the existing student profile fields.
+- The importer reports duplicate registration/form-number groups, missing optional fields, malformed phone values and unusual DOB dates. It retains source values for audit and leaves absent personal information blank.
+- Import access is checked against the signed-in Super Admin/Admin/Office Admin session. Matching imported rows are updated on re-import; existing fee history is not overwritten.
+- Added a student photograph upload/change control inside the profile edit panel. Images use the existing Cloudinary upload endpoint; the returned URL is saved with the student profile.
+- Added source qualification editing and retained original source address/name/sex fields.
+
+**Not yet verified:** no local `npm run lint`, `npm run build`, live MongoDB import, browser upload or Cloudinary upload was executed in this remote repository session. Review the preview carefully before importing the 3,226-row workbook into production and take a database backup first.
