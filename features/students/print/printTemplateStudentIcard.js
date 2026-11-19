@@ -55,16 +55,16 @@ function splitNameMarkup(value, lastNameColor, diploma) {
 
 function idNumberMarkup(value) {
   const safe = escapeHtml(value || "—");
-  const islMatch = safe.match(/^(.*\\bISL\\/)(.+)$/i);
+  const islMatch = safe.match(/^(.*\bISL\/)(.+)$/i);
   if (islMatch) {
     return islMatch[1] + '<span class="id-number-tail">' + islMatch[2] + "</span>";
   }
-  const match = safe.match(/^(.*\\/)(\\d+)$/);
+  const match = safe.match(/^(.*\/)(\d+)$/);
   return match ? match[1] + '<span class="id-number-tail">' + match[2] + "</span>" : safe;
 }
 
 function titleCase(value) {
-  return String(value || "").toLocaleLowerCase().replace(/(^|[\\s'-])([a-z])/g, (_, prefix, letter) => prefix + letter.toUpperCase());
+  return String(value || "").toLocaleLowerCase().replace(/(^|[\s'-])([a-z])/g, (_, prefix, letter) => prefix + letter.toUpperCase());
 }
 
 function getAddressMarkup(student) {
@@ -84,11 +84,11 @@ function getAddressMarkup(student) {
   add("district", pick(addressObject.district, student.district));
 
   if (typeof addressSource === "string") {
-    const parts = addressSource.split(/[,\\n]+/).map((part) => part.trim()).filter(Boolean);
+    const parts = addressSource.split(/[,\n]+/).map((part) => part.trim()).filter(Boolean);
     parts.forEach((part, index) => {
-      const match = part.match(/^(ward(?:\\s*no)?|colony|village|vill|po|post\\s*office|ps|police\\s*station|district)\\s*[-:]\\s*(.*)$/i);
+      const match = part.match(/^(ward(?:\s*no)?|colony|village|vill|po|post\s*office|ps|police\s*station|district)\s*[-:]\s*(.*)$/i);
       if (match) {
-        const label = match[1].toLowerCase().replace(/\\s+/g, "");
+        const label = match[1].toLowerCase().replace(/\s+/g, "");
         const key = ["ward", "wardno", "colony", "village", "vill"].includes(label) ? "ward"
           : ["po", "postoffice"].includes(label) ? "po"
           : ["ps", "policestation"].includes(label) ? "ps" : "district";
