@@ -41,18 +41,12 @@ export default function StudentDetailsPage({ params }) {
         student={student}
         printStudentForm={printStudentForm}
         onDownloadIcardJpg={() => {
-          const courseText = String(student.courseName || student.courseCode || "");
-          if (/coding\s*for\s*kids|\bCFK\b|\bKIDS\b/i.test(courseText)) {
-            setIcardOutputMode("jpg");
-            setIcardDialogOpen(true);
-          } else downloadStudentICardJpg();
+          setIcardOutputMode("jpg");
+          setIcardDialogOpen(true);
         }}
         onPrintIcard={() => {
-          const courseText = String(student.courseName || student.courseCode || "");
-          if (/coding\s*for\s*kids|\bCFK\b|\bKIDS\b/i.test(courseText)) {
-            setIcardOutputMode("print");
-            setIcardDialogOpen(true);
-          } else printStudentICard();
+          setIcardOutputMode("print");
+          setIcardDialogOpen(true);
         }}
         printBill={printBill}
         onEdit={() => setEditing(true)}
@@ -76,9 +70,9 @@ export default function StudentDetailsPage({ params }) {
             open={icardDialogOpen}
             student={student}
             onClose={() => setIcardDialogOpen(false)}
-            onSelect={() => {
+            onSelect={(templateName) => {
               setIcardDialogOpen(false);
-              printStudentICard("", icardOutputMode);
+              printStudentICard("", icardOutputMode, templateName);
             }}
           />
           <StudentEditPanel
