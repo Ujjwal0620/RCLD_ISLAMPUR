@@ -37,6 +37,7 @@ export default function useStudentProfile(params) {
         : []),
     ]);
     const [proofUploading, setProofUploading] = useState(false);
+    const [photoUploading, setPhotoUploading] = useState(false);
     const [feeWorkspaceOpen, setFeeWorkspaceOpen] = useState(false);
     const [attForm, setAttForm] = useState({
       date: new Date().toISOString().slice(0, 10),
@@ -262,6 +263,30 @@ export default function useStudentProfile(params) {
       setMessage("Fee information saved.");
     }
   
+    async function uploadStudentPhoto(file) {
+      if (!file) return;
+      if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024) {
+        setMessage("Choose a JPG, PNG or WebP image smaller than 5 MB.");
+        return;
+      }
+      setPhotoUploading(true);
+      setMessage("");
+      try {
+        const form = new FormData();
+        form.append("file", file);
+        form.append("purpose", "photo");
+        const response = await fetch("/api/uploads/student-photo", { method: "POST", body: form });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Unable to upload student photo.");
+        setEditForm(current => ({ ...current, photoUrl: data.url }));
+        setMessage("Photo uploaded. Save Changes to update the student profile.");
+      } catch (uploadError) {
+        setMessage(uploadError.message || "Unable to upload student photo.");
+      } finally {
+        setPhotoUploading(false);
+      }
+    }
+
     async function uploadPaymentProof(file) {
       if (!file) return;
       if (!file.type.startsWith("image/") || file.size > 5 * 1024 * 1024) {
@@ -313,11 +338,11 @@ export default function useStudentProfile(params) {
   return {
     student, setStudent, error, loading, fee, courses, batches, referrals, attendance,
     feeForm, setFeeForm, paymentItems, setPaymentItems, proofUploading,
-    feeWorkspaceOpen, setFeeWorkspaceOpen, attForm, setAttForm, message, setMessage,
+    feeWorkspaceOpen, setFeeWorkspaceOpen, attForm, setAttForm, message, setMessage, photoUploading,
     editing, setEditing, editForm, setEditForm, history, setHistory, contactLogs,
     transition, setTransition, transitioning, setTransitioning, icardDialogOpen,
     setIcardDialogOpen, semesterBusy, updateCfkSemester, saveStudent, deleteStudent,
-    saveFees, uploadPaymentProof, printStudentICard, downloadStudentICardJpg, printStudentForm, printBill,
+    saveFees, uploadPaymentProof, uploadStudentPhoto, printStudentICard, downloadStudentICardJpg, printStudentForm, printBill,
     saveAttendance,
   };
 }
