@@ -1,24 +1,35 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { IdCard, X } from "lucide-react";
 
-const templates = [
-  "ID Card Diploma.jpg",
-  "ID Card Robotics 1st year.jpg",
-  "ID Card Robotics 2nd year.jpg",
-  "ID Card Robotics 3rd year.jpg",
-  "ID Card School Course.jpg",
-  "ID Card Sem-1.jpg",
-  "ID Card Sem-2.jpg",
-  "ID Card Sem-3.jpg",
-  "ID Card Sem-4.jpg",
-  "ID Card Sem-5.jpg",
-  "ID Card Sem-6.jpg",
-];
-
-const titleFor = (name) => name.replace(/\.jpg$/i, "").replace(/\bsem-(\d+)/i, "Semester $1");
+const titleFor = (name) => name.replace(/\.(jpe?g|png)$/i, "").replace(/\bsem-(\d+)/i, "Semester $1");
 
 export default function CodingForKidsIcardDialog({ open, student, onClose, onSelect }) {
+  const [templates, setTemplates] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setLoading(true);
+    setError("");
+    fetch("/api/icard-templates", { cache: "no-store" })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Unable to load templates.");
+        if (!cancelled) setTemplates(data.templates || []);
+      })
+      .catch((requestError) => {
+        if (!cancelled) setError(requestError.message || "Unable to load templates.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [open]);
+
   if (!open) return null;
   return (
     <div className="cfk-template-backdrop" role="presentation" onMouseDown={(event) => {
@@ -33,6 +44,9 @@ export default function CodingForKidsIcardDialog({ open, student, onClose, onSel
           </div>
           <button type="button" className="cfk-template-close" aria-label="Close" onClick={onClose}><X size={20}/></button>
         </header>
+        {loading && <p role="status">Loading available templates…</p>}
+        {error && <p role="alert" className="error-text">{error}</p>}
+        {!loading && !error && templates.length === 0 && <p>No JPG or PNG templates were found in public/assets/icardtemplates.</p>}
         <div className="cfk-template-grid">
           {templates.map((template) => (
             <button type="button" className="cfk-template-option" key={template} onClick={() => onSelect(template)}>
