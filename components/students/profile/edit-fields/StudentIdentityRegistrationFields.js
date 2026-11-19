@@ -12,6 +12,7 @@ export default function StudentIdentityRegistrationFields({ editForm, setEditFor
                                 ["aecCode", "AEC Code"],
                                 ["regnNo", "Registration No."],
                                 ["admissionDate", "Admission Date"],
+                                ["sourceQualification", "Qualification (Source Excel)"],
                               ].map(([k, l]) => (
                                 <label className="form-field" key={k}>
                                   <span>{l}</span>
