@@ -125,7 +125,7 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
 }
 
 export async function printTemplateStudentIcard({ student, templateName, outputMode = "print", setMessage }) {
-  if (typeof templateName !== "string" || templateName !== templateName.split(/[\\/]/).pop() || !/\\.(jpe?g|png)$/i.test(templateName)) {
+  if (typeof templateName !== "string" || templateName !== templateName.split(/[\\/]/).pop() || !/\.(jpe?g|png)$/i.test(templateName)) {
     setMessage?.("Please select a valid I-card template.");
     return;
   }
