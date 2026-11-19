@@ -168,7 +168,7 @@ export default function BulkImportPage() {
             </div>
             <h4>Missing optional information</h4>
             <div className="form-help" style={{ margin: "8px 0 18px" }}>
-              DOB: {preview.missing?.dateOfBirth} · Gender: {preview.missing?.sex} · Father name: {preview.missing?.fatherName} · Address: {preview.missing?.address} · Phone: {preview.missing?.phone} · Form No.: {preview.missing?.formNo} · Qualification: {preview.missing?.qualification}
+              DOB: {preview.missing?.dateOfBirth} · Gender: {preview.missing?.sex} · Father name: {preview.missing?.fatherName} · Address: {preview.missing?.address} · Phone: {preview.missing?.phone} · Form No.: {preview.missing?.formNo} · Qualification: {preview.missing?.qualification} · DOB outside expected range: {preview.missing?.dobOutsideExpectedRange} · DOB after admission: {preview.missing?.dobAfterAdmission}
             </div>
             {(preview.duplicateRegistrationCodes > 0 || preview.duplicateFormNumbers > 0 || preview.invalidRows > 0) && (
               <div className="form-help" style={{ padding: 12, borderRadius: 8, background: "rgba(217,119,6,.08)", marginBottom: 16 }}>
