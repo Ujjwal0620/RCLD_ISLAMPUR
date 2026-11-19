@@ -55,12 +55,57 @@ function splitNameMarkup(value, lastNameColor, diploma) {
 
 function idNumberMarkup(value) {
   const safe = escapeHtml(value || "—");
-  const match = safe.match(/^(.*\/)(\d+)$/);
+  const islMatch = safe.match(/^(.*\\bISL\\/)(.+)$/i);
+  if (islMatch) {
+    return islMatch[1] + '<span class="id-number-tail">' + islMatch[2] + "</span>";
+  }
+  const match = safe.match(/^(.*\\/)(\\d+)$/);
   return match ? match[1] + '<span class="id-number-tail">' + match[2] + "</span>" : safe;
 }
 
 function titleCase(value) {
-  return String(value || "").toLocaleLowerCase().replace(/(^|[\s'-])([a-z])/g, (_, prefix, letter) => prefix + letter.toUpperCase());
+  return String(value || "").toLocaleLowerCase().replace(/(^|[\\s'-])([a-z])/g, (_, prefix, letter) => prefix + letter.toUpperCase());
+}
+
+function getAddressMarkup(student) {
+  const addressSource = firstValue(student.presentAddress, student.address, student.completeAddress, student.permanentAddress);
+  const addressObject = addressSource && typeof addressSource === "object" ? addressSource : {};
+  const values = { ward: [], po: [], ps: [], district: [] };
+  const add = (key, value) => {
+    const text = String(value ?? "").trim();
+    if (text && !values[key].some((item) => item.toLowerCase() === text.toLowerCase())) values[key].push(text);
+  };
+  const pick = (...items) => firstValue(...items);
+
+  add("ward", pick(addressObject.ward, addressObject.wardNo, addressObject.colony, addressObject.village, addressObject.vill,
+    student.ward, student.wardNo, student.colony, student.village, student.vill));
+  add("po", pick(addressObject.po, addressObject.postOffice, addressObject.post_office, student.po, student.postOffice, student.post_office));
+  add("ps", pick(addressObject.ps, addressObject.policeStation, addressObject.police_station, student.ps, student.policeStation, student.police_station));
+  add("district", pick(addressObject.district, student.district));
+
+  if (typeof addressSource === "string") {
+    const parts = addressSource.split(/[,\\n]+/).map((part) => part.trim()).filter(Boolean);
+    parts.forEach((part, index) => {
+      const match = part.match(/^(ward(?:\\s*no)?|colony|village|vill|po|post\\s*office|ps|police\\s*station|district)\\s*[-:]\\s*(.*)$/i);
+      if (match) {
+        const label = match[1].toLowerCase().replace(/\\s+/g, "");
+        const key = ["ward", "wardno", "colony", "village", "vill"].includes(label) ? "ward"
+          : ["po", "postoffice"].includes(label) ? "po"
+          : ["ps", "policestation"].includes(label) ? "ps" : "district";
+        add(key, match[2]);
+      } else if (!values.ward.length && index === 0) add("ward", part);
+      else if (!values.po.length && index === 1) add("po", part);
+      else if (!values.district.length && index >= 2) add("district", part);
+    });
+  }
+
+  const lines = [
+    values.ward.join(", "),
+    [values.po.join(", "), values.ps.join(", ")].filter(Boolean).join(", "),
+    values.district.join(", "),
+  ].filter(Boolean);
+  if (!lines.length && addressSource && typeof addressSource !== "object") lines.push(String(addressSource).trim());
+  return lines.map((line) => '<div class="address-line">' + escapeHtml(line) + "</div>").join("");
 }
 
 function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
@@ -71,7 +116,7 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
   const icardNumber = firstValue(student.icardNumber, student.iCardNumber, student.idCardNumber, student.cardNumber, student.studentId, student.enrollmentNo, student.admissionNo, "—");
   const registrationNumber = firstValue(student.registrationNumber, student.registrationNo, student.registrationId, student.regNo, student.regnNo, student.formNo, "—");
   const fatherName = titleCase(firstValue(student.fatherOrHusbandName, student.fatherName, student.fatherNameAsPerRecords, student.guardianName, "—"));
-  const address = firstValue(student.presentAddress, student.address, student.completeAddress, student.permanentAddress, "—");
+  const addressMarkup = getAddressMarkup(student);
   const admission = getAdmissionDate(student) || "—";
   const photo = photoUrl
     ? '<img class="student-photo" src="' + escapeHtml(photoUrl) + '" alt="Student photograph">'
@@ -83,7 +128,7 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
       '<div class="overlay diploma-id">' + idNumberMarkup(icardNumber) + '</div>' +
       '<div class="overlay diploma-name">' + nameMarkup + '</div>' +
       '<div class="overlay diploma-father">' + escapeHtml(fatherName) + '</div>' +
-      '<div class="overlay diploma-address">' + escapeHtml(address) + '</div>' +
+      '<div class="overlay diploma-address">' + addressMarkup + '</div>' +
       '<div class="overlay diploma-course">' + escapeHtml(courseName || firstValue(student.courseName, student.course?.name, student.courseCode, "")) + '</div>' +
       '<div class="overlay diploma-admission">' + escapeHtml(admission) + '</div>'
     : '<div class="overlay circular-name">' + nameMarkup + '</div>' +
@@ -91,7 +136,7 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
       '<div class="overlay circular-registration">' + escapeHtml(registrationNumber) + '</div>' +
       '<div class="overlay circular-admission">' + escapeHtml(admission) + '</div>' +
       '<div class="overlay circular-father">' + escapeHtml(fatherName) + '</div>' +
-      '<div class="overlay circular-address">' + escapeHtml(address) + '</div>';
+      '<div class="overlay circular-address">' + addressMarkup + '</div>';
 
   return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
     '<title>RCLD I-Card - ' + escapeHtml(fullName) + '</title><style>' +
@@ -107,7 +152,7 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     '.circular-name{top:49.6%;left:5%;width:90%;text-align:center;font-weight:800;font-size:clamp(14px,3.1cqw,22px);text-transform:uppercase;letter-spacing:.4px;line-height:1.1;white-space:nowrap}' +
     '.circular-id,.circular-registration,.circular-admission,.circular-father,.circular-address{left:46.8%;width:49%;font-weight:600;font-size:clamp(9px,2.3cqw,13px);line-height:1.15;text-align:left}' +
     '.circular-id{top:61.5%}.circular-registration{top:64.4%}.circular-admission{top:67.2%}.circular-father{top:70%}' +
-    '.circular-address{top:72.8%;width:48%;line-height:1.32;word-break:break-word;overflow-wrap:anywhere}' +
+    '.circular-address{top:72.8%;width:48%;line-height:1.32;word-break:break-word;overflow-wrap:anywhere}.address-line{display:block;min-height:0}' +
     '.id-number-tail{font-weight:800}' +
     '.diploma .student-photo{top:34.2%;left:32.1%;transform:none;width:35.8%;height:25%;aspect-ratio:auto;border-radius:10px;object-fit:cover}' +
     '.diploma .overlay{font-size:clamp(8px,2.1cqw,13px);line-height:1.15;color:#1E242B}' +
@@ -115,7 +160,7 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     '.diploma-id{top:13%;left:72%;font-weight:700}' +
     '.diploma-name{top:62.5%;left:16.5%;width:80%;font-size:clamp(11px,2.6cqw,16px);font-weight:800;text-transform:uppercase;white-space:nowrap}' +
     '.diploma-father{top:66.2%;left:31%;width:66%;font-weight:600}' +
-    '.diploma-address{top:69.2%;left:20.5%;width:75%;line-height:1.3;font-weight:600;white-space:normal;overflow-wrap:anywhere}' +
+    '.diploma-address{top:69.2%;left:20.5%;width:75%;line-height:1.3;font-weight:600;white-space:normal;overflow-wrap:anywhere}.diploma-address .address-line{display:block}' +
     '.diploma-course{top:77.6%;left:19%;width:76%;font-weight:700}.diploma-admission{top:81.8%;left:29.5%;width:68%;font-weight:600}' +
     '@media screen{body{padding:24px 0;background:#e9edf3}.card{box-shadow:0 2px 14px #0002}}' +
     '@media print{html,body{width:54mm!important;height:85.6mm!important;min-height:0!important;margin:0!important;padding:0!important;overflow:hidden!important}body{display:block!important}.card{width:54mm!important;height:85.6mm!important;aspect-ratio:auto!important;max-width:none!important;margin:0!important;box-shadow:none!important;container-type:inline-size}}' +
