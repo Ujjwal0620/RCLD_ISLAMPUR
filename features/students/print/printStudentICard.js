@@ -13,12 +13,18 @@ import {
 } from "@/features/students/print/studentIcardHelpers";
 import { buildCfkStudentIcardMarkup } from "@/features/students/print/buildCfkStudentIcardMarkup";
 import { buildStandardStudentIcardMarkup } from "@/features/students/print/buildStandardStudentIcardMarkup";
+import { printTemplateStudentIcard } from "@/features/students/print/printTemplateStudentIcard";
 
-export async function printStudentICard(student, setMessage, selectedSemester = "", outputMode = "print") {
+export async function printStudentICard(student, setMessage, selectedSemester = "", outputMode = "print", selectedTemplate = "") {
   if (!student || !isIcardEligible(student)) {
     setMessage(
       "I-Card is unavailable until all required details are complete and admission is not pending."
     );
+    return;
+  }
+
+  if (selectedTemplate) {
+    await printTemplateStudentIcard({ student, templateName: selectedTemplate, outputMode, setMessage });
     return;
   }
 
