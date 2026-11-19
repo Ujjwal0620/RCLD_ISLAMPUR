@@ -147,7 +147,7 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     '.template-background{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;z-index:0}' +
     '.student-photo{position:absolute;z-index:1;top:20.3%;left:50%;transform:translateX(-50%);width:38.6%;aspect-ratio:1/1;height:auto;border-radius:50%;object-fit:cover;object-position:center;display:block}' +
     '.photo-empty{background:transparent}' +
-    '.overlay{position:absolute;z-index:2;font-family:"Arial Narrow",Arial,sans-serif;color:#3E454C;overflow:hidden}' +
+    '.overlay{position:absolute;z-index:2;font-family:Arial,"Helvetica Neue","Liberation Sans",sans-serif;color:#3E454C;overflow:hidden}' +
     '.circular-name{top:49.5%;left:4%;width:92%;text-align:center;font-weight:800;font-size:clamp(18px,5.5cqw,64px);text-transform:uppercase;letter-spacing:.3px;line-height:1.05;white-space:nowrap}' +
     '.circular-id,.circular-registration,.circular-admission,.circular-father,.circular-address{left:46.8%;width:49%;font-weight:700;font-size:clamp(12px,2.75cqw,36px);line-height:1.15;text-align:left;color:#3E454C}' +
     '.circular-id{top:61.5%}.circular-registration{top:64.4%}.circular-admission{top:67.2%}.circular-father{top:70%}' +
