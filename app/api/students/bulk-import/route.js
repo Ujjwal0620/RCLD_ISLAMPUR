@@ -194,6 +194,7 @@ function readSourceRows(workbook) {
       whatsappNumber: phones[0] || "",
       guardianContactNumber: phones[1] || "",
       sourceQualification: clean(get("qualification")),
+      sourcePhone: clean(get("phone")),
       formNo: clean(get("formNo")),
       admissionDate: dateValue(get("admissionDate")),
       course: clean(get("course")),
@@ -226,7 +227,8 @@ function previewSummary(parsedRows) {
     formNo: parsedRows.filter(item => !item.row.formNo).length,
     qualification: parsedRows.filter(item => !item.row.sourceQualification).length,
     dobOutsideExpectedRange: parsedRows.filter(item => { const year = Number(String(item.row.dateOfBirth || "").slice(0, 4)); return year && (year < 1900 || year > new Date().getFullYear()); }).length,
-    dobAfterAdmission: parsedRows.filter(item => item.row.dateOfBirth && item.row.admissionDate && item.row.dateOfBirth > item.row.admissionDate).length
+    dobAfterAdmission: parsedRows.filter(item => item.row.dateOfBirth && item.row.admissionDate && item.row.dateOfBirth > item.row.admissionDate).length,
+    phoneWithInvalidDigits: parsedRows.filter(item => item.row.sourcePhone.split(/[;,]/).some(part => { const value = digits(part); return value && value.length !== 10; })).length
   };
   return {
     totalRows: parsedRows.length,
