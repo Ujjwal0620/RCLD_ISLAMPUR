@@ -7,7 +7,7 @@ import { getStudentAdmissionStatus } from "@/lib/student-admission-status";
 
 const StudentSchema = new mongoose.Schema({
   formNo:{type:String,default:"",trim:true},
-  aecCode:String,regnNo:String,enrollmentNo:String,admissionDate:String,guardianContactNumber:String,dueAmount:mongoose.Schema.Types.Mixed,paymentStatus:mongoose.Schema.Types.Mixed,sourceCourseLabel:String,importSource:String,courseName:String,courseCode:String,batchId:{type:mongoose.Schema.Types.ObjectId,ref:"Batch",default:null},batchCode:String,
+  aecCode:String,regnNo:String,enrollmentNo:String,admissionDate:String,guardianContactNumber:String,dueAmount:mongoose.Schema.Types.Mixed,paymentStatus:mongoose.Schema.Types.Mixed,sourceCourseLabel:String,importSource:String,sourceStudentName:String,sourceSex:String,sourceQualification:String,sourceAddressRaw:String,courseName:String,courseCode:String,batchId:{type:mongoose.Schema.Types.ObjectId,ref:"Batch",default:null},batchCode:String,
   applicantName:{type:String,default:"",trim:true},nationality:String,dateOfBirth:String,sex:String,
   fatherOrHusbandName:String,address:String,presentAddress:String,permanentAddress:String,sameAsPresentAddress:Boolean,postOffice:String,policeStation:String,nearestLandmark:String,district:String,state:String,permanentPostOffice:String,permanentNearestLandmark:String,permanentPin:String,permanentDistrict:String,permanentState:String,pin:String,whatsappNumber:String,
   mobileNumber:{type:String,default:"",trim:true},
@@ -44,7 +44,7 @@ export async function PATCH(req,{params}){
     if(body.batchId!==undefined && String(body.batchId||"")!==String(current.batchId||"")) return NextResponse.json({error:"Use the Batch Movement workflow to shift, drop out, or rejoin a student so the complete footprint is preserved."},{status:409});
     if(body.status!==undefined && String(body.status||"")!==String(current.status||"")) return NextResponse.json({error:"Use the Batch Movement workflow for status changes so every movement receives a remark and audit footprint."},{status:409});
     const allowed=[
-      "formNo","aecCode","regnNo","enrollmentNo","admissionDate","guardianContactNumber","dueAmount","paymentStatus","sourceCourseLabel","importSource","courseName","courseCode","applicantName","nationality","dateOfBirth","sex","fatherOrHusbandName",
+      "formNo","aecCode","regnNo","enrollmentNo","admissionDate","guardianContactNumber","dueAmount","paymentStatus","sourceCourseLabel","importSource","sourceStudentName","sourceSex","sourceQualification","sourceAddressRaw","courseName","courseCode","applicantName","nationality","dateOfBirth","sex","fatherOrHusbandName",
       "address","presentAddress","permanentAddress","sameAsPresentAddress","postOffice","policeStation","nearestLandmark","district","state","permanentPostOffice","permanentNearestLandmark","permanentPin","permanentDistrict","permanentState","pin","whatsappNumber","guardianContactNumber","mobileNumber","email","aadhaarNumber","referralId","referralName","marketingEmployeeId","marketingEmployeeName","qualifications","batchId","batchCode",
       "enclosures","declarationDate","declarationPlace","signatureApplicant","signatureUrl","photoUrl","currentSemester","semesterStatus","semesterHistory","status"
     ];
@@ -80,6 +80,7 @@ export async function PATCH(req,{params}){
     if(body.guardianContactNumber!==undefined && guardian && !/^\\d{10}$/.test(guardian))return NextResponse.json({error:"Guardian mobile number must contain exactly 10 digits."},{status:400});
     if(body.whatsappNumber!==undefined && whatsapp && !/^\\d{10}$/.test(whatsapp))return NextResponse.json({error:"WhatsApp number must contain exactly 10 digits."},{status:400});
     if(body.mobileNumber!==undefined)update.mobileNumber=mobileNumber;
+    if(body.photoUrl && !String(body.photoUrl).startsWith("https://res.cloudinary.com/"))return NextResponse.json({error:"Student photo must be uploaded to Cloudinary."},{status:400});
     if(body.signatureUrl && !String(body.signatureUrl).startsWith("https://res.cloudinary.com/"))return NextResponse.json({error:"Student signature must be uploaded to Cloudinary."},{status:400});
     if(body.email!==undefined)update.email=email;
     if(body.aadhaarNumber!==undefined)update.aadhaarNumber=aadhaarNumber;
