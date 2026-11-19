@@ -1,16 +1,4 @@
-const TEMPLATE_FILES = [
-  "ID Card Diploma.jpg",
-  "ID Card Robotics 1st year.jpg",
-  "ID Card Robotics 2nd year.jpg",
-  "ID Card Robotics 3rd year.jpg",
-  "ID Card School Course.jpg",
-  "ID Card Sem-1.jpg",
-  "ID Card Sem-2.jpg",
-  "ID Card Sem-3.jpg",
-  "ID Card Sem-4.jpg",
-  "ID Card Sem-5.jpg",
-  "ID Card Sem-6.jpg",
-];
+
 
 const escapeHtml = (value) => String(value ?? "—").replace(/[&<>"']/g, (char) => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
@@ -90,7 +78,7 @@ ${semesterText ? `<div class="semester-tag">${escapeHtml(semesterText)}</div>` :
 }
 
 export async function printTemplateStudentIcard({ student, templateName, outputMode = "print", setMessage }) {
-  if (!TEMPLATE_FILES.includes(templateName)) {
+  if (typeof templateName !== "string" || templateName !== templateName.split(/[\\/]/).pop() || !/\\.(jpe?g|png)$/i.test(templateName)) {
     setMessage?.("Please select a valid I-card template.");
     return;
   }
@@ -145,4 +133,3 @@ export async function printTemplateStudentIcard({ student, templateName, outputM
   }
 }
 
-export { TEMPLATE_FILES };
