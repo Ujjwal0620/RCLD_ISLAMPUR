@@ -18,6 +18,8 @@ export default function StudentEditPanel({
   saveStudent,
   indiaLocations,
   setMessage,
+  uploadStudentPhoto,
+  photoUploading,
 }) {
   if (!editing) return null;
 
@@ -34,6 +36,27 @@ export default function StudentEditPanel({
                     </div>
                   </div>
                   <form onSubmit={saveStudent}>
+                    <div className="edit-card student-photo-edit-card" style={{ marginBottom: 16 }}>
+                      <h4>Student Photograph</h4>
+                      <div style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
+                        <div style={{ width: 112, height: 132, borderRadius: 12, border: "1px solid var(--border-color,#dbe2ec)", background: "var(--surface-muted,#f4f6fa)", display: "grid", placeItems: "center", overflow: "hidden" }}>
+                          {editForm.photoUrl ? <img src={editForm.photoUrl} alt="Student photograph preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 12, opacity: .65 }}>No photo</span>}
+                        </div>
+                        <div>
+                          <label className="form-field">
+                            <span>{editForm.photoUrl ? "Change student photo" : "Upload student photo"}</span>
+                            <input type="file" accept="image/jpeg,image/png,image/webp" disabled={photoUploading} onChange={event => {
+                              const file = event.target.files?.[0];
+                              if (file) uploadStudentPhoto(file);
+                              event.target.value = "";
+                            }} />
+                          </label>
+                          <p className="form-help" style={{ marginTop: 7 }}>JPG, PNG or WebP · maximum 5 MB · stored securely in Cloudinary.</p>
+                          {photoUploading && <p className="form-help">Uploading photograph…</p>}
+                          {editForm.photoUrl && <span className="form-help">Save Changes to apply the new photo to the student profile.</span>}
+                        </div>
+                      </div>
+                    </div>
                     <div className="student-edit-grid">
                       <StudentIdentityRegistrationFields editForm={editForm} setEditForm={setEditForm} />
                     <StudentCourseFeeFields editForm={editForm} setEditForm={setEditForm} courses={courses} batches={batches} />
