@@ -13,7 +13,7 @@ const StudentSchema = new mongoose.Schema({
   sameAsPresentAddress: Boolean, postOffice: String, policeStation: String, district: String,
   state: String, pin: String, sourceAddressRaw: String, mobileNumber: String, whatsappNumber: String,
   guardianContactNumber: String, sourceQualification: String, photoUrl: String, status: String,
-  importSource: String, sourceRowNo: Number, batchId: mongoose.Schema.Types.ObjectId, batchCode: String
+  importSource: String, sourceRowNo: Number, sourceRowKey: String, batchId: mongoose.Schema.Types.ObjectId, batchCode: String
 }, { timestamps: true, strict: false });
 const Student = mongoose.models.Student || mongoose.model("Student", StudentSchema);
 let formNoIndexMigration;
@@ -216,6 +216,7 @@ function readSourceRows(workbook) {
       course: clean(get("course")),
       sourceRowNo: index + 1
     };
+    row.sourceRowKey = [row.regnNo, row.formNo, row.applicantName.toLowerCase(), row.admissionDate, row.course.toUpperCase()].join("|");
     const errors = [];
     if (!row.regnNo) errors.push("St_Code is blank.");
     if (!row.applicantName) errors.push("St_Name is blank.");
@@ -315,9 +316,9 @@ export async function POST(request) {
         whatsappNumber: row.whatsappNumber, guardianContactNumber: row.guardianContactNumber,
         sourceQualification: row.sourceQualification, sourcePhone: row.sourcePhone, courseCode: course.code,
         courseName: course.name, sourceCourseLabel: row.course, admissionDate: row.admissionDate,
-        importSource: sourceName, sourceRowNo: row.sourceRowNo
+        importSource: sourceName, sourceRowNo: row.sourceRowNo, sourceRowKey: row.sourceRowKey
       };
-      const identityFilters = [{ importSource: sourceName, sourceRowNo: row.sourceRowNo }];
+      const identityFilters = [{ importSource: sourceName, sourceRowKey: row.sourceRowKey }];
       if (row.formNo) identityFilters.push({
         regnNo: row.regnNo, formNo: row.formNo, applicantName: row.applicantName,
         admissionDate: row.admissionDate, courseCode: course.code
