@@ -54,13 +54,16 @@ function splitNameMarkup(value, lastNameColor, diploma) {
 }
 
 function idNumberMarkup(value) {
-  const safe = escapeHtml(value || "—");
-  const markerIndex = safe.toUpperCase().lastIndexOf("ISL/");
+  const raw = String(value || "—");
+  const markerIndex = raw.toUpperCase().lastIndexOf("ISL/");
   if (markerIndex >= 0) {
-    const prefix = safe.slice(0, markerIndex + 4);
-    const suffix = safe.slice(markerIndex + 4);
-    return prefix + (suffix ? '<span class="id-number-tail">' + suffix + "</span>" : "");
+    const before = escapeHtml(raw.slice(0, markerIndex));
+    const marker = escapeHtml(raw.slice(markerIndex, markerIndex + 4));
+    const suffix = escapeHtml(raw.slice(markerIndex + 4));
+    return before + '<span class="id-number-prefix">' + marker + '</span>' +
+      (suffix ? '<span class="id-number-tail">' + suffix + "</span>" : "");
   }
+  const safe = escapeHtml(raw);
   const match = safe.match(/^(.*\/)(\d+)$/);
   return match ? match[1] + '<span class="id-number-tail">' + match[2] + "</span>" : safe;
 }
@@ -152,16 +155,16 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     '.student-photo{position:absolute;z-index:1;top:20.3%;left:50%;transform:translateX(-50%);width:38.6%;aspect-ratio:1/1;height:auto;border-radius:50%;object-fit:cover;object-position:center;display:block}' +
     '.photo-empty{background:transparent}' +
     '.overlay{position:absolute;z-index:2;font-family:"Arial Narrow",Arial,sans-serif;color:#3E454C;overflow:hidden}' +
-    '.circular-name{top:49.6%;left:5%;width:90%;text-align:center;font-weight:800;font-size:clamp(15px,3.4cqw,24px);text-transform:uppercase;letter-spacing:.4px;line-height:1.1;white-space:nowrap}' +
-    '.circular-id,.circular-registration,.circular-admission,.circular-father,.circular-address{left:46.8%;width:49%;font-weight:600;font-size:clamp(9px,2.3cqw,13px);line-height:1.15;text-align:left}.circular-id{font-size:clamp(10px,2.6cqw,15px)}' +
+    '.circular-name{top:49.6%;left:5%;width:90%;text-align:center;font-weight:800;font-size:20px;text-transform:uppercase;letter-spacing:.4px;line-height:1.1;white-space:nowrap}' +
+    '.circular-id,.circular-registration,.circular-admission,.circular-father,.circular-address{left:46.8%;width:49%;font-weight:600;font-size:clamp(11px,2.7cqw,15px);line-height:1.15;text-align:left}.circular-id{font-size:clamp(12px,2.9cqw,17px)}' +
     '.circular-id{top:61.5%}.circular-registration{top:64.4%}.circular-admission{top:67.2%}.circular-father{top:70%}' +
     '.circular-address{top:72.8%;width:48%;line-height:1.32;word-break:break-word;overflow-wrap:anywhere}.address-line{display:block;min-height:0}' +
-    '.id-number-tail{font-weight:800}' +
+    '.id-number-prefix{font-weight:400!important}.id-number-tail{font-weight:900!important}' +
     '.diploma .student-photo{top:34.2%;left:32.1%;transform:none;width:35.8%;height:25%;aspect-ratio:auto;border-radius:10px;object-fit:cover}' +
-    '.diploma .overlay{font-size:clamp(8px,2.1cqw,13px);line-height:1.15;color:#1E242B}' +
+    '.diploma .overlay{font-size:clamp(10px,2.4cqw,15px);line-height:1.15;color:#1E242B}' +
     '.diploma-registration{top:2.5%;left:38.5%;font-weight:700}.diploma-session{top:2.5%;left:87.5%;font-weight:700}' +
-    '.diploma-id{top:13%;left:72%;font-weight:700;font-size:clamp(9px,2.4cqw,14px)}' +
-    '.diploma-name{top:62.5%;left:16.5%;width:80%;font-size:clamp(12px,2.9cqw,18px);font-weight:800;text-transform:uppercase;white-space:nowrap}' +
+    '.diploma-id{top:13%;left:72%;font-weight:700;font-size:clamp(11px,2.7cqw,16px)}' +
+    '.diploma-name{top:62.5%;left:16.5%;width:80%;font-size:20px;font-weight:800;text-transform:uppercase;white-space:nowrap}' +
     '.diploma-father{top:66.2%;left:31%;width:66%;font-weight:600}' +
     '.diploma-address{top:69.2%;left:20.5%;width:75%;line-height:1.3;font-weight:600;white-space:normal;overflow-wrap:anywhere}.diploma-address .address-line{display:block}' +
     '.diploma-course{top:77.6%;left:19%;width:76%;font-weight:700}.diploma-admission{top:81.8%;left:29.5%;width:68%;font-weight:600}' +
