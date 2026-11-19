@@ -95,7 +95,8 @@ function getAddressMarkup(student) {
         add(key, match[2]);
       } else if (!values.ward.length && index === 0) add("ward", part);
       else if (!values.po.length && index === 1) add("po", part);
-      else if (!values.district.length && index >= 2) add("district", part);
+      else if (parts.length >= 4 && !values.ps.length && index === 2) add("ps", part);
+      else if (!values.district.length && index >= (parts.length >= 4 ? 3 : 2)) add("district", part);
     });
   }
 
