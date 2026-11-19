@@ -16,6 +16,17 @@ const StudentSchema = new mongoose.Schema({
   importSource: String, sourceRowNo: Number, batchId: mongoose.Schema.Types.ObjectId, batchCode: String
 }, { timestamps: true, strict: false });
 const Student = mongoose.models.Student || mongoose.model("Student", StudentSchema);
+let formNoIndexMigration;
+async function removeLegacyFormNoUniqueIndex() {
+  if (!formNoIndexMigration) {
+    formNoIndexMigration = (async () => {
+      const indexes = await Student.collection.indexes();
+      const legacyIndex = indexes.find(index => index.name === "formNo_1" && index.unique);
+      if (legacyIndex) await Student.collection.dropIndex(legacyIndex.name);
+    })();
+  }
+  await formNoIndexMigration;
+}
 
 const FeeSchema = new mongoose.Schema({
   studentId: { type: mongoose.Schema.Types.ObjectId, unique: true, index: true },
@@ -274,6 +285,7 @@ export async function POST(request) {
     if (mode !== "import") return NextResponse.json({ ...summary, message: "Spreadsheet preview is ready. Review the mapping before importing." });
     if (!summary.validRows) return NextResponse.json({ error: "No valid student rows were found.", ...summary }, { status: 400 });
 
+    await removeLegacyFormNoUniqueIndex();
     const sourceName = String(file.name || "RCLD Student Import.xlsx").slice(0, 180);
     const validRows = parsedRows.filter(item => item.errors.length === 0);
     const courseCodes = [...new Set(validRows.map(item => {
@@ -296,7 +308,7 @@ export async function POST(request) {
         policeStation: row.policeStation, district: row.district, pin: row.pin,
         sourceAddressRaw: row.sourceAddressRaw, mobileNumber: row.mobileNumber,
         whatsappNumber: row.whatsappNumber, guardianContactNumber: row.guardianContactNumber,
-        sourceQualification: row.sourceQualification, courseCode: course.code,
+        sourceQualification: row.sourceQualification, sourcePhone: row.sourcePhone, courseCode: course.code,
         courseName: course.name, sourceCourseLabel: row.course, admissionDate: row.admissionDate,
         importSource: sourceName, sourceRowNo: row.sourceRowNo
       };
