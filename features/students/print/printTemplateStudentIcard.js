@@ -125,7 +125,7 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
 }
 
 export async function printTemplateStudentIcard({ student, templateName, outputMode = "print", setMessage }) {
-  if (typeof templateName !== "string" || templateName !== templateName.split(/[\\/]/).pop() || !TEMPLATE_CONFIG[templateName]) {
+  if (typeof templateName !== "string" || templateName !== templateName.split(/[\\/]/).pop() || !/\\.(jpe?g|png)$/i.test(templateName)) {
     setMessage?.("Please select a valid I-card template.");
     return;
   }
@@ -145,7 +145,7 @@ export async function printTemplateStudentIcard({ student, templateName, outputM
       return;
     }
     win.document.open();
-    win.document.write(html.replace("</body>", '<script>window.addEventListener("load",()=>setTimeout(()=>window.print(),300));</script></body>'));
+    win.document.write(html.replace("</body>", '<script>window.addEventListener("load",async()=>{await Promise.all([...document.images].map((img)=>img.decode?img.decode().catch(()=>{}):Promise.resolve()));setTimeout(()=>window.print(),150);});</script></body>'));
     win.document.close();
     return;
   }
