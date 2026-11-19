@@ -141,13 +141,13 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     '<title>RCLD I-Card - ' + escapeHtml(fullName) + '</title><style>' +
     '@page{size:54mm 85.6mm;margin:0}' +
     '*{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}' +
-    'html,body{margin:0;padding:0;background:#fff;font-family:'Arial','Helvetica Neue','Liberation Sans',sans-serif}' +
+    'html,body{margin:0;padding:0;background:#fff;font-family:Arial,"Helvetica Neue","Liberation Sans",sans-serif}' +
     'body{width:100%;min-height:100vh;display:flex;justify-content:center;align-items:flex-start}' +
     '.card{position:relative;width:min(100vw,640px);aspect-ratio:640/1016;overflow:hidden;container-type:inline-size;background:#fff;isolation:isolate;color:#3E454C}' +
     '.template-background{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;z-index:0}' +
     '.student-photo{position:absolute;z-index:1;top:20.3%;left:50%;transform:translateX(-50%);width:38.6%;aspect-ratio:1/1;height:auto;border-radius:50%;object-fit:cover;object-position:center;display:block}' +
     '.photo-empty{background:transparent}' +
-    '.overlay{position:absolute;z-index:2;font-family:'Arial','Helvetica Neue','Liberation Sans',sans-serif;color:#3E454C;overflow:hidden}' +
+    '.overlay{position:absolute;z-index:2;font-family:Arial,"Helvetica Neue","Liberation Sans",sans-serif;color:#3E454C;overflow:hidden}' +
     '.circular-name{top:48.8%;left:3%;width:94%;text-align:center;font-weight:800;font-size:clamp(20px,6.3cqw,80px);text-transform:uppercase;letter-spacing:.3px;line-height:1.05;white-space:nowrap}' +
     '.circular-id,.circular-registration,.circular-admission,.circular-father,.circular-address{left:46.8%;width:48.5%;font-weight:700;font-size:clamp(13px,3.1cqw,44px);line-height:1.15;text-align:left;color:#3E454C}' +
     '.circular-id{top:61.2%}.circular-registration{top:64.1%}.circular-admission{top:66.9%}.circular-father{top:69.7%}' +
