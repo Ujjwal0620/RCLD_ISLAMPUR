@@ -224,7 +224,9 @@ function previewSummary(parsedRows) {
     address: parsedRows.filter(item => !item.row.address).length,
     phone: parsedRows.filter(item => !item.row.mobileNumber && !item.row.guardianContactNumber).length,
     formNo: parsedRows.filter(item => !item.row.formNo).length,
-    qualification: parsedRows.filter(item => !item.row.sourceQualification).length
+    qualification: parsedRows.filter(item => !item.row.sourceQualification).length,
+    dobOutsideExpectedRange: parsedRows.filter(item => { const year = Number(String(item.row.dateOfBirth || "").slice(0, 4)); return year && (year < 1900 || year > new Date().getFullYear()); }).length,
+    dobAfterAdmission: parsedRows.filter(item => item.row.dateOfBirth && item.row.admissionDate && item.row.dateOfBirth > item.row.admissionDate).length
   };
   return {
     totalRows: parsedRows.length,
@@ -242,7 +244,7 @@ function previewSummary(parsedRows) {
       qualification: item.row.sourceQualification
     })),
     errors: parsedRows.filter(item => item.errors.length).slice(0, 30).map(item => ({
-      row: item.row.sourceRowNo + 1, errors: item.errors
+      row: item.row.sourceRowNo, errors: item.errors
     }))
   };
 }
