@@ -47,7 +47,7 @@ function splitNameMarkup(value, lastNameColor, diploma) {
   const parts = String(value || "").trim().split(/\s+/).filter(Boolean);
   if (!parts.length) return "";
   const last = parts.length > 1 ? parts.pop() : "";
-  const firstColor = diploma ? "#1E242B" : "#3E454C";
+  const firstColor = "#3E454C";
   const leading = parts.map((part) => '<span style="color:' + firstColor + '">' + escapeHtml(part) + "</span>").join(" ");
   if (!last) return '<span style="color:' + firstColor + '">' + escapeHtml(parts[0]) + "</span>";
   return leading + ' <span style="color:' + (diploma ? "#2E3192" : lastNameColor) + '">' + escapeHtml(last) + "</span>";
