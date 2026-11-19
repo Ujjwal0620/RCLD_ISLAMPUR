@@ -20,7 +20,12 @@ let formNoIndexMigration;
 async function removeLegacyFormNoUniqueIndex() {
   if (!formNoIndexMigration) {
     formNoIndexMigration = (async () => {
-      const indexes = await Student.collection.indexes();
+      let indexes = [];
+      try {
+        indexes = await Student.collection.indexes();
+      } catch (error) {
+        if (error.code !== 26 && error.codeName !== "NamespaceNotFound") throw error;
+      }
       const legacyIndex = indexes.find(index => index.name === "formNo_1" && index.unique);
       if (legacyIndex) await Student.collection.dropIndex(legacyIndex.name);
     })();
