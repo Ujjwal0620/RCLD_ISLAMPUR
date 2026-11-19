@@ -9,12 +9,14 @@ export default function StudentProfileStyles() {
             .cfk-template-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;background:rgba(37,99,235,.1);color:#2563eb}
             .cfk-template-heading h2{margin:0;font-size:19px;font-weight:750}.cfk-template-heading p{margin:5px 0 0;font-size:13px;opacity:.7}
             .cfk-template-close{position:absolute;right:0;top:0;border:0;background:transparent;color:inherit;cursor:pointer}
-            .cfk-template-option{width:100%;display:grid;grid-template-columns:150px 1fr auto;align-items:center;gap:18px;padding:14px;border:1px solid var(--border-color,#dce3ee);border-radius:14px;background:rgba(127,127,127,.035);color:inherit;text-align:left;cursor:pointer;transition:border-color .18s,box-shadow .18s}
+            .cfk-template-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;max-height:min(68vh,650px);overflow:auto;padding:2px 4px 4px 2px}
+            .cfk-template-option{min-width:0;display:flex;flex-direction:column;align-items:stretch;gap:10px;padding:12px;border:1px solid var(--border-color,#dce3ee);border-radius:14px;background:rgba(127,127,127,.035);color:inherit;text-align:left;cursor:pointer;transition:border-color .18s,box-shadow .18s}
             .cfk-template-option:hover{border-color:#5677d8;box-shadow:0 8px 22px rgba(49,87,213,.12)}
-            .cfk-template-option img{width:100%;height:210px;object-fit:contain;background:#f4f5f8;border-radius:8px}
-            .cfk-template-option span{display:flex;flex-direction:column;gap:6px}.cfk-template-option small{opacity:.65}
-            .cfk-template-select{padding:9px 13px;border-radius:9px;background:#3157d5;color:white;font-size:12px;font-weight:700;white-space:nowrap}
-            @media(max-width:560px){.cfk-template-dialog{padding:16px}.cfk-template-option{grid-template-columns:100px 1fr;gap:12px}.cfk-template-option img{height:150px}.cfk-template-select{grid-column:1/-1;justify-self:start}}
+            .cfk-template-option img{width:100%;height:230px;object-fit:contain;background:#f4f5f8;border-radius:8px}
+            .cfk-template-option-copy{display:flex;flex-direction:column;gap:4px;min-width:0}
+            .cfk-template-option-copy strong{font-size:13px}.cfk-template-option-copy small{font-size:10px;opacity:.65;overflow-wrap:anywhere}
+            .cfk-template-select{padding:9px 13px;border-radius:9px;background:#3157d5;color:white;font-size:12px;font-weight:700;text-align:center;white-space:nowrap}
+            @media(max-width:560px){.cfk-template-dialog{padding:16px}.cfk-template-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.cfk-template-option{padding:8px}.cfk-template-option img{height:155px}.cfk-template-select{font-size:10px}}
       /* Student profile workspace refinement */
       .student-profile-page{width:100%;max-width:1320px;margin:22px auto 40px;gap:18px}
       .student-profile-page>.detail-section{overflow:hidden;transition:border-color .18s ease,box-shadow .18s ease}
