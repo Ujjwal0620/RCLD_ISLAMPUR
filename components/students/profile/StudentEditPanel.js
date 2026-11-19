@@ -67,7 +67,7 @@ export default function StudentEditPanel({
                       <button type="button" className="ghost-btn" onClick={() => setEditing(false)}>
                         Cancel
                       </button>
-                      <button className="primary-btn">
+                      <button className="primary-btn" disabled={photoUploading}>
                         <Save size={16} /> Save Changes
                       </button>
                     </div>
