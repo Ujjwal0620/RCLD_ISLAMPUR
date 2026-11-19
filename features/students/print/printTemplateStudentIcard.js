@@ -47,7 +47,7 @@ function splitNameMarkup(value, lastNameColor, diploma) {
   const parts = String(value || "").trim().split(/\s+/).filter(Boolean);
   if (!parts.length) return "";
   const last = parts.length > 1 ? parts.pop() : "";
-  const firstColor = "#3E454C";
+  const firstColor = diploma ? "#1E242B" : "#3E454C";
   const leading = parts.map((part) => '<span style="color:' + firstColor + '">' + escapeHtml(part) + "</span>").join(" ");
   if (!last) return '<span style="color:' + firstColor + '">' + escapeHtml(parts[0]) + "</span>";
   return leading + ' <span style="color:' + (diploma ? "#2E3192" : lastNameColor) + '">' + escapeHtml(last) + "</span>";
@@ -141,23 +141,23 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     '<title>RCLD I-Card - ' + escapeHtml(fullName) + '</title><style>' +
     '@page{size:54mm 85.6mm;margin:0}' +
     '*{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}' +
-    'html,body{margin:0;padding:0;background:#fff;font-family:Arial,"Helvetica Neue","Liberation Sans",sans-serif}' +
+    'html,body{margin:0;padding:0;background:#fff;font-family:'Arial','Helvetica Neue','Liberation Sans',sans-serif}' +
     'body{width:100%;min-height:100vh;display:flex;justify-content:center;align-items:flex-start}' +
     '.card{position:relative;width:min(100vw,640px);aspect-ratio:640/1016;overflow:hidden;container-type:inline-size;background:#fff;isolation:isolate;color:#3E454C}' +
     '.template-background{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;z-index:0}' +
     '.student-photo{position:absolute;z-index:1;top:20.3%;left:50%;transform:translateX(-50%);width:38.6%;aspect-ratio:1/1;height:auto;border-radius:50%;object-fit:cover;object-position:center;display:block}' +
     '.photo-empty{background:transparent}' +
-    '.overlay{position:absolute;z-index:2;font-family:Arial,"Helvetica Neue","Liberation Sans",sans-serif;color:#3E454C;overflow:hidden}' +
-    '.circular-name{top:49.5%;left:4%;width:92%;text-align:center;font-weight:800;font-size:clamp(18px,5.5cqw,64px);text-transform:uppercase;letter-spacing:.3px;line-height:1.05;white-space:nowrap}' +
-    '.circular-id,.circular-registration,.circular-admission,.circular-father,.circular-address{left:46.8%;width:49%;font-weight:700;font-size:clamp(12px,3cqw,40px);line-height:1.15;text-align:left;color:#3E454C}' +
-    '.circular-id{top:61.5%}.circular-registration{top:64.4%}.circular-admission{top:67.2%}.circular-father{top:70%}' +
-    '.circular-address{top:72.8%;width:48%;line-height:1.28;word-break:break-word;overflow-wrap:anywhere}.address-line{display:block;min-height:0}' +
-    '.id-number-tail{font-size:3.6cqw;font-weight:800;color:#3E454C}' +
+    '.overlay{position:absolute;z-index:2;font-family:'Arial','Helvetica Neue','Liberation Sans',sans-serif;color:#3E454C;overflow:hidden}' +
+    '.circular-name{top:48.8%;left:3%;width:94%;text-align:center;font-weight:800;font-size:clamp(20px,6.3cqw,80px);text-transform:uppercase;letter-spacing:.3px;line-height:1.05;white-space:nowrap}' +
+    '.circular-id,.circular-registration,.circular-admission,.circular-father,.circular-address{left:46.8%;width:48.5%;font-weight:700;font-size:clamp(13px,3.1cqw,44px);line-height:1.15;text-align:left;color:#3E454C}' +
+    '.circular-id{top:61.2%}.circular-registration{top:64.1%}.circular-admission{top:66.9%}.circular-father{top:69.7%}' +
+    '.circular-address{top:72.5%;width:48.5%;line-height:1.26;word-break:break-word;overflow-wrap:anywhere}.address-line{display:block;min-height:0}' +
+    '.circular-id .id-number-tail{font-size:3.75cqw;font-weight:800;color:#3E454C}' +
     '.diploma .student-photo{top:34.2%;left:32.1%;transform:none;width:35.8%;height:25%;aspect-ratio:auto;border-radius:10px;object-fit:cover}' +
-    '.diploma .overlay{font-size:clamp(12px,3cqw,40px);line-height:1.15;color:#3E454C;font-weight:700}' +
+    '.diploma .overlay{font-size:clamp(12px,2.95cqw,40px);line-height:1.15;color:#1E242B;font-weight:700}' +
     '.diploma-registration{top:2.5%;left:38.5%;font-weight:700}.diploma-session{top:2.5%;left:87.5%;font-weight:700}' +
     '.diploma-id{top:13%;left:72%;font-weight:700;font-size:clamp(12px,3cqw,40px)}' +
-    '.diploma-name{top:62.5%;left:16.5%;width:80%;font-size:clamp(18px,5.5cqw,64px);font-weight:800;text-transform:uppercase;letter-spacing:.3px;line-height:1.05;white-space:nowrap}' +
+    '.diploma-name{top:62.5%;left:16.5%;width:80%;font-size:clamp(15px,3.6cqw,48px);font-weight:800;text-transform:uppercase;letter-spacing:.3px;line-height:1.05;white-space:nowrap;color:#1E242B}' +
     '.diploma-father{top:66.2%;left:31%;width:66%;font-weight:700}' +
     '.diploma-address{top:69.2%;left:20.5%;width:75%;line-height:1.28;font-weight:700;white-space:normal;overflow-wrap:anywhere}.diploma-address .address-line{display:block}' +
     '.diploma-course{top:77.6%;left:19%;width:76%;font-weight:700}.diploma-admission{top:81.8%;left:29.5%;width:68%;font-weight:700}' +
