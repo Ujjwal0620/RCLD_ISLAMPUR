@@ -10,7 +10,7 @@ export default function StudentProfileHero({ student, uploadStudentPhoto, photoU
   const semesterEnrollment = roman
     ? enrollments.find(item => String(item.semesterLabel || "").toUpperCase() === "SM-" + roman)
     : null;
-  const activeEnrollment = semesterEnrollment || student.activeEnrollment || enrollments.find(item => item.status === "ACTIVE");
+  const activeEnrollment = student.activeEnrollment || semesterEnrollment || enrollments.find(item => item.status === "ACTIVE");
   const currentStCode = activeEnrollment?.stCode || student.regnNo || student.enrollmentNo;
   return (
     <section className="student-profile-card student-profile-hero">
