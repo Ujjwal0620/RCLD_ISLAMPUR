@@ -6,7 +6,7 @@ function firstValue(...values) {
 }
 
 function titleCase(value) {
-  return String(value || "").trim().toLocaleLowerCase().replace(/(^|[\\s'-])([a-z])/g, (_, prefix, letter) => prefix + letter.toLocaleUpperCase());
+  return String(value || "").trim().toLocaleLowerCase().replace(/(^|[\s'-])([a-z])/g, (_, prefix, letter) => prefix + letter.toLocaleUpperCase());
 }
 
 function formatAdmissionDate(student) {
@@ -14,10 +14,10 @@ function formatAdmissionDate(student) {
   if (!raw) return "";
   const text = String(raw).trim();
   let year, month, day;
-  let match = text.match(/^(\\d{4})[-/](\\d{1,2})[-/](\\d{1,2})/);
+  let match = text.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
   if (match) [, year, month, day] = match;
   if (!match) {
-    match = text.match(/^(\\d{1,2})[-/](\\d{1,2})[-/](\\d{4})/);
+    match = text.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
     if (match) [, day, month, year] = match;
   }
   if (!match) {
@@ -43,7 +43,7 @@ function getPhotoUrl(student) {
     typeof student.studentPhoto === "string" ? student.studentPhoto : student.studentPhoto?.url || student.studentPhoto?.secure_url,
     student.profilePhoto, student.imageUrl, ""
   );
-  if (raw && /^https:\\/\\//i.test(raw) && /(^|\\.)res\\.cloudinary\\.com$/i.test(new URL(raw).hostname)) {
+  if (raw && /^https:\/\//i.test(raw) && /(^|\.)res\.cloudinary\.com$/i.test(new URL(raw).hostname)) {
     return "/api/icard-photo?url=" + encodeURIComponent(raw);
   }
   if (raw) return raw;
@@ -57,12 +57,12 @@ function getAddressLines(student) {
   const ward = firstValue(
     source.ward, source.wardNo, source.colony, source.village, source.vill,
     student.ward, student.wardNo, student.colony, student.village, student.vill,
-    typeof address === "string" ? address.split(/[,|\\n]+/).map(part => part.trim()).filter(Boolean)[0] : ""
+    typeof address === "string" ? address.split(/[,|\n]+/).map(part => part.trim()).filter(Boolean)[0] : ""
   );
   const po = firstValue(source.po, source.postOffice, source.post_office, student.po, student.postOffice, student.post_office, "");
   const ps = firstValue(source.ps, source.policeStation, source.police_station, student.ps, student.policeStation, student.police_station, "");
   const district = firstValue(source.district, student.district, student.permanentDistrict, "");
-  const clean = value => String(value || "").trim().replace(/^(?:P\\.?\\s*O\\.?|P\\.?\\s*S\\.?|Dist\\.?)\\s*/i, "").trim();
+  const clean = value => String(value || "").trim().replace(/^(?:P\.?\s*O\.?|P\.?\s*S\.?|Dist\.?)\s*/i, "").trim();
   const wardLine = clean(ward);
   const poPsLine = [
     po ? "P.O. " + clean(po) : "",
@@ -120,7 +120,7 @@ function drawPhoto(ctx, image, width, height) {
 }
 
 function drawName(ctx, student, width, height) {
-  const parts = String(firstValue(student.applicantName, student.fullName, student.name, "STUDENT")).trim().split(/\\s+/).filter(Boolean);
+  const parts = String(firstValue(student.applicantName, student.fullName, student.name, "STUDENT")).trim().split(/\s+/).filter(Boolean);
   if (!parts.length) return;
   const surname = parts.length > 1 ? parts.pop() : "";
   const firstNames = parts;
@@ -195,7 +195,7 @@ function drawDetails(ctx, student, width, height) {
 }
 
 export async function renderStudentIcardCanvas(student, templateName) {
-  if (!student || !templateName || /[\\/]/.test(templateName)) {
+  if (!student || !templateName || /[\/]/.test(templateName)) {
     throw new Error("A student and valid ID-card template are required.");
   }
   await document.fonts.ready;
@@ -303,7 +303,7 @@ export function getRecommendedIcardTemplate(student, templates) {
   if (/robotics/.test(course)) {
     const year = Number(firstValue(student?.roboticsYear, student?.courseYear, student?.yearOfCourse, semester, 1));
     expected = `ID Card Robotics ${Math.min(3, Math.max(1, year))}${year === 1 ? "st" : year === 2 ? "nd" : "rd"} year.jpg`;
-  } else if (/coding\\s*for\\s*kids|\\bkids\\b|\\bsm[-_ ]/.test(course) || semester) {
+  } else if (/coding\s*for\s*kids|\bkids\b|\bsm[-_ ]/.test(course) || semester) {
     expected = semester ? `ID Card Sem-${Math.min(6, Math.max(1, semester))}.jpg` : "ID Card Sem-1.jpg";
   } else if (/school/.test(course)) {
     expected = "ID Card School Course.jpg";
