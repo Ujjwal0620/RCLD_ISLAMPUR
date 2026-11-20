@@ -140,16 +140,16 @@ function findStudentSheet(workbook, requestedSheet = "") {
   if (requestedSheet) {
     const selected = compatible.find(item => item.sheetName === requestedSheet);
     if (!selected) throw new Error("Selected worksheet is not a compatible student-data sheet.");
-    return { ...selected, availableSheets: compatible.map(item => item.sheetName) };
+    return { ...selected, availableSheets: workbook.SheetNames || [], studentSheets: compatible.map(item => item.sheetName) };
   }
   const selected = compatible.find(item => /^student\s*data$/i.test(item.sheetName))
     || compatible.find(item => /^st\s*list$/i.test(item.sheetName)) || compatible[0];
   if (!selected) throw new Error("No student worksheet found. Expected St_Code/Regn_No and D_O_A/DOI columns; payment-only sheets are ignored.");
-  return { ...selected, availableSheets: compatible.map(item => item.sheetName) };
+  return { ...selected, availableSheets: workbook.SheetNames || [], studentSheets: compatible.map(item => item.sheetName) };
 }
 
 function parseRows(workbook, requestedSheet = "") {
-  const { sheetName, grid, headerIndex, availableSheets = [] } = findStudentSheet(workbook, requestedSheet);
+  const { sheetName, grid, headerIndex, availableSheets = [], studentSheets = [] } = findStudentSheet(workbook, requestedSheet);
   const headers = grid[headerIndex].map(headerKey);
   const indexFor = key => headers.findIndex(header => aliases[key].includes(header));
   const indexes = Object.fromEntries(Object.keys(aliases).map(key => [key, indexFor(key)]));
@@ -181,7 +181,7 @@ function parseRows(workbook, requestedSheet = "") {
       warnings, errors
     });
   }
-  return { sheetName, availableSheets, rows };
+  return { sheetName, availableSheets, studentSheets, rows };
 }
 
 function previewPayload(parsed) {
@@ -189,6 +189,7 @@ function previewPayload(parsed) {
   return {
     sheetName: parsed.sheetName,
     availableSheets: parsed.availableSheets || [parsed.sheetName],
+    studentSheets: parsed.studentSheets || [parsed.sheetName],
     totalRows: parsed.rows.length,
     validRows: valid.length,
     invalidRows: parsed.rows.length - valid.length,
