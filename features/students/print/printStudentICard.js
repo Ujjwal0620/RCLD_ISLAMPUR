@@ -15,14 +15,34 @@ import { buildCfkStudentIcardMarkup } from "@/features/students/print/buildCfkSt
 import { buildStandardStudentIcardMarkup } from "@/features/students/print/buildStandardStudentIcardMarkup";
 import { printTemplateStudentIcard } from "@/features/students/print/printTemplateStudentIcard";
 
-function resolveActiveEnrollmentStudent(student) {
+function resolveActiveEnrollmentStudent(student, selectedTemplate = "") {
   const enrollments = Array.isArray(student?.enrollments) ? student.enrollments : [];
   const roman = ["I", "II", "III", "IV", "V", "VI"][Number(student?.currentSemester || 0) - 1] || "";
   const isKids = /coding\s*for\s*kids|\bCFK\b|\bKIDS\b/i.test(String(student?.courseName || student?.courseCode || ""));
   const semesterEnrollment = isKids && roman
     ? enrollments.find(item => String(item.semesterLabel || "").toUpperCase() === "SM-" + roman)
     : null;
-  const activeEnrollment = student?.activeEnrollment || semesterEnrollment || enrollments.find(item => item.status === "ACTIVE");
+  const templateName = String(selectedTemplate || "").toUpperCase();
+  const templateSemester = templateName.match(/SEM[- ]?(\\d)/);
+  const templateYear = templateName.match(/(1ST|2ND|3RD)\\s*YEAR/);
+  const templateSemesterRoman = templateSemester
+    ? ["I", "II", "III", "IV", "V", "VI"][Number(templateSemester[1]) - 1] : "";
+  let templateEnrollment = templateSemesterRoman
+    ? enrollments.find(item => String(item.semesterLabel || "").toUpperCase() === "SM-" + templateSemesterRoman
+      || new RegExp("SEM[- ]?" + templateSemester[1], "i").test(String(item.semesterLabel || "")))
+    : null;
+  if (!templateEnrollment && templateYear) {
+    const yearNumber = { "1ST": 1, "2ND": 2, "3RD": 3 }[templateYear[1]];
+    templateEnrollment = enrollments.find(item =>
+      new RegExp("YEAR[- ]?" + yearNumber, "i").test(String(item.semesterLabel || ""))
+    );
+    if (!templateEnrollment) {
+      const roboticsEnrollments = enrollments.filter(item => String(item.courseCode || "").toUpperCase() === "ROBOTICS")
+        .sort((a, b) => new Date(a.admissionDate || 0) - new Date(b.admissionDate || 0));
+      templateEnrollment = roboticsEnrollments[yearNumber - 1] || null;
+    }
+  }
+  const activeEnrollment = templateEnrollment || student?.activeEnrollment || semesterEnrollment || enrollments.find(item => item.status === "ACTIVE");
   if (!activeEnrollment) return student;
   const semesterRoman = String(activeEnrollment.semesterLabel || "").toUpperCase().match(/SM[- ]?(I|II|III|IV|V|VI)\b/);
   const semesterIndex = semesterRoman ? ["I", "II", "III", "IV", "V", "VI"].indexOf(semesterRoman[1]) + 1 : 0;
@@ -72,7 +92,7 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
     return;
   }
 
-  student = resolveActiveEnrollmentStudent(student);
+  student = resolveActiveEnrollmentStudent(student, selectedTemplate);
 
   if (selectedTemplate) {
     await printTemplateStudentIcard({ student, templateName: selectedTemplate, outputMode, setMessage });
