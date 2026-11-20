@@ -5,6 +5,13 @@ import RCLDLogo from "@/components/RCLDLogo";
 import { formatDisplayValue as value } from "@/lib/formatters";
 
 export default function StudentProfileHero({ student, uploadStudentPhoto, photoUploading }) {
+  const enrollments = Array.isArray(student.enrollments) ? student.enrollments : [];
+  const roman = ["I", "II", "III", "IV", "V", "VI"][Number(student.currentSemester || 0) - 1] || "";
+  const semesterEnrollment = roman
+    ? enrollments.find(item => String(item.semesterLabel || "").toUpperCase() === "SM-" + roman)
+    : null;
+  const activeEnrollment = semesterEnrollment || student.activeEnrollment || enrollments.find(item => item.status === "ACTIVE");
+  const currentStCode = activeEnrollment?.stCode || student.regnNo || student.enrollmentNo;
   return (
     <section className="student-profile-card student-profile-hero">
       <div className="student-profile-brand">
@@ -56,7 +63,7 @@ export default function StudentProfileHero({ student, uploadStudentPhoto, photoU
         <div className="eyebrow">STUDENT RECORD / REGISTRATION</div>
         <h2>{student.applicantName}</h2>
         <p>
-          St_Code {value(student.regnNo || student.enrollmentNo)} · {value(student.courseName)} · {value(student.mobileNumber)}
+          St_Code {value(currentStCode)} · {value(student.courseName)} · {value(student.mobileNumber)}
         </p>
       </div>
       <span className="badge profile-status">{value(student.status)}</span>
