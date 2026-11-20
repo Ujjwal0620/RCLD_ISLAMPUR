@@ -174,8 +174,11 @@ export default function useStudentProfile(params) {
       const fd = await fr.json();
       if (!fr.ok) return setMessage(fd.error || "Student saved, but fee mapping failed.");
       setFee(fd.fee);
-      setStudent(d.student);
-      setEditForm(d.student);
+      const refreshedProfile = await fetch("/api/students/" + student._id, { cache: "no-store" });
+      const refreshedData = refreshedProfile.ok ? await refreshedProfile.json() : null;
+      const savedStudent = refreshedData?.student || d.student;
+      setStudent(savedStudent);
+      setEditForm(savedStudent);
       setEditing(false);
       setMessage("Student profile and course fee mapping updated successfully.");
     }
