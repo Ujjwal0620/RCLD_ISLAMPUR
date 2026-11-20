@@ -173,16 +173,17 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     'body{width:100%;min-height:100vh;display:flex;justify-content:center;align-items:flex-start}' +
     '.card{position:relative;width:min(100vw,640px);aspect-ratio:640/1016;overflow:hidden;container-type:inline-size;background:#fff;isolation:isolate;color:#3E454C}' +
     '.template-background{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;z-index:0}' +
-    '.student-photo{position:absolute;z-index:2;top:20.3%;left:50%;transform:translateX(-50%);width:38.6%;aspect-ratio:1/1;height:auto;border-radius:50%;object-fit:cover;object-position:center;display:block}' +
+    '.student-photo{position:absolute;z-index:2;top:var(--photo-top,20.3%);left:var(--photo-left,50%);transform:translateX(-50%);width:var(--photo-width,38.6%);aspect-ratio:1/1;height:auto;border-radius:50%;object-fit:cover;object-position:center;display:block}' +
+    '.circular-name{top:var(--name-top,48.8%);left:var(--name-left,3%);width:var(--name-width,94%);text-align:center;font-weight:800;font-size:clamp(20px,6.3cqw,80px);text-transform:uppercase;letter-spacing:.3px;line-height:1.05;white-space:nowrap}' +
     '.photo-empty{background:transparent}' +
     '.overlay{position:absolute;z-index:2;font-family:Arial,"Helvetica Neue","Liberation Sans",sans-serif;color:#3E454C;overflow:hidden}' +
     '.template-background-canvas{position:absolute;inset:0;width:100%;height:100%;z-index:0;display:block}' +
-    '.template-label-mask{position:absolute;z-index:1;top:59.7%;left:2.5%;width:42.5%;height:15.4%;pointer-events:none}' +
+    '.template-label-mask{position:absolute;z-index:1;top:var(--mask-top,59.7%);left:var(--mask-left,2.5%);width:var(--mask-width,42.5%);height:var(--mask-height,15.4%);pointer-events:none}' +
     '.template-fields{position:absolute;z-index:3;top:0;left:0;width:100%;height:100%;font-family:Arial,"Helvetica Neue","Liberation Sans",sans-serif;color:#222}' +
-    '.template-row{position:absolute;left:0;width:100%;display:grid;grid-template-columns:41.5% 48.5%;column-gap:1.3%;align-items:baseline;font-size:clamp(13px,3.1cqw,44px);line-height:1.12;font-weight:400}' +
-    '.template-label{text-align:right;white-space:nowrap;color:var(--template-label-color);font-weight:400}' +
-    '.template-value{text-align:left;min-width:0;overflow:hidden;color:#222;font-weight:400;white-space:nowrap}' +
-    '.template-row-id{top:61.2%}.template-row-admission{top:66.9%}.template-row-father{top:69.7%}.template-row-address{top:72.5%;align-items:start}' +
+    '.template-row{position:absolute;left:0;width:100%;font-size:clamp(13px,3.1cqw,44px);line-height:1.12;font-weight:400}' +
+    '.template-label{position:absolute;left:3.2%;width:42.3%;text-align:right;white-space:nowrap;color:var(--template-label-color);font-weight:400}' +
+    '.template-value{position:absolute;left:46.8%;width:48.5%;text-align:left;min-width:0;overflow:hidden;color:#222;font-weight:400;white-space:nowrap}' +
+    '.template-row-id{top:var(--row-id-top,61.2%)}.template-row-admission{top:var(--row-admission-top,66.9%)}.template-row-father{top:var(--row-father-top,69.7%)}.template-row-address{top:var(--row-address-top,72.5%);align-items:start}' +
     '.template-row-id .id-number-prefix{font-size:3.1cqw;font-weight:400;color:#222;white-space:nowrap}' +
     '.template-row-id .id-number-code{font-size:3.1cqw;font-weight:700;color:#222;white-space:nowrap}' +
     '.template-row-address .template-value{white-space:normal;line-height:1.26;word-break:normal;overflow-wrap:anywhere;font-size:clamp(11px,2.75cqw,38px)}' +
@@ -206,7 +207,9 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     photo + overlays + '</main><script>' +
     'window.__prepareRcldTemplate=async function(){const card=document.querySelector(".card");const source=document.querySelector(".template-background-source");if(source.decode)await source.decode();else if(!source.complete)await new Promise((r,j)=>{source.onload=r;source.onerror=j});if(!source.naturalWidth)throw new Error("Template image could not be loaded.");const canvas=document.querySelector(".template-background-canvas");const ctx=canvas.getContext("2d",{willReadFrequently:true});canvas.width=source.naturalWidth;canvas.height=source.naturalHeight;ctx.drawImage(source,0,0);' +
     (diploma ? '' : 'const mode=' + JSON.stringify(config.maskMode) + ';const x=Math.round(canvas.width*0.025),y=Math.round(canvas.height*0.597),w=Math.round(canvas.width*0.425),h=Math.round(canvas.height*0.154);if(mode==="white"){ctx.fillStyle="#FFFFFF";ctx.fillRect(x,y,w,h)}else{const strip=ctx.getImageData(Math.min(x+w,canvas.width-1),y,1,h);const pixels=strip.data;for(let row=0;row<h;row++){ctx.fillStyle="rgba("+pixels[row*4]+","+pixels[row*4+1]+","+pixels[row*4+2]+","+pixels[row*4+3]/255+")";ctx.fillRect(x,y+row,w,1)}}') +
-    'source.remove();};document.querySelector(".card").style.setProperty("--template-label-color",' + JSON.stringify(config.labelColor || "#2E3192") + ');</script></body></html>';
+    'source.remove();};const card=document.querySelector(".card");card.style.setProperty("--template-label-color",' + JSON.stringify(config.labelColor || "#2E3192") + ');' +
+    (!diploma ? 'const c=' + JSON.stringify(config.coordinates) + ';card.style.setProperty("--photo-top",c.photo.top+"%");card.style.setProperty("--photo-left",c.photo.left+"%");card.style.setProperty("--photo-width",c.photo.width+"%");card.style.setProperty("--name-top",c.name.top+"%");card.style.setProperty("--name-left",c.name.left+"%");card.style.setProperty("--name-width",c.name.width+"%");card.style.setProperty("--mask-top",c.labelMask.top+"%");card.style.setProperty("--mask-left",c.labelMask.left+"%");card.style.setProperty("--mask-width",c.labelMask.width+"%");card.style.setProperty("--mask-height",c.labelMask.height+"%");card.style.setProperty("--row-id-top",c.rows.id+"%");card.style.setProperty("--row-admission-top",c.rows.admission+"%");card.style.setProperty("--row-father-top",c.rows.father+"%");card.style.setProperty("--row-address-top",c.rows.address+"%");' : '') +
+    '</script></body></html>';
 }
 
 export async function printTemplateStudentIcard({ student, templateName, outputMode = "print", setMessage }) {
