@@ -55,7 +55,7 @@ export default function StudentEditPanel({
                           </label>
                           <p className="form-help" style={{ marginTop: 7 }}>JPG, PNG or WebP · maximum 5 MB · stored securely in Cloudinary.</p>
                           {photoUploading && <p className="form-help">Uploading photograph…</p>}
-                          {editForm.photoUrl && <span className="form-help">Save Changes to apply the new photo to the student profile.</span>}
+                          {editForm.photoUrl && <span className="form-help">The photograph is saved to this student profile immediately after upload.</span>}
                         </div>
                       </div>
                     </div>
