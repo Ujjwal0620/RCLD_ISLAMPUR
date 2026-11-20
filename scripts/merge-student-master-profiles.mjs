@@ -107,8 +107,28 @@ async function main() {
   if (!process.env.MONGODB_URI) throw new Error("MONGODB_URI is required. Use --env-file=.env.");
   await mongoose.connect(process.env.MONGODB_URI);
   const students = await Student.find({}).sort({ admissionDate: 1, createdAt: 1, _id: 1 }).lean();
-  const existing = await StudentMaster.find({}).lean();
-  const groups = existing.map(master => ({ ...master, _existing: true }));
+  const existing = await StudentMaster.find({}).sort({ createdAt: 1, _id: 1 }).lean();
+  const groups = [];
+  for (const master of existing) {
+    const match = findIdentityMatch({
+      fullName: master.fullName || master.normalizedFullName,
+      dob: master.dob, fatherName: master.fatherName, phoneNumbers: master.phoneNumbers || [],
+    }, groups);
+    if (match.match) {
+      const canonical = match.match;
+      canonical.duplicateMasterIds = [...new Set([...(canonical.duplicateMasterIds || []), master._id])];
+      canonical.legacyStudentIds = [...new Map([...(canonical.legacyStudentIds || []), ...(master.legacyStudentIds || [])].map(id => [String(id), id])).values()];
+      canonical.stCodes = [...new Set([...(canonical.stCodes || []), ...(master.stCodes || [])])];
+      canonical.phoneNumbers = [...new Set([...(canonical.phoneNumbers || []), ...(master.phoneNumbers || [])])];
+      canonical.address = canonical.address || master.address;
+      canonical.qualification = canonical.qualification || master.qualification;
+      canonical.photoUrl = canonical.photoUrl || master.photoUrl;
+      canonical.activeEnrollmentId = canonical.activeEnrollmentId || master.activeEnrollmentId;
+      canonical.identityWarnings = [...new Set([...(canonical.identityWarnings || []), ...(master.identityWarnings || [])])];
+    } else {
+      groups.push({ ...master, _existing: true, duplicateMasterIds: [] });
+    }
+  }
   const assignments = [];
   let ambiguous = 0, newGroups = 0;
   const ambiguousSamples = [];
@@ -126,7 +146,7 @@ async function main() {
     const group = {
       _id: "NEW-" + String(student._id), ...identityOf(student),
       normalizedFullName: normalizeName(identityOf(student).fullName),
-      legacyStudentIds: [], stCodes: [], _existing: false,
+      legacyStudentIds: [], stCodes: [], duplicateMasterIds: [], _existing: false,
       identityWarnings: match.ambiguous ? ["Ambiguous identity candidates; not merged automatically."] : [],
     };
     groups.push(group);
@@ -168,6 +188,38 @@ async function main() {
         legacyStudentIds: [], stCodes: [],
       });
       idMap.set(String(group._id), master._id);
+    }
+  }
+  for (const group of groups.filter(item => item._existing && item.duplicateMasterIds?.length)) {
+    const canonicalId = idMap.get(String(group._id));
+    for (const duplicateId of group.duplicateMasterIds) {
+      const duplicateEnrollments = await StudentEnrollment.find({ studentId: duplicateId }).lean();
+      for (const duplicateEnrollment of duplicateEnrollments) {
+        const canonicalEnrollment = await StudentEnrollment.findOne({
+          studentId: canonicalId, stCode: duplicateEnrollment.stCode,
+          normalizedFullName: duplicateEnrollment.normalizedFullName,
+        }).lean();
+        if (canonicalEnrollment) {
+          await mongoose.connection.collection("student_fee_payments").updateMany(
+            { enrollmentId: duplicateEnrollment._id },
+            { $set: { studentId: canonicalId, enrollmentId: canonicalEnrollment._id } }
+          );
+          if ((!canonicalEnrollment.installments || !canonicalEnrollment.installments.length)
+            && duplicateEnrollment.installments?.length) {
+            await StudentEnrollment.updateOne({ _id: canonicalEnrollment._id }, {
+              $set: { installments: duplicateEnrollment.installments, feeConfig: duplicateEnrollment.feeConfig,
+                summary: duplicateEnrollment.summary }
+            });
+          }
+          await StudentEnrollment.deleteOne({ _id: duplicateEnrollment._id });
+        } else {
+          await StudentEnrollment.updateOne({ _id: duplicateEnrollment._id }, { $set: { studentId: canonicalId } });
+        }
+      }
+      await mongoose.connection.collection("student_fee_payments").updateMany(
+        { studentId: duplicateId }, { $set: { studentId: canonicalId } }
+      );
+      await StudentMaster.deleteOne({ _id: duplicateId });
     }
   }
   for (const { student, group } of assignments) {
