@@ -151,27 +151,6 @@ export async function GET(request) {
       if (value === "no") filter.$and = [...(filter.$and || []), { $or: [{ [field]: { $exists: false } }, { [field]: "" }, { [field]: null }] }];
     }
 
-    if (searchParams.get("icardEligible") === "1") {
-      // Keep the directory inclusive. The print templates can render optional
-      // details as blanks/fallbacks; requiring every admission-form field hid
-      // almost all existing students from the I-card directory.
-      filter.$and = [
-        ...(filter.$and || []),
-        { applicantName: { $exists: true, $nin: ["", null] } },
-        {
-          $or: [
-            { enrollmentNo: { $exists: true, $nin: ["", null] } },
-            { studentId: { $exists: true, $nin: ["", null] } },
-            { admissionNo: { $exists: true, $nin: ["", null] } },
-            { regnNo: { $exists: true, $nin: ["", null] } },
-            { formNo: { $exists: true, $nin: ["", null] } },
-          ],
-        },
-        // Keep pending/cancelled records visible in the directory; printing is
-        // separately disabled for these statuses in the UI and print helper.
-      ];
-    }
-
     const qualification = (searchParams.get("qualification") || "").trim();
     if (qualification) {
       const qualificationRx = new RegExp(escapeRegex(qualification), "i");
