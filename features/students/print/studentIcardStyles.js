@@ -55,7 +55,6 @@ export function getStudentIcardStyles(cardHeight = "88mm") {
     .cfk-student-name { font-family:Arial,Helvetica,sans-serif;font-weight:800;letter-spacing:0;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:clip;text-transform:uppercase; }
     .cfk-fname { color:#44515A; }
     .cfk-lname { color:#F6801E; }
-    .cfk-course-name { margin-top:1.2mm;font-size:2.05mm;font-weight:700;letter-spacing:.1mm;color:#44515A;text-transform:uppercase; }
     .cfk-details { position:absolute;top:51.2mm;left:3mm;right:3mm;width:auto;box-sizing:border-box;z-index:4;font-size:1.78mm;line-height:1.22;color:#44515A; }
     .cfk-row { display:flex;align-items:baseline;margin-bottom:.35mm; }
     .cfk-lbl { width:16.5mm;flex:0 0 16.5mm;text-align:right;padding-right:1mm;font-weight:700;color:#F6801E;white-space:nowrap; }
@@ -86,9 +85,9 @@ export function getStudentIcardStyles(cardHeight = "88mm") {
                 .card.std>.bg{position:absolute;inset:0;width:55mm;height:88mm;display:block;z-index:1;pointer-events:none}.card.std{position:relative;display:block;width:55mm;height:88mm;min-width:55mm;max-width:55mm;min-height:88mm;max-height:88mm;margin:0;padding:0;overflow:hidden;box-sizing:border-box;background:#fff;break-inside:avoid;page-break-inside:avoid}.std{font-family:"Times New Roman",Times,Georgia,serif;color:#111;z-index:2}
         
                 .std-id{position:absolute;left:1.8mm;top:3.8mm;width:18.5mm;text-align:center;z-index:3}
-                .std-id .l{font-size:2.15mm;line-height:1.15;font-weight:700;color:#111}
-                .std-id .p{font-size:2.05mm;line-height:1.2;font-weight:700;color:#111;word-break:break-all}
-                .std-id .n{font-size:3.1mm;line-height:1.15;font-weight:800;color:#111;margin-top:.1mm}
+                .std-id .l{font-size:2.15mm;line-height:1.15;font-weight:800;color:#111}
+                .std-id .p{display:none}
+                .std-id .n{font-size:2.15mm;line-height:1.15;font-weight:900;color:#111;margin-top:.1mm;white-space:nowrap;letter-spacing:-.08mm}
         
                 .std-logo{position:absolute;left:21.25mm;top:1.5mm;width:12.5mm;height:14.2mm;object-fit:contain;z-index:3}
         
@@ -108,7 +107,6 @@ export function getStudentIcardStyles(cardHeight = "88mm") {
                 .std-details span{font-size:1.8mm;font-weight:700;color:#111;min-width:0}
                 .std-details .nm{font-weight:800;letter-spacing:.02mm}
                 .std-details .ad{font-size:1.65mm;font-weight:700;line-height:1.9mm;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-                .std-details .crs{font-size:2.05mm;font-weight:700;line-height:2.3mm;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
         
                 .std-sign{position:absolute;right:1.8mm;top:70.2mm;width:13.5mm;text-align:center;z-index:3}
                 .std-sign small{display:block;font-family:Arial,sans-serif;font-size:1.55mm;font-weight:700;color:#111;line-height:1.15;margin-top:.1mm;white-space:nowrap}
