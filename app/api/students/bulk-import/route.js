@@ -312,7 +312,11 @@ export async function POST(request) {
 
     await removeLegacyFormNoUniqueIndex();
     const sourceName = String(file.name || "RCLD Student Import.xlsx").slice(0, 180);
-    const validRows = parsedRows.filter(item => item.errors.length === 0);
+    const rawValidRows = parsedRows.filter(item => item.errors.length === 0);
+    const uniqueRowsByIdentity = new Map();
+    for (const item of rawValidRows) uniqueRowsByIdentity.set(item.row.sourceRowKey, item);
+    const validRows = [...uniqueRowsByIdentity.values()];
+    const duplicateIdentityRowsSkipped = rawValidRows.length - validRows.length;
     const courseCodes = [...new Set(validRows.map(item => {
       const normalized = item.row.course.toUpperCase().replace(/_/g, "-").trim();
       const match = normalized.match(/^([A-Z0-9]+)(?:-|$)/);
@@ -384,7 +388,8 @@ export async function POST(request) {
       message: "Student import completed. Imported data is ready for profile review.",
       totalRows: summary.totalRows, imported: validRows.length,
       created: writeResult.upsertedCount || 0, matched: writeResult.matchedCount || 0,
-      skipped: summary.invalidRows, errors: summary.errors,
+      skipped: summary.invalidRows + duplicateIdentityRowsSkipped,
+      duplicateIdentityRowsSkipped, errors: summary.errors,
       duplicateRegistrationCodes: summary.duplicateRegistrationCodes,
       duplicateFormNumbers: summary.duplicateFormNumbers, missing: summary.missing,
       masterProfilesLinked: masterLinkSummary.linked,
