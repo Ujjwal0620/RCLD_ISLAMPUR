@@ -306,7 +306,9 @@ export async function POST(request) {
       ...summary, paymentSheet: paymentSheetSummary,
       message: "Spreadsheet preview is ready. Review both student and receipt worksheets before importing."
     });
-    if (!summary.validRows) return NextResponse.json({ error: "No valid student rows were found.", ...summary }, { status: 400 });
+    if (!summary.validRows && !paymentPreview.rows.length) {
+      return NextResponse.json({ error: "No valid student rows or payment receipts were found.", ...summary, paymentSheet: paymentSheetSummary }, { status: 400 });
+    }
 
     await removeLegacyFormNoUniqueIndex();
     const sourceName = String(file.name || "RCLD Student Import.xlsx").slice(0, 180);
