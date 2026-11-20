@@ -169,6 +169,7 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     '.diploma .overlay:not(.diploma-name){font-family:"Roboto Condensed","Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;font-size:clamp(13px,3.25cqw,44px);line-height:1.15;color:#1E242B;font-weight:700;transform:scaleY(1.10);transform-origin:left center}' +
     '.diploma-session{top:2.5%;left:87.5%;font-weight:700}' +
     '.diploma-id{top:13%;left:72%;font-weight:900;font-size:clamp(13px,3.25cqw,44px)}' +
+    '.diploma-id .id-number-prefix{font-weight:400}.diploma-id .id-number-code{font-weight:700}' +
     '.diploma-name{top:62.5%;left:16.5%;width:80%;font-size:clamp(15px,3.6cqw,48px);font-weight:800;text-transform:uppercase;letter-spacing:.3px;line-height:1.05;white-space:nowrap;color:#1E242B}' +
     '.diploma-father{top:66.2%;left:31%;width:66%;font-weight:700}' +
     '.diploma-address{top:74.7%;left:20.5%;width:75%;line-height:1.1;font-weight:700;white-space:normal;overflow-wrap:anywhere;font-size:clamp(11px,2.8cqw,36px)}.diploma-address .address-line{display:block}' +
