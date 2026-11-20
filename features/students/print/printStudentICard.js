@@ -91,7 +91,7 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
   );
   const photoUrl = rawPhoto ? esc(rawPhoto) : "";
   const photoImg = photoUrl
-    ? `<img class="photo-img" src="${photoUrl}" alt="Student photo"/>`
+    ? `<img class="photo-img" crossorigin="anonymous" src="${photoUrl}" alt="Student photo"/>`
     : '<div class="photo-ph">PHOTO</div>';
   const logoUrl = new URL("/assets/logo.png", window.location.origin).href;
   // Use the actual Student model fields from the registration API.
@@ -181,7 +181,7 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
     window.addEventListener("load", async () => {
       await Promise.all(
         [...document.images].map((img) =>
-          img.decode ? img.decode().catch(() => {}) : Promise.resolve()
+          img.decode ? img.decode() : new Promise((resolve, reject) => { if (img.complete && img.naturalWidth > 0) resolve(); else { img.onload = resolve; img.onerror = () => reject(new Error("An I-card image could not be loaded.")); } })
         )
       );
       setTimeout(() => window.print(), 300);
@@ -257,7 +257,7 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
         .replace(/[^a-z0-9]+/gi, "-")
         .replace(/^-|-$/g, "");
       const enrollment = String(
-        student.enrollmentNo || student.studentId || student.admissionNo || student.regnNo || student.formNo || ""
+        student.regnNo || student.enrollmentNo || student.studentId || student.admissionNo || student.formNo || ""
       ).replace(/[^a-z0-9-]+/gi, "");
       const link = document.createElement("a");
       link.href = jpgDataUrl;
