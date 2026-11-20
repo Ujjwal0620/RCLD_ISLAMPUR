@@ -6,6 +6,12 @@ export function buildStandardStudentIcardMarkup({
             // ===== STANDARD (ALL OTHER COURSES) : Exact Match to Sample 2 =====
             const fullName = String(student.applicantName || "").trim().toUpperCase();
             const stdNameSizeMm = Math.min(2.65, 34.5 / Math.max(fullName.length * 0.58, 1)).toFixed(2);
+            const rawIdNumber = String(idNumber || "—");
+            const idPrefix = "RCLD/ISL-001/";
+            const idCode = rawIdNumber.toUpperCase().startsWith(idPrefix)
+              ? rawIdNumber.slice(idPrefix.length)
+              : rawIdNumber;
+            const idMarkup = '<span class="id-number-prefix">' + idPrefix + '</span><strong class="id-number-code">' + idCode + '</strong>';
       
             // Format 3-line uppercase address exactly like Sample 2:
             // Line 1: VILL. MALIN GAON,
@@ -50,7 +56,7 @@ export function buildStandardStudentIcardMarkup({
                 <!-- Top Row: Left ID Block, Center Crest Logo, Right Session Block -->
                 <div class="std-id">
                   <div class="l">ID No.</div>
-                  <div class="n">${idNumber || "—"}</div>
+                  <div class="n">${idMarkup}</div>
                 </div>
       
                 <img class="std-logo" src="${logoUrl}" alt="RCLD logo"/>
