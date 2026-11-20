@@ -163,15 +163,15 @@ export async function PATCH(req,{params}){
     if(update.applicantName!==undefined)update.applicantName=String(update.applicantName).trim();
     if(update.mobileNumber!==undefined)update.mobileNumber=String(update.mobileNumber).trim();
     const email=String(body.email ?? "").trim().toLowerCase();
-    const aadhaarNumber=String(body.aadhaarNumber ?? "").replace(/\\D/g, "");
-    if(email && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))return NextResponse.json({error:"Enter a valid email address."},{status:400});
-    if(aadhaarNumber && !/^\\d{12}$/.test(aadhaarNumber))return NextResponse.json({error:"Aadhaar number must contain exactly 12 digits."},{status:400});
-    const mobileNumber=String(body.mobileNumber ?? "").replace(/\\D/g,"");
-    const guardian=String(body.guardianContactNumber||"").replace(/\\D/g,"");
-    const whatsapp=String(body.whatsappNumber||"").replace(/\\D/g,"");
-    if(body.mobileNumber!==undefined && mobileNumber && !/^\\d{10}$/.test(mobileNumber))return NextResponse.json({error:"Mobile number must contain exactly 10 digits."},{status:400});
-    if(body.guardianContactNumber!==undefined && guardian && !/^\\d{10}$/.test(guardian))return NextResponse.json({error:"Guardian mobile number must contain exactly 10 digits."},{status:400});
-    if(body.whatsappNumber!==undefined && whatsapp && !/^\\d{10}$/.test(whatsapp))return NextResponse.json({error:"WhatsApp number must contain exactly 10 digits."},{status:400});
+    const aadhaarNumber=String(body.aadhaarNumber ?? "").replace(/\D/g, "");
+    if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return NextResponse.json({error:"Enter a valid email address."},{status:400});
+    if(aadhaarNumber && !/^\d{12}$/.test(aadhaarNumber))return NextResponse.json({error:"Aadhaar number must contain exactly 12 digits."},{status:400});
+    const mobileNumber=String(body.mobileNumber ?? "").replace(/\D/g,"");
+    const guardian=String(body.guardianContactNumber||"").replace(/\D/g,"");
+    const whatsapp=String(body.whatsappNumber||"").replace(/\D/g,"");
+    if(body.mobileNumber!==undefined && mobileNumber && !/^\d{10}$/.test(mobileNumber))return NextResponse.json({error:"Mobile number must contain exactly 10 digits."},{status:400});
+    if(body.guardianContactNumber!==undefined && guardian && !/^\d{10}$/.test(guardian))return NextResponse.json({error:"Guardian mobile number must contain exactly 10 digits."},{status:400});
+    if(body.whatsappNumber!==undefined && whatsapp && !/^\d{10}$/.test(whatsapp))return NextResponse.json({error:"WhatsApp number must contain exactly 10 digits."},{status:400});
     if(body.mobileNumber!==undefined)update.mobileNumber=mobileNumber;
     if(body.photoUrl && !String(body.photoUrl).startsWith("https://res.cloudinary.com/"))return NextResponse.json({error:"Student photo must be uploaded to Cloudinary."},{status:400});
     if(body.signatureUrl && !String(body.signatureUrl).startsWith("https://res.cloudinary.com/"))return NextResponse.json({error:"Student signature must be uploaded to Cloudinary."},{status:400});
@@ -188,18 +188,18 @@ export async function PATCH(req,{params}){
       const masterFields = {
         fullName: student.applicantName || student.sourceStudentName || "Student",
         normalizedFullName: String(student.applicantName || student.sourceStudentName || "Student")
-          .normalize("NFKC").replace(/_\\d+\\s*$/, "").toUpperCase().replace(/\\s+/g, " ").replace(/[',.]+$/, "").trim(),
+          .normalize("NFKC").replace(/_\d+\s*$/, "").toUpperCase().replace(/\s+/g, " ").replace(/[',.]+$/, "").trim(),
         dob: student.dateOfBirth && !Number.isNaN(new Date(student.dateOfBirth).getTime()) ? new Date(student.dateOfBirth) : undefined,
         fatherName: student.fatherOrHusbandName || "",
-        normalizedFatherName: String(student.fatherOrHusbandName || "").toUpperCase().replace(/[^A-Z0-9 ]/g, " ").replace(/\\s+/g, " ").trim(),
+        normalizedFatherName: String(student.fatherOrHusbandName || "").toUpperCase().replace(/[^A-Z0-9 ]/g, " ").replace(/\s+/g, " ").trim(),
         address: student.presentAddress || student.address || student.permanentAddress || "",
         phoneNumbers: [...new Set([student.mobileNumber, student.guardianContactNumber, student.whatsappNumber]
-          .map(value => String(value || "").replace(/\\D/g, "").slice(-10))
+          .map(value => String(value || "").replace(/\D/g, "").slice(-10))
           .filter(value => value.length === 10))],
         qualification: student.sourceQualification || "",
         ...(update.photoUrl !== undefined ? { photoUrl: update.photoUrl } : {}),
       };
-      const stCode = String(student.regnNo || student.enrollmentNo || "").replace(/\\.0$/, "").trim();
+      const stCode = String(student.regnNo || student.enrollmentNo || "").replace(/\.0$/, "").trim();
       const master = await StudentMaster.findOne({ legacyStudentIds: student._id });
       if (master) {
         const nonEmptyMasterFields = Object.fromEntries(Object.entries(masterFields).filter(([key, value]) =>
