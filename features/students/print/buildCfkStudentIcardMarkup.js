@@ -18,7 +18,7 @@ export function buildCfkStudentIcardMarkup({
   const date = safe(issueDate || "—");
   const addr = safe(address || "—");
   const photo = photoUrl
-    ? '<img class="cfk-photo" src="' + safe(photoUrl) + '" alt="Student photo"/>'
+    ? '<img class="cfk-photo" crossorigin="anonymous" src="' + safe(photoUrl) + '" alt="Student photo"/>'
     : '<div class="cfk-photo cfk-photo-empty">PHOTO</div>';
   const sem = safe(String(semester).replace(/[^0-9]/g, "") || "1");
 
