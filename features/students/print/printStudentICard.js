@@ -31,7 +31,9 @@ function resolveActiveEnrollmentStudent(student) {
     regnNo: activeEnrollment.stCode || student.regnNo,
     enrollmentNo: activeEnrollment.stCode || student.enrollmentNo,
     courseCode: activeEnrollment.courseCode || student.courseCode,
-    courseName: activeEnrollment.courseName || activeEnrollment.courseCode || student.courseName,
+    courseName: activeEnrollment.courseName
+      || (String(student.courseCode || "").toUpperCase() === String(activeEnrollment.courseCode || "").toUpperCase()
+        ? student.courseName : activeEnrollment.courseCode),
     currentSemester: semesterIndex || Number(String(activeEnrollment.semesterLabel || student.currentSemester || "").match(/\\d+/)?.[0] || student.currentSemester || 1),
     admissionDate: activeEnrollment.admissionDate || student.admissionDate,
     activeEnrollment,
