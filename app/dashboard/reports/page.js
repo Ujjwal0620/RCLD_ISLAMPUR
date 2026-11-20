@@ -30,19 +30,71 @@ const groups=[
 
 function ExportMenu(){const[open,setOpen]=useState(false);return <div className="report-export"><button className="report-export-btn" onClick={()=>setOpen(!open)}><Download size={16}/>Export</button>{open&&<div className="report-export-menu"><button onClick={()=>window.print()}><FileText size={15}/>PDF / Print document</button><button><FileSpreadsheet size={15}/>Excel workbook</button><button><FileSpreadsheet size={15}/>CSV detailed data</button><button onClick={()=>window.print()}><Printer size={15}/>Print report</button></div>}</div>}
 
+function reportDataType(group,name){
+ const n=name.toLowerCase();
+ if(group.id==="students"||group.id==="movement")return "students";
+ if(group.id==="payments")return n.includes("collection")||n.includes("payment history")?"collections":"fees";
+ if(group.id==="batches"||group.id==="timetable")return "batches";
+ if(group.id==="employees"||group.id==="faculty")return "employees";
+ if(group.id==="attendance")return n.includes("employee")?"employee-attendance":"student-attendance";
+ if(group.id==="tasks")return "tasks";
+ return "overview";
+}
+
 function ReportDocument({group,name,onBack}){
+ const [from,setFrom]=useState(new Date(new Date().getFullYear(),new Date().getMonth(),1).toISOString().slice(0,10));
+ const [to,setTo]=useState(new Date().toISOString().slice(0,10));
+ const [course,setCourse]=useState("");
+ const [data,setData]=useState(null);
+ const [loading,setLoading]=useState(false);
+ const [error,setError]=useState("");
+ const [ai,setAi]=useState("");
+ const [aiLoading,setAiLoading]=useState(false);
+ const type=reportDataType(group,name);
  const today=new Date().toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"});
+ async function generate(){
+  setLoading(true);setError("");setAi("");
+  try{
+   const params=new URLSearchParams({type,from,to});if(course)params.set("course",course);
+   const response=await fetch("/api/reports/data?"+params.toString(),{cache:"no-store"});
+   const result=await response.json();
+   if(!response.ok)throw new Error(result.error||"Report generation failed.");
+   setData(result);
+  }catch(e){setError(e.message);setData(null)}finally{setLoading(false)}
+ }
+ function exportCsv(){
+  if(!data?.rows?.length)return;
+  const columns=[...new Set(data.rows.flatMap(row=>Object.keys(row)))];
+  const quote=value=>'"'+String(value??"").replace(/"/g,'""')+'"';
+  const csv=[columns.map(quote).join(","),...data.rows.map(row=>columns.map(key=>quote(row[key])).join(","))].join("\r\n");
+  const blob=new Blob(["\\uFEFF"+csv],{type:"text/csv;charset=utf-8"});
+  const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="RCLD-"+name.toLowerCase().replace(/[^a-z0-9]+/g,"-")+".csv";a.click();URL.revokeObjectURL(url);
+ }
+ async function askAI(){
+  if(!data)return;setAiLoading(true);setAi("");
+  try{
+   const prompt="Analyze this generated RCLD ERP report. Report: "+name+". Filters: "+JSON.stringify(data.filters)+". Summary: "+JSON.stringify(data.summary)+". First 40 rows: "+JSON.stringify(data.rows.slice(0,40))+". Explain key findings, risks and recommended actions. Clearly state that the analysis is limited to the supplied rows and never invent totals.";
+   const response=await fetch("/api/ai/chat",{method:"POST",headers:{"Content-Type":"application/json"},cache:"no-store",body:JSON.stringify({messages:[{role:"user",content:prompt}]})});
+   const result=await response.json();if(!response.ok)throw new Error(result.error||"AI analysis unavailable.");setAi(result.reply||"No AI response.");
+  }catch(e){setAi(e.message)}finally{setAiLoading(false)}
+ }
+ useEffect(()=>{generate()},[]);
+ const rows=data?.rows||[];
+ const columns=rows.length?Object.keys(rows[0]):[];
  return <div className="report-document">
-  <div className="report-document-toolbar"><button className="report-back" onClick={onBack}>← Back to {group.title}</button><ExportMenu/></div>
+  <div className="report-document-toolbar"><button className="report-back" onClick={onBack}>← Back to {group.title}</button><div className="report-export"><button className="report-export-btn" onClick={exportCsv} disabled={!rows.length}><Download size={16}/>Export CSV</button><button className="report-export-btn" onClick={()=>window.print()}><Printer size={16}/>Print / PDF</button></div></div>
   <section className="report-paper">
-   <header className="report-letterhead"><div><span>RCLD ISLAMPUR</span><h1>{name}</h1><p>{group.title} · Detailed Management Report</p></div><div className="report-id"><b>REPORT</b><span>{group.id.toUpperCase()}-{new Date().getFullYear()}-001</span></div></header>
-   <div className="report-meta"><div><span>Reporting period</span><b>Selected reporting period</b></div><div><span>Generated on</span><b>{today}</b></div><div><span>Access</span><b>Super Admin / Office Admin</b></div><div><span>Format</span><b>Detailed documented report</b></div></div>
-   <div className="report-filter-row"><label>Date from<input type="date"/></label><label>Date to<input type="date"/></label><label>Course<select><option>All courses</option></select></label><label>Batch<select><option>All batches</option></select></label><button>Generate report</button></div>
-   <div className="report-kpis"><div><span>Total Records</span><strong>—</strong><small>Current filters</small></div><div><span>Current Period</span><strong>—</strong><small>Calculated from ERP data</small></div><div><span>Previous Period</span><strong>—</strong><small>For comparison</small></div><div><span>Attention Required</span><strong>—</strong><small>Rules & AI analysis</small></div></div>
-   <div className="report-analysis-grid"><section className="report-chart-placeholder"><div className="report-section-title"><TrendingUp size={17}/><div><h3>Performance & Trend</h3><p>Visualization generated from the selected report data.</p></div></div><div className="report-chart-bars">{[38,62,48,76,58,82,68,90,72,84].map((x,i)=><i key={i} style={{height:x+"%"}}/>)}</div></section><section className="report-chart-placeholder"><div className="report-section-title"><BarChart3 size={17}/><div><h3>Distribution</h3><p>Course, batch or status breakdown.</p></div></div><div className="report-donut-demo"><div/><span>Live report<br/>visualization</span></div></section></div>
-   <section className="ai-report-panel"><div className="ai-report-heading"><div className="ai-report-icon"><Sparkles size={20}/></div><div><span>AI REPORT INTELLIGENCE</span><h3>Management analysis</h3></div><button>Ask AI about this report</button></div><div className="ai-insight-grid"><article><b>Executive Summary</b><p>Generate a concise management summary after live report data is loaded.</p></article><article><b>Key Findings</b><p>Highlight important changes, concentrations and performance patterns.</p></article><article><b>Risks & Anomalies</b><p>Detect unusual values and records that may require management attention.</p></article><article><b>Recommended Actions</b><p>Provide data-grounded next actions without inventing ERP statistics.</p></article></div></section>
-   <section className="report-detail-section"><div className="report-section-title"><FileText size={17}/><div><h3>Detailed Records</h3><p>Complete row-level report data will appear here after generation.</p></div></div><div className="report-table"><div className="report-table-head"><span>Record</span><span>Category</span><span>Status</span><span>Value</span><span>Remarks</span></div><div className="report-empty-row">Select filters and generate this report to document live ERP records.</div></div></section>
-   <footer className="report-document-footer"><span>RCLD Islampur · Official ERP Report</span><span>Generated from authorized ERP data</span></footer>
+   <header className="report-letterhead"><div><span>RCLD ISLAMPUR</span><h1>{name}</h1><p>{group.title} · Live operational report</p></div><div className="report-id"><b>REPORT</b><span>{type.toUpperCase()}</span></div></header>
+   <div className="report-meta"><div><span>Generated on</span><b>{data?new Date(data.generatedAt).toLocaleString("en-IN"):today}</b></div><div><span>Data source</span><b>MongoDB · Live ERP</b></div><div><span>Reporting period</span><b>{from} — {to}</b></div><div><span>Report type</span><b>{type}</b></div></div>
+   <div className="report-filter-row"><label>Date from<input type="date" value={from} onChange={e=>setFrom(e.target.value)}/></label><label>Date to<input type="date" value={to} onChange={e=>setTo(e.target.value)}/></label><label>Course<input value={course} onChange={e=>setCourse(e.target.value)} placeholder="All courses"/></label><button onClick={generate} disabled={loading}>{loading?"Generating…":"Generate report"}</button></div>
+   {error&&<div className="report-error" role="alert">{error}</div>}
+   {data&&<><div className="report-kpis">{Object.entries(data.summary||{}).map(([key,value])=><div key={key}><span>{key.replace(/([A-Z])/g," $1")}</span><strong>{typeof value==="number"&&/payable|collected|due/i.test(key)?"₹":""}{typeof value==="number"?value.toLocaleString("en-IN"):String(value)}</strong><small>Calculated from live records</small></div>)}</div>
+   {data.notes?.length>0&&<div className="report-notes">{data.notes.map(note=><p key={note}>{note}</p>)}</div>}
+   {data.charts?.courses?.length>0&&<section className="report-detail-section"><div className="report-section-title"><TrendingUp size={17}/><div><h3>Course distribution</h3><p>Student records in the selected scope</p></div></div><div className="report-chart-bars">{data.charts.courses.slice(0,12).map(item=><div key={item.name} title={item.name+": "+item.value} style={{height:"100%",display:"flex",alignItems:"end",gap:4,flexDirection:"column",justifyContent:"end",flex:1}}><i style={{height:Math.max(5,item.value/Math.max(...data.charts.courses.map(x=>x.value))*100)+"%",width:"100%"}}/><small>{item.name}</small><b>{item.value}</b></div>)}</div></section>}
+   <section className="report-detail-section"><div className="report-section-title"><FileText size={17}/><div><h3>Detailed records</h3><p>{rows.length.toLocaleString("en-IN")} records returned by the ERP</p></div></div><div className="report-table" style={{overflowX:"auto"}}>{rows.length?<table style={{width:"100%",borderCollapse:"collapse",minWidth:700}}><thead><tr>{columns.map(col=><th key={col} style={{textAlign:"left",padding:10,whiteSpace:"nowrap"}}>{col.replace(/([A-Z])/g," $1")}</th>)}</tr></thead><tbody>{rows.map((row,index)=><tr key={index}>{columns.map(col=><td key={col} style={{padding:10,borderTop:"1px solid #e7ebf2",fontSize:13}}>{row[col]===null||row[col]===undefined?"—":typeof row[col]==="object"?JSON.stringify(row[col]):String(row[col])}</td>)}</tr>)}</tbody></table>:<div className="report-empty-row">No records match the selected filters.</div>}</div></section>
+   <section className="ai-report-panel"><div className="ai-report-heading"><div className="ai-report-icon"><Sparkles size={20}/></div><div><span>AI REPORT INTELLIGENCE</span><h3>Evidence-based management analysis</h3></div><button onClick={askAI} disabled={aiLoading}>{aiLoading?"Analyzing…":"Analyze with AI"}</button></div>{ai?<div className="ai-report-result" style={{whiteSpace:"pre-wrap"}}>{ai}</div>:<p>AI analysis uses this generated report's live summary and a sample of its records. It does not change ERP data.</p>}</section>
+   </>}
+   <footer className="report-document-footer"><span>RCLD Islampur · Official ERP Report</span><span>Generated from authorized ERP data · {data?.rows?.length||0} rows</span></footer>
   </section>
  </div>
 }
