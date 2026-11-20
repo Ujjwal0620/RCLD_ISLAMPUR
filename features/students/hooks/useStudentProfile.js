@@ -263,24 +263,46 @@ export default function useStudentProfile(params) {
       setMessage("Fee information saved.");
     }
   
+    async function compressStudentPhoto(file) {
+      const objectUrl = URL.createObjectURL(file);
+      try {
+        const image = new Image();
+        image.src = objectUrl;
+        if (image.decode) await image.decode();
+        else await new Promise((resolve, reject) => { image.onload = resolve; image.onerror = reject; });
+        const scale = Math.min(1, 500 / Math.max(image.naturalWidth, image.naturalHeight));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+        canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+        const context = canvas.getContext("2d");
+        if (!context) throw new Error("Unable to prepare the selected image.");
+        context.fillStyle = "#fff";
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.85));
+        if (!blob) throw new Error("Unable to compress the selected image.");
+        return new File([blob], (file.name.replace(/\\.[^.]+$/, "") || "student-photo") + ".jpg", { type: "image/jpeg" });
+      } finally {
+        URL.revokeObjectURL(objectUrl);
+      }
+    }
+
     async function uploadStudentPhoto(file) {
       if (!file) return;
-      if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024) {
-        setMessage("Choose a JPG, PNG or WebP image smaller than 5 MB.");
+      if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 8 * 1024 * 1024) {
+        setMessage("Choose a JPG, PNG or WebP image smaller than 8 MB.");
         return;
       }
       setPhotoUploading(true);
       setMessage("");
       try {
+        const compressed = await compressStudentPhoto(file);
         const form = new FormData();
-        form.append("file", file);
+        form.append("file", compressed);
         form.append("purpose", "photo");
         const response = await fetch("/api/uploads/student-photo", { method: "POST", body: form });
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "Unable to upload student photo.");
-
-        // Persist the Cloudinary URL immediately so the profile and I-card use it
-        // without requiring the separate Edit > Save Changes action.
+        if (!response.ok || !data.url) throw new Error(data.error || "Unable to upload student photo.");
         const saveResponse = await fetch("/api/students/" + student._id, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -288,11 +310,10 @@ export default function useStudentProfile(params) {
         });
         const saved = await saveResponse.json();
         if (!saveResponse.ok) throw new Error(saved.error || "Photo uploaded, but the student profile could not be updated.");
-
         const updatedStudent = saved.student || { ...student, photoUrl: data.url };
         setStudent(updatedStudent);
         setEditForm(current => ({ ...current, photoUrl: data.url }));
-        setMessage("Student photograph saved successfully. It will appear on the profile and I-card.");
+        setMessage("Student photo saved");
       } catch (uploadError) {
         setMessage(uploadError.message || "Unable to upload student photo.");
       } finally {
