@@ -129,20 +129,20 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     : '<div class="student-photo photo-empty" aria-label="Student photograph unavailable"></div>';
 
   const overlays = diploma
-    ? '<div class="overlay diploma-session">' + escapeHtml(session) + '</div>' +
+    ? '<div class="overlay diploma-registration">' + escapeHtml(rawRegistrationCode) + '</div>' +
+      '<div class="overlay diploma-session">' + escapeHtml(session) + '</div>' +
       '<div class="overlay diploma-id">' + idNumberMarkup(icardNumber) + '</div>' +
       '<div class="overlay diploma-name">' + nameMarkup + '</div>' +
       '<div class="overlay diploma-father">' + escapeHtml(fatherName) + '</div>' +
       '<div class="overlay diploma-address">' + addressMarkup + '</div>' +
+      '<div class="overlay diploma-course">' + escapeHtml(courseName || student.courseName || student.courseCode || "") + '</div>' +
       '<div class="overlay diploma-admission">' + escapeHtml(admission) + '</div>'
     : '<div class="overlay circular-name">' + nameMarkup + '</div>' +
-      '<div class="overlay circular-label-cover" aria-hidden="true"></div>' +
-      '<div class="overlay circular-id-label">ID No :</div>' +
       '<div class="overlay circular-id">' + idNumberMarkup(icardNumber) + '</div>' +
+      '<div class="overlay circular-registration">' + escapeHtml(rawRegistrationCode) + '</div>' +
       '<div class="overlay circular-admission">' + escapeHtml(admission) + '</div>' +
       '<div class="overlay circular-father">' + escapeHtml(fatherName) + '</div>' +
-      '<div class="overlay circular-address">' + addressMarkup + '</div>' +
-      '';
+      '<div class="overlay circular-address">' + addressMarkup + '</div>';
 
   return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
     '<title>RCLD I-Card - ' + escapeHtml(fullName) + '</title><style>' +
@@ -156,24 +156,23 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     '.photo-empty{background:transparent}' +
     '.overlay{position:absolute;z-index:2;font-family:Arial,"Helvetica Neue","Liberation Sans",sans-serif;color:#3E454C;overflow:hidden}' +
     '.circular-name{top:48.8%;left:3%;width:94%;text-align:center;font-weight:800;font-size:clamp(20px,6.3cqw,80px);text-transform:uppercase;letter-spacing:.3px;line-height:1.05;white-space:nowrap}' +
-    '.circular-id,.circular-admission,.circular-father,.circular-address{left:46.8%;width:48.5%;font-family:"Roboto Condensed","Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;font-size:clamp(14px,3.45cqw,48px);line-height:1.15;text-align:left;color:#3E454C;transform:none;transform-origin:top left;font-weight:400}' +
-    '.circular-label-cover{left:12%;top:60.25%;width:33.5%;height:6.15%;background:#fff;z-index:3}' +
-    '.circular.robotics .circular-label-cover{background:linear-gradient(180deg,#fff1a8 0%,#fff7d5 55%,#fff 100%)}' +
-    '.circular-id-label{left:17%;top:60.9%;width:28%;font-size:clamp(14px,3.45cqw,48px);line-height:1.15;text-align:right;font-family:"Roboto Condensed","Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;font-weight:700;color:' + config.lastNameColor + ';white-space:nowrap;z-index:4}' +
-    '.circular-id{top:60.9%;font-weight:400;white-space:nowrap}.circular-admission{top:66.6%;font-weight:400}.circular-father{top:69.4%;font-weight:400}' +
-    '.circular-address{top:72.2%;left:46.8%;width:48.5%;line-height:1.1;word-break:break-word;overflow-wrap:anywhere;transform:none;font-size:clamp(12px,2.8cqw,36px);font-weight:400;display:block;max-height:5.8%}' +
+    '.circular-id,.circular-registration,.circular-admission,.circular-father,.circular-address{left:46.8%;width:49%;font-family:"Roboto Condensed","Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;font-size:clamp(12px,3.05cqw,40px);line-height:1.12;text-align:left;color:#3E454C;font-weight:400;transform:none;transform-origin:top left}' +
+    '.circular-id{top:64.1%;white-space:nowrap}.circular-registration{top:67.5%;white-space:nowrap}.circular-admission{top:70.3%}.circular-father{top:73.2%}' +
+    '.circular-address{top:76.1%;line-height:1.08;word-break:break-word;overflow-wrap:anywhere;font-size:clamp(11px,2.7cqw,35px);font-weight:400;display:block}' +
     '.address-line{display:block;min-height:0;font-weight:400}' +
-    '.circular-id .id-number-prefix{font-size:3.2cqw;font-weight:400;color:#3E454C;white-space:nowrap}' +
-    '.circular-id .id-number-code{font-size:3.2cqw;font-weight:700;color:#3E454C;white-space:nowrap}' +
+    '.circular-id .id-number-prefix{font-size:3.05cqw;font-weight:400;color:#3E454C;white-space:nowrap}' +
+    '.circular-id .id-number-code{font-size:3.05cqw;font-weight:700;color:#3E454C;white-space:nowrap}' +
     '.diploma .student-photo{top:34.2%;left:32.1%;transform:none;width:35.8%;height:25%;aspect-ratio:auto;border-radius:10px;object-fit:cover}' +
-    '.diploma .overlay:not(.diploma-name){font-family:"Roboto Condensed","Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;font-size:clamp(13px,3.25cqw,44px);line-height:1.15;color:#1E242B;font-weight:700;transform:scaleY(1.10);transform-origin:left center}' +
-    '.diploma-session{top:2.5%;left:87.5%;font-weight:700}' +
-    '.diploma-id{top:13%;left:72%;font-weight:900;font-size:clamp(13px,3.25cqw,44px)}' +
+    '.diploma .overlay:not(.diploma-name){font-family:"Roboto Condensed","Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;font-size:clamp(10px,2.25cqw,30px);line-height:1.1;color:#1E242B;font-weight:400;transform:none;transform-origin:left top}' +
+    '.diploma-registration{top:2.7%;left:4%;width:36%;white-space:nowrap}' +
+    '.diploma-session{top:2.7%;left:76%;width:21%;white-space:nowrap}' +
+    '.diploma-id{top:12.8%;left:73%;width:25%;white-space:nowrap}' +
     '.diploma-id .id-number-prefix{font-weight:400}.diploma-id .id-number-code{font-weight:700}' +
-    '.diploma-name{top:62.5%;left:16.5%;width:80%;font-size:clamp(15px,3.6cqw,48px);font-weight:800;text-transform:uppercase;letter-spacing:.3px;line-height:1.05;white-space:nowrap;color:#1E242B}' +
-    '.diploma-father{top:66.2%;left:31%;width:66%;font-weight:700}' +
-    '.diploma-address{top:74.7%;left:20.5%;width:75%;line-height:1.1;font-weight:700;white-space:normal;overflow-wrap:anywhere;font-size:clamp(11px,2.8cqw,36px)}.diploma-address .address-line{display:block}' +
-    '.diploma-admission{top:84.0%;left:29.5%;width:68%;font-weight:700}' +
+    '.diploma-name{top:62.4%;left:19%;width:78%;font-size:clamp(12px,2.8cqw,38px);font-weight:400;text-transform:uppercase;letter-spacing:.1px;line-height:1.05;white-space:nowrap;color:#1E242B}' +
+    '.diploma-father{top:66.1%;left:31%;width:66%;font-weight:400}' +
+    '.diploma-address{top:73.6%;left:20.5%;width:76%;line-height:1.1;font-weight:400;white-space:normal;overflow-wrap:anywhere;font-size:clamp(10px,2.25cqw,30px)}.diploma-address .address-line{display:block}' +
+    '.diploma-course{top:85.2%;left:19%;width:78%;font-weight:400}' +
+    '.diploma-admission{top:90.3%;left:29.5%;width:68%;font-weight:400}' +
     '@media screen{body{padding:24px 0;background:#e9edf3}.card{box-shadow:0 2px 14px #0002}}' +
     '@media print{html,body{width:54mm!important;height:85.6mm!important;min-height:0!important;margin:0!important;padding:0!important;overflow:hidden!important}body{display:block!important}.card{width:54mm!important;height:85.6mm!important;aspect-ratio:auto!important;max-width:none!important;margin:0!important;box-shadow:none!important;container-type:inline-size}}' +
     '</style></head><body><main class="card ' + (diploma ? "diploma" : "circular" + (/robotics/i.test(templateName) ? " robotics" : "")) + '">' +
