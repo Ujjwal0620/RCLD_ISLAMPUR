@@ -240,6 +240,15 @@ function canvasToJpeg(canvas) {
 export async function exportStudentIcards({ students, templateName, outputMode = "jpg", onMessage }) {
   const list = Array.isArray(students) ? students.filter(Boolean) : [];
   if (!list.length) throw new Error("Select at least one student.");
+  // Open the print tab synchronously during the user click, before async canvas rendering.
+  const printWindow = outputMode === "print" ? window.open("", "_blank") : null;
+  if (outputMode === "print" && !printWindow) throw new Error("Please allow pop-ups to print the ID card.");
+  if (printWindow) {
+    printWindow.document.open();
+    printWindow.document.write("<!doctype html><title>Preparing ID cards</title><body style=\"font:14px Arial;padding:24px\">Preparing student ID cards…</body>");
+    printWindow.document.close();
+  }
+
   const cards = [];
   for (const student of list) {
     const canvas = await renderStudentIcardCanvas(student, templateName);
@@ -247,8 +256,6 @@ export async function exportStudentIcards({ students, templateName, outputMode =
   }
 
   if (outputMode === "print") {
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) throw new Error("Please allow pop-ups to print the ID card.");
     const pages = await Promise.all(cards.map(async ({ canvas, student }) => {
       const blob = await canvasToJpeg(canvas);
       const url = URL.createObjectURL(blob);
