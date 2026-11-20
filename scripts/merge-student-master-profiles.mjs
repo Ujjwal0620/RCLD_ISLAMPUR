@@ -2,16 +2,33 @@
  * One-time, conservative StudentMaster consolidation.
  *
  * Dry run:
- *   node --env-file=.env scripts/merge-student-master-profiles.mjs
+ *   npm run merge:student-profiles
  *
  * Apply after reviewing the dry-run counts:
- *   node --env-file=.env scripts/merge-student-master-profiles.mjs --apply
+ *   npm run merge:student-profiles -- --apply
  *
  * Legacy Student documents are deliberately retained because attendance, batches,
  * payments and other operational records may reference their ObjectIds. The API
  * presents one canonical directory profile per StudentMaster identity.
  */
 import mongoose from "mongoose";
+import { existsSync, readFileSync } from "node:fs";
+
+function loadLocalEnvironment() {
+  for (const file of [".env.local", ".env", ".env.development.local", ".env.development"]) {
+    if (!existsSync(file)) continue;
+    for (const line of readFileSync(file, "utf8").split(/\\r?\\n/)) {
+      const match = line.trim().match(/^(?:export\\s+)?([A-Za-z_][A-Za-z0-9_]*)\\s*=\\s*(.*)$/);
+      if (!match || process.env[match[1]] !== undefined) continue;
+      let value = match[2].trim();
+      if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+        value = value.slice(1, -1);
+      }
+      process.env[match[1]] = value;
+    }
+  }
+}
+loadLocalEnvironment();
 
 const apply = process.argv.includes("--apply");
 const normalizeName = value => String(value ?? "").trim().normalize("NFKC")
@@ -105,8 +122,10 @@ const identityOf = student => ({
 const stCodeOf = student => String(student.regnNo || student.enrollmentNo || student.studentCode || "").replace(/\.0$/, "").trim();
 
 async function main() {
-  if (!process.env.MONGODB_URI) throw new Error("MONGODB_URI is required. Use --env-file=.env.");
-  await mongoose.connect(process.env.MONGODB_URI);
+  const mongoUri = process.env.MONGODB_URI
+    || (process.env.NODE_ENV !== "production" ? "mongodb://127.0.0.1:27017/rcld_islampur" : "");
+  if (!mongoUri) throw new Error("MONGODB_URI is required for production cleanup.");
+  await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 5000 });
   const students = await Student.find({}).sort({ admissionDate: 1, createdAt: 1, _id: 1 }).lean();
   const existing = await StudentMaster.find({}).sort({ createdAt: 1, _id: 1 }).lean();
   const groups = [];
