@@ -130,7 +130,7 @@ export default function StudentFeeWorkspace({
                       <tbody>
                         {historyRows.length ? historyRows.map((payment, index) => (
                           <tr key={String(payment._id || payment.mrNo) + "-" + index}>
-                            <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{formatDate(payment.paymentDate || payment.date)}</td>
+                            <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{formatDate(payment.paymentDate || payment.rawPaymentDate || payment.date)}</td>
                             <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{payment.mrNo || payment.receiptNo || "—"}</td>
                             <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{payment.stCode || currentStCode || "—"}</td>
                             <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{payment.courseName || payment.courseCode || "—"}{payment.semesterLabel ? " / " + payment.semesterLabel : ""}</td>
