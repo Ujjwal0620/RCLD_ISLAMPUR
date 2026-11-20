@@ -1,29 +1,14 @@
 import { NextResponse } from "next/server";
 import { connectMongoDB } from "@/lib/mongodb";
 import mongoose from "mongoose";
+import Student from "@/models/Student";
 import Course from "@/models/Course";
 import StudentMaster from "@/models/StudentMaster";
 import StudentEnrollment from "@/models/StudentEnrollment";
 import { linkImportedStudentRecords } from "@/lib/student-import/import-payment-sheet";
 import { getStudentAdmissionStatus } from "@/lib/student-admission-status";
 
-const StudentSchema = new mongoose.Schema({
-  formNo: { type: String, trim: true },
-  aecCode: String, regnNo: String, enrollmentNo: String, admissionDate: String, guardianContactNumber: String, dueAmount: mongoose.Schema.Types.Mixed, paymentStatus: mongoose.Schema.Types.Mixed, sourceCourseLabel: String, importSource: String, sourceStudentName: String, sourceSex: String, sourceQualification: String, sourceAddressRaw: String, sourcePhone: String, sourceRowKey: String, courseName: String, courseCode: String, batchId: { type: mongoose.Schema.Types.ObjectId, ref: "Batch", default: null }, batchCode: String,
-  applicantName: { type: String, default: "", trim: true }, nationality: String, dateOfBirth: String, sex: String,
-  fatherOrHusbandName: String, address: String, presentAddress: String, permanentAddress: String, sameAsPresentAddress: Boolean, postOffice: String, policeStation: String, nearestLandmark: String, district: String, state: String, permanentPostOffice: String, permanentNearestLandmark: String, permanentPin: String, permanentDistrict: String, permanentState: String, pin: String, whatsappNumber: String,
-  mobileNumber: { type: String, default: "", trim: true },
-  email: { type: String, default: "", trim: true, lowercase: true },
-  aadhaarNumber: { type: String, default: "", trim: true },
-  referralId: { type: String, default: "" }, referralName: { type: String, default: "" }, marketingEmployeeId: { type: String, default: "" }, marketingEmployeeName: { type: String, default: "" },
-  qualifications: [{ examCourse: String, boardUniversity: String, collegeInstitute: String, year: String, percentage: String }],
-  enclosures: { stampPhoto: Boolean, qualifyingCertificates: Boolean, matricAdmitCard: Boolean },
-  declarationDate: String, declarationPlace: String, signatureApplicant: String, signatureUrl: String, photoUrl: String,
-  currentSemester: Number, semesterStatus: { type: String, default: "Not Started" }, semesterHistory: { type: [mongoose.Schema.Types.Mixed], default: [] }, status: { type: String, default: "Admission Pending" }
-}, { timestamps: true });
 
-StudentSchema.index({ enrollmentNo: 1 }, { unique: true, partialFilterExpression: { enrollmentNo: { $type: "string", $gt: "" } } });
-const Student = mongoose.models.Student || mongoose.model("Student", StudentSchema);
 let formNoIndexMigration;
 async function removeLegacyFormNoUniqueIndex() {
   if (!formNoIndexMigration) {
