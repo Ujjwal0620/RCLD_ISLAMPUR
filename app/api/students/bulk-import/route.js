@@ -290,7 +290,8 @@ export async function POST(request) {
 
     const courseCodes = [...new Set(uniqueRows.map(row => row.course).filter(Boolean))];
     const baseCodes = [...new Set(courseCodes.map(code => code.split("-")[0]))];
-    const courses = await Course.find({ code: { $in: [...courseCodes, ...baseCodes] } }).lean();
+    const coursePatterns = [...new Set([...courseCodes, ...baseCodes])].map(code => new RegExp("^" + code.replace(/[.*+?^${}()|[\]\\]/g, "\\const courses = await Course.find({ code: { $in: [...courseCodes, ...baseCodes] } }).lean();") + "$", "i"));
+    const courses = await Course.find({ code: { $in: coursePatterns } }).lean();
     const courseMap = new Map(courses.map(course => [String(course.code).toUpperCase(), course]));
     const operations = [];
     const operationRows = [];
