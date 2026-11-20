@@ -136,6 +136,17 @@ async function main() {
   }, null, 2));
   if (!apply) { console.log("No database writes were made. Review the report, then rerun with --apply."); return; }
 
+  let enrollmentIndexes = [];
+  try { enrollmentIndexes = await StudentEnrollment.collection.indexes(); }
+  catch (error) { if (error.code !== 26 && error.codeName !== "NamespaceNotFound") throw error; }
+  const oldEnrollmentIndex = enrollmentIndexes.find(index => index.unique
+    && index.key?.stCode === 1 && index.key?.normalizedFullName === 1 && !index.key?.studentId);
+  if (oldEnrollmentIndex) await StudentEnrollment.collection.dropIndex(oldEnrollmentIndex.name);
+  await StudentEnrollment.collection.createIndex(
+    { studentId: 1, stCode: 1, normalizedFullName: 1 },
+    { unique: true, name: "studentId_1_stCode_1_normalizedFullName_1" }
+  );
+
   const idMap = new Map();
   for (const group of groups) {
     if (group._existing) idMap.set(String(group._id), group._id);
