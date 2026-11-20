@@ -247,7 +247,7 @@ function asStudentPayload(row, course, sourceName) {
 }
 
 function normalizePersonName(value) {
-  return clean(value).toLowerCase().normalize("NFKD").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+  return clean(value).replace(/_\d+\s*$/, "").toLowerCase().normalize("NFKD").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
 }
 function nameSimilarity(left, right) {
   const a = normalizePersonName(left), b = normalizePersonName(right);
@@ -338,7 +338,7 @@ export async function POST(request) {
     for (const [code, group] of grouped) {
       if (group.length === 1) { uniqueRows.push(group[0]); continue; }
       const existing = existingByCode.get(code);
-      const matching = existing ? group.map(row => ({ row, score: nameSimilarity(existing.applicantName || existing.name, row.name) })).filter(item => item.score >= 0.65).sort((a,b) => b.score-a.score) : [];
+      const matching = existing ? group.map(row => ({ row, score: nameSimilarity(existing.applicantName || existing.name, row.name) })).filter(item => item.score >= 0.75).sort((a,b) => b.score-a.score) : [];
       if (matching.length) { uniqueRows.push(matching[0].row); for (const row of group) if (row !== matching[0].row) warnings.push({ row: row.rowNo, Regn_No: row.regnNo, reason: "Reused registration code has a different student name; row skipped to prevent cross-student merging." }); }
       else for (const row of group) warnings.push({ row: row.rowNo, Regn_No: row.regnNo, reason: "Duplicate registration code has conflicting names; rows skipped to prevent cross-student merging." });
     }
@@ -357,7 +357,7 @@ export async function POST(request) {
       const courseInfo = { code: row.course, name: course?.name || COURSE_NAMES[row.course] || row.course };
       const payload = asStudentPayload(row, courseInfo, sourceName);
       if (existing) {
-        if ((existing.applicantName || existing.name) && nameSimilarity(existing.applicantName || existing.name, row.name) < 0.65) { warnings.push({ row: row.rowNo, Regn_No: row.regnNo, reason: "Registration number matched but student name did not; existing student left unchanged." }); continue; }
+        if ((existing.applicantName || existing.name) && nameSimilarity(existing.applicantName || existing.name, row.name) < 0.75) { warnings.push({ row: row.rowNo, Regn_No: row.regnNo, reason: "Registration number matched but student name did not; existing student left unchanged." }); continue; }
         const missing = buildMissingFields(existing, payload);
         if (!Object.keys(missing).length) { unchanged += 1; continue; }
         operations.push({ updateOne: { filter: { _id: existing._id }, update: { $set: missing }, upsert: false } });
