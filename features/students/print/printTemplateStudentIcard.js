@@ -113,7 +113,7 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
   const fullName = firstValue(student.applicantName, student.fullName, student.name, "STUDENT");
   const nameMarkup = splitNameMarkup(fullName, config.lastNameColor, diploma);
   const icardNumber = firstValue(student.icardNumber, student.iCardNumber, student.idCardNumber, student.cardNumber, student.studentId, student.enrollmentNo, student.admissionNo, "—");
-  const registrationNumber = firstValue(student.registrationNumber, student.registrationNo, student.registrationId, student.regNo, student.regnNo, student.formNo, "—");
+  const registrationNumber = firstValue(student.regnNo, student.registrationNumber, student.registrationNo, student.registrationId, student.regNo, student.formNo, "—");
   const fatherName = titleCase(firstValue(student.fatherOrHusbandName, student.fatherName, student.fatherNameAsPerRecords, student.guardianName, "—"));
   const addressMarkup = getAddressMarkup(student);
   const admission = getAdmissionDate(student) || "—";
@@ -135,7 +135,8 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
       '<div class="overlay circular-registration">' + escapeHtml(registrationNumber) + '</div>' +
       '<div class="overlay circular-admission">' + escapeHtml(admission) + '</div>' +
       '<div class="overlay circular-father">' + escapeHtml(fatherName) + '</div>' +
-      '<div class="overlay circular-address">' + addressMarkup + '</div>';
+      '<div class="overlay circular-address">' + addressMarkup + '</div>' +
+      '<div class="overlay circular-course">' + escapeHtml(courseName || firstValue(student.courseName, student.course?.name, student.courseCode, "—")) + '</div>';
 
   return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
     '<title>RCLD I-Card - ' + escapeHtml(fullName) + '</title><style>' +
@@ -152,6 +153,7 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     '.circular-id,.circular-registration,.circular-admission,.circular-father,.circular-address{left:46.8%;width:48.5%;font-family:"Roboto Condensed","Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;font-weight:700;font-size:clamp(14px,3.45cqw,48px);line-height:1.15;text-align:left;color:#3E454C;transform:scaleY(1.12);transform-origin:left center}' +
     '.circular-id{top:60.9%}.circular-registration{top:63.8%}.circular-admission{top:66.6%}.circular-father{top:69.4%}' +
     '.circular-address{top:72.2%;left:46.8%;width:48.5%;line-height:1.3;word-break:break-word;overflow-wrap:anywhere;transform-origin:top left}.address-line{display:block;min-height:0}' +
+    '.circular-course{top:81.2%;left:46.8%;width:48.5%;font-size:clamp(12px,3cqw,40px);font-weight:800;color:#2E3192}' +
     '.circular-id .id-number-tail{font-size:4.1cqw;font-weight:800;color:#3E454C}' +
     '.diploma .student-photo{top:34.2%;left:32.1%;transform:none;width:35.8%;height:25%;aspect-ratio:auto;border-radius:10px;object-fit:cover}' +
     '.diploma .overlay:not(.diploma-name){font-family:"Roboto Condensed","Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;font-size:clamp(13px,3.25cqw,44px);line-height:1.15;color:#1E242B;font-weight:700;transform:scaleY(1.10);transform-origin:left center}' +
@@ -205,7 +207,21 @@ export async function printTemplateStudentIcard({ student, templateName, outputM
     });
     const doc = frame.contentDocument;
     if (!doc) throw new Error("Unable to prepare the selected template.");
-    await Promise.all([...doc.images].map((img) => img.decode ? img.decode().catch(() => {}) : Promise.resolve()));
+    await Promise.all([...doc.images].map(async img => {
+      try {
+        if (img.decode) await img.decode();
+        else if (!img.complete || !img.naturalWidth) await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; });
+        if (!img.naturalWidth) throw new Error("Image unavailable");
+      } catch (error) {
+        if (img.classList.contains("student-photo")) {
+          const placeholder = doc.createElement("div");
+          placeholder.className = "student-photo photo-empty";
+          img.replaceWith(placeholder);
+        } else {
+          throw new Error("I-card template image could not be loaded.");
+        }
+      }
+    }));
     const { toJpeg } = await import("html-to-image");
     const card = doc.querySelector(".card");
     const dataUrl = await toJpeg(card, { quality: 1, pixelRatio: 1, backgroundColor: "#fff", cacheBust: true });
