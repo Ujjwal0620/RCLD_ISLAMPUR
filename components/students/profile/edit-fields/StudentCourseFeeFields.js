@@ -25,7 +25,6 @@ export default function StudentCourseFeeFields({ editForm, setEditForm, feeForm,
                                         registrationFee: selected.registrationFee || f.registrationFee || 0,
                                       }));
                                   }}
-                                  required
                                 >
                                   <option value="">Select course</option>
                                   {courses.map((x) => (
