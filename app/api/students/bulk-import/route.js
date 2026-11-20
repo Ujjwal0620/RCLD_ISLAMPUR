@@ -154,21 +154,29 @@ function normalizeSex(value) {
 function readSourceRows(workbook) {
   let selectedSheet = workbook.Sheets["Student Data"];
   if (!selectedSheet) {
+    const requiredStudentHeaders = ["stcode", "stname", "sex", "address", "qualification", "course"];
     for (const sheetName of workbook.SheetNames) {
-      const candidate = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: "" });
-      const first = candidate.find(row => row.some(cell => clean(cell)));
-      const names = (first || []).map(normalizeHeader);
-      if (names.includes("stcode") && names.includes("stname")) {
-        selectedSheet = workbook.Sheets[sheetName];
-        break;
-      }
+      const candidate = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: "", raw: true });
+      const hasStudentHeader = candidate.some(row => {
+        const names = row.map(normalizeHeader);
+        return requiredStudentHeaders.every(header => names.includes(header))
+          && names.some(header => ["dob", "dateofbirth"].includes(header))
+          && names.some(header => ["stfather", "father", "fathername"].includes(header))
+          && names.some(header => ["phno", "phoneno", "phone"].includes(header))
+          && names.some(header => ["doa", "dateofadmission", "admissiondate"].includes(header));
+      });
+      if (hasStudentHeader) { selectedSheet = workbook.Sheets[sheetName]; break; }
     }
   }
   if (!selectedSheet) throw new Error('Could not find the "Student Data" worksheet or St_Code/St_Name headers.');
   const grid = XLSX.utils.sheet_to_json(selectedSheet, { header: 1, defval: "", raw: true });
   const headerIndex = grid.findIndex(row => {
     const headers = row.map(normalizeHeader);
-    return headers.includes("stcode") && headers.includes("stname");
+    return ["stcode", "stname", "sex", "address", "qualification", "course"].every(header => headers.includes(header))
+      && headers.some(header => ["dob", "dateofbirth"].includes(header))
+      && headers.some(header => ["stfather", "father", "fathername"].includes(header))
+      && headers.some(header => ["phno", "phoneno", "phone"].includes(header))
+      && headers.some(header => ["doa", "dateofadmission", "admissiondate"].includes(header));
   });
   if (headerIndex < 0) throw new Error("Student Data worksheet does not contain St_Code and St_Name columns.");
 
