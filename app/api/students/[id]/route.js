@@ -56,16 +56,24 @@ export async function GET(req,{params}){
     });
     const FeeSchema = new mongoose.Schema({ studentId: mongoose.Schema.Types.ObjectId, payments: [mongoose.Schema.Types.Mixed] }, { strict: false });
     const StudentFee = mongoose.models.StudentFee || mongoose.model("StudentFee", FeeSchema);
-    const legacyFee = await StudentFee.findOne({ studentId: student._id }).lean();
-    for (const payment of legacyFee?.payments || []) {
-      paymentHistory.push({
-        _id: payment._id, paymentDate: payment.date || null, mrNo: payment.receiptNo || payment.reference || "—",
-        stCode: student.regnNo || student.enrollmentNo || "—", amountPaid: Number(payment.amount || 0),
-        courseCode: student.courseCode || "", courseName: student.courseName || student.courseCode || "—",
-        semesterLabel: payment.semester ? "SEM-" + payment.semester : "Current",
-        installmentApplied: (payment.items || []).map(item => (item.purpose || item.type || "Fee") + ": ₹" + Number(item.amount || 0).toLocaleString("en-IN")).join(", ") || payment.paymentType || "Course fee",
-        sourceSheet: "ERP Fee Ledger",
-      });
+    const linkedStudentIds = masterProfile?.legacyStudentIds?.length ? masterProfile.legacyStudentIds : [student._id];
+    const [legacyFees, linkedStudentDocs] = await Promise.all([
+      StudentFee.find({ studentId: { $in: linkedStudentIds } }).lean(),
+      Student.find({ _id: { $in: linkedStudentIds } }).select("_id regnNo enrollmentNo courseCode courseName").lean(),
+    ]);
+    const linkedStudentMap = new Map(linkedStudentDocs.map(item => [String(item._id), item]));
+    for (const legacyFee of legacyFees) {
+      const linkedStudent = linkedStudentMap.get(String(legacyFee.studentId)) || student;
+      for (const payment of legacyFee.payments || []) {
+        paymentHistory.push({
+          _id: payment._id, paymentDate: payment.date || null, mrNo: payment.receiptNo || payment.reference || "—",
+          stCode: linkedStudent.regnNo || linkedStudent.enrollmentNo || "—", amountPaid: Number(payment.amount || 0),
+          courseCode: linkedStudent.courseCode || "", courseName: linkedStudent.courseName || linkedStudent.courseCode || "—",
+          semesterLabel: payment.semester ? "SEM-" + payment.semester : "Current",
+          installmentApplied: (payment.items || []).map(item => (item.purpose || item.type || "Fee") + ": ₹" + Number(item.amount || 0).toLocaleString("en-IN")).join(", ") || payment.paymentType || "Course fee",
+          sourceSheet: "ERP Fee Ledger",
+        });
+      }
     }
     paymentHistory.sort((a, b) => new Date(a.paymentDate || 0) - new Date(b.paymentDate || 0));
     const enrichedStudent = {
