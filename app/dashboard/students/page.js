@@ -78,17 +78,24 @@ export default function StudentsPage(){
     if(!selectAllMatching&&!selectedStudents.length)return alert("Select at least one student first.");
     setBulkIcardLoading(true);
     try{
-      const response=await fetch("/api/students/bulk-icards",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify(selectAllMatching?{selectAllMatching:true,filters}:{studentIds:selectedStudents})
-      });
+      let response;
+      if(selectAllMatching){
+        const params=new URLSearchParams({page:"1",limit:"500"});
+        Object.entries(filters).forEach(([key,value])=>{if(value)params.set(key,value)});
+        response=await fetch("/api/students?"+params.toString(),{cache:"no-store"});
+      }else{
+        response=await fetch("/api/students/bulk-icards",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({studentIds:selectedStudents})
+        });
+      }
       const data=await response.json();
       if(!response.ok)throw new Error(data.error||"Unable to load selected students.");
       setBulkIcardStudents(data.students||[]);
       setBulkIcardMode(mode);
       setBulkIcardDialogOpen(true);
-      if(data.truncated)alert("The selection contains more than 500 students. The first 500 will be prepared in this batch.");
+      if(selectAllMatching&&Number(data.pagination?.total||0)>500)alert("The selection contains more than 500 students. The first 500 will be prepared in this batch.");
     }catch(error){alert(error.message||"Unable to prepare ID cards.");}
     finally{setBulkIcardLoading(false);}
   }
