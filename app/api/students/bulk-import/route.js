@@ -304,6 +304,9 @@ export async function POST(request) {
     const file = form.get("file");
     const mode = String(form.get("mode") || "preview");
     const importMode = String(form.get("importMode") || "fill_and_import").toLowerCase();
+    if (!["fill_and_import", "update_existing_only"].includes(importMode)) {
+      return NextResponse.json({ error: "Invalid student import mode." }, { status: 400 });
+    }
     const requestedSheet = String(form.get("sheetName") || "").trim();
     if (!file || typeof file.arrayBuffer !== "function") return NextResponse.json({ error: "Choose an Excel or CSV file." }, { status: 400 });
     if (!/\.(xlsx|xls|csv)$/i.test(String(file.name || ""))) return NextResponse.json({ error: "Only .xlsx, .xls and .csv files are supported." }, { status: 400 });
@@ -322,25 +325,68 @@ export async function POST(request) {
     const errors = [...preview.errors];
     const validRows = parsed.rows.filter(row => !row.errors.length);
     const registrationNumbers = [...new Set(validRows.map(row => row.regnNo).filter(Boolean))];
-    const numericRegistrationNumbers = registrationNumbers.filter(code => /^\d+$/.test(code)).map(Number);
-    const existingRecords = registrationNumbers.length ? await Student.find({ $or: [
-      { regnNo: { $in: [...registrationNumbers, ...numericRegistrationNumbers] } },
-      { enrollmentNo: { $in: [...registrationNumbers, ...numericRegistrationNumbers] } }
-    ] }).lean() : [];
-    const existingByCode = new Map();
-    for (const student of existingRecords) for (const rawCode of [student.regnNo, student.enrollmentNo]) {
-      const key = String(rawCode ?? "").replace(/\.0$/, "");
-      if (key && !existingByCode.has(key)) existingByCode.set(key, student);
+    const existingRecords = [];
+    // Keep each lookup bounded; regnNo is indexed and enrollmentNo has a partial unique index.
+    for (let offset = 0; offset < registrationNumbers.length; offset += 500) {
+      const codeChunk = registrationNumbers.slice(offset, offset + 500);
+      const numericChunk = codeChunk.filter(code => /^\d+$/.test(code)).map(Number);
+      const variants = [...codeChunk, ...numericChunk];
+      const found = await Student.find({ $or: [
+        { regnNo: { $in: variants } },
+        { enrollmentNo: { $in: variants } }
+      ] }).lean();
+      existingRecords.push(...found);
     }
+    const existingByCode = new Map();
+    for (const student of existingRecords) {
+      const identity = String(student._id);
+      for (const rawCode of [student.regnNo, student.enrollmentNo]) {
+        const key = String(rawCode ?? "").replace(/\.0$/, "").trim();
+        if (!key) continue;
+        const candidates = existingByCode.get(key) || [];
+        if (!candidates.some(item => String(item._id) === identity)) candidates.push(student);
+        existingByCode.set(key, candidates);
+      }
+    }
+
     const grouped = new Map();
-    for (const row of validRows) { const key = row.regnNo || "ROW-" + row.rowNo; if (!grouped.has(key)) grouped.set(key, []); grouped.get(key).push(row); }
+    for (const row of validRows) {
+      const key = row.regnNo || "ROW-" + row.rowNo;
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key).push(row);
+    }
     const uniqueRows = [];
+    const existingForRow = new Map();
     for (const [code, group] of grouped) {
-      if (group.length === 1) { uniqueRows.push(group[0]); continue; }
-      const existing = existingByCode.get(code);
-      const matching = existing ? group.map(row => ({ row, score: nameSimilarity(existing.applicantName || existing.name, row.name) })).filter(item => item.score >= 0.75).sort((a,b) => b.score-a.score) : [];
-      if (matching.length) { uniqueRows.push(matching[0].row); for (const row of group) if (row !== matching[0].row) warnings.push({ row: row.rowNo, Regn_No: row.regnNo, reason: "Reused registration code has a different student name; row skipped to prevent cross-student merging." }); }
-      else for (const row of group) warnings.push({ row: row.rowNo, Regn_No: row.regnNo, reason: "Duplicate registration code has conflicting names; rows skipped to prevent cross-student merging." });
+      const candidates = existingByCode.get(code) || [];
+      if (!candidates.length && group.length === 1) {
+        uniqueRows.push(group[0]);
+        continue;
+      }
+      const pairs = [];
+      for (const row of group) {
+        for (const student of candidates) {
+          const existingName = student.applicantName || student.name || "";
+          const score = nameSimilarity(existingName, row.name);
+          if (score >= 0.75) pairs.push({ row, student, score });
+        }
+      }
+      // Merge only when one unambiguous row-to-student match exists.
+      if (pairs.length === 1) {
+        uniqueRows.push(pairs[0].row);
+        existingForRow.set(pairs[0].row, pairs[0].student);
+        for (const row of group) {
+          if (row !== pairs[0].row) warnings.push({
+            row: row.rowNo, Regn_No: row.regnNo,
+            reason: "Reused registration code has a different or ambiguous student name; row skipped to prevent cross-student merging."
+          });
+        }
+      } else {
+        const reason = candidates.length
+          ? "Registration code matched an existing record, but the name match was missing, conflicting, or ambiguous; row skipped to protect existing student data."
+          : "Duplicate registration code has no unique existing-student name match; rows skipped to prevent cross-student merging.";
+        for (const row of group) warnings.push({ row: row.rowNo, Regn_No: row.regnNo, reason });
+      }
     }
 
     const operations = []; const operationRows = [];
@@ -351,7 +397,7 @@ export async function POST(request) {
     const courses = coursePatterns.length ? await Course.find({ code: { $in: coursePatterns } }).lean() : [];
     const courseMap = new Map(courses.map(course => [String(course.code).toUpperCase(), course]));
     for (const row of uniqueRows) {
-      const existing = row.regnNo ? existingByCode.get(row.regnNo) : null;
+      const existing = existingForRow.get(row) || null;
       if (!existing && importMode === "update_existing_only") { skippedNew += 1; continue; }
       const course = courseMap.get(row.course) || courseMap.get(row.course.split("-")[0]) || null;
       const courseInfo = { code: row.course, name: course?.name || COURSE_NAMES[row.course] || row.course };
@@ -363,7 +409,10 @@ export async function POST(request) {
         operations.push({ updateOne: { filter: { _id: existing._id }, update: { $set: missing }, upsert: false } });
         operationRows.push({ row, kind: "existing" });
       } else {
-        operations.push({ updateOne: { filter: row.regnNo ? { regnNo: row.regnNo } : { sourceRowKey: row.sourceRowKey }, update: { $setOnInsert: { ...payload, status: "Registered" } }, upsert: true } });
+        const insertFilter = row.regnNo
+          ? { $or: [{ regnNo: row.regnNo }, { enrollmentNo: row.regnNo }] }
+          : { sourceRowKey: row.sourceRowKey };
+        operations.push({ updateOne: { filter: insertFilter, update: { $setOnInsert: { ...payload, status: "Registered" } }, upsert: true } });
         operationRows.push({ row, kind: "new" });
       }
     }
