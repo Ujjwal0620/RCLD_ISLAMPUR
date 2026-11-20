@@ -24,13 +24,15 @@ function resolveActiveEnrollmentStudent(student) {
     : null;
   const activeEnrollment = semesterEnrollment || student?.activeEnrollment || enrollments.find(item => item.status === "ACTIVE");
   if (!activeEnrollment) return student;
+  const semesterRoman = String(activeEnrollment.semesterLabel || "").toUpperCase().match(/SM[- ]?(I|II|III|IV|V|VI)\\b/);
+  const semesterIndex = semesterRoman ? ["I", "II", "III", "IV", "V", "VI"].indexOf(semesterRoman[1]) + 1 : 0;
   return {
     ...student,
     regnNo: activeEnrollment.stCode || student.regnNo,
     enrollmentNo: activeEnrollment.stCode || student.enrollmentNo,
     courseCode: activeEnrollment.courseCode || student.courseCode,
     courseName: activeEnrollment.courseName || activeEnrollment.courseCode || student.courseName,
-    currentSemester: Number(String(activeEnrollment.semesterLabel || student.currentSemester || "").match(/\\d+/)?.[0] || student.currentSemester || 1),
+    currentSemester: semesterIndex || Number(String(activeEnrollment.semesterLabel || student.currentSemester || "").match(/\\d+/)?.[0] || student.currentSemester || 1),
     admissionDate: activeEnrollment.admissionDate || student.admissionDate,
     activeEnrollment,
   };
