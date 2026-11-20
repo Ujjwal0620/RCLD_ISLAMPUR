@@ -14,7 +14,7 @@ export function buildCfkStudentIcardMarkup({
   const name = safe(student.applicantName || "Student");
   const father = safe(student.fatherOrHusbandName || student.fatherName || student.guardianName || "—");
   const course = safe(courseText);
-  const id = safe(idNumber || student.enrollmentNo || student.studentId || student.admissionNo || "—");
+  const id = safe(idNumber || student.regnNo || student.enrollmentNo || student.studentId || student.admissionNo || "—");
   const date = safe(issueDate || "—");
   const addr = safe(address || "—");
   const photo = photoUrl
