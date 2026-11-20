@@ -112,7 +112,7 @@ function parseAddress(value) {
   const raw = String(value ?? "").replace(/\r/g, "").trim();
   const lines = raw.split(/[\n,;|]+/).map(item => item.trim()).filter(Boolean);
   const takeAfter = (line, pattern) => line ? line.replace(pattern, "").trim().replace(/^[.:+\- ]+|[,. ]+$/g, "") : "";
-  const wardLine = lines.find(line => /^(?:VILL(?:AGE)?\.?|WARD(?:\s*NO\.?)?|COLONY|TOWN)\b?/i.test(line)) || "";
+  const wardLine = lines.find(line => /^(?:VILL(?:AGE)?\.?|WARD(?:\s*NO\.?)?|COLONY|TOWN)/i.test(line)) || "";
   const ward = takeAfter(wardLine, /^(?:VILL(?:AGE)?\.?|WARD(?:\s*NO\.?)?|COLONY|TOWN)\s*[:.\-]?\s*/i);
   const sharedLine = lines.find(line => /P\.?\s*O\.?\s*\+?\s*P\.?\s*S\.?/i.test(line)) || "";
   let po = "", ps = "";
