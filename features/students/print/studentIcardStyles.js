@@ -103,11 +103,11 @@ export function getStudentIcardStyles(cardHeight = "88mm") {
                 .std-photo{position:absolute;left:17.5mm;top:29.8mm;width:20.0mm;height:23.8mm;border:.55mm solid #1B1F6B;border-radius:1.6mm;overflow:hidden;background:#FFFFFF;z-index:3}
         
                 .std-details{position:absolute;left:2.5mm;right:2.5mm;width:auto;top:54.8mm;z-index:3;overflow:hidden;box-sizing:border-box}
-                .std-details .r{display:grid;grid-template-columns:14.8mm minmax(0,1fr);column-gap:.8mm;align-items:baseline;margin:0 0 .55mm;width:100%;line-height:2.45mm;box-sizing:border-box}
+                .std-details .r{display:grid;grid-template-columns:14.8mm minmax(0,1fr);column-gap:.8mm;align-items:baseline;margin:0 0 .25mm;width:100%;line-height:2.05mm;box-sizing:border-box}
                 .std-details b{font-size:2.05mm;font-weight:700;color:#1B1F6B;white-space:nowrap}
                 .std-details span{font-size:1.8mm;font-weight:700;color:#111;min-width:0}
                 .std-details .nm{font-weight:800;letter-spacing:.02mm}
-                .std-details .ad{font-size:1.88mm;font-weight:700;line-height:2.35mm;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+                .std-details .ad{font-size:1.65mm;font-weight:700;line-height:1.9mm;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
                 .std-details .crs{font-size:2.05mm;font-weight:700;line-height:2.3mm;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
         
                 .std-sign{position:absolute;right:1.8mm;top:70.2mm;width:13.5mm;text-align:center;z-index:3}
