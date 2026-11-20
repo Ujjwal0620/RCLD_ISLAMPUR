@@ -95,7 +95,7 @@ function normalizeCourse(value, courseMap) {
 }
 
 function cleanStudentName(value) {
-  return clean(value).replace(/_\\d+\\s*$/, "").replace(/[',.]+$/, "").replace(/\\s+/g, " ").trim();
+  return clean(value).replace(/_\d+\s*$/, "").replace(/[',.]+$/, "").replace(/\s+/g, " ").trim();
 }
 
 function cleanAddressPart(value, labels) {
@@ -196,7 +196,7 @@ function readSourceRows(workbook) {
     const values = grid[index];
     if (!values.some(value => clean(value))) continue;
     const get = key => indexes[key] >= 0 ? values[indexes[key]] : "";
-    const registrationCode = clean(get("regnNo")).replace(/\\.0$/, "").trim();
+    const registrationCode = clean(get("regnNo")).replace(/\.0$/, "").trim();
     const sourceName = clean(get("name"));
     const name = cleanStudentName(sourceName);
     const address = parseAddress(get("address"));
