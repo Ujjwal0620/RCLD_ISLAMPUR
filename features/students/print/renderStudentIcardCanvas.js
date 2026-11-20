@@ -289,6 +289,18 @@ export async function exportStudentIcards({ students, templateName, outputMode =
     printWindow.document.close();
   }
 
+  let exportList = list;
+  if (outputMode !== "print") {
+    exportList = [];
+    for (const student of list) {
+      if (!student._id) throw new Error("Student ID is missing; unable to assign an ID-card number.");
+      const response = await fetch(`/api/students/${encodeURIComponent(student._id)}/icard-number`, { method: "POST" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to assign an ID-card number.");
+      exportList.push({ ...student, idCardNo: String(data.idCardNo) });
+    }
+  }
+
   if (outputMode === "print") {
     const pages = [];
     try {
@@ -321,8 +333,8 @@ export async function exportStudentIcards({ students, templateName, outputMode =
     return;
   }
 
-  for (let index = 0; index < list.length; index += 1) {
-    const student = list[index];
+  for (let index = 0; index < exportList.length; index += 1) {
+    const student = exportList[index];
     const canvas = await renderStudentIcardCanvas(student, templateName, index + 1);
     const blob = await canvasToJpeg(canvas);
     const url = URL.createObjectURL(blob);
@@ -335,9 +347,9 @@ export async function exportStudentIcards({ students, templateName, outputMode =
     link.click();
     link.remove();
     window.setTimeout(() => URL.revokeObjectURL(url), 30000);
-    if (index < list.length - 1) await new Promise(resolve => window.setTimeout(resolve, 180));
+    if (index < exportList.length - 1) await new Promise(resolve => window.setTimeout(resolve, 180));
   }
-  onMessage?.(list.length === 1 ? "Student ID Card JPG downloaded." : `${list.length} student ID cards downloaded.`);
+  onMessage?.(exportList.length === 1 ? "Student ID Card JPG downloaded." : `${exportList.length} student ID cards downloaded.`);
 }
 
 export function getRecommendedIcardTemplate(student, templates) {
