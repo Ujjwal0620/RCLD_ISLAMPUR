@@ -266,18 +266,14 @@ export async function exportStudentIcards({ students, templateName, outputMode =
     printWindow.document.close();
   }
 
-  const cards = [];
-  for (const student of list) {
-    const canvas = await renderStudentIcardCanvas(student, templateName);
-    cards.push({ student, canvas });
-  }
-
   if (outputMode === "print") {
-    const pages = await Promise.all(cards.map(async ({ canvas, student }) => {
+    const pages = [];
+    for (const student of list) {
+      const canvas = await renderStudentIcardCanvas(student, templateName);
       const blob = await canvasToJpeg(canvas);
       const url = URL.createObjectURL(blob);
-      return { url, name: student.applicantName || "Student" };
-    }));
+      pages.push({ url, name: student.applicantName || "Student" });
+    }
     const html = `<!doctype html><html><head><meta charset="utf-8"><title>RCLD Student ID Cards</title><style>
       @page{size:54mm 85.6mm;margin:0}
       *{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
@@ -296,8 +292,9 @@ export async function exportStudentIcards({ students, templateName, outputMode =
     return;
   }
 
-  for (let index = 0; index < cards.length; index += 1) {
-    const { student, canvas } = cards[index];
+  for (let index = 0; index < list.length; index += 1) {
+    const student = list[index];
+    const canvas = await renderStudentIcardCanvas(student, templateName);
     const blob = await canvasToJpeg(canvas);
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -309,7 +306,7 @@ export async function exportStudentIcards({ students, templateName, outputMode =
     link.click();
     link.remove();
     window.setTimeout(() => URL.revokeObjectURL(url), 30000);
-    if (index < cards.length - 1) await new Promise(resolve => window.setTimeout(resolve, 180));
+    if (index < list.length - 1) await new Promise(resolve => window.setTimeout(resolve, 180));
   }
   onMessage?.(list.length === 1 ? "Student ID Card JPG downloaded." : `${list.length} student ID cards downloaded.`);
 }
