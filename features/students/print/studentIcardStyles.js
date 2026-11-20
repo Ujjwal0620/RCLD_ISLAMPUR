@@ -87,7 +87,7 @@ export function getStudentIcardStyles(cardHeight = "88mm") {
                 .std-id{position:absolute;left:1.8mm;top:3.8mm;width:18.5mm;text-align:center;z-index:3}
                 .std-id .l{font-size:2.15mm;line-height:1.15;font-weight:800;color:#111}
                 .std-id .p{display:none}
-                .std-id .n{font-size:2.15mm;line-height:1.15;font-weight:900;color:#111;margin-top:.1mm;white-space:nowrap;letter-spacing:-.08mm}
+                .std-id .n{font-size:1.65mm;line-height:1.15;font-weight:900;color:#111;margin-top:.1mm;white-space:nowrap;letter-spacing:-.08mm}
         
                 .std-logo{position:absolute;left:21.25mm;top:1.5mm;width:12.5mm;height:14.2mm;object-fit:contain;z-index:3}
         
