@@ -23,8 +23,8 @@ function resolveActiveEnrollmentStudent(student, selectedTemplate = "") {
     ? enrollments.find(item => String(item.semesterLabel || "").toUpperCase() === "SM-" + roman)
     : null;
   const templateName = String(selectedTemplate || "").toUpperCase();
-  const templateSemester = templateName.match(/SEM[- ]?(\\d)/);
-  const templateYear = templateName.match(/(1ST|2ND|3RD)\\s*YEAR/);
+  const templateSemester = templateName.match(/SEM[- ]?(\d)/);
+  const templateYear = templateName.match(/(1ST|2ND|3RD)\s*YEAR/);
   const templateSemesterRoman = templateSemester
     ? ["I", "II", "III", "IV", "V", "VI"][Number(templateSemester[1]) - 1] : "";
   let templateEnrollment = templateSemesterRoman
