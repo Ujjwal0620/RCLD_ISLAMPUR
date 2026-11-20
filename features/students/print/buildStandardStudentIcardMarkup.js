@@ -49,7 +49,7 @@ export function buildStandardStudentIcardMarkup({
       
                 <!-- Top Row: Left ID Block, Center Crest Logo, Right Session Block -->
                 <div class="std-id">
-                  <div class="l">ID NO.</div>
+                  <div class="l">ST_CODE</div>
                   <div class="p">${idPrefix}</div>
                   ${idNumber ? `<div class="n">${idNumber}</div>` : ""}
                 </div>
