@@ -358,7 +358,7 @@ export async function POST(request) {
     if (feeOperations.length) await StudentFee.bulkWrite(feeOperations, { ordered: false });
 
     // Create/link one durable identity record and one enrollment for each registration code.
-    const linkedStudents = await Student.find({ importSource: sourceName }).lean();
+    const linkedStudents = await Student.find({ importSource: sourceName }).sort({ admissionDate: 1, createdAt: 1 }).lean();
     const masterLinkSummary = await linkImportedStudentRecords(linkedStudents);
     // Import the dynamically detected fee worksheet; missing/invalid rows are reported, never silently discarded.
     const paymentImport = await importPaymentWorksheet(workbook, { sourceName });
