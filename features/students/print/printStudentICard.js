@@ -18,13 +18,13 @@ import { printTemplateStudentIcard } from "@/features/students/print/printTempla
 function resolveActiveEnrollmentStudent(student) {
   const enrollments = Array.isArray(student?.enrollments) ? student.enrollments : [];
   const roman = ["I", "II", "III", "IV", "V", "VI"][Number(student?.currentSemester || 0) - 1] || "";
-  const isKids = /coding\\s*for\\s*kids|\\bCFK\\b|\\bKIDS\\b/i.test(String(student?.courseName || student?.courseCode || ""));
+  const isKids = /coding\s*for\s*kids|\bCFK\b|\bKIDS\b/i.test(String(student?.courseName || student?.courseCode || ""));
   const semesterEnrollment = isKids && roman
     ? enrollments.find(item => String(item.semesterLabel || "").toUpperCase() === "SM-" + roman)
     : null;
   const activeEnrollment = student?.activeEnrollment || semesterEnrollment || enrollments.find(item => item.status === "ACTIVE");
   if (!activeEnrollment) return student;
-  const semesterRoman = String(activeEnrollment.semesterLabel || "").toUpperCase().match(/SM[- ]?(I|II|III|IV|V|VI)\\b/);
+  const semesterRoman = String(activeEnrollment.semesterLabel || "").toUpperCase().match(/SM[- ]?(I|II|III|IV|V|VI)\b/);
   const semesterIndex = semesterRoman ? ["I", "II", "III", "IV", "V", "VI"].indexOf(semesterRoman[1]) + 1 : 0;
   return {
     ...student,
@@ -34,7 +34,7 @@ function resolveActiveEnrollmentStudent(student) {
     courseName: activeEnrollment.courseName
       || (String(student.courseCode || "").toUpperCase() === String(activeEnrollment.courseCode || "").toUpperCase()
         ? student.courseName : activeEnrollment.courseCode),
-    currentSemester: semesterIndex || Number(String(activeEnrollment.semesterLabel || student.currentSemester || "").match(/\\d+/)?.[0] || student.currentSemester || 1),
+    currentSemester: semesterIndex || Number(String(activeEnrollment.semesterLabel || student.currentSemester || "").match(/\d+/)?.[0] || student.currentSemester || 1),
     admissionDate: activeEnrollment.admissionDate || student.admissionDate,
     activeEnrollment,
   };
