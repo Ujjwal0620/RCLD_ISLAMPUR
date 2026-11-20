@@ -15,7 +15,8 @@ import mongoose from "mongoose";
 import { existsSync, readFileSync } from "node:fs";
 
 function loadLocalEnvironment() {
-  for (const file of [".env.local", ".env", ".env.development.local", ".env.development"]) {
+  const mode = process.env.NODE_ENV || "development";
+  for (const file of [".env." + mode + ".local", ".env.local", ".env." + mode, ".env"]) {
     if (!existsSync(file)) continue;
     for (const line of readFileSync(file, "utf8").split(/\\r?\\n/)) {
       const match = line.trim().match(/^(?:export\\s+)?([A-Za-z_][A-Za-z0-9_]*)\\s*=\\s*(.*)$/);
