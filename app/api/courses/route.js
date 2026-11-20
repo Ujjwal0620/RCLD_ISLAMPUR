@@ -12,9 +12,9 @@ async function ensureCatalog(){
   const marker = "official-course-fees-and-cfk-semesters-v1";
   if (!(await migrations.findOne({_id:marker}))) {
     const official = {CCA:2500,DCA:4500,ADCA:6000,CCC:5000,CAO:5500,DWPD:12000,DOM:9000,DCST:14000,DCAP:16500,DHNT:20900};
-    for (const [code,fee] of Object.entries(official)) await Course.updateOne({code},{$set:{fee,admissionFee:0}});
+    for (const [code,fee] of Object.entries(official)) await Course.updateOne({code},{$setOnInsert:{fee,admissionFee:0,admissionIncludedInTotal:true}},{upsert:true});
     const kids = COURSE_CATALOG.find(x=>x.code==="KIDS");
-    await Course.updateOne({code:"KIDS"},{$set:{name:kids.name,durationMonths:36,fee:24600,admissionFee:0,semesterPlans:kids.semesterPlans,description:kids.description}});
+    await Course.updateOne({code:"KIDS"},{$setOnInsert:{name:kids.name,durationMonths:36,fee:24600,admissionFee:0,semesterPlans:kids.semesterPlans,description:kids.description,admissionIncludedInTotal:true}},{upsert:true});
     await migrations.insertOne({_id:marker,appliedAt:new Date()});
   }
 }
