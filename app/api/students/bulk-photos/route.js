@@ -77,9 +77,17 @@ export async function POST(request) {
         continue;
       }
 
+      const numericRegistrationNo = /^\\d+$/.test(registrationNo) ? Number(registrationNo) : null;
       const student = await Student.findOne({
-        regnNo: { $in: [registrationNo, Number(registrationNo)] },
-      }).select("_id regnNo applicantName").lean();
+        $or: [
+          { regnNo: registrationNo },
+          { enrollmentNo: registrationNo },
+          ...(numericRegistrationNo === null ? [] : [
+            { regnNo: numericRegistrationNo },
+            { enrollmentNo: numericRegistrationNo },
+          ]),
+        ],
+      }).select("_id regnNo enrollmentNo applicantName").lean();
       if (!student) {
         summary.unmatchedFilenames.push(filename);
         continue;
@@ -89,8 +97,15 @@ export async function POST(request) {
         const buffer = Buffer.from(await file.arrayBuffer());
         const uploaded = await uploadToCloudinary(cloudinary.client, buffer, registrationNo, extension);
         await Student.findByIdAndUpdate(student._id, { $set: { photoUrl: uploaded.secure_url } }, { new: true, runValidators: false });
+        // Link the same Cloudinary URL to the master profile by legacy ID
+        // and by registration code, covering older imports with incomplete links.
         await StudentMaster.updateOne(
-          { legacyStudentIds: student._id },
+          {
+            $or: [
+              { legacyStudentIds: student._id },
+              { stCodes: registrationNo },
+            ],
+          },
           { $set: { photoUrl: uploaded.secure_url } }
         );
         summary.matchedAndUpdated += 1;
