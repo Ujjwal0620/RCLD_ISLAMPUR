@@ -157,9 +157,9 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
   const usesSampledRoboticsPatch = hasCircularLabelPatch && templateName.startsWith("ID Card Robotics ");
   const circularLabelPatch = hasCircularLabelPatch
     ? '<div class="circular-label-patch' + (usesSampledRoboticsPatch ? ' robotics-label-patch' : '') + '"></div>' +
-      '<div class="overlay circular-label circular-label-admission">Date of Admn. :</div>' +
-      '<div class="overlay circular-label circular-label-father">Father\'s Name :</div>' +
-      '<div class="overlay circular-label circular-label-address">Address :</div>'
+      '<div class="overlay circular-label circular-label-admission" style="color:' + config.lastNameColor + '">Date of Admn. :</div>' +
+      '<div class="overlay circular-label circular-label-father" style="color:' + config.lastNameColor + '">Father\'s Name :</div>' +
+      '<div class="overlay circular-label circular-label-address" style="color:' + config.lastNameColor + '">Address :</div>'
     : "";
   const diplomaValues = diploma
     ? '<div class="overlay diploma-session">' + escapeHtml(session || "—") + '</div>' +
@@ -188,7 +188,7 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     '.circular-address{top:69.4%;transform-origin:top left;line-height:1.28;word-break:break-word;white-space:normal;max-height:10.8%;overflow:hidden}' +
     '.circular-label-patch{position:absolute;z-index:3;top:63.3%;left:15%;width:30.5%;height:14.5%;background:#fff;pointer-events:none}' +
     '.circular-label-patch.robotics-label-patch{background:#fff}' +
-    '.circular-label{z-index:4;left:15%;width:29.8%;text-align:right;font-family:"Roboto Condensed","Arial Narrow",Arial,sans-serif;font-weight:700;font-size:clamp(14px,3.35cqw,46px);color:var(--active-template-badge-color);transform:scaleY(1.10);transform-origin:right center;white-space:nowrap;overflow:visible}' +
+    '.circular-label{z-index:4;left:15%;width:29.8%;text-align:right;font-family:"Roboto Condensed","Arial Narrow",Arial,sans-serif;font-weight:700;font-size:clamp(14px,3.35cqw,46px);transform:scaleY(1.10);transform-origin:right center;white-space:nowrap;overflow:visible}' +
     '.circular-label-admission{top:63.8%}.circular-label-father{top:66.6%}.circular-label-address{top:69.4%}' +
     '.circular-address .address-line{display:block;min-height:0}' +
     '.diploma .student-photo{top:34.2%;left:32.1%;transform:none;width:35.8%;height:25%;aspect-ratio:auto;border-radius:10px;object-fit:cover}' +
