@@ -27,6 +27,9 @@ export default function StudentFeeWorkspace({
   const currentStCode = String(student.regnNo || student.enrollmentNo || "");
   const effectiveStCode = selectedStCode || currentStCode;
   const enrollmentOptions = Array.isArray(student.enrollments) ? student.enrollments : [];
+  const selectedEnrollment = enrollmentOptions.find(item => String(item.stCode || "") === effectiveStCode);
+  const selectedInstallments = Array.isArray(selectedEnrollment?.installments) ? selectedEnrollment.installments : [];
+  const selectedSummary = selectedEnrollment?.summary || {};
   const historyRows = useMemo(() => paymentHistory.filter(payment =>
     historyScope === "all" || String(payment.stCode || "") === effectiveStCode
   ), [paymentHistory, historyScope, effectiveStCode]);
@@ -128,6 +131,33 @@ export default function StudentFeeWorkspace({
                         )) : <tr><td colSpan={6} style={{ padding: 16, textAlign: "center", color: "var(--muted,#7b8494)" }}>No payment receipts are linked to this student profile yet.</td></tr>}
                       </tbody>
                     </table>
+                  </div>
+                  <div style={{ marginTop: 18 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                      <h4 style={{ margin: 0 }}>Installment Breakdown — {selectedEnrollment?.semesterLabel || selectedEnrollment?.courseCode || "Selected Semester"} ({effectiveStCode || "—"})</h4>
+                      <small>Due ₹{Number(selectedSummary.totalDue || selectedEnrollment?.feeConfig?.netPayableFee || 0).toLocaleString("en-IN")} · Paid ₹{Number(selectedSummary.totalPaid || 0).toLocaleString("en-IN")} · Balance ₹{Number(selectedSummary.balanceDue || 0).toLocaleString("en-IN")}</small>
+                    </div>
+                    <div style={{ overflowX: "auto", marginTop: 8 }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 620 }}>
+                        <thead><tr>
+                          {["Installment", "Due Date", "Amount Due", "Amount Paid", "Balance", "Status"].map(label =>
+                            <th key={label} style={{ textAlign: "left", padding: "9px 8px", borderBottom: "1px solid var(--border,#e3e7ef)", fontSize: 12 }}>{label}</th>
+                          )}
+                        </tr></thead>
+                        <tbody>
+                          {selectedInstallments.length ? selectedInstallments.map((installment, index) => (
+                            <tr key={String(installment.index ?? index) + "-" + installment.label}>
+                              <td style={{ padding: "8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{installment.label}</td>
+                              <td style={{ padding: "8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{formatDate(installment.dueDate)}</td>
+                              <td style={{ padding: "8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>₹{Number(installment.amountDue || 0).toLocaleString("en-IN")}</td>
+                              <td style={{ padding: "8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>₹{Number(installment.amountPaid || 0).toLocaleString("en-IN")}</td>
+                              <td style={{ padding: "8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>₹{Math.max(0, Number(installment.amountDue || 0) - Number(installment.amountPaid || 0)).toLocaleString("en-IN")}</td>
+                              <td style={{ padding: "8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{installment.status || "PENDING"}</td>
+                            </tr>
+                          )) : <tr><td colSpan={6} style={{ padding: 14, textAlign: "center", color: "var(--muted,#7b8494)" }}>No installment plan is available for this registration. Legacy receipts remain listed above.</td></tr>}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </section>
                 <button
