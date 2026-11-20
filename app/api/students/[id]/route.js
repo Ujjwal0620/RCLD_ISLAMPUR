@@ -37,7 +37,10 @@ export async function GET(req,{params}){
     const enrollmentQuery = masterProfile ? { studentId: masterProfile._id } : { legacyStudentId: student._id };
     const enrollments = await StudentEnrollment.find(enrollmentQuery).sort({ admissionDate: 1, createdAt: 1 }).lean();
     const activeEnrollment = masterProfile
-      ? enrollments.find(item => String(item._id) === String(masterProfile.activeEnrollmentId))
+      ? (enrollments.find(item => String(item._id) === String(masterProfile.activeEnrollmentId))
+        || enrollments.find(item => item.status === "ACTIVE")
+        || enrollments[enrollments.length - 1]
+        || null)
       : null;
     const canonicalStudentId = activeEnrollment?.legacyStudentId || student._id;
     const canonicalStudent = String(canonicalStudentId) === String(student._id)
