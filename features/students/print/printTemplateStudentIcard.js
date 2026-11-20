@@ -132,9 +132,8 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     student.formNo, student.formNumber, student.registrationNumber, student.registrationNo,
     student.registrationId, student.regNo, student.regnNo, "-"
   )).trim();
-  const prefix = "RCLD/ISL-001/";
-  const idCode = rawRegistrationCode.toUpperCase().startsWith(prefix)
-    ? rawRegistrationCode.slice(prefix.length)
+  const idCode = rawRegistrationCode.includes("/")
+    ? rawRegistrationCode.slice(rawRegistrationCode.lastIndexOf("/") + 1)
     : rawRegistrationCode;
   const fatherName = titleCase(firstValue(student.fatherOrHusbandName, student.fatherName, student.fatherNameAsPerRecords, student.guardianName, "—"));
   const addressMarkup = getAddressMarkup(student) || '<div class="address-line">—</div>';
