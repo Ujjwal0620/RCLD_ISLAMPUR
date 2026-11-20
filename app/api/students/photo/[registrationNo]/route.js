@@ -64,10 +64,15 @@ export async function GET(_request, { params }) {
     }
 
     let cloudinaryUrl = "";
+    let databaseAvailable = false;
+    let student = null;
+    let master = null;
+    let enrollment = null;
     try {
       await connectMongoDB();
+      databaseAvailable = true;
       const numericCode = /^\d+$/.test(code) ? Number(code) : null;
-      const [student, masterByCode, enrollment] = await Promise.all([
+      const [matchedStudent, masterByCode, matchedEnrollment] = await Promise.all([
         Student.findOne({
           $or: [
             { regnNo: code }, { enrollmentNo: code },
@@ -78,34 +83,38 @@ export async function GET(_request, { params }) {
         StudentEnrollment.findOne({ stCode: code }).select("studentId legacyStudentId stCode").lean(),
       ]);
 
-      let master = masterByCode;
+      student = matchedStudent;
+      enrollment = matchedEnrollment;
+      master = masterByCode;
       if (!master && enrollment?.studentId) {
         master = await StudentMaster.findById(enrollment.studentId)
           .select("_id photoUrl stCodes legacyStudentIds").lean();
       }
       cloudinaryUrl = safeCloudinaryUrl(student?.photoUrl) || safeCloudinaryUrl(master?.photoUrl);
+    } catch (databaseError) {
+      console.warn("[student-photo] Database lookup unavailable:", databaseError?.message || databaseError);
+    }
 
-      if (!cloudinaryUrl) {
-        const cloudinary = configureCloudinary();
-        if (cloudinary.configured) {
-          cloudinaryUrl = await findCloudinaryPhoto(cloudinary.client, code);
-          if (cloudinaryUrl) {
-            if (master?._id) {
-              await StudentMaster.updateOne({ _id: master._id }, { $set: { photoUrl: cloudinaryUrl } });
-            }
-            const linkedIds = [
-              ...(master?.legacyStudentIds || []),
-              ...(enrollment?.legacyStudentId ? [enrollment.legacyStudentId] : []),
-              ...(student?._id ? [student._id] : []),
-            ];
-            if (linkedIds.length) {
-              await Student.updateMany({ _id: { $in: linkedIds } }, { $set: { photoUrl: cloudinaryUrl } });
-            }
+    // Cloudinary lookup is independent of MongoDB availability. This is important
+    // when the Atlas connection is temporarily unavailable.
+    if (!cloudinaryUrl) {
+      const cloudinary = configureCloudinary();
+      if (cloudinary.configured) {
+        cloudinaryUrl = await findCloudinaryPhoto(cloudinary.client, code);
+        if (cloudinaryUrl && databaseAvailable) {
+          if (master?._id) {
+            await StudentMaster.updateOne({ _id: master._id }, { $set: { photoUrl: cloudinaryUrl } }).catch(() => {});
+          }
+          const linkedIds = [
+            ...(master?.legacyStudentIds || []),
+            ...(enrollment?.legacyStudentId ? [enrollment.legacyStudentId] : []),
+            ...(student?._id ? [student._id] : []),
+          ];
+          if (linkedIds.length) {
+            await Student.updateMany({ _id: { $in: linkedIds } }, { $set: { photoUrl: cloudinaryUrl } }).catch(() => {});
           }
         }
       }
-    } catch (databaseError) {
-      console.warn("[student-photo] Database/Cloudinary lookup unavailable:", databaseError?.message || databaseError);
     }
 
     if (cloudinaryUrl) {
