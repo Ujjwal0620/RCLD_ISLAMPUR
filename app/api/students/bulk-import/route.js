@@ -95,7 +95,7 @@ function normalizeCourse(value, courseMap) {
 }
 
 function cleanStudentName(value) {
-  return clean(value).replace(/_\d+\s*$/, "").replace(/[',.]+$/, "").replace(/\s+/g, " ").trim();
+  return clean(value).replace(/[',.]+$/, "").replace(/_\d+\s*$/, "").replace(/\s+/g, " ").trim();
 }
 
 function cleanAddressPart(value, labels) {
