@@ -80,6 +80,14 @@ export function buildStandardStudentIcardMarkup({
                     <span class="one-line">${upper(student.fatherOrHusbandName)}</span>
                   </div>
                   <div class="r">
+                    <b>DOB:</b>
+                    <span class="one-line">${esc(student.dateOfBirth || student.dob || "—")}</span>
+                  </div>
+                  <div class="r">
+                    <b>Phone:</b>
+                    <span class="one-line">${esc(student.mobileNumber || student.phoneNumber || "—")}</span>
+                  </div>
+                  <div class="r">
                     <b>Address:</b>
                     <span class="ad">${stdAddrLines.map((l) => esc(l)).join("<br/>")}</span>
                   </div>
