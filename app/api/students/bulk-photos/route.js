@@ -15,14 +15,13 @@ const StudentSchema = new mongoose.Schema({
 const Student = mongoose.models.Student || mongoose.model("Student", StudentSchema);
 
 function registrationFromFilename(filename) {
-  const base = String(filename || "").split(/[\\/]/).pop() || "";
-  const exact = base.match(/(?:^|[_\\-\\s])(\\d{4,})(?=\\.[^.]+$)/);
+  const base = String(filename || "").split("/").pop() || "";
+  const exact = base.match(/(?:^|[_ -])([0-9]{4,})(?=\\.[^.]+$)/);
   if (exact?.[1]) return exact[1];
   const withoutExtension = base.replace(/\\.[^.]+$/, "");
-  const candidates = withoutExtension.match(/\\d{4,}/g) || [];
+  const candidates = withoutExtension.match(/[0-9]{4,}/g) || [];
   return candidates.length ? candidates[candidates.length - 1] : "";
 }
-
 function uploadToCloudinary(client, buffer, registrationNo, extension) {
   return new Promise((resolve, reject) => {
     const stream = client.uploader.upload_stream({
