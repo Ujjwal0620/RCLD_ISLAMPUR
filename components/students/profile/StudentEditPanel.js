@@ -37,7 +37,7 @@ export default function StudentEditPanel({
                       </span>
                     </div>
                   </div>
-                  <form onSubmit={saveStudent}>
+                  <form onSubmit={saveStudent} noValidate>
                     <div className="edit-card student-photo-edit-card" style={{ marginBottom: 16 }}>
                       <h4>Student Photograph</h4>
                       <div style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
