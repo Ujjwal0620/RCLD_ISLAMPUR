@@ -186,10 +186,11 @@ export default function BulkImportPage() {
           <div className="panel-head"><div><h3>Import summary</h3><p>{result.message}</p></div><CheckCircle2 size={22} /></div>
           <div style={{ padding: 20 }}>
             <div className="student-summary-grid">
-              <div className="summary-card"><span>Existing Students Enriched</span><strong>{result.existingStudentsEnriched ?? 0}</strong></div>
+              <div className="summary-card"><span>Existing Students Enriched (missing fields filled)</span><strong>{result.existingStudentsEnriched ?? 0}</strong></div>
               <div className="summary-card"><span>Existing Students Unchanged</span><strong>{result.existingStudentsUnchanged ?? 0}</strong></div>
               <div className="summary-card"><span>New Students Created</span><strong>{result.newStudentsCreated ?? 0}</strong></div>
               <div className="summary-card"><span>Skipped New</span><strong>{result.skippedNew ?? 0}</strong></div>
+              <div className="summary-card"><span>Warnings / Duplicate IDs Flagged</span><strong>{result.warningCount ?? result.warnings?.length ?? 0}</strong></div>
             </div>
             {result.warnings?.length > 0 && <details style={{ marginTop: 18 }} open><summary><b>Warnings / Duplicate IDs Flagged ({result.warningCount ?? result.warnings.length})</b></summary><div className="form-help" style={{ marginTop: 10 }}>{result.warnings.slice(0, 1000).map((item, index) => <div key={index}>Row {item.row ?? "—"} · Regn_No {item.Regn_No || "—"}: {item.reason}</div>)}</div><button className="ghost-btn" type="button" onClick={() => { const ws = XLSX.utils.json_to_sheet(result.warnings); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Import Warnings"); XLSX.writeFile(wb, "RCLD_Student_Import_Warnings.xlsx"); }}><Download size={15} /> Download warning details</button></details>}
             {result.errors?.length > 0 && <><h4 style={{ marginTop: 18 }}>Row errors ({result.errors.length})</h4><div className="error-msg">{result.errors.slice(0, 100).map((item, index) => <div key={index}>Row {item.row ?? "—"} · Regn_No {item.Regn_No || "—"}: {item.reason}</div>)}</div></>}
