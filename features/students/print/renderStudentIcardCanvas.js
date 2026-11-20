@@ -185,9 +185,9 @@ function getSequentialStudentId(student, fallbackIndex = 1) {
   const stored = candidates.find(value => {
     if (typeof value === "number") return Number.isSafeInteger(value) && value > 0;
     const text = String(value || "").trim();
-    return /^\\d+$/.test(text) || /(?:ID[-_ ]?NO|ID[-_ ]?CARD)[/:_-]+\\d+$/i.test(text);
+    return /^\d+$/.test(text) || /(?:ID[-_ ]?NO|ID[-_ ]?CARD)[/:_-]+\d+$/i.test(text);
   });
-  const match = String(stored || "").match(/(\\d+)$/);
+  const match = String(stored || "").match(/(\d+)$/);
   const parsed = match ? Number(match[1]) : 0;
   const serial = Number.isSafeInteger(parsed) && parsed > 0
     ? parsed
