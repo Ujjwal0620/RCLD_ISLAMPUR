@@ -116,14 +116,12 @@ async function main() {
     const masterId = realMasterIds.get(String(plannedMaster._id));
     const master = await StudentMaster.findById(masterId);
     if (!master.legacyStudentIds.some(id => String(id) === String(student._id))) master.legacyStudentIds.push(student._id);
-    const latestDate = new Date(student.admissionDate || student.createdAt || 0);
-    const currentDate = new Date(master.updatedAt || master.createdAt || 0);
-    if (latestDate >= currentDate) {
-      master.address = student.address || master.address;
-      master.phoneNumbers = [...new Set([...(master.phoneNumbers || []), ...phoneNumbers(student)])];
-      master.qualification = student.sourceQualification || master.qualification;
-      if (!master.photoUrl && student.photoUrl) master.photoUrl = student.photoUrl;
-    }
+    // Students are processed oldest-to-newest, so each non-empty value here
+    // supersedes the prior semester while blank fields never erase master data.
+    master.address = student.address || master.address;
+    master.phoneNumbers = [...new Set([...(master.phoneNumbers || []), ...phoneNumbers(student)])];
+    master.qualification = student.sourceQualification || master.qualification;
+    if (!master.photoUrl && student.photoUrl) master.photoUrl = student.photoUrl;
     await master.save();
 
     const stCode = enrollmentCode(student);
