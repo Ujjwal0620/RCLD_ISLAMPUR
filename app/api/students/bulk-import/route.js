@@ -68,8 +68,11 @@ function dateValue(value) {
     return parsed ? [parsed.y, String(parsed.m).padStart(2, "0"), String(parsed.d).padStart(2, "0")].join("-") : "";
   }
   const raw = clean(value);
-  let match = raw.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/);
-  if (match) return match[3] + "-" + match[2].padStart(2, "0") + "-" + match[1].padStart(2, "0");
+  let match = raw.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})$/);
+  if (match) {
+    const year = Number(match[3]) < 100 ? 2000 + Number(match[3]) : Number(match[3]);
+    return String(year) + "-" + match[2].padStart(2, "0") + "-" + match[1].padStart(2, "0");
+  }
   match = raw.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
   if (match) return match[1] + "-" + match[2].padStart(2, "0") + "-" + match[3].padStart(2, "0");
   const parsed = new Date(raw);
