@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { connectMongoDB } from "@/lib/mongodb";
 import mongoose from "mongoose";
 import Course from "@/models/Course";
+import StudentMaster from "@/models/StudentMaster";
+import StudentEnrollment from "@/models/StudentEnrollment";
 import { getStudentAdmissionStatus } from "@/lib/student-admission-status";
 
 const StudentSchema = new mongoose.Schema({
@@ -159,6 +161,27 @@ export async function GET(request) {
     if (qualification) {
       const qualificationRx = new RegExp(escapeRegex(qualification), "i");
       filter.$and = [...(filter.$and || []), { $or: ["qualifications.examCourse","qualifications.boardUniversity","qualifications.collegeInstitute","qualifications.year","qualifications.percentage"].map(field => ({ [field]: qualificationRx })) }];
+    }
+
+    // Present one directory row per permanent master identity. Historical Student
+    // documents remain stored because operational tables still reference their IDs.
+    const masterProfiles = await StudentMaster.find({ legacyStudentIds: { $exists: true, $ne: [] } })
+      .select("_id legacyStudentIds activeEnrollmentId").lean();
+    if (masterProfiles.length) {
+      const activeIds = masterProfiles.map(master => master.activeEnrollmentId).filter(Boolean);
+      const activeEnrollments = await StudentEnrollment.find({ _id: { $in: activeIds } })
+        .select("_id legacyStudentId").lean();
+      const activeById = new Map(activeEnrollments.map(enrollment => [String(enrollment._id), enrollment]));
+      const hiddenIds = [];
+      for (const master of masterProfiles) {
+        const linkedIds = (master.legacyStudentIds || []).map(String);
+        const activeStudentId = activeById.get(String(master.activeEnrollmentId))?.legacyStudentId;
+        const canonicalId = activeStudentId && linkedIds.includes(String(activeStudentId))
+          ? String(activeStudentId)
+          : linkedIds[linkedIds.length - 1];
+        for (const linkedId of linkedIds) if (linkedId !== canonicalId) hiddenIds.push(linkedId);
+      }
+      if (hiddenIds.length) filter._id = { $nin: hiddenIds.map(id => new mongoose.Types.ObjectId(id)) };
     }
 
     const studentQuery = Student.find(filter).sort({ createdAt: -1 });
