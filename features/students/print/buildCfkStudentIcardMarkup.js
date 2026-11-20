@@ -68,9 +68,7 @@ export function buildCfkStudentIcardMarkup({
       <div class="cfk-course">${course}</div>
       <div class="cfk-fields">
         <div class="cfk-field"><span>${id}</span></div>
-        <div class="cfk-field"><span>${safe(student.dateOfBirth || student.dob || "—")}</span></div>
         <div class="cfk-field"><span>${father}</span></div>
-        <div class="cfk-field"><span>${safe(student.mobileNumber || student.phoneNumber || "—")}</span></div>
         <div class="cfk-field"><span class="cfk-address">${addr}</span></div>
         <div class="cfk-field"><span>${date}</span></div>
       </div>
