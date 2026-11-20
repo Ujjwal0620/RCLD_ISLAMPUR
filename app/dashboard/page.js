@@ -63,7 +63,36 @@ export default function DashboardPage(){
 
  async function load(){
   setLoading(true);
-  try{const r=await fetch("/api/dashboard",{cache:"no-store"});setData(await r.json())}finally{setLoading(false)}
+  try{
+   const r=await fetch("/api/dashboard",{cache:"no-store"});
+   const payload=await r.json();
+   setData({
+    ...payload,
+    students:Number(payload.students||0),
+    assigned:Number(payload.assigned||0),
+    activeStudents:Number(payload.activeStudents||0),
+    batches:Number(payload.batches||0),
+    employees:Number(payload.employees||0),
+    dropout:Number(payload.dropout||0),
+    unassigned:Number(payload.unassigned||0),
+    batchUtilization:Number(payload.batchUtilization||0),
+    recent:Array.isArray(payload.recent)?payload.recent:[],
+    studentStatus:Array.isArray(payload.studentStatus)?payload.studentStatus:[],
+    courses:Array.isArray(payload.courses)?payload.courses:[],
+    batchPerformance:Array.isArray(payload.batchPerformance)?payload.batchPerformance:[],
+    finance:{payable:0,collected:0,due:0,collectionPercentage:0,...(payload.finance||{})}
+   });
+  }catch(error){
+   console.error("Dashboard data load failed:",error);
+   setData(previous=>({
+    ...previous,
+    studentStatus:Array.isArray(previous.studentStatus)?previous.studentStatus:[],
+    courses:Array.isArray(previous.courses)?previous.courses:[],
+    recent:Array.isArray(previous.recent)?previous.recent:[],
+    batchPerformance:Array.isArray(previous.batchPerformance)?previous.batchPerformance:[],
+    finance:{payable:0,collected:0,due:0,collectionPercentage:0,...(previous.finance||{})}
+   }));
+  }finally{setLoading(false)}
  }
  async function loadActivity(){
   setActivityLoading(true);
@@ -78,7 +107,7 @@ export default function DashboardPage(){
  },[]);
  useEffect(()=>{if(user && !["superadmin","office-admin"].includes(user.role))return;loadActivity()},[user,period,date,month]);
 
- const statusTotal=data.studentStatus.reduce((n,x)=>n+x.value,0)||data.students;
+ const statusTotal=(Array.isArray(data.studentStatus)?data.studentStatus:[]).reduce((n,x)=>n+Number(x?.value||0),0)||data.students;
  const topCourses=data.courses.slice(0,8);
  const capacity=data.batchUtilization||0;
  const attendance=activity.attendance.day;
