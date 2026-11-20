@@ -231,6 +231,52 @@ function asStudentPayload(row, course, sourceName) {
   };
 }
 
+function normalizePersonName(value) {
+  return clean(value).toLowerCase().normalize("NFKD").replace(/[^a-z0-9 ]/g, " ").replace(/\\s+/g, " ").trim();
+}
+function nameSimilarity(left, right) {
+  const a = normalizePersonName(left), b = normalizePersonName(right);
+  if (!a || !b) return 0;
+  if (a === b) return 1;
+  const aa = new Set(a.split(" ")), bb = new Set(b.split(" "));
+  return (2 * [...aa].filter(token => bb.has(token)).length) / (aa.size + bb.size);
+}
+function isMissing(value, field) {
+  if (value === null || value === undefined || String(value).trim() === "") return true;
+  if (field === "sex" || field === "sourceSex") {
+    const normalized = String(value).trim().replace(/^[^a-z0-9]+|[^a-z0-9]+$/gi, "").toUpperCase();
+    return !["M", "F", "MALE", "FEMALE"].includes(normalized);
+  }
+  return false;
+}
+function buildMissingFields(existing, payload) {
+  const fields = {};
+  const put = (target, aliases, source, extras = []) => {
+    if (aliases.some(key => !isMissing(existing[key], key)) || isMissing(payload[source], source)) return;
+    fields[target] = payload[source];
+    for (const [key, value] of extras) if (isMissing(existing[key], key) && !isMissing(value, key)) fields[key] = value;
+  };
+  put("applicantName", ["applicantName", "name"], "applicantName");
+  put("admissionDate", ["admissionDate", "dateOfAdmission"], "admissionDate", [["dateOfAdmission", payload.dateOfAdmission]]);
+  put("dateOfBirth", ["dateOfBirth", "dob"], "dateOfBirth", [["dob", payload.dob]]);
+  put("sex", ["sex", "gender"], "sex");
+  put("fatherOrHusbandName", ["fatherOrHusbandName", "fatherName"], "fatherOrHusbandName", [["fatherName", payload.fatherName]]);
+  put("mobileNumber", ["mobileNumber", "phone", "whatsappNumber"], "mobileNumber", [["phone", payload.phone]]);
+  put("alternatePhoneNumber", ["alternatePhoneNumber", "guardianContactNumber", "altPhone"], "alternatePhoneNumber", [["altPhone", payload.altPhone]]);
+  put("address", ["address", "presentAddress", "permanentAddress"], "address", [["presentAddress", payload.presentAddress], ["permanentAddress", payload.permanentAddress]]);
+  put("ward", ["ward"], "ward"); put("village", ["village"], "village");
+  put("postOffice", ["postOffice", "po"], "postOffice", [["po", payload.po]]);
+  put("policeStation", ["policeStation", "ps"], "policeStation", [["ps", payload.ps]]);
+  put("district", ["district"], "district");
+  put("pin", ["pin", "pincode"], "pin", [["pincode", payload.pincode]]);
+  put("sourceQualification", ["sourceQualification", "qualification"], "sourceQualification", [["qualification", payload.qualification]]);
+  put("formNo", ["formNo"], "formNo");
+  put("courseCode", ["courseCode", "courseName", "sourceCourseLabel"], "courseCode", [["courseName", payload.courseName], ["sourceCourseLabel", payload.sourceCourseLabel]]);
+  if (isMissing(existing.sourceAddressRaw, "sourceAddressRaw") && !isMissing(payload.sourceAddressRaw, "sourceAddressRaw")) fields.sourceAddressRaw = payload.sourceAddressRaw;
+  if (isMissing(existing.sourcePhone, "sourcePhone") && !isMissing(payload.sourcePhone, "sourcePhone")) fields.sourcePhone = payload.sourcePhone;
+  return fields;
+}
+
 export async function POST(request) {
   try {
     const session = await getSession();
@@ -242,14 +288,15 @@ export async function POST(request) {
     const form = await request.formData();
     const file = form.get("file");
     const mode = String(form.get("mode") || "preview");
-    const duplicateMode = String(form.get("duplicateMode") || "skip").toLowerCase();
+    const importMode = String(form.get("importMode") || "fill_and_import").toLowerCase();
+    const requestedSheet = String(form.get("sheetName") || "").trim();
     if (!file || typeof file.arrayBuffer !== "function") return NextResponse.json({ error: "Choose an Excel or CSV file." }, { status: 400 });
     if (!/\.(xlsx|xls|csv)$/i.test(String(file.name || ""))) return NextResponse.json({ error: "Only .xlsx, .xls and .csv files are supported." }, { status: 400 });
     if (Number(file.size || 0) > 15 * 1024 * 1024) return NextResponse.json({ error: "The file must be smaller than 15 MB." }, { status: 413 });
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const workbook = XLSX.read(buffer, { type: "buffer", cellDates: true });
-    const parsed = parseRows(workbook);
+    const parsed = parseRows(workbook, requestedSheet);
     const preview = previewPayload(parsed);
     if (mode !== "import") return NextResponse.json(preview);
 
@@ -257,37 +304,82 @@ export async function POST(request) {
     await removeLegacyFormNoUniqueIndex();
     const sourceName = String(file.name || "RCLD Student Import").slice(0, 180);
     const validRows = parsed.rows.filter(row => !row.errors.length);
-    const uniqueRows = [];
-    const seen = new Set();
     const warnings = [...preview.warnings];
     const errors = [...preview.errors];
-    let skipped = parsed.rows.length - validRows.length;
-    for (const row of validRows) {
-      if (row.regnNo && seen.has(row.regnNo)) {
-        skipped += 1;
-        warnings.push({ row: row.rowNo, Regn_No: row.regnNo, reason: "Duplicate registration number within this workbook; the first occurrence was retained." });
-        continue;
-      }
-      if (row.regnNo) seen.add(row.regnNo);
-      uniqueRows.push(row);
-    }
-
-    const registrationNumbers = uniqueRows.map(row => row.regnNo).filter(Boolean);
-    const numericRegistrationNumbers = registrationNumbers.filter(code => /^\d+$/.test(code)).map(Number);
-    const existingRecords = registrationNumbers.length
-      ? await Student.find({ $or: [
-          { regnNo: { $in: [...registrationNumbers, ...numericRegistrationNumbers] } },
-          { enrollmentNo: { $in: [...registrationNumbers, ...numericRegistrationNumbers] } }
-        ] }).lean()
-      : [];
+    const validRows = parsed.rows.filter(row => !row.errors.length);
+    const registrationNumbers = [...new Set(validRows.map(row => row.regnNo).filter(Boolean))];
+    const numericRegistrationNumbers = registrationNumbers.filter(code => /^\\d+$/.test(code)).map(Number);
+    const existingRecords = registrationNumbers.length ? await Student.find({ $or: [
+      { regnNo: { $in: [...registrationNumbers, ...numericRegistrationNumbers] } },
+      { enrollmentNo: { $in: [...registrationNumbers, ...numericRegistrationNumbers] } }
+    ] }).lean() : [];
     const existingByCode = new Map();
-    for (const student of existingRecords) {
-      for (const rawCode of [student.regnNo, student.enrollmentNo]) {
-        const key = String(rawCode ?? "").replace(/\.0$/, "");
-        if (key && !existingByCode.has(key)) existingByCode.set(key, student);
-      }
+    for (const student of existingRecords) for (const rawCode of [student.regnNo, student.enrollmentNo]) {
+      const key = String(rawCode ?? "").replace(/\\.0$/, "");
+      if (key && !existingByCode.has(key)) existingByCode.set(key, student);
+    }
+    const grouped = new Map();
+    for (const row of validRows) { const key = row.regnNo || "ROW-" + row.rowNo; if (!grouped.has(key)) grouped.set(key, []); grouped.get(key).push(row); }
+    const uniqueRows = [];
+    for (const [code, group] of grouped) {
+      if (group.length === 1) { uniqueRows.push(group[0]); continue; }
+      const existing = existingByCode.get(code);
+      const matching = existing ? group.map(row => ({ row, score: nameSimilarity(existing.applicantName || existing.name, row.name) })).filter(item => item.score >= 0.65).sort((a,b) => b.score-a.score) : [];
+      if (matching.length) { uniqueRows.push(matching[0].row); for (const row of group) if (row !== matching[0].row) warnings.push({ row: row.rowNo, Regn_No: row.regnNo, reason: "Reused registration code has a different student name; row skipped to prevent cross-student merging." }); }
+      else for (const row of group) warnings.push({ row: row.rowNo, Regn_No: row.regnNo, reason: "Duplicate registration code has conflicting names; rows skipped to prevent cross-student merging." });
     }
 
+    const operations = []; const operationRows = [];
+    let imported = 0, enriched = 0, unchanged = 0, skippedNew = 0;
+    const courseCodes = [...new Set(uniqueRows.map(row => row.course).filter(Boolean))];
+    const baseCodes = [...new Set(courseCodes.map(code => code.split("-")[0]))];
+    const coursePatterns = [...new Set([...courseCodes, ...baseCodes])].map(code => new RegExp("^" + code.replace(/[.*+?^$()|[\\]\\\\]/g, "\\\\$&") + "$", "i"));
+    const courses = coursePatterns.length ? await Course.find({ code: { $in: coursePatterns } }).lean() : [];
+    const courseMap = new Map(courses.map(course => [String(course.code).toUpperCase(), course]));
+    for (const row of uniqueRows) {
+      const existing = row.regnNo ? existingByCode.get(row.regnNo) : null;
+      if (!existing && importMode === "update_existing_only") { skippedNew += 1; continue; }
+      const course = courseMap.get(row.course) || courseMap.get(row.course.split("-")[0]) || null;
+      const courseInfo = { code: row.course, name: course?.name || COURSE_NAMES[row.course] || row.course };
+      const payload = asStudentPayload(row, courseInfo, sourceName);
+      if (existing) {
+        if (nameSimilarity(existing.applicantName || existing.name, row.name) < 0.65) { warnings.push({ row: row.rowNo, Regn_No: row.regnNo, reason: "Registration number matched but student name did not; existing student left unchanged." }); continue; }
+        const missing = buildMissingFields(existing, payload);
+        if (!Object.keys(missing).length) { unchanged += 1; continue; }
+        operations.push({ updateOne: { filter: { _id: existing._id }, update: { $set: missing }, upsert: false } });
+        operationRows.push({ row, kind: "existing" });
+      } else {
+        operations.push({ updateOne: { filter: row.regnNo ? { regnNo: row.regnNo } : { sourceRowKey: row.sourceRowKey }, update: { $setOnInsert: { ...payload, status: "Registered" } }, upsert: true } });
+        operationRows.push({ row, kind: "new" });
+      }
+    }
+    const newStudentIds = [];
+    for (let offset = 0; offset < operations.length; offset += 500) {
+      const chunk = operations.slice(offset, offset + 500);
+      try {
+        const write = await Student.bulkWrite(chunk, { ordered: false });
+        imported += Number(write.upsertedCount || 0); enriched += Number(write.modifiedCount || 0);
+        for (const [index, value] of Object.entries(write.upsertedIds || {})) if (operationRows[offset + Number(index)]?.kind === "new") newStudentIds.push(value._id || value);
+      } catch (writeError) {
+        const failed = new Map((writeError.writeErrors || []).map(item => [item.index, item]));
+        const result = writeError.result || writeError;
+        imported += Number(result.upsertedCount || 0); enriched += Number(result.modifiedCount || 0);
+        for (const [index, item] of operationRows.slice(offset, offset + chunk.length).entries()) {
+          const failure = failed.get(index);
+          if (failure) errors.push({ row: item.row.rowNo, Regn_No: item.row.regnNo, reason: failure.errmsg || failure.message || "Database rejected this row." });
+          else if (item.kind === "new" && result.upsertedIds?.[index]) newStudentIds.push(result.upsertedIds[index]._id || result.upsertedIds[index]);
+        }
+      }
+    }
+    const importedStudents = newStudentIds.length ? await Student.find({ _id: { $in: newStudentIds } }).lean() : [];
+    for (const student of importedStudents) {
+      try {
+        const rawCode = String(student.sourceCourseLabel || student.courseCode || "").trim().toUpperCase();
+        const resolved = await resolveCourseFeeConfig(rawCode, Course);
+        await StudentFee.updateOne({ studentId: student._id }, { $setOnInsert: { totalFee: Number(resolved.feeConfig?.grossFee ?? 0), admissionFee: Number(resolved.feeConfig?.admissionFee ?? 0), registrationFee: Number(resolved.feeConfig?.registrationFee ?? 0), discount: 0, payments: [], updatedBy: "student-bulk-import" } }, { upsert: true });
+        try { await linkImportedStudentRecords([student]); } catch (linkError) { errors.push({ row: student.sourceRowNo, Regn_No: student.regnNo, reason: "Student saved, but academic enrollment linking needs review: " + linkError.message }); }
+      } catch (rowError) { errors.push({ row: student.sourceRowNo, Regn_No: student.regnNo, reason: "Student saved, but fee initialization failed: " + rowError.message }); }
+    }
     const courseCodes = [...new Set(uniqueRows.map(row => row.course).filter(Boolean))];
     const baseCodes = [...new Set(courseCodes.map(code => code.split("-")[0]))];
     const coursePatterns = [...new Set([...courseCodes, ...baseCodes])].map(code => new RegExp("^" + code + "$", "i"));
@@ -342,39 +434,6 @@ export async function POST(request) {
       }
     }
 
-    const failedRows = new Set(errors.map(item => Number(item.row)).filter(Number.isFinite));
-    const successfulOperations = operationRows.filter(item => !failedRows.has(Number(item.row.rowNo)));
-    const importedStudentFilters = successfulOperations.map(item => item.existing
-      ? { _id: item.existing._id }
-      : item.row.regnNo
-        ? { regnNo: item.row.regnNo }
-        : { sourceRowKey: item.row.sourceRowKey });
-    const importedStudents = importedStudentFilters.length
-      ? await Student.find({ $or: importedStudentFilters }).sort({ admissionDate: 1, createdAt: 1 }).lean()
-      : [];
-    for (const student of importedStudents) {
-      try {
-        const rawCode = String(student.sourceCourseLabel || student.courseCode || "").trim().toUpperCase();
-        const resolved = await resolveCourseFeeConfig(rawCode, Course);
-        await StudentFee.updateOne(
-          { studentId: student._id },
-          { $setOnInsert: {
-            totalFee: Number(resolved.feeConfig?.grossFee ?? 0),
-            admissionFee: Number(resolved.feeConfig?.admissionFee ?? 0),
-            registrationFee: Number(resolved.feeConfig?.registrationFee ?? 0),
-            discount: 0, payments: [], updatedBy: "student-bulk-import"
-          } },
-          { upsert: true }
-        );
-        try { await linkImportedStudentRecords([student]); }
-        catch (linkError) {
-          errors.push({ row: student.sourceRowNo, Regn_No: student.regnNo, reason: "Student saved, but academic enrollment linking needs review: " + linkError.message });
-        }
-      } catch (rowError) {
-        errors.push({ row: student.sourceRowNo, Regn_No: student.regnNo, reason: "Student saved, but fee initialization failed: " + rowError.message });
-      }
-    }
-
     let paymentImport = null;
     try {
       const paymentPreview = parsePaymentWorksheet(workbook);
@@ -385,9 +444,11 @@ export async function POST(request) {
 
     return NextResponse.json({
       message: "Student import processing completed.",
-      total: parsed.rows.length, imported, updated, skipped,
-      warnings: warnings.slice(0, 500), errors: errors.slice(0, 500),
-      sheetName: parsed.sheetName, duplicateMode, paymentImport
+      total: parsed.rows.length, imported, newStudentsCreated: imported,
+      enriched, existingStudentsEnriched: enriched, unchanged, existingStudentsUnchanged: unchanged,
+      skippedNew, skipped: skippedNew + errors.length,
+      warnings: warnings.slice(0, 1000), warningCount: warnings.length, errors: errors.slice(0, 1000),
+      sheetName: parsed.sheetName, importMode, paymentImport
     });
   } catch (error) {
     console.error("[student-bulk-import]", error);
