@@ -49,9 +49,8 @@ export function buildStandardStudentIcardMarkup({
       
                 <!-- Top Row: Left ID Block, Center Crest Logo, Right Session Block -->
                 <div class="std-id">
-                  <div class="l">ST_CODE</div>
-                  <div class="p">${idPrefix}</div>
-                  ${idNumber ? `<div class="n">${idNumber}</div>` : ""}
+                  <div class="l">ID No.</div>
+                  <div class="n">${idNumber || "—"}</div>
                 </div>
       
                 <img class="std-logo" src="${logoUrl}" alt="RCLD logo"/>
@@ -82,10 +81,6 @@ export function buildStandardStudentIcardMarkup({
                   <div class="r">
                     <b>Address:</b>
                     <span class="ad">${stdAddrLines.map((l) => esc(l)).join("<br/>")}</span>
-                  </div>
-                  <div class="r">
-                    <b>Course:</b>
-                    <span class="crs">${esc(courseText || "—")}</span>
                   </div>
                   <div class="r">
                     <b>Date of Issue:</b>
