@@ -96,7 +96,7 @@ const StudentMaster = mongoose.models.StudentMaster || mongoose.model("StudentMa
 const StudentEnrollment = mongoose.models.StudentEnrollment || mongoose.model("StudentEnrollment", EnrollmentSchema);
 
 const identityOf = student => ({
-  fullName: student.applicantName || student.sourceStudentName || student.name || "",
+  fullName: student.applicantName || student.sourceStudentName || student.name || "UNIDENTIFIED STUDENT " + String(student._id),
   dob: student.dateOfBirth || student.dob || null,
   fatherName: student.fatherOrHusbandName || student.fatherName || "",
   phoneNumbers: phones([student.mobileNumber, student.guardianContactNumber, student.whatsappNumber, student.sourcePhone].filter(Boolean).join(",")),
