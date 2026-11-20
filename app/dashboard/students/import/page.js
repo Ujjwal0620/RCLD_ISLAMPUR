@@ -85,7 +85,7 @@ export default function BulkImportPage() {
         <div>
           <span className="eyebrow">RCLD ADMISSION WORKBOOK</span>
           <h2>Import student records from Excel or CSV</h2>
-          <p>Detects student-data worksheets automatically, ignores payment-only sheets for student records, and safely fills only missing fields on existing students.</p>
+          <p>Detects student-data worksheets automatically. Payment-receipt sheets are excluded from this student import. Existing student records are enriched only where fields are missing.</p>
         </div>
         <button className="ghost-btn" type="button" onClick={downloadTemplate}><Download size={16} /> Download Template</button>
       </section>
