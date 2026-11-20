@@ -56,7 +56,7 @@ function splitNameMarkup(value, lastNameColor, diploma) {
   const parts = String(value || "").trim().split(/\s+/).filter(Boolean);
   if (!parts.length) return "";
   const last = parts.length > 1 ? parts.pop() : "";
-  const firstColor = diploma ? "#1E242B" : "#3E454C";
+  const firstColor = diploma ? "#1E242B" : "#374151";
   const leading = parts.map((part) => '<span style="color:' + firstColor + '">' + escapeHtml(part) + "</span>").join(" ");
   if (!last) return '<span style="color:' + firstColor + '">' + escapeHtml(parts[0]) + "</span>";
   return leading + ' <span style="color:' + (diploma ? "#2E3192" : lastNameColor) + '">' + escapeHtml(last) + "</span>";
@@ -186,7 +186,7 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     '.template-row-id{top:var(--row-id-top,61.2%)}.template-row-admission{top:var(--row-admission-top,66.9%)}.template-row-father{top:var(--row-father-top,69.7%)}.template-row-address{top:var(--row-address-top,72.5%);align-items:start}' +
     '.template-row-id .id-number-prefix{font-size:3.1cqw;font-weight:400;color:#222;white-space:nowrap}' +
     '.template-row-id .id-number-code{font-size:3.1cqw;font-weight:700;color:#222;white-space:nowrap}' +
-    '.template-row-address .template-value{white-space:normal;line-height:1.26;word-break:normal;overflow-wrap:anywhere;font-size:clamp(11px,2.75cqw,38px)}' +
+    '.template-row-address .template-value{white-space:normal;line-height:1.26;word-break:normal;overflow-wrap:anywhere;font-size:clamp(11px,2.75cqw,38px);max-height:3.78em;overflow:hidden}' +
     '.address-line{display:block;min-height:0;font-weight:400}' +
     '.diploma .student-photo{top:34.2%;left:32.1%;transform:none;width:35.8%;height:25%;aspect-ratio:auto;border-radius:10px;object-fit:cover}' +
     '.diploma .overlay:not(.diploma-name){font-family:Arial,"Helvetica Neue","Liberation Sans",sans-serif;font-size:clamp(10px,2.25cqw,30px);line-height:1.1;color:#1E242B;font-weight:400;transform:none;transform-origin:left top}' +
