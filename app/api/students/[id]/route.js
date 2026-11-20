@@ -164,10 +164,10 @@ export async function PATCH(req,{params}){
     const student=await Student.findByIdAndUpdate(id,update,{new:true,runValidators:true}).lean();
     if (student) {
       const masterFields = {
-        fullName: student.applicantName || student.sourceStudentName || "Student",
-        normalizedFullName: String(student.applicantName || student.sourceStudentName || "Student")
+        fullName: student.applicantName || student.sourceStudentName || "",
+        normalizedFullName: String(student.applicantName || student.sourceStudentName || "")
           .normalize("NFKC").replace(/_\\d+\\s*$/, "").toUpperCase().replace(/\\s+/g, " ").replace(/[',.]+$/, "").trim(),
-        dob: student.dateOfBirth && !Number.isNaN(new Date(student.dateOfBirth).getTime()) ? new Date(student.dateOfBirth) : null,
+        dob: student.dateOfBirth && !Number.isNaN(new Date(student.dateOfBirth).getTime()) ? new Date(student.dateOfBirth) : undefined,
         fatherName: student.fatherOrHusbandName || "",
         normalizedFatherName: String(student.fatherOrHusbandName || "").toUpperCase().replace(/[^A-Z0-9 ]/g, " ").replace(/\\s+/g, " ").trim(),
         address: student.presentAddress || student.address || student.permanentAddress || "",
@@ -176,15 +176,14 @@ export async function PATCH(req,{params}){
           .filter(value => value.length === 10))],
         qualification: student.sourceQualification || "",
         ...(update.photoUrl !== undefined ? { photoUrl: update.photoUrl } : {}),
-        ...(student.regnNo || student.enrollmentNo ? { $unused: "" } : {}),
       };
-      delete masterFields.$unused;
       const stCode = String(student.regnNo || student.enrollmentNo || "").replace(/\\.0$/, "").trim();
       const master = await StudentMaster.findOne({ legacyStudentIds: student._id });
       if (master) {
-        Object.assign(master, Object.fromEntries(Object.entries(masterFields).filter(([key, value]) =>
-          key === "photoUrl" || key === "dob" ? value !== undefined : Boolean(value)
-        )));
+        const nonEmptyMasterFields = Object.fromEntries(Object.entries(masterFields).filter(([key, value]) =>
+          value !== undefined && value !== null && value !== "" && (!Array.isArray(value) || value.length > 0)
+        ));
+        Object.assign(master, nonEmptyMasterFields);
         if (stCode && !master.stCodes.includes(stCode)) master.stCodes.push(stCode);
         await master.save();
       } else {
