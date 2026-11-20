@@ -155,6 +155,15 @@ export default function useStudentProfile(params) {
       });
       const d = await r.json();
       if (!r.ok) return setMessage(d.error || "Unable to update student.");
+      setStudent(d.student);
+      setEditForm(d.student);
+      const hasFeeSettings = [feeForm.totalFee, feeForm.discount, feeForm.admissionFee, feeForm.registrationFee]
+        .some(value => String(value ?? "").trim() !== "");
+      if (!hasFeeSettings) {
+        setEditing(false);
+        setMessage("Student profile updated successfully.");
+        return;
+      }
       const fr = await fetch("/api/students/" + student._id + "/fees", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -264,25 +273,43 @@ export default function useStudentProfile(params) {
     }
   
     async function uploadStudentPhoto(file) {
-      if (!file) return;
-      if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 5 * 1024 * 1024) {
+      if (!file || !student?._id) return;
+      if (!String(file.type || "").startsWith("image/") || file.size > 5 * 1024 * 1024) {
         setMessage("Choose a JPG, PNG or WebP image smaller than 5 MB.");
         return;
       }
+      const previousUrl = editForm.photoUrl || student.photoUrl || "";
+      const previewUrl = URL.createObjectURL(file);
       setPhotoUploading(true);
       setMessage("");
+      setEditForm(current => ({ ...current, photoUrl: previewUrl }));
+      setStudent(current => current ? ({ ...current, photoUrl: previewUrl }) : current);
       try {
         const form = new FormData();
         form.append("file", file);
         form.append("purpose", "photo");
-        const response = await fetch("/api/uploads/student-photo", { method: "POST", body: form });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "Unable to upload student photo.");
-        setEditForm(current => ({ ...current, photoUrl: data.url }));
-        setMessage("Photo uploaded. Save Changes to update the student profile.");
+        const uploadResponse = await fetch("/api/uploads/student-photo", { method: "POST", body: form });
+        const uploadData = await uploadResponse.json();
+        if (!uploadResponse.ok || !uploadData.url) {
+          throw new Error(uploadData.error || "Unable to upload student photograph.");
+        }
+        const saveResponse = await fetch("/api/students/" + student._id, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ photoUrl: uploadData.url }),
+        });
+        const saveData = await saveResponse.json();
+        if (!saveResponse.ok) throw new Error(saveData.error || "Photo uploaded but could not be linked to the student.");
+        const savedStudent = { ...student, ...saveData.student, photoUrl: uploadData.url };
+        setStudent(savedStudent);
+        setEditForm(current => ({ ...current, ...savedStudent, photoUrl: uploadData.url }));
+        setMessage("Student photograph uploaded and saved.");
       } catch (uploadError) {
-        setMessage(uploadError.message || "Unable to upload student photo.");
+        setEditForm(current => ({ ...current, photoUrl: previousUrl }));
+        setStudent(current => current ? ({ ...current, photoUrl: previousUrl }) : current);
+        setMessage(uploadError.message || "Unable to save student photograph.");
       } finally {
+        URL.revokeObjectURL(previewUrl);
         setPhotoUploading(false);
       }
     }
@@ -337,12 +364,12 @@ export default function useStudentProfile(params) {
 
   return {
     student, setStudent, error, loading, fee, courses, batches, referrals, attendance,
-    feeForm, setFeeForm, paymentItems, setPaymentItems, proofUploading,
-    feeWorkspaceOpen, setFeeWorkspaceOpen, attForm, setAttForm, message, setMessage, photoUploading,
+    feeForm, setFeeForm, paymentItems, setPaymentItems, proofUploading, photoUploading, uploadStudentPhoto,
+    feeWorkspaceOpen, setFeeWorkspaceOpen, attForm, setAttForm, message, setMessage,
     editing, setEditing, editForm, setEditForm, history, setHistory, contactLogs,
     transition, setTransition, transitioning, setTransitioning, icardDialogOpen,
     setIcardDialogOpen, semesterBusy, updateCfkSemester, saveStudent, deleteStudent,
-    saveFees, uploadPaymentProof, uploadStudentPhoto, printStudentICard, downloadStudentICardJpg, printStudentForm, printBill,
+    saveFees, uploadPaymentProof, printStudentICard, downloadStudentICardJpg, printStudentForm, printBill,
     saveAttendance,
   };
 }

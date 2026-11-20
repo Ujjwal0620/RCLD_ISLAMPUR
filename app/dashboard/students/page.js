@@ -1,6 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Search, UserPlus, ChevronLeft, ChevronRight, SlidersHorizontal, X, RotateCcw, Filter, Pencil, Trash2, Send, Upload, ShieldCheck, Users, UserRoundCheck, GraduationCap } from "lucide-react";
+import { Search, UserPlus, ChevronLeft, ChevronRight, SlidersHorizontal, X, RotateCcw, Filter, Pencil, Trash2, Send, Upload, ShieldCheck, Users, UserRoundCheck, GraduationCap, Download, Printer, ImagePlus } from "lucide-react";
+import CodingForKidsIcardDialog from "@/components/students/profile/CodingForKidsIcardDialog";
+import BulkStudentPhotoUploadDialog from "@/components/students/BulkStudentPhotoUploadDialog";
+import { exportStudentIcards } from "@/features/students/print/renderStudentIcardCanvas";
 import ERPLayout from "@/components/ERPLayout";
 
 const fallbackCourses=["CCA","DCA","ADCA","CCC","CAO","DWPD","DOM","DCST","DCAP","DHNT"];
@@ -12,6 +15,8 @@ export default function StudentsPage(){
   const [advanced,setAdvanced]=useState(false),[loading,setLoading]=useState(true);
   const [selectedStudents,setSelectedStudents]=useState([]),[batches,setBatches]=useState([]),[selectedBatch,setSelectedBatch]=useState(""),[assigning,setAssigning]=useState(false);
   const [selectAllMatching,setSelectAllMatching]=useState(false),[bulkStatus,setBulkStatus]=useState(""),[bulkBusy,setBulkBusy]=useState(false);
+  const [bulkIcardDialogOpen,setBulkIcardDialogOpen]=useState(false),[bulkIcardMode,setBulkIcardMode]=useState("jpg"),[bulkIcardStudents,setBulkIcardStudents]=useState([]),[bulkIcardLoading,setBulkIcardLoading]=useState(false);
+  const [bulkPhotoDialogOpen,setBulkPhotoDialogOpen]=useState(false);
 
   async function load(page=1,override=filters){
     setLoading(true);
@@ -44,7 +49,7 @@ export default function StudentsPage(){
     if(/^DOM(?:[-_ ]|$)/.test(v)||v.includes("DIPLOMA IN OFFICE MANAGEMENT"))return "DOM";
     if(/^DCST(?:[-_ ]|$)/.test(v))return "DCST";
     if(/^DCA(?:[-_ ]|$)/.test(v))return "DCA";
-    return v.replace(/\\s+/g,"");
+    return v.replace(new RegExp(String.fromCharCode(92)+"s+","g"),"");
   };
   const selectedCourses=[...new Set(selectedRecords.map(s=>normalizeCourse(s.courseCode||s.courseName||s.sourceCourseLabel)).filter(Boolean))];
   const compatibleBatches=batches.filter(b=>b.available&&(!selectedCourses.length||selectedCourses.length!==1||normalizeCourse(b.courseCode||b.courseName)===selectedCourses[0]));
@@ -70,6 +75,40 @@ export default function StudentsPage(){
     if(allVisibleSelected){setSelectedStudents([]);return}
     setSelectedStudents(students.map(s=>s._id));
   }
+  async function openBulkIcards(mode){
+    if(bulkIcardLoading)return;
+    if(!selectAllMatching&&!selectedStudents.length)return alert("Select at least one student first.");
+    setBulkIcardLoading(true);
+    try{
+      let response;
+      if(selectAllMatching){
+        const params=new URLSearchParams({page:"1",limit:"500"});
+        Object.entries(filters).forEach(([key,value])=>{if(value)params.set(key,value)});
+        response=await fetch("/api/students?"+params.toString(),{cache:"no-store"});
+      }else{
+        response=await fetch("/api/students/bulk-icards",{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({studentIds:selectedStudents})
+        });
+      }
+      const data=await response.json();
+      if(!response.ok)throw new Error(data.error||"Unable to load selected students.");
+      setBulkIcardStudents(data.students||[]);
+      setBulkIcardMode(mode);
+      setBulkIcardDialogOpen(true);
+      if(selectAllMatching&&Number(data.pagination?.total||0)>500)alert("The selection contains more than 500 students. The first 500 will be prepared in this batch.");
+    }catch(error){alert(error.message||"Unable to prepare ID cards.");}
+    finally{setBulkIcardLoading(false);}
+  }
+
+  async function confirmBulkIcards(templateName, records, mode){
+    try{
+      await exportStudentIcards({students:records,templateName,outputMode:mode,onMessage:message=>alert(message)});
+      setBulkIcardDialogOpen(false);
+    }catch(error){alert(error.message||"Unable to generate the selected student ID cards.");}
+  }
+
   async function sendToBatch(){
     if(assigning)return;
     if((!selectedStudents.length&&!selectAllMatching)||!selectedBatch)return alert("Select students and an available batch.");
@@ -82,7 +121,7 @@ export default function StudentsPage(){
   }
 
   return <ERPLayout active="/dashboard/students">
-    <header className="topbar"><div><div className="crumb">Students / Registry</div><h1>Students</h1></div><div className="top-actions"><a className="ghost-btn" href="/dashboard/students/import"><Upload size={17}/> Bulk Import</a><a className="primary-btn" href="/dashboard/students/register"><UserPlus size={17}/> Register Student</a></div></header>
+    <header className="topbar"><div><div className="crumb">Students / Registry</div><h1>Students</h1></div><div className="top-actions"><button className="ghost-btn" onClick={()=>setBulkPhotoDialogOpen(true)}><ImagePlus size={17}/> Bulk Upload Photos</button><a className="ghost-btn" href="/dashboard/students/import"><Upload size={17}/> Bulk Import</a><a className="primary-btn" href="/dashboard/students/register"><UserPlus size={17}/> Register Student</a></div></header>
     <section className="directory-overview">
       <div>
         <span className="eyebrow">STUDENT OPERATIONS</span>
@@ -128,11 +167,15 @@ export default function StudentsPage(){
       <select value={bulkStatus} onChange={e=>setBulkStatus(e.target.value)}><option value="">Change status…</option>{["Registered","Admission Pending","Active","Course Completed","Alumni","Suspended","Cancelled"].map(s=><option key={s}>{s}</option>)}</select>
       <button className="ghost-btn" disabled={bulkBusy} onClick={()=>runBulk("status")}><ShieldCheck size={15}/> Apply Status</button>
       <button className="danger-btn" disabled={bulkBusy} onClick={()=>runBulk("delete")}><Trash2 size={15}/> Bulk Delete</button>
+      <button className="ghost-btn" disabled={bulkIcardLoading||bulkBusy} onClick={()=>openBulkIcards("jpg")}><Download size={15}/>{bulkIcardLoading?"Preparing…":"Download ID Cards"}</button>
+      <button className="ghost-btn" disabled={bulkIcardLoading||bulkBusy} onClick={()=>openBulkIcards("print")}><Printer size={15}/> Print ID Cards</button>
     </div>
   </section>}</><section className="panel table-panel directory-table-panel" aria-busy={loading}>
       {((selectedUnassigned.length>0&&selectedUnassigned.length===selectedStudents.length)||(selectAllMatching&&filters.registration==="unassigned"))&&<div className="batch-assignment-toolbar"><div><strong>{selectedStudents.length} student{selectedStudents.length>1?"s":""} selected</strong><span>Only unassigned students can be sent to a batch. Multiple selected students must match the selected batch course.</span></div><div className="top-actions"><select value={selectedBatch} onChange={e=>setSelectedBatch(e.target.value)}><option value="">Select available batch</option>{compatibleBatches.map(b=><option key={b._id} value={b._id}>{b.batchCode} — {b.courseCode} · {b.remaining} seats left</option>)}</select><button className="primary-btn" disabled={assigning||!selectedBatch} onClick={sendToBatch}><Send size={16}/>{assigning?"Sending…":"Send to Batch"}</button></div></div>}
-      {loading?<div className="empty">Loading students…</div>:students.length===0?<div className="empty">No students match the selected filters.</div>:<div className="table-wrap"><table><thead><tr><th><input type="checkbox" aria-label="Select all visible students" checked={selectAllMatching||allVisibleSelected} onChange={toggleAll}/></th><th>Form No.</th><th>Applicant Name</th><th>Course</th><th>Batch</th><th>Mobile</th><th>Due</th><th>Status</th><th>Actions</th></tr></thead><tbody>{students.map(s=><tr key={s._id} className="student-row" tabIndex="0" onClick={()=>window.location.href=`/dashboard/students/${s._id}`} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();window.location.href=`/dashboard/students/${s._id}`;}}}><td onClick={e=>e.stopPropagation()}><input type="checkbox" disabled={false} checked={selectAllMatching||selectedStudents.includes(s._id)} onChange={e=>setSelectedStudents(v=>e.target.checked?[...new Set([...v,s._id])]:v.filter(id=>id!==s._id))}/></td><td><strong>{s.formNo}</strong></td><td>{s.applicantName}</td><td>{s.courseCode||s.courseName||"—"}</td><td>{s.batchCode||"Unassigned"}</td><td>{s.mobileNumber}</td><td>₹{Number(s.dueAmount||0).toLocaleString("en-IN")}</td><td><span className="badge">{s.status}</span></td><td><div className="top-actions" onClick={e=>e.stopPropagation()}><a className="ghost-btn" href={`/dashboard/students/${s._id}?edit=1`}><Pencil size={14}/> Edit</a><button className="ghost-btn" onClick={async e=>{e.stopPropagation();if(!confirm("Permanently delete this student?"))return;const r=await fetch(`/api/students/${s._id}`,{method:"DELETE"});const d=await r.json();if(!r.ok)return alert(d.error||"Unable to delete student");load(pagination.page)}}><Trash2 size={14}/> Delete</button></div></td></tr>)}</tbody></table></div>}
+      {loading?<div className="empty">Loading students…</div>:students.length===0?<div className="empty">No students match the selected filters.</div>:<div className="table-wrap"><table><thead><tr><th><input type="checkbox" aria-label="Select all visible students" checked={selectAllMatching||allVisibleSelected} onChange={toggleAll}/></th><th>Form No.</th><th>Applicant Name</th><th>Course</th><th>Batch</th><th>Mobile</th><th>Due</th><th>Status</th><th>Actions</th></tr></thead><tbody>{students.map(s=><tr key={s._id} className="student-row" tabIndex="0" onClick={()=>window.location.href=`/dashboard/students/${s._id}`} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();window.location.href=`/dashboard/students/${s._id}`;}}}><td onClick={e=>e.stopPropagation()}><input type="checkbox" disabled={false} checked={selectAllMatching||selectedStudents.includes(s._id)} onChange={e=>setSelectedStudents(v=>e.target.checked?[...new Set([...v,s._id])]:v.filter(id=>id!==s._id))}/></td><td><strong>{s.formNo}</strong></td><td><div style={{display:"flex",alignItems:"center",gap:10,minWidth:180}}>{s.photoUrl?<img src={s.photoUrl} alt={s.applicantName+" photo"} loading="lazy" onError={e=>{e.currentTarget.style.display="none";if(e.currentTarget.nextElementSibling)e.currentTarget.nextElementSibling.style.display="grid"}} style={{width:38,height:38,borderRadius:"50%",objectFit:"cover",border:"1px solid var(--border,#e2e8f0)",flexShrink:0}}/>:null}<span style={{display:s.photoUrl?"none":"grid",placeItems:"center",width:38,height:38,borderRadius:"50%",background:"var(--surface-muted,#eef2ff)",color:"var(--primary,#315efb)",fontWeight:700,flexShrink:0}}>{String(s.applicantName||"S").trim().charAt(0).toUpperCase()}</span><span style={{fontWeight:600}}>{s.applicantName}</span></div></td><td>{s.courseCode||s.courseName||"—"}</td><td>{s.batchCode||"Unassigned"}</td><td>{s.mobileNumber}</td><td>₹{Number(s.dueAmount||0).toLocaleString("en-IN")}</td><td><span className="badge">{s.status}</span></td><td><div className="top-actions" onClick={e=>e.stopPropagation()}><a className="ghost-btn" href={`/dashboard/students/${s._id}?edit=1`}><Pencil size={14}/> Edit</a><button className="ghost-btn" onClick={async e=>{e.stopPropagation();if(!confirm("Permanently delete this student?"))return;const r=await fetch(`/api/students/${s._id}`,{method:"DELETE"});const d=await r.json();if(!r.ok)return alert(d.error||"Unable to delete student");load(pagination.page)}}><Trash2 size={14}/> Delete</button></div></td></tr>)}</tbody></table></div>}
       <div className="pagination"><span>Showing {students.length?((pagination.page-1)*50)+1:0}–{Math.min(pagination.page*50,pagination.total)} of {pagination.total}</span><div><button disabled={pagination.page<=1} onClick={()=>load(pagination.page-1)}><ChevronLeft size={17}/></button><span className="page-no">Page {pagination.page} of {pagination.totalPages}</span><button disabled={pagination.page>=pagination.totalPages} onClick={()=>load(pagination.page+1)}><ChevronRight size={17}/></button></div></div>
     </section>
+    <CodingForKidsIcardDialog open={bulkIcardDialogOpen} students={bulkIcardStudents} mode={bulkIcardMode} onClose={()=>setBulkIcardDialogOpen(false)} onSelect={confirmBulkIcards}/>
+    <BulkStudentPhotoUploadDialog open={bulkPhotoDialogOpen} onClose={()=>setBulkPhotoDialogOpen(false)} onComplete={()=>load(pagination.page)}/>
   </ERPLayout>
 }

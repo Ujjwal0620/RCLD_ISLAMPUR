@@ -62,7 +62,7 @@ export default function StudentICardsPage() {
       });
       const response = await fetch("/api/students?" + params.toString(), { cache: "no-store" });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Unable to load eligible student I-Cards.");
+      if (!response.ok) throw new Error(data.error || "Unable to load student I-Cards.");
       setStudents(data.students || []);
       setPagination(data.pagination || { page: 1, limit: PAGE_SIZE, total: 0, totalPages: 1 });
       if (data.filterOptions) {
@@ -118,7 +118,7 @@ export default function StudentICardsPage() {
           <h1>Student I-Cards</h1>
         </div>
         <div className="top-actions">
-          <span className="badge">{pagination.total.toLocaleString("en-IN")} eligible students</span>
+          <span className="badge">{pagination.total.toLocaleString("en-IN")} students</span>
           <button type="button" className="ghost-btn" onClick={() => load(pagination.page, filters)}>
             <RefreshCw size={15} /> Refresh
           </button>
@@ -128,6 +128,7 @@ export default function StudentICardsPage() {
       <CodingForKidsIcardDialog
         open={templateDialogOpen}
         student={selectedStudent}
+        mode={icardOutputMode}
         onClose={() => setTemplateDialogOpen(false)}
         onSelect={(templateName) => {
           setTemplateDialogOpen(false);
@@ -152,7 +153,7 @@ export default function StudentICardsPage() {
           <div className="icard-filter-heading">
             <div>
               <h3>Find students</h3>
-              <p>Only students with the required profile details and photograph are included.</p>
+              <p>Optional student fields may remain blank; choose a template to preview the available details.</p>
             </div>
             <button type="button" className="clear-inline" onClick={clearFilters} disabled={!activeFilterCount}>
               <RotateCcw size={14} /> Reset filters
@@ -214,7 +215,7 @@ export default function StudentICardsPage() {
           </div>
         </form>
         <div className="icard-filter-summary">
-          <span><Filter size={14} /> {pagination.total.toLocaleString("en-IN")} matching I-Cards</span>
+          <span><Filter size={14} /> {pagination.total.toLocaleString("en-IN")} matching students</span>
           <span>{activeFilterCount ? activeFilterCount + " filter(s) selected" : "No filters applied"}</span>
         </div>
       </section>
@@ -234,7 +235,7 @@ export default function StudentICardsPage() {
         {loading ? (
           <div className="empty">Loading student I-Cards…</div>
         ) : students.length === 0 ? (
-          <div className="empty">No eligible students match these filters.</div>
+          <div className="empty">No students match these filters.</div>
         ) : (
           <div className="table-wrap">
             <table className="icard-student-table">
@@ -279,8 +280,7 @@ export default function StudentICardsPage() {
                         <button
                           type="button"
                           className="ghost-btn icard-print-button"
-                          disabled={["Admission Pending", "Cancelled"].includes(student.status)}
-                          title={["Admission Pending", "Cancelled"].includes(student.status) ? "I-Card printing is unavailable for this status" : "Print student I-Card"}
+                          title="Print student I-Card"
                           onClick={() => {
                             setMessage("");
                             setSelectedStudent(student);
@@ -293,8 +293,7 @@ export default function StudentICardsPage() {
                         <button
                           type="button"
                           className="ghost-btn icard-print-button"
-                          disabled={["Admission Pending", "Cancelled"].includes(student.status)}
-                          title={["Admission Pending", "Cancelled"].includes(student.status) ? "I-Card download is unavailable for this status" : "Download student I-Card as JPG"}
+                          title="Download student I-Card as JPG"
                           onClick={() => {
                             setMessage("");
                             setSelectedStudent(student);

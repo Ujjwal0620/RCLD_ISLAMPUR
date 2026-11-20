@@ -12,6 +12,8 @@ export default function StudentEditPanel({
   setEditing,
   editForm,
   setEditForm,
+  feeForm,
+  setFeeForm,
   courses,
   batches,
   referrals,
@@ -35,7 +37,7 @@ export default function StudentEditPanel({
                       </span>
                     </div>
                   </div>
-                  <form onSubmit={saveStudent}>
+                  <form onSubmit={saveStudent} noValidate>
                     <div className="edit-card student-photo-edit-card" style={{ marginBottom: 16 }}>
                       <h4>Student Photograph</h4>
                       <div style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
@@ -53,13 +55,13 @@ export default function StudentEditPanel({
                           </label>
                           <p className="form-help" style={{ marginTop: 7 }}>JPG, PNG or WebP · maximum 5 MB · stored securely in Cloudinary.</p>
                           {photoUploading && <p className="form-help">Uploading photograph…</p>}
-                          {editForm.photoUrl && <span className="form-help">Save Changes to apply the new photo to the student profile.</span>}
+                          {editForm.photoUrl && <span className="form-help">The photograph is saved to this student profile immediately after upload.</span>}
                         </div>
                       </div>
                     </div>
                     <div className="student-edit-grid">
                       <StudentIdentityRegistrationFields editForm={editForm} setEditForm={setEditForm} />
-                    <StudentCourseFeeFields editForm={editForm} setEditForm={setEditForm} courses={courses} batches={batches} />
+                    <StudentCourseFeeFields editForm={editForm} setEditForm={setEditForm} feeForm={feeForm} setFeeForm={setFeeForm} courses={courses} batches={batches} />
                     <StudentPersonalInformationFields editForm={editForm} setEditForm={setEditForm} referrals={referrals} indiaLocations={indiaLocations} />
                     <StudentAcademicDocumentFields editForm={editForm} setEditForm={setEditForm} />
                     <StudentStatusEnclosureFields editForm={editForm} setEditForm={setEditForm} setMessage={setMessage} />

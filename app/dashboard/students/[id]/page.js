@@ -69,10 +69,11 @@ export default function StudentDetailsPage({ params }) {
           <CodingForKidsIcardDialog
             open={icardDialogOpen}
             student={student}
+            mode={icardOutputMode}
             onClose={() => setIcardDialogOpen(false)}
-            onSelect={(templateName) => {
+            onSelect={(templateName, _records, mode) => {
               setIcardDialogOpen(false);
-              printStudentICard("", icardOutputMode, templateName);
+              printStudentICard("", mode || icardOutputMode, templateName);
             }}
           />
           <StudentEditPanel
@@ -80,6 +81,8 @@ export default function StudentDetailsPage({ params }) {
             setEditing={setEditing}
             editForm={editForm}
             setEditForm={setEditForm}
+            feeForm={feeForm}
+            setFeeForm={setFeeForm}
             courses={courses}
             batches={batches}
             referrals={referrals}
@@ -89,7 +92,7 @@ export default function StudentDetailsPage({ params }) {
             uploadStudentPhoto={uploadStudentPhoto}
             photoUploading={photoUploading}
           />
-          <StudentProfileHero student={student} />
+          <StudentProfileHero student={student} uploadStudentPhoto={uploadStudentPhoto} photoUploading={photoUploading} />
           <StudentTransitionPanel
             student={student} batches={batches} history={history} setHistory={setHistory}
             editForm={editForm} setEditForm={setEditForm} setStudent={setStudent}
@@ -117,7 +120,7 @@ export default function StudentDetailsPage({ params }) {
           />
           <StudentAttendanceSection attendance={attendance} attForm={attForm} setAttForm={setAttForm} saveAttendance={saveAttendance} />
           <StudentQualificationSection student={student} />
-          {message && <div className="success-msg student-profile-feedback" role="status">{message}</div>}
+          {message && <div className="success-msg student-profile-feedback" role="status" style={{ position: "fixed", top: 18, right: 18, zIndex: 1200, maxWidth: "min(420px, calc(100vw - 32px))" }}>{message}</div>}
         </main>
       )}
     </ERPLayout>

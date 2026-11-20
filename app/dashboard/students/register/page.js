@@ -16,18 +16,16 @@ const initial = {
 };
 
 
-function Field({ label, name, value, onChange, required, type = "text", maxLength, inputMode, pattern }) {
+function Field({ label, name, value, onChange, type = "text", maxLength, inputMode }) {
   return (
     <label className="form-field">
-      <span>{label}{required ? " *" : ""}</span>
+      <span>{label}</span>
       <input
         type={type}
         value={value ?? ""}
         onChange={(e) => onChange(name, e.target.value)}
-        required={required}
         maxLength={maxLength}
         inputMode={inputMode}
-        pattern={pattern}
         autoComplete="off"
       />
     </label>
@@ -35,7 +33,7 @@ function Field({ label, name, value, onChange, required, type = "text", maxLengt
 }
 
 
-function DigitBoxes({ label, value = "", onChange, length = 10, required = false }) {
+function DigitBoxes({ label, value = "", onChange, length = 10 }) {
   const digits = String(value || "").padEnd(length, " ").slice(0, length).split("");
   function setDigits(start, text) {
     const incoming = String(text || "").replace(/\D/g, "").slice(0, length - start);
@@ -44,7 +42,7 @@ function DigitBoxes({ label, value = "", onChange, length = 10, required = false
     incoming.split("").forEach((digit, offset) => { next[start + offset] = digit; });
     onChange(next.join("").replace(/\s+$/, ""));
   }
-  return <label className="form-field digit-box-field"><span>{label}{required ? " *" : ""}</span><div className="rcld-digit-boxes" role="group" aria-label={label}>{Array.from({ length }, (_, i) => <input key={i} aria-label={label + " digit " + (i + 1)} inputMode="numeric" pattern="[0-9]" maxLength={1} value={digits[i] === " " ? "" : digits[i]} required={required && i === 0} onChange={e => { setDigits(i, e.target.value.slice(-1)); if (e.target.value && i < length - 1) e.target.parentElement.children[i + 1]?.focus(); }} onKeyDown={e => { if (e.key === "Backspace" && !digits[i] && i > 0) e.currentTarget.parentElement.children[i - 1]?.focus(); if (e.key === "ArrowLeft" && i > 0) e.currentTarget.parentElement.children[i - 1]?.focus(); if (e.key === "ArrowRight" && i < length - 1) e.currentTarget.parentElement.children[i + 1]?.focus(); }} onPaste={e => { e.preventDefault(); setDigits(i, e.clipboardData.getData("text")); const target = Math.min(length - 1, i + e.clipboardData.getData("text").replace(/\D/g, "").length); e.currentTarget.parentElement.children[target]?.focus(); }} />)}</div></label>;
+  return <label className="form-field digit-box-field"><span>{label}</span><div className="rcld-digit-boxes" role="group" aria-label={label}>{Array.from({ length }, (_, i) => <input key={i} aria-label={label + " digit " + (i + 1)} inputMode="numeric" maxLength={1} value={digits[i] === " " ? "" : digits[i]} onChange={e => { setDigits(i, e.target.value.slice(-1)); if (e.target.value && i < length - 1) e.target.parentElement.children[i + 1]?.focus(); }} onKeyDown={e => { if (e.key === "Backspace" && !digits[i] && i > 0) e.currentTarget.parentElement.children[i - 1]?.focus(); if (e.key === "ArrowLeft" && i > 0) e.currentTarget.parentElement.children[i - 1]?.focus(); if (e.key === "ArrowRight" && i < length - 1) e.currentTarget.parentElement.children[i + 1]?.focus(); }} onPaste={e => { e.preventDefault(); setDigits(i, e.clipboardData.getData("text")); const target = Math.min(length - 1, i + e.clipboardData.getData("text").replace(/\D/g, "").length); e.currentTarget.parentElement.children[target]?.focus(); }} />)}</div></label>;
 }
 
 export default function RegisterStudentPage() {
@@ -123,7 +121,6 @@ export default function RegisterStudentPage() {
         permanentAddress: form.sameAsPresentAddress ? (form.presentAddress || form.address).trim() : form.permanentAddress.trim()
       };
 
-      if ([payload.mobileNumber,payload.guardianContactNumber,payload.whatsappNumber].some(v => v && v.length !== 10)) throw new Error("Any entered mobile number must contain exactly 10 digits.");
 
       const r = await fetch("/api/students", {
         method: "POST",
@@ -170,7 +167,7 @@ export default function RegisterStudentPage() {
             <label className="rcld-inline-field"><span>Form No:</span><input value={form.formNo} onChange={e=>update("formNo",e.target.value)} /></label>
             <label className="rcld-inline-field"><span>Enrollment No:</span><input value={form.enrollmentNo} readOnly placeholder="Auto generated after registration" /></label>
             <label className="rcld-inline-field"><span>Date:</span><input type="date" value={form.admissionDate} onChange={e=>update("admissionDate",e.target.value)} /></label>
-            <label className="rcld-inline-field rcld-course-field"><span>Course / Course Code:</span><select value={form.courseCode} onChange={e=>selectCourse(e.target.value)} required><option value="">Select course</option>{courses.map(c=><option key={c._id} value={c.code}>{c.name} — {c.code}</option>)}</select></label>
+            <label className="rcld-inline-field rcld-course-field"><span>Course / Course Code:</span><select value={form.courseCode} onChange={e=>selectCourse(e.target.value)}><option value="">Select course</option>{courses.map(c=><option key={c._id} value={c.code}>{c.name} — {c.code}</option>)}</select></label>
           </div>
           <div className="rcld-office-extra">
             <Field label="Course Name" name="courseName" value={form.courseName} onChange={update}/>
@@ -237,7 +234,7 @@ export default function RegisterStudentPage() {
             <div>
               <DigitBoxes label="Mobile No" value={form.mobileNumber} onChange={v=>update("mobileNumber",v)} length={10}/>
               <DigitBoxes label="WhatsApp No" value={form.whatsappNumber} onChange={v=>update("whatsappNumber",v)} length={10}/>
-              <Field label="Aadhaar No" name="aadhaarNumber" value={form.aadhaarNumber} onChange={update} maxLength={12} inputMode="numeric" pattern="[0-9]{12}"/>
+              <Field label="Aadhaar No" name="aadhaarNumber" value={form.aadhaarNumber} onChange={update} maxLength={12} inputMode="numeric"/>
             </div>
             <div>
               <DigitBoxes label="Mobile No Guardian" value={form.guardianContactNumber} onChange={v=>update("guardianContactNumber",v)} length={10}/>
