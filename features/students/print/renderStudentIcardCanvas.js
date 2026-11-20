@@ -195,7 +195,7 @@ function drawDetails(ctx, student, width, height) {
 }
 
 export async function renderStudentIcardCanvas(student, templateName) {
-  if (!student || !templateName || /[\/]/.test(templateName)) {
+  if (!student || !templateName || templateName.includes("/") || templateName.includes("\\\\")) {
     throw new Error("A student and valid ID-card template are required.");
   }
   await document.fonts.ready;
@@ -293,17 +293,21 @@ export async function exportStudentIcards({ students, templateName, outputMode =
 export function getRecommendedIcardTemplate(student, templates) {
   if (!Array.isArray(templates) || !templates.length) return "";
   const course = String(firstValue(student?.courseName, student?.courseCode, student?.sourceCourseLabel, "")).toLowerCase();
-  const semesterRaw = firstValue(student?.currentSemester, student?.semester, student?.activeSemester, student?.semesterLabel, "");
-  const semesterMatch = String(semesterRaw).match(/([1-6]|i{1,3}|iv|v|vi)/i);
+  const semesterRaw = String(firstValue(student?.currentSemester, student?.semester, student?.activeSemester, student?.semesterLabel, "")).trim();
+  const semesterSource = semesterRaw || course;
   const romanMap = { i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6 };
-  const semester = semesterMatch
-    ? (romanMap[String(semesterMatch[1]).toLowerCase()] || Number(semesterMatch[1]))
-    : Number(String(course).match(/sm[-_ ]?([1-6])/i)?.[1] || 0);
+  const semesterMatch = semesterSource.match(/(?:SM|SEM(?:ESTER)?)\s*[-_ ]?\s*(VI|IV|V|III|II|I|[1-6])\b/i)
+    || semesterSource.match(/^(VI|IV|V|III|II|I|[1-6])$/i);
+  const semesterToken = semesterMatch?.[1] || "";
+  const semester = semesterToken
+    ? (romanMap[semesterToken.toLowerCase()] || Number(semesterToken))
+    : 0;
   let expected = "";
   if (/robotics/.test(course)) {
     const year = Number(firstValue(student?.roboticsYear, student?.courseYear, student?.yearOfCourse, semester, 1));
-    expected = `ID Card Robotics ${Math.min(3, Math.max(1, year))}${year === 1 ? "st" : year === 2 ? "nd" : "rd"} year.jpg`;
-  } else if (/coding\s*for\s*kids|\bkids\b|\bsm[-_ ]/.test(course) || semester) {
+    const safeYear = Math.min(3, Math.max(1, Number.isFinite(year) ? year : 1));
+    expected = `ID Card Robotics ${safeYear}${safeYear === 1 ? "st" : safeYear === 2 ? "nd" : "rd"} year.jpg`;
+  } else if (/coding\s*for\s*kids|\bkids\b|\bsm[-_ ]|\bsem(?:ester)?\s*[-_ ]?/.test(course) || semester) {
     expected = semester ? `ID Card Sem-${Math.min(6, Math.max(1, semester))}.jpg` : "ID Card Sem-1.jpg";
   } else if (/school/.test(course)) {
     expected = "ID Card School Course.jpg";
