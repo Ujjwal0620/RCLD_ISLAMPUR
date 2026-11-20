@@ -29,7 +29,7 @@ export default function StudentFeeWorkspace({
   const semesterEnrollment = semesterRoman
     ? enrollmentOptions.find(item => String(item.semesterLabel || "").toUpperCase() === "SM-" + semesterRoman)
     : null;
-  const currentEnrollment = semesterEnrollment || student.activeEnrollment || enrollmentOptions.find(item => item.status === "ACTIVE");
+  const currentEnrollment = student.activeEnrollment || semesterEnrollment || enrollmentOptions.find(item => item.status === "ACTIVE");
   const currentStCode = String(currentEnrollment?.stCode || student.regnNo || student.enrollmentNo || "");
   const effectiveStCode = selectedStCode || currentStCode;
   const selectedEnrollment = enrollmentOptions.find(item => String(item.stCode || "") === effectiveStCode) || currentEnrollment;
