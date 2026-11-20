@@ -293,7 +293,7 @@ export async function exportStudentIcards({ students, templateName, outputMode =
       html,body{margin:0;padding:0;background:#fff}
       .card-page{width:54mm;height:85.6mm;margin:0;padding:0;overflow:hidden;page-break-after:always;break-after:page}
       .card-page:last-child{page-break-after:auto;break-after:auto}
-      .card-page img{display:block;width:54mm;height:85.6mm;object-fit:fill}
+      .card-page img{display:block;width:54mm;height:85.6mm;object-fit:contain}
       @media screen{body{display:flex;flex-direction:column;align-items:center;gap:12px;background:#e9edf3;padding:12px}.card-page{box-shadow:0 2px 12px #0002}}
     </style></head><body>${pages.map(page => `<section class="card-page"><img src="${page.url}" alt="${String(page.name).replace(/[&<>"]/g,"")}"></section>`).join("")}
       <script>window.addEventListener("load",async()=>{await Promise.all([...document.images].map(img=>img.decode?img.decode().catch(()=>{}):Promise.resolve()));await document.fonts.ready;setTimeout(()=>window.print(),250)});</script>
