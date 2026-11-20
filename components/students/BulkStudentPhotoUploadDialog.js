@@ -18,7 +18,7 @@ export default function BulkStudentPhotoUploadDialog({ open, onClose, onComplete
     const incoming = Array.from(fileList || []).filter(file => allowed.test(file.name));
     setFiles(current => {
       const combined = [...current, ...incoming];
-      const unique = new Map(combined.map(file => [file.name + "|" + file.size + "|" + file.lastModified, file]));
+      const unique = new Map(combined.map(file => [(file.webkitRelativePath || file.name) + "|" + file.size + "|" + file.lastModified, file]));
       return [...unique.values()];
     });
     setSummary(null);
