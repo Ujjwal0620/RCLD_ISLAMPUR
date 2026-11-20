@@ -44,12 +44,17 @@ export async function GET(req,{params}){
       ? await StudentFeePayment.find(paymentQuery).sort({ paymentDate: 1, mrNo: 1 }).lean()
       : [];
     const enrollmentMap = new Map(enrollments.map(item => [String(item._id), item]));
+    const enrollmentCourseCodes = [...new Set(enrollments.map(item => String(item.courseCode || "").toUpperCase()).filter(Boolean))];
+    const courseDocuments = enrollmentCourseCodes.length
+      ? await Course.find({ code: { $in: enrollmentCourseCodes } }).select("code name").lean()
+      : [];
+    const courseNameMap = new Map(courseDocuments.map(course => [String(course.code).toUpperCase(), course.name]));
     const paymentHistory = importedPayments.map(payment => {
       const enrollment = enrollmentMap.get(String(payment.enrollmentId)) || {};
       return {
         ...payment,
         courseCode: enrollment.courseCode || "",
-        courseName: enrollment.courseName || enrollment.courseCode || "Legacy / Unknown Course",
+        courseName: enrollment.courseName || courseNameMap.get(String(enrollment.courseCode || "").toUpperCase()) || enrollment.courseCode || "Legacy / Unknown Course",
         semesterLabel: enrollment.semesterLabel || "LEGACY",
         installmentApplied: (payment.allocations || []).map(item => item.label + ": ₹" + Number(item.allocatedAmount || 0).toLocaleString("en-IN")).join(", ") || "Legacy receipt / not allocated",
       };
