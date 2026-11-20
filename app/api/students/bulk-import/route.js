@@ -308,6 +308,10 @@ export async function POST(request) {
         continue;
       }
       const course = courseMap.get(row.course) || courseMap.get(row.course.split("-")[0]) || null;
+      const builtInFeeCourse = row.course === "ROBOTICS" || /^SM-(I|II|III|IV|V|VI)$/.test(row.course);
+      if (row.course && !course && !builtInFeeCourse) {
+        warnings.push({ row: row.rowNo, Regn_No: row.regnNo, reason: "Course was not found in Course Master; the student is saved with an unconfigured fee plan for review." });
+      }
       const courseInfo = { code: row.course, name: course?.name || COURSE_NAMES[row.course] || row.course };
       const payload = asStudentPayload(row, courseInfo, sourceName);
       operations.push({
