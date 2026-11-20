@@ -4,6 +4,7 @@ import * as XLSX from "xlsx";
 import { connectMongoDB } from "@/lib/mongodb";
 import { getSession } from "@/lib/auth";
 import Course from "@/models/Course";
+import { importPaymentWorksheet, linkImportedStudentRecords } from "@/lib/student-import/import-payment-sheet";
 
 const StudentSchema = new mongoose.Schema({
   formNo: String, enrollmentNo: String, regnNo: String, applicantName: String,
@@ -191,7 +192,7 @@ function readSourceRows(workbook) {
     const values = grid[index];
     if (!values.some(value => clean(value))) continue;
     const get = key => indexes[key] >= 0 ? values[indexes[key]] : "";
-    const registrationCode = clean(get("regnNo"));
+    const registrationCode = clean(get("regnNo")).replace(/\\.0$/, "").trim();
     const sourceName = clean(get("name"));
     const name = cleanStudentName(sourceName, registrationCode);
     const address = parseAddress(get("address"));
@@ -352,13 +353,21 @@ export async function POST(request) {
     }
     if (feeOperations.length) await StudentFee.bulkWrite(feeOperations, { ordered: false });
 
+    // Create/link one durable identity record and one enrollment for each registration code.
+    const linkedStudents = await Student.find({ importSource: sourceName }).lean();
+    const masterLinkSummary = await linkImportedStudentRecords(linkedStudents);
+    // Import the dynamically detected fee worksheet; missing/invalid rows are reported, never silently discarded.
+    const paymentImport = await importPaymentWorksheet(workbook, { sourceName });
+
     return NextResponse.json({
       message: "Student import completed. Imported data is ready for profile review.",
       totalRows: summary.totalRows, imported: validRows.length,
       created: writeResult.upsertedCount || 0, matched: writeResult.matchedCount || 0,
       skipped: summary.invalidRows, errors: summary.errors,
       duplicateRegistrationCodes: summary.duplicateRegistrationCodes,
-      duplicateFormNumbers: summary.duplicateFormNumbers, missing: summary.missing
+      duplicateFormNumbers: summary.duplicateFormNumbers, missing: summary.missing,
+      masterProfilesLinked: masterLinkSummary.linked,
+      paymentImport
     });
   } catch (error) {
     console.error("[student-bulk-import]", error);
