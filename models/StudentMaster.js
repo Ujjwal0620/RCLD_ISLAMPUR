@@ -1,10 +1,10 @@
 import mongoose from "mongoose";
 
 const StudentMasterSchema = new mongoose.Schema({
-  fullName: { type: String, required: true, trim: true },
-  normalizedFullName: { type: String, required: true, index: true },
+  fullName: { type: String, default: "", trim: true },
+  normalizedFullName: { type: String, default: "", index: true },
   dob: { type: Date, default: null },
-  gender: { type: String, enum: ["M", "F", "Other", ""], default: "" },
+  gender: { type: String, default: "" },
   fatherName: { type: String, default: "", trim: true },
   normalizedFatherName: { type: String, default: "", index: true },
   address: { type: String, default: "" },
