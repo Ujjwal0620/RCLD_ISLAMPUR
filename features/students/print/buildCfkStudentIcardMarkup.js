@@ -42,17 +42,13 @@ export function buildCfkStudentIcardMarkup({
         color:#343b49; font-size:4.4mm; font-weight:700; line-height:1.05;
         white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
       }
-      .cfk-course {
-        position:absolute; top:55.2%; left:9%; width:82%; text-align:center;
-        color:#96308f; font-size:2.1mm; font-weight:700; letter-spacing:.15px;
-        white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-      }
       .cfk-fields {
         position:absolute; left:47.5%; right:4.5%; top:61.5%;
         display:grid; grid-template-rows:repeat(6, 1fr); height:15.2%;
         gap:0; font-size:1.85mm; line-height:1.02; font-weight:600;
       }
       .cfk-field { display:flex; align-items:center; min-width:0; }
+      .cfk-field strong { font-size:1.7mm; font-weight:900; white-space:nowrap; letter-spacing:-.04mm; }
       .cfk-field span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
       .cfk-address { white-space:normal!important; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; line-height:1.05; }
       .cfk-semester {
@@ -65,7 +61,7 @@ export function buildCfkStudentIcardMarkup({
       ${photo}
       <div class="cfk-name">${name}</div>
       <div class="cfk-fields">
-        <div class="cfk-field"><span>${id}</span></div>
+        <div class="cfk-field"><strong>${id}</strong></div>
         <div class="cfk-field"><span>${father}</span></div>
         <div class="cfk-field"><span class="cfk-address">${addr}</span></div>
         <div class="cfk-field"><span>${date}</span></div>
