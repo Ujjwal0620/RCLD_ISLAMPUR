@@ -19,7 +19,7 @@ const StudentSchema = new mongoose.Schema({
   qualifications:[{examCourse:String,boardUniversity:String,collegeInstitute:String,year:String,percentage:String}],
   enclosures:{stampPhoto:Boolean,qualifyingCertificates:Boolean,matricAdmitCard:Boolean},
   declarationDate:String,declarationPlace:String,signatureApplicant:String,signatureUrl:String,photoUrl:String,
-  currentSemester:{type:Number,min:1,max:6},semesterStatus:{type:String,enum:["Not Started","Active","Completed"],default:"Not Started"},semesterHistory:{type:[mongoose.Schema.Types.Mixed],default:[]},
+  currentSemester:Number,semesterStatus:{type:String,default:"Not Started"},semesterHistory:{type:[mongoose.Schema.Types.Mixed],default:[]},
   status:{type:String,default:"Admission Pending"}
 },{timestamps:true});
 const Student=mongoose.models.Student||mongoose.model("Student",StudentSchema);
@@ -180,8 +180,6 @@ export async function PATCH(req,{params}){
     if(body.guardianContactNumber!==undefined && guardian && !/^\d{10}$/.test(guardian))return NextResponse.json({error:"Guardian mobile number must contain exactly 10 digits."},{status:400});
     if(body.whatsappNumber!==undefined && whatsapp && !/^\d{10}$/.test(whatsapp))return NextResponse.json({error:"WhatsApp number must contain exactly 10 digits."},{status:400});
     if(body.mobileNumber!==undefined)update.mobileNumber=mobileNumber;
-    if(body.photoUrl && !String(body.photoUrl).startsWith("https://res.cloudinary.com/"))return NextResponse.json({error:"Student photo must be uploaded to Cloudinary."},{status:400});
-    if(body.signatureUrl && !String(body.signatureUrl).startsWith("https://res.cloudinary.com/"))return NextResponse.json({error:"Student signature must be uploaded to Cloudinary."},{status:400});
     if(body.email!==undefined)update.email=email;
     if(body.aadhaarNumber!==undefined)update.aadhaarNumber=aadhaarNumber;
     if(body.referralId!==undefined){
@@ -193,7 +191,7 @@ export async function PATCH(req,{params}){
     if (admissionFieldsChanged && ["Admission Pending", "Registered", "Active", ""].includes(String(current.status || ""))) {
       update.status = getStudentAdmissionStatus(mergedStudent);
     }
-    const student=await Student.findByIdAndUpdate(id,update,{new:true,runValidators:true}).lean();
+    const student=await Student.findByIdAndUpdate(id,update,{new:true,runValidators:false}).lean();
     if (student) {
       const masterFields = {
         fullName: student.applicantName || student.sourceStudentName || "Student",
