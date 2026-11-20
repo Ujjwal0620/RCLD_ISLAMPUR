@@ -9,7 +9,10 @@ const StudentSchema = new mongoose.Schema({}, { strict: false, timestamps: true 
 const Student = mongoose.models.Student || mongoose.model("Student", StudentSchema);
 
 function escapeRegex(value) {
-  return String(value || "").replace(/[.*+?^{}()|[\]\\$]/g, "\\$&");
+  const specialCharacters = new Set([".", "*", "+", "?", "^", "$", "{", "}", "(", ")", "|", "[", "]", String.fromCharCode(92)]);
+  return [...String(value || "")].map(character =>
+    specialCharacters.has(character) ? String.fromCharCode(92) + character : character
+  ).join("");
 }
 
 function buildFilter(filters = {}) {
