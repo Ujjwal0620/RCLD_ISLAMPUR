@@ -370,7 +370,8 @@ export async function POST(request) {
     for (let offset = 0; offset < registrationNumbers.length; offset += 500) {
       const codeChunk = registrationNumbers.slice(offset, offset + 500);
       const numericChunk = codeChunk.filter(code => /^\d+$/.test(code)).map(Number);
-      const variants = [...codeChunk, ...numericChunk];
+      const decimalStringVariants = codeChunk.filter(code => /^\d+$/.test(code)).map(code => code + ".0");
+      const variants = [...codeChunk, ...decimalStringVariants, ...numericChunk];
       const found = await Student.find({ $or: [
         { regnNo: { $in: variants } },
         { enrollmentNo: { $in: variants } }
@@ -381,7 +382,7 @@ export async function POST(request) {
     for (const student of existingRecords) {
       const identity = String(student._id);
       for (const rawCode of [student.regnNo, student.enrollmentNo]) {
-        const key = String(rawCode ?? "").replace(/\.0$/, "").trim();
+        const key = String(rawCode ?? "").replace(/\.0+$/, "").trim();
         if (!key) continue;
         const candidates = existingByCode.get(key) || [];
         if (!candidates.some(item => String(item._id) === identity)) candidates.push(student);
