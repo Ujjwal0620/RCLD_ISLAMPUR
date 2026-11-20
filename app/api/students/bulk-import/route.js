@@ -207,7 +207,7 @@ function previewPayload(parsed) {
       phone: row.phone, secondaryPhone: row.secondaryPhone, course: row.course,
       warnings: row.warnings, errors: row.errors
     })),
-    warnings: parsed.rows.flatMap(row => row.warnings.map(reason => ({ row: row.rowNo, Regn_No: row.regnNo, reason }))).slice(0, 500),
+    warnings: parsed.rows.flatMap(row => row.warnings.map(reason => ({ row: row.rowNo, Regn_No: row.regnNo, reason }))),
     errors: parsed.rows.filter(row => row.errors.length).map(row => ({ row: row.rowNo, Regn_No: row.regnNo, reason: row.errors.join(" ") })).slice(0, 200),
     message: "Preview parsed from " + parsed.sheetName + ". Review cleaned values and warnings before importing."
   };
@@ -407,7 +407,7 @@ export async function POST(request) {
       total: parsed.rows.length, imported, newStudentsCreated: imported,
       enriched, existingStudentsEnriched: enriched, unchanged, existingStudentsUnchanged: unchanged,
       skippedNew, skipped: skippedNew + errors.length,
-      warnings: warnings.slice(0, 1000), warningCount: warnings.length, errors: errors.slice(0, 1000),
+      warnings, warningCount: warnings.length, errors,
       sheetName: parsed.sheetName, importMode, paymentImport
     });
   } catch (error) {
