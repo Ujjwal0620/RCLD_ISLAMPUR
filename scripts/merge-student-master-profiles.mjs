@@ -176,7 +176,9 @@ async function main() {
   }
   console.log(JSON.stringify({
     mode: apply ? "APPLY" : "DRY RUN", studentRecords: students.length,
-    existingMasterProfiles: existing.length, resultingMasterProfiles: groups.length,
+    existingMasterProfiles: existing.length,
+    duplicateMasterProfilesDetected: groups.reduce((sum, group) => sum + (group.duplicateMasterIds?.length || 0), 0),
+    resultingMasterProfiles: groups.length,
     recordsToLink: assignments.filter(item => item.method !== "ALREADY_LINKED").length,
     newMasterProfiles: newGroups, ambiguousRecordsKeptSeparate: ambiguous,
     ambiguousSamples: ambiguousSamples.slice(0, 30),
