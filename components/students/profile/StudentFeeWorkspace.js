@@ -33,6 +33,13 @@ export default function StudentFeeWorkspace({
   const totalAcrossSemesters = paymentHistory.reduce((sum, payment) => sum + Number(payment.amountPaid ?? payment.amount ?? 0), 0);
   const currentSemesterPaid = paymentHistory.filter(payment => String(payment.stCode || "") === currentStCode)
     .reduce((sum, payment) => sum + Number(payment.amountPaid ?? payment.amount ?? 0), 0);
+  const activeEnrollment = student.activeEnrollment || enrollmentOptions.find(item => item.status === "ACTIVE");
+  const activeSummary = activeEnrollment?.summary || {};
+  const currentPayable = Number(activeEnrollment?.feeConfig?.netPayableFee || activeSummary.totalDue || fee?.payable || 0);
+  const currentPaid = Number(activeSummary.totalPaid || currentSemesterPaid || fee?.paid || 0);
+  const currentBalanceDue = Number(activeSummary.totalDue || 0) > 0
+    ? Number(activeSummary.balanceDue || 0)
+    : currentPayable > 0 ? Math.max(0, currentPayable - currentPaid) : Number(fee?.due || 0);
   const formatDate = value => value ? new Date(value).toLocaleDateString("en-IN") : "—";
   return (
     <section className="detail-section student-fees-section">
@@ -46,17 +53,17 @@ export default function StudentFeeWorkspace({
                 <div className="student-fee-overview">
                   <div className="fee-overview-card fee-total">
                     <span>Total Payable</span>
-                    <strong>₹{Number(fee?.payable || 0).toLocaleString("en-IN")}</strong>
+                    <strong>₹{currentPayable.toLocaleString("en-IN")}</strong>
                     <small>Admission fee and installments are included</small>
                   </div>
                   <div className="fee-overview-card fee-paid">
                     <span>Course Fee Paid (incl. discount)</span>
-                    <strong>₹{Number(fee?.paid || 0).toLocaleString("en-IN")}</strong>
+                    <strong>₹{currentPaid.toLocaleString("en-IN")}</strong>
                     <small>{(fee?.payments || []).length} payment entries recorded</small>
                   </div>
                   <div className="fee-overview-card fee-due">
                     <span>Outstanding Due</span>
-                    <strong>₹{Number(fee?.due || 0).toLocaleString("en-IN")}</strong>
+                    <strong>₹{currentBalanceDue.toLocaleString("en-IN")}</strong>
                     <small>Discount is counted as course-fee credit</small>
                   </div>
                 </div>
@@ -71,8 +78,8 @@ export default function StudentFeeWorkspace({
                   </span>
                   <span>
                     <b>Fee status</b>
-                    <em className={Number(fee?.due || 0) <= 0 ? "fee-status-paid" : "fee-status-due"}>
-                      {Number(fee?.due || 0) <= 0 ? "Paid" : "Payment Due"}
+                    <em className={currentBalanceDue <= 0 ? "fee-status-paid" : "fee-status-due"}>
+                      {currentBalanceDue <= 0 ? "Paid" : "Payment Due"}
                     </em>
                   </span>
                 </div>
@@ -99,7 +106,7 @@ export default function StudentFeeWorkspace({
                   <div className="student-fee-overview" style={{ marginTop: 12 }}>
                     <div className="fee-overview-card fee-paid"><span>Total Paid Across All Semesters</span><strong>₹{totalAcrossSemesters.toLocaleString("en-IN")}</strong></div>
                     <div className="fee-overview-card fee-paid"><span>Current Semester Paid</span><strong>₹{currentSemesterPaid.toLocaleString("en-IN")}</strong></div>
-                    <div className="fee-overview-card fee-due"><span>Current Balance Due</span><strong>₹{Number(fee?.due || 0).toLocaleString("en-IN")}</strong></div>
+                    <div className="fee-overview-card fee-due"><span>Current Balance Due</span><strong>₹{currentBalanceDue.toLocaleString("en-IN")}</strong></div>
                   </div>
                   <div style={{ overflowX: "auto", marginTop: 12 }}>
                     <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 760 }}>
@@ -176,18 +183,18 @@ export default function StudentFeeWorkspace({
                         <div className="fee-modal-stats">
                           <div>
                             <small>Total payable</small>
-                            <strong>₹{Number(fee?.payable || 0).toLocaleString("en-IN")}</strong>
+                            <strong>₹{currentPayable.toLocaleString("en-IN")}</strong>
                           </div>
                           <div>
                             <small>Paid till date</small>
                             <strong className="fee-green">
-                              ₹{Number(fee?.paid || 0).toLocaleString("en-IN")}
+                              ₹{currentPaid.toLocaleString("en-IN")}
                             </strong>
                           </div>
                           <div>
                             <small>Balance due</small>
                             <strong className="fee-red">
-                              ₹{Number(fee?.due || 0).toLocaleString("en-IN")}
+                              ₹{currentBalanceDue.toLocaleString("en-IN")}
                             </strong>
                           </div>
                         </div>
