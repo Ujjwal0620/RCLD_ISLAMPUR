@@ -110,18 +110,26 @@ function normalizeCourse(value) {
 
 function parseAddress(value) {
   const raw = String(value ?? "").replace(/\r/g, "").trim();
-  const flat = raw.split(/[\n,;|]+/).map(item => item.trim()).filter(Boolean).join(" ");
-  const extract = pattern => { const match = flat.match(pattern); return match ? String(match[1] || "").replace(/[,.]+$/, "").trim() : ""; };
-  const ward = extract(/(?:VILL(?:AGE)?\.?|WARD(?:\s*NO\.?)?|COLONY|TOWN)\s*[:.\-]?\s*([^,;|\n]+?)(?=\s+(?:P\.?\s*O|P\.?\s*S|PO\b|PS\b|DIST\b|PIN\b)|$)/i);
-  let po = extract(/(?:P\.?\s*O\.?|POST\s*OFFICE)\s*[:.\-+]*\s*([^,;|\n]+?)(?=\s*(?:\+\s*P\.?\s*S\.?|P\.?\s*S\.?|POLICE\s*STATION|DIST\b|PIN\b)|$)/i);
-  let ps = extract(/(?:P\.?\s*S\.?|POLICE\s*STATION)\s*[:.\-+]*\s*([^,;|\n]+?)(?=\s*(?:DIST\b|PIN\b)|$)/i);
-  if (!po && /P\.?\s*O\.?\s*\+\s*P\.?\s*S\.?/i.test(flat)) {
-    const shared = extract(/P\.?\s*O\.?\s*\+\s*P\.?\s*S\.?\s*[:.\-]*\s*([^,;|\n]+?)(?=\s*(?:DIST\b|PIN\b)|$)/i);
+  const lines = raw.split(/[\n,;|]+/).map(item => item.trim()).filter(Boolean);
+  const takeAfter = (line, pattern) => line ? line.replace(pattern, "").trim().replace(/^[.:+\- ]+|[,. ]+$/g, "") : "";
+  const wardLine = lines.find(line => /^(?:VILL(?:AGE)?\.?|WARD(?:\s*NO\.?)?|COLONY|TOWN)\b?/i.test(line)) || "";
+  const ward = takeAfter(wardLine, /^(?:VILL(?:AGE)?\.?|WARD(?:\s*NO\.?)?|COLONY|TOWN)\s*[:.\-]?\s*/i);
+  const sharedLine = lines.find(line => /P\.?\s*O\.?\s*\+?\s*P\.?\s*S\.?/i.test(line)) || "";
+  let po = "", ps = "";
+  if (sharedLine) {
+    const shared = takeAfter(sharedLine, /^.*?P\.?\s*O\.?\s*\+?\s*P\.?\s*S\.?\s*[:.\-+]*\s*/i);
     po = shared; ps = shared;
+  } else {
+    const poLine = lines.find(line => /(?:^|\s)P\.?\s*O\.?(?:\s|[:.\-]|$)/i.test(line)) || "";
+    const psLine = lines.find(line => /(?:^|\s)P\.?\s*S\.?(?:\s|[:.\-]|$)/i.test(line)) || "";
+    po = takeAfter(poLine, /^.*?P\.?\s*O\.?\s*[:.\-]*\s*/i);
+    ps = takeAfter(psLine, /^.*?P\.?\s*S\.?\s*[:.\-]*\s*/i);
   }
-  let district = extract(/DIST(?:RICT)?\.?\s*[:.\-]?\s*([^,;|\n]+?)(?=\s*PIN\b|$)/i);
+  const districtLine = lines.find(line => /^DIST(?:RICT)?\.?\s*[:.\-]?/i.test(line)) || "";
+  let district = takeAfter(districtLine, /^DIST(?:RICT)?\.?\s*[:.\-]?\s*/i);
   if (/^(?:U\s*\/\s*D|U\.?D\.?)$/i.test(district)) district = "Uttar Dinajpur";
-  const pincode = extract(/PIN(?:NO|O|N)?\.?\s*[:.\-]?\s*(\d{6})/i);
+  const pinLine = lines.find(line => /\bPIN(?:NO|O|N)?\.?\s*[:.\-]?\s*\d{6}/i.test(line)) || raw;
+  const pincode = pinLine.match(/\bPIN(?:NO|O|N)?\.?\s*[:.\-]?\s*(\d{6})/i)?.[1] || "";
   return { address: raw, ward, village: ward, po, ps, postOffice: po, policeStation: ps, district, pincode, pin: pincode, sourceAddressRaw: raw };
 }
 
