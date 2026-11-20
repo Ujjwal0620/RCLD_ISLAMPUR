@@ -77,7 +77,7 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
   const sessionLabel = esc(student.session || student.academicSession || DEFAULT_SESSION);
 
   const enrollRaw =
-    String(firstNonEmpty(student.enrollmentNo, student.studentId, student.admissionNo, student.regnNo, student.formNo, "—")).trim();
+    String(firstNonEmpty(student.regnNo, student.enrollmentNo, student.studentId, student.admissionNo, student.formNo, "—")).trim();
   const idMatch = enrollRaw.match(/^(.*?)(\d+)$/);
   const idPrefix = idMatch ? esc(idMatch[1]) : esc(enrollRaw);
   const idNumber = idMatch ? esc(idMatch[2]) : "";
