@@ -224,7 +224,7 @@ function readSourceRows(workbook) {
     };
     row.sourceRowKey = [
       row.regnNo, row.formNo, normalizeHeader(row.applicantName), row.dateOfBirth,
-      normalizeHeader(row.fatherOrHusbandName), row.sourcePhone.replace(/\\D/g, ""),
+      normalizeHeader(row.fatherOrHusbandName), row.sourcePhone.replace(/\D/g, ""),
       row.admissionDate, row.course.toUpperCase()
     ].join("|");
     const errors = [];
