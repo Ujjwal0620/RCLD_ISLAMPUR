@@ -63,8 +63,20 @@ function findIdentityMatch(row, candidates) {
     if (sameDob && father && candidateFather && father === candidateFather && similarity(name, candidateName) >= 0.85) spelling.push(candidate);
   }
   const matches = exact.length ? exact : spelling;
-  if (matches.length === 1) return { match: matches[0], ambiguous: false };
-  return { match: null, ambiguous: matches.length > 1 };
+  const distinct = [];
+  for (const candidate of matches) {
+    const duplicate = distinct.some(other => {
+      const sameName = normalizeName(candidate.fullName || candidate.normalizedFullName) === normalizeName(other.fullName || other.normalizedFullName);
+      const sameDob = Boolean(dateKey(candidate.dob) && dateKey(candidate.dob) === dateKey(other.dob));
+      const sameFather = tokenOverlap(candidate.fatherName, other.fatherName);
+      const candidatePhones = new Set(candidate.phoneNumbers || []);
+      const samePhone = (other.phoneNumbers || []).some(phone => candidatePhones.has(phone));
+      return sameName && (sameDob || sameFather || samePhone);
+    });
+    if (!duplicate) distinct.push(candidate);
+  }
+  if (distinct.length === 1) return { match: distinct[0], ambiguous: false };
+  return { match: null, ambiguous: distinct.length > 1 };
 }
 const StudentSchema = new mongoose.Schema({}, { strict: false, timestamps: true });
 const MasterSchema = new mongoose.Schema({
