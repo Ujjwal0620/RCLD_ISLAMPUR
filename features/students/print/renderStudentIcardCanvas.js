@@ -54,14 +54,32 @@ function getPhotoUrl(student) {
 function getAddressLines(student) {
   const address = firstValue(student.presentAddress, student.address, student.completeAddress, student.fullAddress, student.applicantAddress, student.permanentAddress, "");
   const source = address && typeof address === "object" ? address : {};
+  const rawParts = typeof address === "string"
+    ? address.split(/[,|\n]+/).map(part => part.trim()).filter(Boolean)
+    : [];
+  const labelled = (pattern) => rawParts.find(part => pattern.test(part)) || "";
+  const valueAfterLabel = (part) => String(part || "").replace(/^[^:.-]+[:.-]\s*/i, "").replace(/^(?:P\.?\s*O\.?|P\.?\s*S\.?|Dist\.?)\s*/i, "").trim();
+
   const ward = firstValue(
     source.ward, source.wardNo, source.colony, source.village, source.vill,
     student.ward, student.wardNo, student.colony, student.village, student.vill,
-    typeof address === "string" ? address.split(/[,|\n]+/).map(part => part.trim()).filter(Boolean)[0] : ""
+    valueAfterLabel(labelled(/^(?:ward|ward\s*no|village|vill|colony)\b/i)),
+    rawParts.find(part => !/^(?:P\.?\s*O\.?|P\.?\s*S\.?|Dist\.?)\b/i.test(part))
   );
-  const po = firstValue(source.po, source.postOffice, source.post_office, student.po, student.postOffice, student.post_office, "");
-  const ps = firstValue(source.ps, source.policeStation, source.police_station, student.ps, student.policeStation, student.police_station, "");
-  const district = firstValue(source.district, student.district, student.permanentDistrict, "");
+  const po = firstValue(
+    source.po, source.postOffice, source.post_office,
+    student.po, student.postOffice, student.post_office,
+    valueAfterLabel(labelled(/^P\.?\s*O\.?\b/i))
+  );
+  const ps = firstValue(
+    source.ps, source.policeStation, source.police_station,
+    student.ps, student.policeStation, student.police_station,
+    valueAfterLabel(labelled(/^P\.?\s*S\.?\b/i))
+  );
+  const district = firstValue(
+    source.district, student.district, student.permanentDistrict,
+    valueAfterLabel(labelled(/^Dist\.?\b/i))
+  );
   const clean = value => String(value || "").trim().replace(/^(?:P\.?\s*O\.?|P\.?\s*S\.?|Dist\.?)\s*/i, "").trim();
   const wardLine = clean(ward);
   const poPsLine = [
