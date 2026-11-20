@@ -117,8 +117,6 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
   const fatherName = titleCase(firstValue(student.fatherOrHusbandName, student.fatherName, student.fatherNameAsPerRecords, student.guardianName, "—"));
   const addressMarkup = getAddressMarkup(student);
   const admission = getAdmissionDate(student) || "—";
-  const dob = firstValue(student.dateOfBirth, student.dob, "—");
-  const phone = firstValue(student.mobileNumber, student.phoneNumber, student.whatsappNumber, "—");
   const photo = photoUrl
     ? '<img class="student-photo" crossorigin="anonymous" src="' + escapeHtml(photoUrl) + '" alt="Student photograph">'
     : '<div class="student-photo photo-empty" aria-label="Student photograph unavailable"></div>';
@@ -129,8 +127,6 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
       '<div class="overlay diploma-id">' + idNumberMarkup(icardNumber) + '</div>' +
       '<div class="overlay diploma-name">' + nameMarkup + '</div>' +
       '<div class="overlay diploma-father">' + escapeHtml(fatherName) + '</div>' +
-      '<div class="overlay diploma-dob">DOB: ' + escapeHtml(dob) + '</div>' +
-      '<div class="overlay diploma-phone">PHONE: ' + escapeHtml(phone) + '</div>' +
       '<div class="overlay diploma-address">' + addressMarkup + '</div>' +
       '<div class="overlay diploma-course">' + escapeHtml(courseName || firstValue(student.courseName, student.course?.name, student.courseCode, "")) + '</div>' +
       '<div class="overlay diploma-admission">' + escapeHtml(admission) + '</div>'
@@ -140,8 +136,6 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
       '<div class="overlay circular-admission">' + escapeHtml(admission) + '</div>' +
       '<div class="overlay circular-father">' + escapeHtml(fatherName) + '</div>' +
       '<div class="overlay circular-address">' + addressMarkup + '</div>' +
-      '<div class="overlay circular-dob">DOB: ' + escapeHtml(dob) + '</div>' +
-      '<div class="overlay circular-phone">PHONE: ' + escapeHtml(phone) + '</div>' +
       '<div class="overlay circular-course">' + escapeHtml(courseName || firstValue(student.courseName, student.course?.name, student.courseCode, "—")) + '</div>';
 
   return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
@@ -159,8 +153,6 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     '.circular-id,.circular-registration,.circular-admission,.circular-father,.circular-address{left:46.8%;width:48.5%;font-family:"Roboto Condensed","Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;font-weight:700;font-size:clamp(14px,3.45cqw,48px);line-height:1.15;text-align:left;color:#3E454C;transform:scaleY(1.12);transform-origin:left center}' +
     '.circular-id{top:60.9%}.circular-registration{top:63.8%}.circular-admission{top:66.6%}.circular-father{top:69.4%}' +
     '.circular-address{top:72.2%;left:46.8%;width:48.5%;line-height:1.1;word-break:break-word;overflow-wrap:anywhere;transform-origin:top left;font-size:clamp(12px,2.8cqw,36px);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.address-line{display:block;min-height:0}' +
-    '.circular-dob{top:75.5%;left:46.8%;width:48.5%;font-size:clamp(11px,2.7cqw,34px);font-weight:700}' +
-    '.circular-phone{top:78.1%;left:46.8%;width:48.5%;font-size:clamp(11px,2.7cqw,34px);font-weight:700}' +
     '.circular-course{top:81.2%;left:46.8%;width:48.5%;font-size:clamp(12px,3cqw,40px);font-weight:800;color:#2E3192}' +
     '.circular-id .id-number-tail{font-size:4.1cqw;font-weight:800;color:#3E454C}' +
     '.diploma .student-photo{top:34.2%;left:32.1%;transform:none;width:35.8%;height:25%;aspect-ratio:auto;border-radius:10px;object-fit:cover}' +
@@ -169,8 +161,6 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     '.diploma-id{top:13%;left:72%;font-weight:700;font-size:clamp(13px,3.25cqw,44px)}' +
     '.diploma-name{top:62.5%;left:16.5%;width:80%;font-size:clamp(15px,3.6cqw,48px);font-weight:800;text-transform:uppercase;letter-spacing:.3px;line-height:1.05;white-space:nowrap;color:#1E242B}' +
     '.diploma-father{top:66.2%;left:31%;width:66%;font-weight:700}' +
-    '.diploma-dob{top:69.1%;left:31%;width:66%;font-weight:700}' +
-    '.diploma-phone{top:71.9%;left:31%;width:66%;font-weight:700}' +
     '.diploma-address{top:74.7%;left:20.5%;width:75%;line-height:1.1;font-weight:700;white-space:normal;overflow-wrap:anywhere;font-size:clamp(11px,2.8cqw,36px)}.diploma-address .address-line{display:block}' +
     '.diploma-course{top:81.0%;left:19%;width:76%;font-weight:700}.diploma-admission{top:84.0%;left:29.5%;width:68%;font-weight:700}' +
     '@media screen{body{padding:24px 0;background:#e9edf3}.card{box-shadow:0 2px 14px #0002}}' +
