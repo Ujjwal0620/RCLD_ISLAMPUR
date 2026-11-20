@@ -6,12 +6,6 @@ export function buildStandardStudentIcardMarkup({
             // ===== STANDARD (ALL OTHER COURSES) : Exact Match to Sample 2 =====
             const fullName = String(student.applicantName || "").trim().toUpperCase();
             const stdNameSizeMm = Math.min(2.65, 34.5 / Math.max(fullName.length * 0.58, 1)).toFixed(2);
-            const rawIdNumber = String(idNumber || "—");
-            const instituteIdPrefix = "RCLD/ISL-001/";
-            const idCode = rawIdNumber.toUpperCase().startsWith(instituteIdPrefix)
-              ? rawIdNumber.slice(instituteIdPrefix.length)
-              : rawIdNumber;
-            const idMarkup = '<span class="id-number-prefix">' + instituteIdPrefix + '</span><strong class="id-number-code">' + idCode + '</strong>';
       
             // Format 3-line uppercase address exactly like Sample 2:
             // Line 1: VILL. MALIN GAON,
@@ -55,8 +49,9 @@ export function buildStandardStudentIcardMarkup({
       
                 <!-- Top Row: Left ID Block, Center Crest Logo, Right Session Block -->
                 <div class="std-id">
-                  <div class="l">ID No.</div>
-                  <div class="n">${idMarkup}</div>
+                  <div class="l">ID NO.</div>
+                  <div class="p">${idPrefix}</div>
+                  ${idNumber ? `<div class="n">${idNumber}</div>` : ""}
                 </div>
       
                 <img class="std-logo" src="${logoUrl}" alt="RCLD logo"/>
@@ -87,6 +82,10 @@ export function buildStandardStudentIcardMarkup({
                   <div class="r">
                     <b>Address:</b>
                     <span class="ad">${stdAddrLines.map((l) => esc(l)).join("<br/>")}</span>
+                  </div>
+                  <div class="r">
+                    <b>Course:</b>
+                    <span class="crs">${esc(courseText || "—")}</span>
                   </div>
                   <div class="r">
                     <b>Date of Issue:</b>

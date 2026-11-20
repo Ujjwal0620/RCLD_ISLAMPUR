@@ -15,75 +15,6 @@ import { buildCfkStudentIcardMarkup } from "@/features/students/print/buildCfkSt
 import { buildStandardStudentIcardMarkup } from "@/features/students/print/buildStandardStudentIcardMarkup";
 import { printTemplateStudentIcard } from "@/features/students/print/printTemplateStudentIcard";
 
-function resolveActiveEnrollmentStudent(student, selectedTemplate = "") {
-  const enrollments = Array.isArray(student?.enrollments) ? student.enrollments : [];
-  const roman = ["I", "II", "III", "IV", "V", "VI"][Number(student?.currentSemester || 0) - 1] || "";
-  const isKids = /coding\s*for\s*kids|\bCFK\b|\bKIDS\b/i.test(String(student?.courseName || student?.courseCode || ""));
-  const semesterEnrollment = isKids && roman
-    ? enrollments.find(item => String(item.semesterLabel || "").toUpperCase() === "SM-" + roman)
-    : null;
-  const templateName = String(selectedTemplate || "").toUpperCase();
-  const templateSemester = templateName.match(/SEM[- ]?(\d)/);
-  const templateYear = templateName.match(/(1ST|2ND|3RD)\s*YEAR/);
-  const templateSemesterRoman = templateSemester
-    ? ["I", "II", "III", "IV", "V", "VI"][Number(templateSemester[1]) - 1] : "";
-  let templateEnrollment = templateSemesterRoman
-    ? enrollments.find(item => String(item.semesterLabel || "").toUpperCase() === "SM-" + templateSemesterRoman
-      || new RegExp("SEM[- ]?" + templateSemester[1], "i").test(String(item.semesterLabel || "")))
-    : null;
-  if (!templateEnrollment && templateYear) {
-    const yearNumber = { "1ST": 1, "2ND": 2, "3RD": 3 }[templateYear[1]];
-    templateEnrollment = enrollments.find(item =>
-      new RegExp("YEAR[- ]?" + yearNumber, "i").test(String(item.semesterLabel || ""))
-    );
-    if (!templateEnrollment) {
-      const roboticsEnrollments = enrollments.filter(item => String(item.courseCode || "").toUpperCase() === "ROBOTICS")
-        .sort((a, b) => new Date(a.admissionDate || 0) - new Date(b.admissionDate || 0));
-      templateEnrollment = roboticsEnrollments[yearNumber - 1] || null;
-    }
-  }
-  const activeEnrollment = templateEnrollment || student?.activeEnrollment || semesterEnrollment || enrollments.find(item => item.status === "ACTIVE");
-  if (!activeEnrollment) return student;
-  const semesterRoman = String(activeEnrollment.semesterLabel || "").toUpperCase().match(/SM[- ]?(I|II|III|IV|V|VI)\b/);
-  const semesterIndex = semesterRoman ? ["I", "II", "III", "IV", "V", "VI"].indexOf(semesterRoman[1]) + 1 : 0;
-  return {
-    ...student,
-    regnNo: activeEnrollment.stCode || student.regnNo,
-    enrollmentNo: activeEnrollment.stCode || student.enrollmentNo,
-    courseCode: activeEnrollment.courseCode || student.courseCode,
-    courseName: activeEnrollment.courseName
-      || (String(student.courseCode || "").toUpperCase() === String(activeEnrollment.courseCode || "").toUpperCase()
-        ? student.courseName : activeEnrollment.courseCode),
-    currentSemester: semesterIndex || Number(String(activeEnrollment.semesterLabel || student.currentSemester || "").match(/\d+/)?.[0] || student.currentSemester || 1),
-    admissionDate: activeEnrollment.admissionDate || student.admissionDate,
-    activeEnrollment,
-  };
-}
-
-async function waitForIcardImages(doc) {
-  await Promise.all([...doc.images].map(async img => {
-    try {
-      if (img.decode) await img.decode();
-      else if (!img.complete || !img.naturalWidth) {
-        await new Promise((resolve, reject) => {
-          img.onload = resolve;
-          img.onerror = () => reject(new Error("Image failed to load."));
-        });
-      }
-      if (!img.naturalWidth) throw new Error("Image has no decoded pixels.");
-    } catch (error) {
-      if (img.classList.contains("photo-img") || img.classList.contains("cfk-photo") || img.classList.contains("student-photo")) {
-        const placeholder = doc.createElement("div");
-        placeholder.className = "photo-ph";
-        placeholder.textContent = "PHOTO";
-        img.replaceWith(placeholder);
-      } else {
-        throw new Error("An I-card asset could not be loaded. Check the logo/template asset and try again.");
-      }
-    }
-  }));
-}
-
 export async function printStudentICard(student, setMessage, selectedSemester = "", outputMode = "print", selectedTemplate = "") {
   if (!student || !isIcardEligible(student)) {
     setMessage(
@@ -91,8 +22,6 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
     );
     return;
   }
-
-  student = resolveActiveEnrollmentStudent(student, selectedTemplate);
 
   if (selectedTemplate) {
     await printTemplateStudentIcard({ student, templateName: selectedTemplate, outputMode, setMessage });
@@ -147,14 +76,11 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
   const issueDate = formatIcardDate(admissionDate);
   const sessionLabel = esc(student.session || student.academicSession || DEFAULT_SESSION);
 
-  const registrationCode = String(firstNonEmpty(
-    student.stCode, student.activeEnrollment?.stCode, student.regnNo, student.registrationNumber, student.registrationNo, student.registrationId,
-    student.regNo, student.enrollmentNo, student.studentId, student.admissionNo, student.formNo, "—"
-  )).trim();
-  const instituteId = /^RCLD\/ISL-001\//i.test(registrationCode)
-    ? registrationCode
-    : `RCLD/ISL-001/${registrationCode}`;
-  const idNumber = esc(instituteId);
+  const enrollRaw =
+    String(firstNonEmpty(student.enrollmentNo, student.studentId, student.admissionNo, student.regnNo, student.formNo, "—")).trim();
+  const idMatch = enrollRaw.match(/^(.*?)(\d+)$/);
+  const idPrefix = idMatch ? esc(idMatch[1]) : esc(enrollRaw);
+  const idNumber = idMatch ? esc(idMatch[2]) : "";
 
   const rawPhoto = firstNonEmpty(
     student.photoUrl,
@@ -165,7 +91,7 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
   );
   const photoUrl = rawPhoto ? esc(rawPhoto) : "";
   const photoImg = photoUrl
-    ? `<img class="photo-img" crossorigin="anonymous" src="${photoUrl}" alt="Student photo"/>`
+    ? `<img class="photo-img" src="${photoUrl}" alt="Student photo"/>`
     : '<div class="photo-ph">PHOTO</div>';
   const logoUrl = new URL("/assets/logo.png", window.location.origin).href;
   // Use the actual Student model fields from the registration API.
@@ -220,7 +146,7 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
     cardMarkup = buildCfkStudentIcardMarkup({
       student,
       photoUrl: rawPhoto || "",
-      idNumber,
+      idNumber: `${idPrefix}${idNumber}`,
       issueDate,
       address: addressLines.join(", "),
       semester: activeSemester,
@@ -231,7 +157,7 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
     cardMarkup = buildStandardStudentIcardMarkup({
       student,
       addrMain,
-      idPrefix: "",
+      idPrefix,
       idNumber,
       issueDate,
       photoImg,
@@ -253,22 +179,11 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
   const autoPrintScript = outputMode === "jpg" ? "" : `
   <script>
     window.addEventListener("load", async () => {
-      await Promise.all([...document.images].map(async (img) => {
-        try {
-          if (img.decode) await img.decode();
-          else if (!img.complete || !img.naturalWidth) await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; });
-          if (!img.naturalWidth) throw new Error("Image unavailable");
-        } catch (error) {
-          if (img.classList.contains("photo-img") || img.classList.contains("cfk-photo")) {
-            const placeholder = document.createElement("div");
-            placeholder.className = "photo-ph";
-            placeholder.textContent = "PHOTO";
-            img.replaceWith(placeholder);
-          } else {
-            throw error;
-          }
-        }
-      }));
+      await Promise.all(
+        [...document.images].map((img) =>
+          img.decode ? img.decode().catch(() => {}) : Promise.resolve()
+        )
+      );
       setTimeout(() => window.print(), 300);
     });
   </script>`;
@@ -303,7 +218,11 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
       if (!frameDocument) throw new Error("Unable to prepare the I-Card image.");
 
       if (frameDocument.fonts?.ready) await frameDocument.fonts.ready;
-      await waitForIcardImages(frameDocument);
+      await Promise.all(
+        [...frameDocument.images].map((img) =>
+          img.decode ? img.decode().catch(() => {}) : Promise.resolve()
+        )
+      );
 
       const cardElement = frameDocument.querySelector(".cfk-template-card, .id-card, .card.std, .icard-page.cfk-card");
       if (!cardElement) throw new Error("The I-Card layout could not be found.");
@@ -338,7 +257,7 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
         .replace(/[^a-z0-9]+/gi, "-")
         .replace(/^-|-$/g, "");
       const enrollment = String(
-        student.regnNo || student.enrollmentNo || student.studentId || student.admissionNo || student.formNo || ""
+        student.enrollmentNo || student.studentId || student.admissionNo || student.regnNo || student.formNo || ""
       ).replace(/[^a-z0-9-]+/gi, "");
       const link = document.createElement("a");
       link.href = jpgDataUrl;

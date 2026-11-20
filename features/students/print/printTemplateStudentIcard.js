@@ -4,22 +4,12 @@ const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => 
 
 const firstValue = (...values) => values.find((value) => value !== undefined && value !== null && String(value).trim());
 
-const CIRCULAR_COORDINATES = {
-  photo: { top: 20.3, left: 50, width: 38.6 },
-  name: { top: 48.8, left: 3, width: 94 },
-  labelMask: { top: 59.7, left: 2.5, width: 42.5, height: 15.4 },
-  labels: { left: 3.2, right: 45.5, width: 42.3 },
-  values: { left: 46.8, width: 48.5 },
-  rows: { id: 61.2, admission: 64.6, father: 67.8, address: 71.0 },
-  addressLineHeight: 1.26,
-};
 const TEMPLATE_CONFIG = {
   "ID Card Sem-1.jpg": { lastNameColor: "#E61E8C" },
   "ID Card Sem-2.jpg": { lastNameColor: "#009846" },
   "ID Card Sem-3.jpg": { lastNameColor: "#0095DA" },
   "ID Card Sem-4.jpg": { lastNameColor: "#F58220" },
   "ID Card Sem-5.jpg": { lastNameColor: "#9C2B86" },
-  "ID Card Sem-6.jpg": { lastNameColor: "#E53935", labelColor: "#E53935", maskMode: "white", coordinates: CIRCULAR_COORDINATES },
   "ID Card School Course.jpg": { lastNameColor: "#E31E24" },
   "ID Card Robotics 1st year.jpg": { lastNameColor: "#D99B00" },
   "ID Card Robotics 2nd year.jpg": { lastNameColor: "#0077B6" },
@@ -64,12 +54,11 @@ function splitNameMarkup(value, lastNameColor, diploma) {
 }
 
 function idNumberMarkup(value) {
-  const normalized = String(value || "—");
-  const prefix = "RCLD/ISL-001/";
-  const suffix = normalized.toUpperCase().startsWith(prefix)
-    ? normalized.slice(prefix.length)
-    : normalized;
-  return '<span class="id-number-prefix">' + prefix + '</span><strong class="id-number-code">' + escapeHtml(suffix) + "</strong>";
+  const raw = String(value || "—");
+  const match = raw.match(/^(.*\/)(\d+)$/);
+  if (!match) return escapeHtml(raw);
+  return escapeHtml(match[1]) +
+    '<span class="id-number-tail" style="font-size:4.1cqw;font-weight:800;">' + escapeHtml(match[2]) + "</span>";
 }
 
 function titleCase(value) {
@@ -123,92 +112,60 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
   const config = TEMPLATE_CONFIG[templateName] || { lastNameColor: "#3E454C" };
   const fullName = firstValue(student.applicantName, student.fullName, student.name, "STUDENT");
   const nameMarkup = splitNameMarkup(fullName, config.lastNameColor, diploma);
-  const rawRegistrationCode = String(firstValue(
-    student.stCode, student.activeEnrollment?.stCode, student.regnNo, student.registrationNumber, student.registrationNo, student.registrationId,
-    student.regNo, student.icardNumber, student.iCardNumber, student.idCardNumber, student.cardNumber,
-    student.enrollmentNo, student.admissionNo, student.formNo, "—"
-  )).trim();
-  const studentCode = String(firstValue(
-    student.stCode, student.activeEnrollment?.stCode, student.studentCode,
-    student.student_code, rawRegistrationCode
-  )).trim();
-  const idCode = studentCode.includes("/")
-    ? studentCode.slice(studentCode.lastIndexOf("/") + 1)
-    : studentCode;
-  const idValueMarkup = '<span class="id-number-prefix">RCLD/ISL-001/</span><strong class="id-number-code">' + escapeHtml(idCode || "-") + '</strong>';
+  const icardNumber = firstValue(student.icardNumber, student.iCardNumber, student.idCardNumber, student.cardNumber, student.studentId, student.enrollmentNo, student.admissionNo, "—");
+  const registrationNumber = firstValue(student.registrationNumber, student.registrationNo, student.registrationId, student.regNo, student.regnNo, student.formNo, "—");
   const fatherName = titleCase(firstValue(student.fatherOrHusbandName, student.fatherName, student.fatherNameAsPerRecords, student.guardianName, "—"));
-  const addressMarkup = getAddressMarkup(student) || '<div class="address-line">—</div>';
+  const addressMarkup = getAddressMarkup(student);
   const admission = getAdmissionDate(student) || "—";
   const photo = photoUrl
-    ? '<img class="student-photo" crossorigin="anonymous" src="' + escapeHtml(photoUrl) + '" alt="Student photograph">'
+    ? '<img class="student-photo" src="' + escapeHtml(photoUrl) + '" alt="Student photograph">'
     : '<div class="student-photo photo-empty" aria-label="Student photograph unavailable"></div>';
-  const circularValues =
-    '<div class="overlay circular-value circular-id">' + idValueMarkup + '</div>' +
-    '<div class="overlay circular-value circular-admission">' + escapeHtml(admission) + '</div>' +
-    '<div class="overlay circular-value circular-father">' + escapeHtml(fatherName) + '</div>' +
-    '<div class="overlay circular-value circular-address">' + addressMarkup + '</div>';
-  const circularLabelPatchTemplates = new Set([
-    "ID Card Sem-1.jpg", "ID Card Sem-2.jpg", "ID Card Sem-3.jpg",
-    "ID Card Sem-4.jpg", "ID Card Sem-5.jpg", "ID Card School Course.jpg",
-    "ID Card Robotics 1st year.jpg", "ID Card Robotics 2nd year.jpg",
-    "ID Card Robotics 3rd year.jpg",
-  ]);
-  const hasCircularLabelPatch = !diploma && circularLabelPatchTemplates.has(templateName);
-  const usesSampledRoboticsPatch = hasCircularLabelPatch && templateName.startsWith("ID Card Robotics ");
-  const circularLabelPatch = hasCircularLabelPatch
-    ? '<div class="circular-label-patch' + (usesSampledRoboticsPatch ? ' robotics-label-patch' : '') + '"></div>' +
-      '<div class="overlay circular-label circular-label-admission" style="color:' + config.lastNameColor + '">Date of Admn. :</div>' +
-      '<div class="overlay circular-label circular-label-father" style="color:' + config.lastNameColor + '">Father\'s Name :</div>' +
-      '<div class="overlay circular-label circular-label-address" style="color:' + config.lastNameColor + '">Address :</div>'
-    : "";
-  const diplomaValues = diploma
-    ? '<div class="overlay diploma-session">' + escapeHtml(session || "—") + '</div>' +
-      '<div class="overlay diploma-id">' + idValueMarkup + '</div>' +
+
+  const overlays = diploma
+    ? '<div class="overlay diploma-registration">' + escapeHtml(registrationNumber) + '</div>' +
+      '<div class="overlay diploma-session">' + escapeHtml(session) + '</div>' +
+      '<div class="overlay diploma-id">' + idNumberMarkup(icardNumber) + '</div>' +
       '<div class="overlay diploma-name">' + nameMarkup + '</div>' +
       '<div class="overlay diploma-father">' + escapeHtml(fatherName) + '</div>' +
       '<div class="overlay diploma-address">' + addressMarkup + '</div>' +
-      '<div class="overlay diploma-course">' + escapeHtml(courseName || student.courseName || student.courseCode || "—") + '</div>' +
+      '<div class="overlay diploma-course">' + escapeHtml(courseName || firstValue(student.courseName, student.course?.name, student.courseCode, "")) + '</div>' +
       '<div class="overlay diploma-admission">' + escapeHtml(admission) + '</div>'
-    : '<div class="overlay circular-name">' + nameMarkup + '</div>' + circularValues;
+    : '<div class="overlay circular-name">' + nameMarkup + '</div>' +
+      '<div class="overlay circular-id">' + idNumberMarkup(icardNumber) + '</div>' +
+      '<div class="overlay circular-registration">' + escapeHtml(registrationNumber) + '</div>' +
+      '<div class="overlay circular-admission">' + escapeHtml(admission) + '</div>' +
+      '<div class="overlay circular-father">' + escapeHtml(fatherName) + '</div>' +
+      '<div class="overlay circular-address">' + addressMarkup + '</div>';
 
   return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
     '<title>RCLD I-Card - ' + escapeHtml(fullName) + '</title><style>' +
     '@page{size:54mm 85.6mm;margin:0}' +
     '*{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}' +
-    'html,body{width:100%;height:100%;margin:0;padding:0;background:transparent;font-family:Arial,"Helvetica Neue","Liberation Sans",sans-serif}' +
-    'body{display:flex;justify-content:center;align-items:flex-start}' +
-    '.card{position:relative;width:100%;max-width:640px;aspect-ratio:640/1016;overflow:hidden;border:none;outline:none;padding:0;margin:0;background:transparent;container-type:inline-size;color:#3E454C}' +
-    '.template-background{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;display:block;border:none;margin:0;padding:0;z-index:0}' +
-    '.student-photo{position:absolute;z-index:2;top:19.3%;left:50%;transform:translateX(-50%);width:40.6%;aspect-ratio:1/1;height:auto;border-radius:50%;object-fit:cover;display:block}' +
+    'html,body{margin:0;padding:0;background:#fff;font-family:Arial,"Helvetica Neue","Liberation Sans",sans-serif}' +
+    'body{width:100%;min-height:100vh;display:flex;justify-content:center;align-items:flex-start}' +
+    '.card{position:relative;width:min(100vw,640px);aspect-ratio:640/1016;overflow:hidden;container-type:inline-size;background:#fff;isolation:isolate;color:#3E454C}' +
+    '.template-background{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;z-index:0}' +
+    '.student-photo{position:absolute;z-index:1;top:20.3%;left:50%;transform:translateX(-50%);width:38.6%;aspect-ratio:1/1;height:auto;border-radius:50%;object-fit:cover;object-position:center;display:block}' +
     '.photo-empty{background:transparent}' +
-    '.overlay{position:absolute;z-index:2;overflow:hidden;font-family:Arial,"Helvetica Neue","Liberation Sans",sans-serif}' +
-    '.circular-name{top:48.6%;left:3%;width:94%;text-align:center;font-weight:800;font-size:clamp(20px,6cqw,76px);text-transform:uppercase;letter-spacing:.3px;line-height:1.05;white-space:nowrap}' +
-    '.circular-value{left:46.8%;width:48.5%;text-align:left;font-family:"Roboto Condensed","Arial Narrow",Arial,sans-serif;font-weight:700;font-size:clamp(14px,3.35cqw,46px);color:#3E454C;transform:scaleY(1.10);transform-origin:left center;white-space:nowrap}' +
-    '.circular-id{top:60.9%}.circular-id .id-number-prefix{font-size:3.35cqw;font-weight:700}.circular-id .id-number-code{font-size:3.95cqw;font-weight:800}.circular-admission{top:63.8%}.circular-father{top:66.6%}' +
-    '.circular-address{top:69.4%;transform-origin:top left;line-height:1.28;word-break:break-word;white-space:normal;max-height:10.8%;overflow:hidden}' +
-    '.circular-label-patch{position:absolute;z-index:3;top:63.3%;left:15%;width:30.5%;height:14.5%;background:#fff;pointer-events:none}' +
-    '.circular-label-patch.robotics-label-patch{background:#fff}' +
-    '.circular-label{z-index:4;left:15%;width:29.8%;text-align:right;font-family:"Roboto Condensed","Arial Narrow",Arial,sans-serif;font-weight:700;font-size:clamp(14px,3.35cqw,46px);transform:scaleY(1.10);transform-origin:right center;white-space:nowrap;overflow:visible}' +
-    '.circular-label-admission{top:63.8%}.circular-label-father{top:66.6%}.circular-label-address{top:69.4%}' +
-    '.circular-address .address-line{display:block;min-height:0}' +
+    '.overlay{position:absolute;z-index:2;font-family:Arial,"Helvetica Neue","Liberation Sans",sans-serif;color:#3E454C;overflow:hidden}' +
+    '.circular-name{top:48.8%;left:3%;width:94%;text-align:center;font-weight:800;font-size:clamp(20px,6.3cqw,80px);text-transform:uppercase;letter-spacing:.3px;line-height:1.05;white-space:nowrap}' +
+    '.circular-id,.circular-registration,.circular-admission,.circular-father,.circular-address{left:46.8%;width:48.5%;font-family:"Roboto Condensed","Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;font-weight:700;font-size:clamp(14px,3.45cqw,48px);line-height:1.15;text-align:left;color:#3E454C;transform:scaleY(1.12);transform-origin:left center}' +
+    '.circular-id{top:60.9%}.circular-registration{top:63.8%}.circular-admission{top:66.6%}.circular-father{top:69.4%}' +
+    '.circular-address{top:72.2%;left:46.8%;width:48.5%;line-height:1.3;word-break:break-word;overflow-wrap:anywhere;transform-origin:top left}.address-line{display:block;min-height:0}' +
+    '.circular-id .id-number-tail{font-size:4.1cqw;font-weight:800;color:#3E454C}' +
     '.diploma .student-photo{top:34.2%;left:32.1%;transform:none;width:35.8%;height:25%;aspect-ratio:auto;border-radius:10px;object-fit:cover}' +
-    '.diploma .overlay{font-family:Arial,"Helvetica Neue","Liberation Sans",sans-serif;font-size:clamp(13px,3.2cqw,44px);color:#1E242B;font-weight:700;line-height:1.1;transform:none;transform-origin:left top;white-space:nowrap}' +
-    '.diploma-session{top:2.5%;left:87.5%;width:12%}' +
-    '.diploma-id{top:13%;left:72%;width:26%}.diploma-id .id-number-prefix{font-size:2.7cqw;font-weight:700}.diploma-id .id-number-code{font-size:3.2cqw;font-weight:800}' +
-    '.diploma-name{top:62.5%;left:16.5%;width:82%;font-size:clamp(15px,3.6cqw,48px)!important;font-weight:800!important;text-transform:uppercase;white-space:nowrap}' +
-    '.diploma-father{top:66.2%;left:31%;width:68%}' +
-    '.diploma-address{top:69.2%;left:20.5%;width:75%;line-height:1.28;white-space:normal;word-break:break-word;max-height:7.8%;overflow:hidden}' +
-    '.diploma-address .address-line{display:block}' +
-    '.diploma-course{top:77.6%;left:19%;width:78%}.diploma-admission{top:81.8%;left:29.5%;width:68%}' +
-    '@media print{html,body{width:54mm!important;height:85.6mm!important;margin:0!important;padding:0!important;overflow:hidden!important;background:transparent!important}body{display:block!important}.card{width:54mm!important;height:85.6mm!important;max-width:none!important;aspect-ratio:640/1016!important;margin:0!important;box-shadow:none!important}}' +
+    '.diploma .overlay:not(.diploma-name){font-family:"Roboto Condensed","Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;font-size:clamp(13px,3.25cqw,44px);line-height:1.15;color:#1E242B;font-weight:700;transform:scaleY(1.10);transform-origin:left center}' +
+    '.diploma-registration{top:2.5%;left:38.5%;font-weight:700}.diploma-session{top:2.5%;left:87.5%;font-weight:700}' +
+    '.diploma-id{top:13%;left:72%;font-weight:700;font-size:clamp(13px,3.25cqw,44px)}' +
+    '.diploma-name{top:62.5%;left:16.5%;width:80%;font-size:clamp(15px,3.6cqw,48px);font-weight:800;text-transform:uppercase;letter-spacing:.3px;line-height:1.05;white-space:nowrap;color:#1E242B}' +
+    '.diploma-father{top:66.2%;left:31%;width:66%;font-weight:700}' +
+    '.diploma-address{top:69.2%;left:20.5%;width:75%;line-height:1.28;font-weight:700;white-space:normal;overflow-wrap:anywhere}.diploma-address .address-line{display:block}' +
+    '.diploma-course{top:77.6%;left:19%;width:76%;font-weight:700}.diploma-admission{top:81.8%;left:29.5%;width:68%;font-weight:700}' +
+    '@media screen{body{padding:24px 0;background:#e9edf3}.card{box-shadow:0 2px 14px #0002}}' +
+    '@media print{html,body{width:54mm!important;height:85.6mm!important;min-height:0!important;margin:0!important;padding:0!important;overflow:hidden!important}body{display:block!important}.card{width:54mm!important;height:85.6mm!important;aspect-ratio:auto!important;max-width:none!important;margin:0!important;box-shadow:none!important;container-type:inline-size}}' +
     '</style></head><body><main class="card ' + (diploma ? "diploma" : "circular") + '">' +
-    '<img class="template-background" src="/assets/icardtemplates/' + encodeURIComponent(templateName) + '" alt="" crossorigin="anonymous">' +
-    (hasCircularLabelPatch ? circularLabelPatch : "") +
-    photo + diplomaValues + '</main>' +
-    '<script>' +
-    'const patch=document.querySelector(".robotics-label-patch");' +
-    'window.__rcldPatchReady=patch?(async()=>{const image=document.querySelector(".template-background");try{if(image.decode)await image.decode();else if(!image.complete)await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=reject});const canvas=document.createElement("canvas");canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;const context=canvas.getContext("2d",{willReadFrequently:true});context.drawImage(image,0,0);const pixel=context.getImageData(Math.round(image.naturalWidth*.2),Math.round(image.naturalHeight*.65),1,1).data;patch.style.backgroundColor="rgb("+pixel[0]+","+pixel[1]+","+pixel[2]+")";}catch(error){console.error("Unable to sample Robotics template patch color",error);}})():Promise.resolve();' +
-    '</script></body></html>';
+    '<img class="template-background" src="/assets/icardtemplates/' + encodeURIComponent(templateName) + '" alt="">' +
+    photo + overlays + '</main></body></html>';
 }
 
 export async function printTemplateStudentIcard({ student, templateName, outputMode = "print", setMessage }) {
@@ -232,7 +189,7 @@ export async function printTemplateStudentIcard({ student, templateName, outputM
       return;
     }
     win.document.open();
-    win.document.write(html.replace("</body>", '<script>window.addEventListener("load",async()=>{try{await window.__rcldPatchReady;const imgs=[...document.images];await Promise.all(imgs.map(async img=>{if(img.decode)await img.decode();else if(!img.complete||!img.naturalWidth)await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;});}));setTimeout(()=>window.print(),150);}catch(error){console.error(error);alert("Unable to prepare this ID card template.");}});</script></body>'));
+    win.document.write(html.replace("</body>", '<script>window.addEventListener("load",async()=>{await Promise.all([...document.images].map((img)=>img.decode?img.decode().catch(()=>{}):Promise.resolve()));setTimeout(()=>window.print(),150);});</script></body>'));
     win.document.close();
     return;
   }
@@ -248,26 +205,10 @@ export async function printTemplateStudentIcard({ student, templateName, outputM
     });
     const doc = frame.contentDocument;
     if (!doc) throw new Error("Unable to prepare the selected template.");
-    await doc.defaultView.__rcldPatchReady;
-    
-    await Promise.all([...doc.images].map(async img => {
-      try {
-        if (img.decode) await img.decode();
-        else if (!img.complete || !img.naturalWidth) await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; });
-        if (!img.naturalWidth) throw new Error("Image unavailable");
-      } catch (error) {
-        if (img.classList.contains("student-photo")) {
-          const placeholder = doc.createElement("div");
-          placeholder.className = "student-photo photo-empty";
-          img.replaceWith(placeholder);
-        } else {
-          throw new Error("I-card template image could not be loaded.");
-        }
-      }
-    }));
+    await Promise.all([...doc.images].map((img) => img.decode ? img.decode().catch(() => {}) : Promise.resolve()));
     const { toJpeg } = await import("html-to-image");
     const card = doc.querySelector(".card");
-    const dataUrl = await toJpeg(card, { quality: 1, width: 640, height: 1016, canvasWidth: 640, canvasHeight: 1016, pixelRatio: 1, backgroundColor: "#fff", cacheBust: true });
+    const dataUrl = await toJpeg(card, { quality: 1, pixelRatio: 1, backgroundColor: "#fff", cacheBust: true });
     const link = document.createElement("a");
     const base = String(student.applicantName || student.fullName || "Student").trim().replace(/[^a-z0-9]+/gi, "-");
     link.href = dataUrl;
