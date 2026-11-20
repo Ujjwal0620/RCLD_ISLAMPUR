@@ -4,7 +4,7 @@ import * as XLSX from "xlsx";
 import { connectMongoDB } from "@/lib/mongodb";
 import { getSession } from "@/lib/auth";
 import Course from "@/models/Course";
-import { importPaymentWorksheet, linkImportedStudentRecords } from "@/lib/student-import/import-payment-sheet";
+import { importPaymentWorksheet, linkImportedStudentRecords, parsePaymentWorksheet } from "@/lib/student-import/import-payment-sheet";
 
 const StudentSchema = new mongoose.Schema({
   formNo: String, enrollmentNo: String, regnNo: String, applicantName: String,
@@ -293,7 +293,17 @@ export async function POST(request) {
     const workbook = XLSX.read(buffer, { type: "buffer", cellDates: true });
     const parsedRows = readSourceRows(workbook);
     const summary = previewSummary(parsedRows);
-    if (mode !== "import") return NextResponse.json({ ...summary, message: "Spreadsheet preview is ready. Review the mapping before importing." });
+    const paymentPreview = parsePaymentWorksheet(workbook);
+    const paymentSheetSummary = {
+      sheetName: paymentPreview.sheetName,
+      totalRows: paymentPreview.rows.length,
+      validRows: paymentPreview.rows.filter(row => row.valid).length,
+      invalidRows: paymentPreview.rows.filter(row => !row.valid).length,
+    };
+    if (mode !== "import") return NextResponse.json({
+      ...summary, paymentSheet: paymentSheetSummary,
+      message: "Spreadsheet preview is ready. Review both student and receipt worksheets before importing."
+    });
     if (!summary.validRows) return NextResponse.json({ error: "No valid student rows were found.", ...summary }, { status: 400 });
 
     await removeLegacyFormNoUniqueIndex();
