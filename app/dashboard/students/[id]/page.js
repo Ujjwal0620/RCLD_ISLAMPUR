@@ -69,6 +69,7 @@ export default function StudentDetailsPage({ params }) {
           <CodingForKidsIcardDialog
             open={icardDialogOpen}
             student={student}
+            mode={icardOutputMode}
             onClose={() => setIcardDialogOpen(false)}
             onSelect={(templateName) => {
               setIcardDialogOpen(false);
