@@ -63,7 +63,7 @@ export async function POST(request) {
     for (const file of files) {
       const filename = String(file.name || "unnamed");
       const extension = filename.split(".").pop().toLowerCase();
-      if (!["jpg", "jpeg", "png", "webp"].includes(extension) || !String(file.type || "").startsWith("image/")) {
+      if (!["jpg", "jpeg", "png", "webp"].includes(extension) || (file.type && !String(file.type).startsWith("image/"))) {
         summary.failedFiles.push({ filename, reason: "Unsupported image format." });
         continue;
       }
