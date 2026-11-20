@@ -52,7 +52,7 @@ export default function StudentPersonalInformationFields({ editForm, setEditForm
                                   inputMode="numeric"
                                   pattern="[0-9]{12}"
                                   maxLength="12"
-                                  required
+
                                   value={editForm.aadhaarNumber || ""}
                                   onChange={(e) =>
                                     setEditForm((f) => ({
