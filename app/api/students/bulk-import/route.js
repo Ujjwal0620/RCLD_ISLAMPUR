@@ -313,7 +313,7 @@ function buildMissingOnlyFilter(existing, fields) {
   addGroup(["applicantName", "name"]);
   addGroup(["admissionDate", "dateOfAdmission"]);
   addGroup(["dateOfBirth", "dob"]);
-  addGroup(["sex", "gender", "sourceSex"], true);
+  addGroup(["sex", "gender"], true);
   addGroup(["fatherOrHusbandName", "fatherName"]);
   addGroup(["mobileNumber", "phone", "whatsappNumber"]);
   addGroup(["alternatePhoneNumber", "altPhone", "guardianContactNumber"]);
