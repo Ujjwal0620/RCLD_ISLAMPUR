@@ -168,7 +168,7 @@ function drawName(ctx, student, width, height, templateName) {
 
 function getSequentialStudentId(student, fallbackIndex = 1) {
   const candidates = [
-    student.idCardSerial, student.idCardNumber, student.serialNumber,
+    student.idCardNo, student.idCardSerial, student.idCardNumber, student.serialNumber,
     student.serialNo, student.sequenceNumber, student.studentSerial,
     student.studentId, student.idNumber,
   ];
