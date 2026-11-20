@@ -54,7 +54,12 @@ function splitNameMarkup(value, lastNameColor, diploma) {
 }
 
 function idNumberMarkup(value) {
-  return '<strong class="id-number-full">' + escapeHtml(value || "—") + "</strong>";
+  const normalized = String(value || "—");
+  const prefix = "RCLD/ISL-001/";
+  const suffix = normalized.toUpperCase().startsWith(prefix)
+    ? normalized.slice(prefix.length)
+    : normalized;
+  return '<span class="id-number-prefix">' + prefix + '</span><strong class="id-number-code">' + escapeHtml(suffix) + "</strong>";
 }
 
 function titleCase(value) {
@@ -131,6 +136,8 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
       '<div class="overlay diploma-address">' + addressMarkup + '</div>' +
       '<div class="overlay diploma-admission">' + escapeHtml(admission) + '</div>'
     : '<div class="overlay circular-name">' + nameMarkup + '</div>' +
+      '<div class="overlay circular-label-cover" aria-hidden="true"></div>' +
+      '<div class="overlay circular-id-label">ID No :</div>' +
       '<div class="overlay circular-id">' + idNumberMarkup(icardNumber) + '</div>' +
       '<div class="overlay circular-admission">' + escapeHtml(admission) + '</div>' +
       '<div class="overlay circular-father">' + escapeHtml(fatherName) + '</div>' +
@@ -149,11 +156,15 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     '.photo-empty{background:transparent}' +
     '.overlay{position:absolute;z-index:2;font-family:Arial,"Helvetica Neue","Liberation Sans",sans-serif;color:#3E454C;overflow:hidden}' +
     '.circular-name{top:48.8%;left:3%;width:94%;text-align:center;font-weight:800;font-size:clamp(20px,6.3cqw,80px);text-transform:uppercase;letter-spacing:.3px;line-height:1.05;white-space:nowrap}' +
-    '.circular-id,.circular-admission,.circular-father,.circular-address{left:46.8%;width:48.5%;font-family:"Roboto Condensed","Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;font-weight:700;font-size:clamp(14px,3.45cqw,48px);line-height:1.15;text-align:left;color:#3E454C;transform:scaleY(1.12);transform-origin:left center}' +
-    '.circular-id{top:60.9%;font-weight:900}.circular-admission{top:63.8%}.circular-father{top:66.6%}' +
-    '.circular-address{top:69.4%;left:46.8%;width:48.5%;line-height:1.1;word-break:break-word;overflow-wrap:anywhere;transform-origin:top left;font-size:clamp(12px,2.8cqw,36px);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.address-line{display:block;min-height:0}' +
-    '.circular-course{top:81.2%;left:46.8%;width:48.5%;font-size:clamp(12px,3cqw,40px);font-weight:800;color:#2E3192}' +
-    '.circular-id .id-number-full{font-size:3.2cqw;font-weight:900;color:#3E454C;white-space:nowrap}' +
+    '.circular-id,.circular-admission,.circular-father,.circular-address{left:46.8%;width:48.5%;font-family:"Roboto Condensed","Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;font-size:clamp(14px,3.45cqw,48px);line-height:1.15;text-align:left;color:#3E454C;transform:none;transform-origin:top left;font-weight:400}' +
+    '.circular-label-cover{left:12%;top:60.25%;width:33.5%;height:6.15%;background:#fff;z-index:3}' +
+    '.circular.robotics .circular-label-cover{background:linear-gradient(180deg,#fff1a8 0%,#fff7d5 55%,#fff 100%)}' +
+    '.circular-id-label{left:17%;top:60.9%;width:28%;font-size:clamp(14px,3.45cqw,48px);line-height:1.15;text-align:right;font-family:"Roboto Condensed","Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;font-weight:700;color:' + config.lastNameColor + ';white-space:nowrap;z-index:4}' +
+    '.circular-id{top:60.9%;font-weight:400;white-space:nowrap}.circular-admission{top:66.6%;font-weight:400}.circular-father{top:69.4%;font-weight:400}' +
+    '.circular-address{top:72.2%;left:46.8%;width:48.5%;line-height:1.1;word-break:break-word;overflow-wrap:anywhere;transform:none;font-size:clamp(12px,2.8cqw,36px);font-weight:400;display:block;max-height:5.8%}' +
+    '.address-line{display:block;min-height:0;font-weight:400}' +
+    '.circular-id .id-number-prefix{font-size:3.2cqw;font-weight:400;color:#3E454C;white-space:nowrap}' +
+    '.circular-id .id-number-code{font-size:3.2cqw;font-weight:700;color:#3E454C;white-space:nowrap}' +
     '.diploma .student-photo{top:34.2%;left:32.1%;transform:none;width:35.8%;height:25%;aspect-ratio:auto;border-radius:10px;object-fit:cover}' +
     '.diploma .overlay:not(.diploma-name){font-family:"Roboto Condensed","Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;font-size:clamp(13px,3.25cqw,44px);line-height:1.15;color:#1E242B;font-weight:700;transform:scaleY(1.10);transform-origin:left center}' +
     '.diploma-session{top:2.5%;left:87.5%;font-weight:700}' +
@@ -164,7 +175,7 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     '.diploma-admission{top:84.0%;left:29.5%;width:68%;font-weight:700}' +
     '@media screen{body{padding:24px 0;background:#e9edf3}.card{box-shadow:0 2px 14px #0002}}' +
     '@media print{html,body{width:54mm!important;height:85.6mm!important;min-height:0!important;margin:0!important;padding:0!important;overflow:hidden!important}body{display:block!important}.card{width:54mm!important;height:85.6mm!important;aspect-ratio:auto!important;max-width:none!important;margin:0!important;box-shadow:none!important;container-type:inline-size}}' +
-    '</style></head><body><main class="card ' + (diploma ? "diploma" : "circular") + '">' +
+    '</style></head><body><main class="card ' + (diploma ? "diploma" : "circular" + (/robotics/i.test(templateName) ? " robotics" : "")) + '">' +
     '<img class="template-background" src="/assets/icardtemplates/' + encodeURIComponent(templateName) + '" alt="">' +
     photo + overlays + '</main></body></html>';
 }
