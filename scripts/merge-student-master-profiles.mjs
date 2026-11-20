@@ -183,7 +183,6 @@ async function main() {
       const normalizedFullName = normalizeName(identityOf(student).fullName);
       let enrollment = await StudentEnrollment.findOne({ studentId: master._id, stCode, normalizedFullName });
       if (!enrollment) {
-        await StudentEnrollment.updateMany({ studentId: master._id, status: "ACTIVE" }, { $set: { status: "PROMOTED" } });
         enrollment = await StudentEnrollment.create({
           studentId: master._id, legacyStudentId: student._id, stCode, normalizedFullName,
           formNo: student.formNo || "", courseCode: String(student.courseCode || "LEGACY").toUpperCase(),
@@ -192,6 +191,12 @@ async function main() {
           status: "ACTIVE", feeConfig: { configured: false, feeRuleSource: "CLEANUP_REVIEW_REQUIRED" },
         });
       }
+      await StudentEnrollment.updateMany(
+        { studentId: master._id, status: "ACTIVE", _id: { $ne: enrollment._id } },
+        { $set: { status: "PROMOTED" } }
+      );
+      enrollment.status = "ACTIVE";
+      await enrollment.save();
       master.activeEnrollmentId = enrollment._id;
     }
     await master.save();
