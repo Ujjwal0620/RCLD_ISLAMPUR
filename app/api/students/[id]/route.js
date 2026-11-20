@@ -82,6 +82,13 @@ export async function GET(req,{params}){
         installmentApplied: (payment.allocations || []).map(item => item.label + ": ₹" + Number(item.allocatedAmount || 0).toLocaleString("en-IN")).join(", ") || (payment.importWarnings?.length ? "Needs review: " + payment.importWarnings.join(" ") : "Legacy receipt / not allocated"),
       };
     });
+    const receiptKey = payment => {
+      const date = payment.paymentDate || payment.date;
+      const dateKey = date && !Number.isNaN(new Date(date).getTime()) ? new Date(date).toISOString().slice(0, 10) : "";
+      return [String(payment.mrNo || payment.receiptNo || payment.reference || ""),
+        String(payment.stCode || ""), dateKey, Number(payment.amountPaid ?? payment.amount ?? 0).toFixed(2)].join("|");
+    };
+    const knownReceiptKeys = new Set(paymentHistory.map(receiptKey));
     const FeeSchema = new mongoose.Schema({ studentId: mongoose.Schema.Types.ObjectId, payments: [mongoose.Schema.Types.Mixed] }, { strict: false });
     const StudentFee = mongoose.models.StudentFee || mongoose.model("StudentFee", FeeSchema);
     const [legacyFees, linkedStudentDocs] = await Promise.all([
@@ -92,14 +99,18 @@ export async function GET(req,{params}){
     for (const legacyFee of legacyFees) {
       const linkedStudent = linkedStudentMap.get(String(legacyFee.studentId)) || student;
       for (const payment of legacyFee.payments || []) {
-        paymentHistory.push({
+        const legacyReceipt = {
           _id: payment._id, paymentDate: payment.date || null, mrNo: payment.receiptNo || payment.reference || "—",
           stCode: linkedStudent.regnNo || linkedStudent.enrollmentNo || "—", amountPaid: Number(payment.amount || 0),
           courseCode: linkedStudent.courseCode || "", courseName: linkedStudent.courseName || linkedStudent.courseCode || "—",
           semesterLabel: payment.semester ? "SEM-" + payment.semester : "Current",
           installmentApplied: (payment.items || []).map(item => (item.purpose || item.type || "Fee") + ": ₹" + Number(item.amount || 0).toLocaleString("en-IN")).join(", ") || payment.paymentType || "Course fee",
           sourceSheet: "ERP Fee Ledger",
-        });
+        };
+        const key = receiptKey(legacyReceipt);
+        if (knownReceiptKeys.has(key)) continue;
+        knownReceiptKeys.add(key);
+        paymentHistory.push(legacyReceipt);
       }
     }
     paymentHistory.sort((a, b) => new Date(a.paymentDate || 0) - new Date(b.paymentDate || 0));
