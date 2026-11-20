@@ -41,9 +41,6 @@ export default function StudentProfileHero({ student, uploadStudentPhoto, photoU
                     />
                   </label>
                 </div>
-                <small style={{ gridColumn: "1 / -1", marginTop: -6, opacity: .7 }}>
-                  {photoUploading ? "Saving photograph…" : "Click camera to upload or change photo"}
-                </small>
                 <div className="student-profile-identity">
                   <div className="eyebrow">STUDENT RECORD / REGISTRATION</div>
                   <h2>{student.applicantName}</h2>
