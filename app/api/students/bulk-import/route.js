@@ -284,8 +284,10 @@ export async function POST(request) {
       : [];
     const existingByCode = new Map();
     for (const student of existingRecords) {
-      const key = String(student.regnNo || student.enrollmentNo || "").replace(/\.0$/, "");
-      if (key && !existingByCode.has(key)) existingByCode.set(key, student);
+      for (const rawCode of [student.regnNo, student.enrollmentNo]) {
+        const key = String(rawCode ?? "").replace(/\.0$/, "");
+        if (key && !existingByCode.has(key)) existingByCode.set(key, student);
+      }
     }
 
     const courseCodes = [...new Set(uniqueRows.map(row => row.course).filter(Boolean))];
