@@ -1,5 +1,22 @@
 import mongoose from "mongoose";
 const CourseSchema = new mongoose.Schema({
-  code:{type:String,required:true,unique:true,trim:true,uppercase:true}, name:{type:String,required:true,trim:true}, category:{type:String,default:"Diploma"}, durationMonths:{type:Number,required:true,min:1}, classesPerWeek:{type:Number,required:true,min:1,max:7}, fee:{type:Number,default:0,min:0}, admissionFee:{type:Number,default:0,min:0}, description:{type:String,default:""}, semesterPlans:{type:[{semester:Number,durationMonths:Number,admissionFee:Number,monthlyFee:Number,tuitionFee:Number,totalFee:Number}],default:[]}, requiredSkills:{type:[String],default:[]}, active:{type:Boolean,default:true}, source:{type:String,default:"RCLD Islampur"}
+  code:{type:String,required:true,unique:true,trim:true,uppercase:true},
+  name:{type:String,required:true,trim:true},
+  category:{type:String,default:"Diploma"},
+  durationMonths:{type:Number,required:true,min:1},
+  classesPerWeek:{type:Number,required:true,min:1,max:7},
+  fee:{type:Number,default:0,min:0},
+  admissionFee:{type:Number,default:0,min:0},
+  monthlyInstallment:{type:Number,default:0,min:0},
+  monthlyFee:{type:Number,default:0,min:0},
+  registrationFee:{type:Number,default:0,min:0},
+  labCharges:{type:Number,default:0,min:0},
+  otherCharges:{type:Number,default:0,min:0},
+  admissionIncludedInTotal:{type:Boolean,default:true},
+  description:{type:String,default:""},
+  semesterPlans:{type:[{semester:Number,durationMonths:Number,admissionFee:Number,monthlyFee:Number,monthlyInstallment:Number,tuitionFee:Number,totalFee:Number}],default:[]},
+  requiredSkills:{type:[String],default:[]},
+  active:{type:Boolean,default:true},
+  source:{type:String,default:"RCLD Islampur"}
 },{timestamps:true});
 export default mongoose.models.Course || mongoose.model("Course",CourseSchema);
