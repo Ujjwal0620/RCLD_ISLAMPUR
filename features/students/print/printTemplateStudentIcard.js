@@ -14,17 +14,17 @@ const CIRCULAR_COORDINATES = {
   addressLineHeight: 1.26,
 };
 const TEMPLATE_CONFIG = {
-  "ID Card Sem-1.jpg": { lastNameColor: "#E61E8C", labelColor: "#E61E8C", maskMode: "white", coordinates: CIRCULAR_COORDINATES },
-  "ID Card Sem-2.jpg": { lastNameColor: "#009846", labelColor: "#009846", maskMode: "white", coordinates: CIRCULAR_COORDINATES },
-  "ID Card Sem-3.jpg": { lastNameColor: "#0095DA", labelColor: "#0095DA", maskMode: "white", coordinates: CIRCULAR_COORDINATES },
-  "ID Card Sem-4.jpg": { lastNameColor: "#F37021", labelColor: "#F37021", maskMode: "white", coordinates: CIRCULAR_COORDINATES },
-  "ID Card Sem-5.jpg": { lastNameColor: "#9C2B86", labelColor: "#9C2B86", maskMode: "white", coordinates: CIRCULAR_COORDINATES },
+  "ID Card Sem-1.jpg": { lastNameColor: "#E61E8C" },
+  "ID Card Sem-2.jpg": { lastNameColor: "#009846" },
+  "ID Card Sem-3.jpg": { lastNameColor: "#0095DA" },
+  "ID Card Sem-4.jpg": { lastNameColor: "#F58220" },
+  "ID Card Sem-5.jpg": { lastNameColor: "#9C2B86" },
   "ID Card Sem-6.jpg": { lastNameColor: "#E53935", labelColor: "#E53935", maskMode: "white", coordinates: CIRCULAR_COORDINATES },
-  "ID Card School Course.jpg": { lastNameColor: "#E31E24", labelColor: "#E31E24", maskMode: "white", coordinates: CIRCULAR_COORDINATES },
-  "ID Card Robotics 1st year.jpg": { lastNameColor: "#D99B00", labelColor: "#D99B00", maskMode: "sample-strip", coordinates: CIRCULAR_COORDINATES },
-  "ID Card Robotics 2nd year.jpg": { lastNameColor: "#0077B6", labelColor: "#0077B6", maskMode: "sample-strip", coordinates: CIRCULAR_COORDINATES },
-  "ID Card Robotics 3rd year.jpg": { lastNameColor: "#4E8B22", labelColor: "#4E8B22", maskMode: "sample-strip", coordinates: CIRCULAR_COORDINATES },
-  "ID Card Diploma.jpg": { lastNameColor: "#2E3192", labelColor: "#2E3192", maskMode: "none" },
+  "ID Card School Course.jpg": { lastNameColor: "#E31E24" },
+  "ID Card Robotics 1st year.jpg": { lastNameColor: "#D99B00" },
+  "ID Card Robotics 2nd year.jpg": { lastNameColor: "#0077B6" },
+  "ID Card Robotics 3rd year.jpg": { lastNameColor: "#4E8B22" },
+  "ID Card Diploma.jpg": { lastNameColor: "#2E3192" },
 };
 
 function getAdmissionDate(student) {
@@ -120,7 +120,7 @@ function getAddressMarkup(student) {
 
 function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
   const diploma = templateName === "ID Card Diploma.jpg";
-  const config = TEMPLATE_CONFIG[templateName] || { lastNameColor: "#3E454C", labelColor: "#3E454C", maskMode: "white", coordinates: CIRCULAR_COORDINATES };
+  const config = TEMPLATE_CONFIG[templateName] || { lastNameColor: "#3E454C" };
   const fullName = firstValue(student.applicantName, student.fullName, student.name, "STUDENT");
   const nameMarkup = splitNameMarkup(fullName, config.lastNameColor, diploma);
   const rawRegistrationCode = String(firstValue(
@@ -132,85 +132,62 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     student.formNo, student.formNumber, student.registrationNumber, student.registrationNo,
     student.registrationId, student.regNo, student.regnNo, "—"
   )).trim();
-  const icardNumber = /^RCLD\/ISL-001\//i.test(rawRegistrationCode)
-    ? rawRegistrationCode
-    : "RCLD/ISL-001/" + rawRegistrationCode;
+  const prefix = "RCLD/ISL-001/";
+  const idCode = rawRegistrationCode.toUpperCase().startsWith(prefix)
+    ? rawRegistrationCode.slice(prefix.length)
+    : rawRegistrationCode;
   const fatherName = titleCase(firstValue(student.fatherOrHusbandName, student.fatherName, student.fatherNameAsPerRecords, student.guardianName, "—"));
-  const addressMarkup = getAddressMarkup(student);
+  const addressMarkup = getAddressMarkup(student) || '<div class="address-line">—</div>';
   const admission = getAdmissionDate(student) || "—";
   const photo = photoUrl
     ? '<img class="student-photo" crossorigin="anonymous" src="' + escapeHtml(photoUrl) + '" alt="Student photograph">'
     : '<div class="student-photo photo-empty" aria-label="Student photograph unavailable"></div>';
-
-  const circularRows = [
-    ["ID No :", idNumberMarkup(icardNumber), "id"],
-    ["Date of Admn. :", escapeHtml(admission), "admission"],
-    ["Father's Name :", escapeHtml(fatherName), "father"],
-    ["Address :", addressMarkup, "address"],
-  ].map(([label, value, key]) =>
-    '<div class="template-row template-row-' + key + '">' +
-      '<div class="template-label">' + label + '</div>' +
-      '<div class="template-value">' + value + '</div>' +
-    '</div>'
-  ).join("");
-  const overlays = diploma
-    ? '<div class="overlay diploma-registration">' + escapeHtml(formRegistrationCode) + '</div>' +
-      '<div class="overlay diploma-session">' + escapeHtml(session) + '</div>' +
-      '<div class="overlay diploma-id">' + idNumberMarkup(icardNumber) + '</div>' +
+  const circularValues =
+    '<div class="overlay circular-value circular-id">' + escapeHtml(idCode || "—") + '</div>' +
+    '<div class="overlay circular-value circular-registration">' + escapeHtml(formRegistrationCode || "—") + '</div>' +
+    '<div class="overlay circular-value circular-admission">' + escapeHtml(admission) + '</div>' +
+    '<div class="overlay circular-value circular-father">' + escapeHtml(fatherName) + '</div>' +
+    '<div class="overlay circular-value circular-address">' + addressMarkup + '</div>';
+  const diplomaValues = diploma
+    ? '<div class="overlay diploma-registration">' + escapeHtml(formRegistrationCode || "—") + '</div>' +
+      '<div class="overlay diploma-session">' + escapeHtml(session || "—") + '</div>' +
+      '<div class="overlay diploma-id">' + escapeHtml(idCode || "—") + '</div>' +
       '<div class="overlay diploma-name">' + nameMarkup + '</div>' +
       '<div class="overlay diploma-father">' + escapeHtml(fatherName) + '</div>' +
       '<div class="overlay diploma-address">' + addressMarkup + '</div>' +
-      '<div class="overlay diploma-course">' + escapeHtml(courseName || student.courseName || student.courseCode || "") + '</div>' +
+      '<div class="overlay diploma-course">' + escapeHtml(courseName || student.courseName || student.courseCode || "—") + '</div>' +
       '<div class="overlay diploma-admission">' + escapeHtml(admission) + '</div>'
-    : '<div class="overlay circular-name">' + nameMarkup + '</div>' +
-      '<div class="template-label-mask" aria-hidden="true"></div>' +
-      '<div class="template-fields">' + circularRows + '</div>';
+    : '<div class="overlay circular-name">' + nameMarkup + '</div>' + circularValues;
 
   return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
     '<title>RCLD I-Card - ' + escapeHtml(fullName) + '</title><style>' +
     '@page{size:54mm 85.6mm;margin:0}' +
     '*{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}' +
-    'html,body{margin:0;padding:0;background:#fff;font-family:Arial,"Helvetica Neue","Liberation Sans",sans-serif}' +
-    'body{width:100%;min-height:100vh;display:flex;justify-content:center;align-items:flex-start}' +
-    '.card{position:relative;width:min(100vw,640px);aspect-ratio:640/1016;overflow:hidden;container-type:inline-size;background:#fff;isolation:isolate;color:#3E454C}' +
-    '.template-background{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;z-index:0}' +
-    '.student-photo{position:absolute;z-index:2;top:var(--photo-top,20.3%);left:var(--photo-left,50%);transform:translateX(-50%);width:var(--photo-width,38.6%);aspect-ratio:1/1;height:auto;border-radius:50%;object-fit:cover;object-position:center;display:block}' +
-    '.circular-name{top:var(--name-top,48.8%);left:var(--name-left,3%);width:var(--name-width,94%);text-align:center;font-weight:800;font-size:clamp(20px,6.3cqw,80px);text-transform:uppercase;letter-spacing:.3px;line-height:1.05;white-space:nowrap}' +
+    'html,body{width:100%;height:100%;margin:0;padding:0;background:transparent;font-family:Arial,"Helvetica Neue","Liberation Sans",sans-serif}' +
+    'body{display:flex;justify-content:center;align-items:flex-start}' +
+    '.card{position:relative;width:100%;max-width:640px;aspect-ratio:640/1016;overflow:hidden;border:none;outline:none;padding:0;margin:0;background:transparent;container-type:inline-size;color:#3E454C}' +
+    '.template-background{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;display:block;border:none;margin:0;padding:0;z-index:0}' +
+    '.student-photo{position:absolute;z-index:2;top:19.3%;left:50%;transform:translateX(-50%);width:40.6%;aspect-ratio:1/1;height:auto;border-radius:50%;object-fit:cover;display:block}' +
     '.photo-empty{background:transparent}' +
-    '.overlay{position:absolute;z-index:2;font-family:Arial,"Helvetica Neue","Liberation Sans",sans-serif;color:#3E454C;overflow:hidden}' +
-    '.template-background-canvas{position:absolute;inset:0;width:100%;height:100%;z-index:0;display:block}' +
-    '.template-label-mask{position:absolute;z-index:1;top:var(--mask-top,59.7%);left:var(--mask-left,2.5%);width:var(--mask-width,42.5%);height:var(--mask-height,15.4%);pointer-events:none}' +
-    '.template-fields{position:absolute;z-index:3;top:0;left:0;width:100%;height:100%;font-family:Arial,"Helvetica Neue","Liberation Sans",sans-serif;color:#222}' +
-    '.template-row{position:absolute;left:0;width:100%;font-size:clamp(15px,3.6cqw,48px);line-height:1.12;font-weight:400}' +
-    '.template-label{position:absolute;top:0;left:var(--label-left,3.2%);width:var(--label-width,42.3%);text-align:right;white-space:nowrap;color:var(--template-label-color);font-weight:400}' +
-    '.template-value{position:absolute;top:0;left:var(--value-left,46.8%);width:var(--value-width,48.5%);text-align:left;min-width:0;overflow:hidden;color:#222;font-weight:400;white-space:nowrap}' +
-    '.template-row-id{top:var(--row-id-top,61.2%)}.template-row-admission{top:var(--row-admission-top,66.9%)}.template-row-father{top:var(--row-father-top,69.7%)}.template-row-address{top:var(--row-address-top,72.5%);align-items:start}' +
-    '.template-row-id .id-number-prefix{font-size:3.6cqw;font-weight:400;color:#222;white-space:nowrap}' +
-    '.template-row-id .id-number-code{font-size:3.6cqw;font-weight:700;color:#222;white-space:nowrap}' +
-    '.template-row-address .template-value{white-space:normal;line-height:var(--address-line-height,1.26);word-break:normal;overflow-wrap:anywhere;font-size:clamp(13px,3.05cqw,40px);max-height:3.78em;overflow:hidden}' +
-    '.address-line{display:block;min-height:0;font-weight:400}' +
+    '.overlay{position:absolute;z-index:2;overflow:hidden;font-family:Arial,"Helvetica Neue","Liberation Sans",sans-serif}' +
+    '.circular-name{top:48.6%;left:3%;width:94%;text-align:center;font-weight:800;font-size:clamp(20px,6cqw,76px);text-transform:uppercase;letter-spacing:.3px;line-height:1.05;white-space:nowrap}' +
+    '.circular-value{left:46.8%;width:48.5%;text-align:left;font-family:"Roboto Condensed","Arial Narrow",Arial,sans-serif;font-weight:700;font-size:clamp(14px,3.35cqw,46px);color:#3E454C;transform:scaleY(1.10);transform-origin:left center;white-space:nowrap}' +
+    '.circular-id{top:60.9%}.circular-registration{top:63.8%}.circular-admission{top:66.6%}.circular-father{top:69.4%}' +
+    '.circular-address{top:72.2%;transform-origin:top left;line-height:1.28;word-break:break-word;white-space:normal;max-height:10.8%;overflow:hidden}' +
+    '.circular-address .address-line{display:block;min-height:0}' +
     '.diploma .student-photo{top:34.2%;left:32.1%;transform:none;width:35.8%;height:25%;aspect-ratio:auto;border-radius:10px;object-fit:cover}' +
-    '.diploma .overlay:not(.diploma-name){font-family:Arial,"Helvetica Neue","Liberation Sans",sans-serif;font-size:clamp(10px,2.25cqw,30px);line-height:1.1;color:#1E242B;font-weight:400;transform:none;transform-origin:left top}' +
-    '.diploma-registration{top:2.7%;left:4%;width:36%;white-space:nowrap}' +
-    '.diploma-session{top:2.7%;left:76%;width:21%;white-space:nowrap}' +
-    '.diploma-id{top:12.8%;left:73%;width:25%;white-space:nowrap}' +
-    '.diploma-id .id-number-prefix{font-weight:400}.diploma-id .id-number-code{font-weight:700}' +
-    '.diploma-name{top:62.4%;left:19%;width:78%;font-size:clamp(12px,2.8cqw,38px);font-weight:400;text-transform:uppercase;letter-spacing:.1px;line-height:1.05;white-space:nowrap;color:#1E242B}' +
-    '.diploma-father{top:66.1%;left:31%;width:66%;font-weight:400}' +
-    '.diploma-address{top:73.6%;left:20.5%;width:76%;line-height:1.1;font-weight:400;white-space:normal;overflow-wrap:anywhere;font-size:clamp(10px,2.25cqw,30px)}.diploma-address .address-line{display:block}' +
-    '.diploma-course{top:85.2%;left:19%;width:78%;font-weight:400}' +
-    '.diploma-admission{top:90.3%;left:29.5%;width:68%;font-weight:400}' +
-    '@media screen{body{padding:24px 0;background:#e9edf3}.card{box-shadow:0 2px 14px #0002}}' +
-    '@media print{html,body{width:54mm!important;height:85.6mm!important;min-height:0!important;margin:0!important;padding:0!important;overflow:hidden!important}body{display:block!important}.card{width:640px!important;height:1016px!important;aspect-ratio:auto!important;max-width:none!important;margin:0!important;box-shadow:none!important;container-type:inline-size;transform:scale(.3185)!important;transform-origin:top left!important}}' +
-    '</style></head><body><main class="card ' + (diploma ? "diploma" : "circular" + (/robotics/i.test(templateName) ? " robotics" : "")) + '">' +
-    '<canvas class="template-background-canvas" aria-hidden="true"></canvas>' +
-    '<img class="template-background-source" src="/assets/icardtemplates/' + encodeURIComponent(templateName) + '" alt="" crossorigin="anonymous" style="display:none">' +
-    photo + overlays + '</main><script>' +
-    'window.__prepareRcldTemplate=async function(){const card=document.querySelector(".card");const source=document.querySelector(".template-background-source");if(source.decode)await source.decode();else if(!source.complete)await new Promise((r,j)=>{source.onload=r;source.onerror=j});if(!source.naturalWidth)throw new Error("Template image could not be loaded.");const canvas=document.querySelector(".template-background-canvas");const ctx=canvas.getContext("2d",{willReadFrequently:true});canvas.width=source.naturalWidth;canvas.height=source.naturalHeight;ctx.drawImage(source,0,0);' +
-    (diploma ? '' : 'const coords=' + JSON.stringify(config.coordinates) + ';const mode=' + JSON.stringify(config.maskMode) + ';const x=Math.round(canvas.width*coords.labelMask.left/100),y=Math.round(canvas.height*coords.labelMask.top/100),w=Math.round(canvas.width*coords.labelMask.width/100),h=Math.round(canvas.height*coords.labelMask.height/100);if(mode==="white"){ctx.fillStyle="#FFFFFF";ctx.fillRect(x,y,w,h)}else{const strip=ctx.getImageData(Math.min(x+w,canvas.width-1),y,1,h);const pixels=strip.data;for(let row=0;row<h;row++){ctx.fillStyle="rgba("+pixels[row*4]+","+pixels[row*4+1]+","+pixels[row*4+2]+","+pixels[row*4+3]/255+")";ctx.fillRect(x,y+row,w,1)}}') +
-    'source.remove();};const card=document.querySelector(".card");card.style.setProperty("--template-label-color",' + JSON.stringify(config.labelColor || "#2E3192") + ');' +
-    (!diploma ? 'const c=' + JSON.stringify(config.coordinates) + ';card.style.setProperty("--photo-top",c.photo.top+"%");card.style.setProperty("--photo-left",c.photo.left+"%");card.style.setProperty("--photo-width",c.photo.width+"%");card.style.setProperty("--name-top",c.name.top+"%");card.style.setProperty("--name-left",c.name.left+"%");card.style.setProperty("--name-width",c.name.width+"%");card.style.setProperty("--mask-top",c.labelMask.top+"%");card.style.setProperty("--mask-left",c.labelMask.left+"%");card.style.setProperty("--mask-width",c.labelMask.width+"%");card.style.setProperty("--mask-height",c.labelMask.height+"%");card.style.setProperty("--label-left",c.labels.left+"%");card.style.setProperty("--label-width",c.labels.width+"%");card.style.setProperty("--value-left",c.values.left+"%");card.style.setProperty("--value-width",c.values.width+"%");card.style.setProperty("--address-line-height",c.addressLineHeight);card.style.setProperty("--row-id-top",c.rows.id+"%");card.style.setProperty("--row-admission-top",c.rows.admission+"%");card.style.setProperty("--row-father-top",c.rows.father+"%");card.style.setProperty("--row-address-top",c.rows.address+"%");' : '') +
-    '</script></body></html>';
+    '.diploma .overlay{font-family:Arial,"Helvetica Neue","Liberation Sans",sans-serif;font-size:clamp(13px,3.2cqw,44px);color:#1E242B;font-weight:700;line-height:1.1;transform:none;transform-origin:left top;white-space:nowrap}' +
+    '.diploma-registration{top:2.5%;left:38.5%;width:48%}.diploma-session{top:2.5%;left:87.5%;width:12%}' +
+    '.diploma-id{top:13%;left:72%;width:26%}' +
+    '.diploma-name{top:62.5%;left:16.5%;width:82%;font-size:clamp(15px,3.6cqw,48px)!important;font-weight:800!important;text-transform:uppercase;white-space:nowrap}' +
+    '.diploma-father{top:66.2%;left:31%;width:68%}' +
+    '.diploma-address{top:69.2%;left:20.5%;width:75%;line-height:1.28;white-space:normal;word-break:break-word;max-height:7.8%;overflow:hidden}' +
+    '.diploma-address .address-line{display:block}' +
+    '.diploma-course{top:77.6%;left:19%;width:78%}.diploma-admission{top:81.8%;left:29.5%;width:68%}' +
+    '@media print{html,body{width:54mm!important;height:85.6mm!important;margin:0!important;padding:0!important;overflow:hidden!important;background:transparent!important}body{display:block!important}.card{width:54mm!important;height:85.6mm!important;max-width:none!important;aspect-ratio:640/1016!important;margin:0!important;box-shadow:none!important}}' +
+    '</style></head><body><main class="card ' + (diploma ? "diploma" : "circular") + '">' +
+    '<img class="template-background" src="/assets/icardtemplates/' + encodeURIComponent(templateName) + '" alt="" crossorigin="anonymous">' +
+    photo + diplomaValues + '</main></body></html>';
 }
 
 export async function printTemplateStudentIcard({ student, templateName, outputMode = "print", setMessage }) {
