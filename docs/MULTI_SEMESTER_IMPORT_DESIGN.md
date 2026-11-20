@@ -31,7 +31,7 @@ Run a read-only preview first:
 npm run merge:student-profiles
 ```
 
-Review the resulting profile counts and ambiguous identity samples. Ambiguous candidates remain separate by design. If the preview is acceptable, apply the links and enrollment records:
+Review the resulting profile counts and ambiguous identity samples. Ambiguous candidates remain separate by design. Take a MongoDB backup before applying: the apply step consolidates duplicate StudentMaster documents and migrates their enrollment/payment references (legacy Student documents are retained). If the preview is acceptable, apply the links and enrollment records:
 
 ```bash
 npm run merge:student-profiles -- --apply
