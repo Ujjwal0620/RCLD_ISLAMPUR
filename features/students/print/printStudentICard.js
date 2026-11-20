@@ -22,7 +22,7 @@ function resolveActiveEnrollmentStudent(student) {
   const semesterEnrollment = isKids && roman
     ? enrollments.find(item => String(item.semesterLabel || "").toUpperCase() === "SM-" + roman)
     : null;
-  const activeEnrollment = semesterEnrollment || student?.activeEnrollment || enrollments.find(item => item.status === "ACTIVE");
+  const activeEnrollment = student?.activeEnrollment || semesterEnrollment || enrollments.find(item => item.status === "ACTIVE");
   if (!activeEnrollment) return student;
   const semesterRoman = String(activeEnrollment.semesterLabel || "").toUpperCase().match(/SM[- ]?(I|II|III|IV|V|VI)\\b/);
   const semesterIndex = semesterRoman ? ["I", "II", "III", "IV", "V", "VI"].indexOf(semesterRoman[1]) + 1 : 0;
