@@ -148,7 +148,7 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
   const sessionLabel = esc(student.session || student.academicSession || DEFAULT_SESSION);
 
   const registrationCode = String(firstNonEmpty(
-    student.regnNo, student.registrationNumber, student.registrationNo, student.registrationId,
+    student.stCode, student.activeEnrollment?.stCode, student.regnNo, student.registrationNumber, student.registrationNo, student.registrationId,
     student.regNo, student.enrollmentNo, student.studentId, student.admissionNo, student.formNo, "—"
   )).trim();
   const instituteId = /^RCLD\/ISL-001\//i.test(registrationCode)
