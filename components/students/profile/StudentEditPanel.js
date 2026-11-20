@@ -12,6 +12,8 @@ export default function StudentEditPanel({
   setEditing,
   editForm,
   setEditForm,
+  feeForm,
+  setFeeForm,
   courses,
   batches,
   referrals,
@@ -59,7 +61,7 @@ export default function StudentEditPanel({
                     </div>
                     <div className="student-edit-grid">
                       <StudentIdentityRegistrationFields editForm={editForm} setEditForm={setEditForm} />
-                    <StudentCourseFeeFields editForm={editForm} setEditForm={setEditForm} courses={courses} batches={batches} />
+                    <StudentCourseFeeFields editForm={editForm} setEditForm={setEditForm} feeForm={feeForm} setFeeForm={setFeeForm} courses={courses} batches={batches} />
                     <StudentPersonalInformationFields editForm={editForm} setEditForm={setEditForm} referrals={referrals} indiaLocations={indiaLocations} />
                     <StudentAcademicDocumentFields editForm={editForm} setEditForm={setEditForm} />
                     <StudentStatusEnclosureFields editForm={editForm} setEditForm={setEditForm} setMessage={setMessage} />
