@@ -13,6 +13,16 @@ const CounterSchema = new mongoose.Schema({
 const Counter = mongoose.models.StudentIcardCounter
   || mongoose.model("StudentIcardCounter", CounterSchema);
 
+const ICardIssueSchema = new mongoose.Schema({
+  studentId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
+  idCardNo: { type: String, required: true, unique: true },
+  action: { type: String, enum: ["download", "print"], required: true },
+  issuedAt: { type: Date, default: Date.now, index: true },
+}, { versionKey: false, collection: "student_icard_issue_logs" });
+
+const ICardIssue = mongoose.models.StudentICardIssue
+  || mongoose.model("StudentICardIssue", ICardIssueSchema);
+
 export async function POST(request, { params }) {
   try {
     await connectMongoDB();
@@ -24,14 +34,29 @@ export async function POST(request, { params }) {
     const student = await Student.findById(id).select("_id").lean();
     if (!student) return NextResponse.json({ error: "Student not found." }, { status: 404 });
 
+    let action = "download";
+    try {
+      const body = await request.json();
+      if (body?.action === "print") action = "print";
+    } catch {
+      // Older clients without a request body are treated as downloads.
+    }
+
     const counter = await Counter.findOneAndUpdate(
       { _id: "student_icard_number" },
       { $inc: { sequence: 1 } },
       { new: true, upsert: true, setDefaultsOnInsert: true },
     );
 
-    const idCardNo = String(counter.sequence);
+    const idCardNo = `RCLD/ID-NO/${String(counter.sequence).padStart(4, "0")}`;
+
     await Student.updateOne({ _id: student._id }, { $set: { idCardNo } });
+    await ICardIssue.create({
+      studentId: student._id,
+      idCardNo,
+      action,
+      issuedAt: new Date(),
+    });
 
     return NextResponse.json({ idCardNo });
   } catch (error) {
