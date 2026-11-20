@@ -246,6 +246,8 @@ export async function renderStudentIcardCanvas(student, templateName, fallbackIn
   canvas.height = height;
   const ctx = canvas.getContext("2d", { alpha: false });
   if (!ctx) throw new Error("Your browser could not create an ID-card canvas.");
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
   ctx.fillStyle = "#fff";
   ctx.fillRect(0, 0, width, height);
   ctx.drawImage(template, 0, 0, width, height);
