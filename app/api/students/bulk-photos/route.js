@@ -31,7 +31,7 @@ function uploadToCloudinary(client, buffer, registrationNo, extension) {
       overwrite: true,
       invalidate: true,
       resource_type: "image",
-      format: extension === "jpg" ? "jpg" : extension,
+      format: extension === "jpeg" ? "jpg" : extension,
       transformation: [{ width: 900, height: 1200, crop: "limit", quality: "auto", fetch_format: "auto" }],
     }, (error, result) => {
       if (error) reject(error);
@@ -68,8 +68,8 @@ export async function POST(request) {
         summary.failedFiles.push({ filename, reason: "Unsupported image format." });
         continue;
       }
-      if (Number(file.size || 0) > 8 * 1024 * 1024) {
-        summary.failedFiles.push({ filename, reason: "Image exceeds 8 MB." });
+      if (Number(file.size || 0) > 4 * 1024 * 1024) {
+        summary.failedFiles.push({ filename, reason: "Image exceeds 4 MB." });
         continue;
       }
       const registrationNo = registrationFromFilename(filename);
