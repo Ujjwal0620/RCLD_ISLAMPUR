@@ -250,7 +250,7 @@ function nameSimilarity(left, right) {
 function isMissing(value, field) {
   if (value === null || value === undefined || String(value).trim() === "") return true;
   if (field === "sex" || field === "sourceSex") {
-    const normalized = String(value).trim().replace(/^[^a-z0-9]+|[^a-z0-9]+$/gi, "").toUpperCase();
+    const normalized = String(value).trim().toUpperCase();
     return !["M", "F", "MALE", "FEMALE"].includes(normalized);
   }
   return false;
