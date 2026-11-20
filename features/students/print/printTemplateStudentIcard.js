@@ -114,7 +114,7 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
   const fullName = firstValue(student.applicantName, student.fullName, student.name, "STUDENT");
   const nameMarkup = splitNameMarkup(fullName, config.lastNameColor, diploma);
   const rawRegistrationCode = String(firstValue(
-    student.regnNo, student.registrationNumber, student.registrationNo, student.registrationId,
+    student.stCode, student.activeEnrollment?.stCode, student.regnNo, student.registrationNumber, student.registrationNo, student.registrationId,
     student.regNo, student.icardNumber, student.iCardNumber, student.idCardNumber, student.cardNumber,
     student.enrollmentNo, student.admissionNo, student.formNo, "—"
   )).trim();
