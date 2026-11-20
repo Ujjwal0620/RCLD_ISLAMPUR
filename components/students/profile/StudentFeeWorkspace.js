@@ -52,7 +52,11 @@ export default function StudentFeeWorkspace({
   const currentBalanceDue = Number(activeSummary.totalDue || 0) > 0
     ? Number(activeSummary.balanceDue || 0)
     : currentPayable > 0 ? Math.max(0, currentPayable - currentPaid) : Number(fee?.due || 0);
-  const formatDate = value => value ? new Date(value).toLocaleDateString("en-IN") : "—";
+  const formatDate = value => {
+    if (!value) return "—";
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString("en-IN");
+  };
   return (
     <section className="detail-section student-fees-section">
                 <div className="detail-section-title">
