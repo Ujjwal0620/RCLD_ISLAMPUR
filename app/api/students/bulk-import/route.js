@@ -225,10 +225,10 @@ async function removeLegacyFormNoUniqueIndex() {
 function asStudentPayload(row, course, sourceName) {
   return {
     regnNo: row.regnNo, enrollmentNo: row.regnNo, formNo: row.formNo,
-    applicantName: row.name, sourceStudentName: row.sourceName,
+    applicantName: row.name, name: row.name, sourceStudentName: row.sourceName,
     dateOfBirth: row.dob, dob: row.dob,
     admissionDate: row.admissionDate, dateOfAdmission: row.admissionDate,
-    sex: row.gender, sourceSex: row.gender,
+    sex: row.gender, gender: row.gender, sourceSex: row.gender,
     fatherOrHusbandName: row.fatherName, fatherName: row.fatherName,
     address: row.address, presentAddress: row.address, permanentAddress: row.address,
     sameAsPresentAddress: Boolean(row.address),
@@ -258,7 +258,7 @@ function nameSimilarity(left, right) {
 }
 function isMissing(value, field) {
   if (value === null || value === undefined || String(value).trim() === "") return true;
-  if (field === "sex" || field === "sourceSex") {
+  if (field === "sex" || field === "gender" || field === "sourceSex") {
     const normalized = String(value).trim().toUpperCase();
     return !["M", "F", "MALE", "FEMALE"].includes(normalized);
   }
@@ -271,10 +271,10 @@ function buildMissingFields(existing, payload) {
     fields[target] = payload[source];
     for (const [key, value] of extras) if (isMissing(existing[key], key) && !isMissing(value, key)) fields[key] = value;
   };
-  put("applicantName", ["applicantName", "name"], "applicantName");
+  put("applicantName", ["applicantName", "name"], "applicantName", [["name", payload.name]]);
   put("admissionDate", ["admissionDate", "dateOfAdmission"], "admissionDate", [["dateOfAdmission", payload.dateOfAdmission]]);
   put("dateOfBirth", ["dateOfBirth", "dob"], "dateOfBirth", [["dob", payload.dob]]);
-  put("sex", ["sex", "gender"], "sex");
+  put("sex", ["sex", "gender"], "sex", [["gender", payload.gender]]);
   put("fatherOrHusbandName", ["fatherOrHusbandName", "fatherName"], "fatherOrHusbandName", [["fatherName", payload.fatherName]]);
   put("mobileNumber", ["mobileNumber", "phone", "whatsappNumber"], "mobileNumber", [["phone", payload.phone]]);
   put("alternatePhoneNumber", ["alternatePhoneNumber", "guardianContactNumber", "altPhone"], "alternatePhoneNumber", [["altPhone", payload.altPhone]]);
@@ -286,7 +286,7 @@ function buildMissingFields(existing, payload) {
   put("pin", ["pin", "pincode"], "pin", [["pincode", payload.pincode]]);
   put("sourceQualification", ["sourceQualification", "qualification"], "sourceQualification", [["qualification", payload.qualification]]);
   put("formNo", ["formNo"], "formNo");
-  put("courseCode", ["courseCode", "courseName", "sourceCourseLabel"], "courseCode", [["courseName", payload.courseName], ["sourceCourseLabel", payload.sourceCourseLabel]]);
+  put("courseCode", ["courseCode", "courseName", "sourceCourseLabel", "course"], "courseCode", [["course", payload.course], ["courseName", payload.courseName], ["sourceCourseLabel", payload.sourceCourseLabel]]);
   if (isMissing(existing.sourceAddressRaw, "sourceAddressRaw") && !isMissing(payload.sourceAddressRaw, "sourceAddressRaw")) fields.sourceAddressRaw = payload.sourceAddressRaw;
   if (isMissing(existing.sourcePhone, "sourcePhone") && !isMissing(payload.sourcePhone, "sourcePhone")) fields.sourcePhone = payload.sourcePhone;
   return fields;
