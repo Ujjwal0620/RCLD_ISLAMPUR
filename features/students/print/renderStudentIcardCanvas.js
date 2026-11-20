@@ -195,7 +195,7 @@ function drawDetails(ctx, student, width, height) {
 }
 
 export async function renderStudentIcardCanvas(student, templateName) {
-  if (!student || !templateName || templateName.includes("/") || templateName.includes("\\\\")) {
+  if (!student || !templateName || templateName.includes("/") || templateName.includes(String.fromCharCode(92))) {
     throw new Error("A student and valid ID-card template are required.");
   }
   await document.fonts.ready;
@@ -311,7 +311,7 @@ export function getRecommendedIcardTemplate(student, templates) {
     : 0;
   let expected = "";
   if (/robotics/.test(course)) {
-    const year = Number(firstValue(student?.roboticsYear, student?.courseYear, student?.yearOfCourse, semester, 1));
+    const courseYear = Number(course.match(/([1-3])(?:st|nd|rd)?\\s*year/i)?.[1] || 0);\n    const year = Number(firstValue(student?.roboticsYear, student?.courseYear, student?.yearOfCourse, courseYear, semester, 1));
     const safeYear = Math.min(3, Math.max(1, Number.isFinite(year) ? year : 1));
     expected = `ID Card Robotics ${safeYear}${safeYear === 1 ? "st" : safeYear === 2 ? "nd" : "rd"} year.jpg`;
   } else if (/coding\s*for\s*kids|\bkids\b|\bsm[-_ ]|\bsem(?:ester)?\s*[-_ ]?/.test(course) || semester) {
