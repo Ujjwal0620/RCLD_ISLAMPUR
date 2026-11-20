@@ -19,6 +19,7 @@ const TEMPLATE_CONFIG = {
   "ID Card Sem-3.jpg": { lastNameColor: "#0095DA", labelColor: "#0095DA", maskMode: "white", coordinates: CIRCULAR_COORDINATES },
   "ID Card Sem-4.jpg": { lastNameColor: "#F37021", labelColor: "#F37021", maskMode: "white", coordinates: CIRCULAR_COORDINATES },
   "ID Card Sem-5.jpg": { lastNameColor: "#9C2B86", labelColor: "#9C2B86", maskMode: "white", coordinates: CIRCULAR_COORDINATES },
+  "ID Card Sem-6.jpg": { lastNameColor: "#E53935", labelColor: "#E53935", maskMode: "white", coordinates: CIRCULAR_COORDINATES },
   "ID Card School Course.jpg": { lastNameColor: "#E31E24", labelColor: "#E31E24", maskMode: "white", coordinates: CIRCULAR_COORDINATES },
   "ID Card Robotics 1st year.jpg": { lastNameColor: "#D99B00", labelColor: "#D99B00", maskMode: "sample-strip", coordinates: CIRCULAR_COORDINATES },
   "ID Card Robotics 2nd year.jpg": { lastNameColor: "#0077B6", labelColor: "#0077B6", maskMode: "sample-strip", coordinates: CIRCULAR_COORDINATES },
@@ -119,7 +120,7 @@ function getAddressMarkup(student) {
 
 function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
   const diploma = templateName === "ID Card Diploma.jpg";
-  const config = TEMPLATE_CONFIG[templateName] || { lastNameColor: "#3E454C" };
+  const config = TEMPLATE_CONFIG[templateName] || { lastNameColor: "#3E454C", labelColor: "#3E454C", maskMode: "white", coordinates: CIRCULAR_COORDINATES };
   const fullName = firstValue(student.applicantName, student.fullName, student.name, "STUDENT");
   const nameMarkup = splitNameMarkup(fullName, config.lastNameColor, diploma);
   const rawRegistrationCode = String(firstValue(
