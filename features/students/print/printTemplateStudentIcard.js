@@ -10,7 +10,7 @@ const CIRCULAR_COORDINATES = {
   labelMask: { top: 59.7, left: 2.5, width: 42.5, height: 15.4 },
   labels: { left: 3.2, right: 45.5, width: 42.3 },
   values: { left: 46.8, width: 48.5 },
-  rows: { id: 61.2, admission: 66.9, father: 69.7, address: 72.5 },
+  rows: { id: 61.2, admission: 64.6, father: 67.8, address: 71.0 },
   addressLineHeight: 1.26,
 };
 const TEMPLATE_CONFIG = {
@@ -180,13 +180,13 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     '.template-background-canvas{position:absolute;inset:0;width:100%;height:100%;z-index:0;display:block}' +
     '.template-label-mask{position:absolute;z-index:1;top:var(--mask-top,59.7%);left:var(--mask-left,2.5%);width:var(--mask-width,42.5%);height:var(--mask-height,15.4%);pointer-events:none}' +
     '.template-fields{position:absolute;z-index:3;top:0;left:0;width:100%;height:100%;font-family:Arial,"Helvetica Neue","Liberation Sans",sans-serif;color:#222}' +
-    '.template-row{position:absolute;left:0;width:100%;font-size:clamp(13px,3.1cqw,44px);line-height:1.12;font-weight:400}' +
+    '.template-row{position:absolute;left:0;width:100%;font-size:clamp(15px,3.6cqw,48px);line-height:1.12;font-weight:400}' +
     '.template-label{position:absolute;top:0;left:var(--label-left,3.2%);width:var(--label-width,42.3%);text-align:right;white-space:nowrap;color:var(--template-label-color);font-weight:400}' +
     '.template-value{position:absolute;top:0;left:var(--value-left,46.8%);width:var(--value-width,48.5%);text-align:left;min-width:0;overflow:hidden;color:#222;font-weight:400;white-space:nowrap}' +
     '.template-row-id{top:var(--row-id-top,61.2%)}.template-row-admission{top:var(--row-admission-top,66.9%)}.template-row-father{top:var(--row-father-top,69.7%)}.template-row-address{top:var(--row-address-top,72.5%);align-items:start}' +
-    '.template-row-id .id-number-prefix{font-size:3.1cqw;font-weight:400;color:#222;white-space:nowrap}' +
-    '.template-row-id .id-number-code{font-size:3.1cqw;font-weight:700;color:#222;white-space:nowrap}' +
-    '.template-row-address .template-value{white-space:normal;line-height:var(--address-line-height,1.26);word-break:normal;overflow-wrap:anywhere;font-size:clamp(11px,2.75cqw,38px);max-height:3.78em;overflow:hidden}' +
+    '.template-row-id .id-number-prefix{font-size:3.6cqw;font-weight:400;color:#222;white-space:nowrap}' +
+    '.template-row-id .id-number-code{font-size:3.6cqw;font-weight:700;color:#222;white-space:nowrap}' +
+    '.template-row-address .template-value{white-space:normal;line-height:var(--address-line-height,1.26);word-break:normal;overflow-wrap:anywhere;font-size:clamp(13px,3.05cqw,40px);max-height:3.78em;overflow:hidden}' +
     '.address-line{display:block;min-height:0;font-weight:400}' +
     '.diploma .student-photo{top:34.2%;left:32.1%;transform:none;width:35.8%;height:25%;aspect-ratio:auto;border-radius:10px;object-fit:cover}' +
     '.diploma .overlay:not(.diploma-name){font-family:Arial,"Helvetica Neue","Liberation Sans",sans-serif;font-size:clamp(10px,2.25cqw,30px);line-height:1.1;color:#1E242B;font-weight:400;transform:none;transform-origin:left top}' +
