@@ -15,6 +15,30 @@ import { buildCfkStudentIcardMarkup } from "@/features/students/print/buildCfkSt
 import { buildStandardStudentIcardMarkup } from "@/features/students/print/buildStandardStudentIcardMarkup";
 import { printTemplateStudentIcard } from "@/features/students/print/printTemplateStudentIcard";
 
+async function waitForIcardImages(doc) {
+  await Promise.all([...doc.images].map(async img => {
+    try {
+      if (img.decode) await img.decode();
+      else if (!img.complete || !img.naturalWidth) {
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = () => reject(new Error("Image failed to load."));
+        });
+      }
+      if (!img.naturalWidth) throw new Error("Image has no decoded pixels.");
+    } catch (error) {
+      if (img.classList.contains("photo-img") || img.classList.contains("cfk-photo") || img.classList.contains("student-photo")) {
+        const placeholder = doc.createElement("div");
+        placeholder.className = "photo-ph";
+        placeholder.textContent = "PHOTO";
+        img.replaceWith(placeholder);
+      } else {
+        throw new Error("An I-card asset could not be loaded. Check the logo/template asset and try again.");
+      }
+    }
+  }));
+}
+
 export async function printStudentICard(student, setMessage, selectedSemester = "", outputMode = "print", selectedTemplate = "") {
   if (!student || !isIcardEligible(student)) {
     setMessage(
@@ -218,11 +242,7 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
       if (!frameDocument) throw new Error("Unable to prepare the I-Card image.");
 
       if (frameDocument.fonts?.ready) await frameDocument.fonts.ready;
-      await Promise.all(
-        [...frameDocument.images].map((img) =>
-          img.decode ? img.decode().catch(() => {}) : Promise.resolve()
-        )
-      );
+      await waitForIcardImages(frameDocument);
 
       const cardElement = frameDocument.querySelector(".cfk-template-card, .id-card, .card.std, .icard-page.cfk-card");
       if (!cardElement) throw new Error("The I-Card layout could not be found.");
