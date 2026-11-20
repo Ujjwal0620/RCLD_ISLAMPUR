@@ -6,7 +6,7 @@ import { connectMongoDB } from "@/lib/mongodb";
 import { getSession } from "@/lib/auth";
 import Course from "@/models/Course";
 import { resolveCourseFeeConfig } from "@/lib/student-import/course-fee-rules";
-import { importPaymentWorksheet, linkImportedStudentRecords, parsePaymentWorksheet } from "@/lib/student-import/import-payment-sheet";
+import { linkImportedStudentRecords } from "@/lib/student-import/import-payment-sheet";
 
 export const runtime = "nodejs";
 
@@ -508,13 +508,9 @@ export async function POST(request) {
         errors.push({ row: null, Regn_No: "", reason: "New students were saved, but academic enrollment linking needs review: " + linkError.message });
       }
     }
-    let paymentImport = null;
-    try {
-      const paymentPreview = parsePaymentWorksheet(workbook);
-      if (paymentPreview.rows?.length) paymentImport = await importPaymentWorksheet(workbook, { sourceName });
-    } catch (paymentError) {
-      warnings.push({ row: null, Regn_No: "", reason: "Student rows were imported, but payment-sheet import failed: " + paymentError.message });
-    }
+    // Payment-receipt worksheets are deliberately excluded from this student import.
+    // They contain MR_No/Amt_Paid rows and must be handled by a separate fee-import workflow.
+    const paymentImport = { skipped: true, message: "Payment-only worksheets were not processed by student import." };
 
     return NextResponse.json({
       message: "Student import processing completed.",
