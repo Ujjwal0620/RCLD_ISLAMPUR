@@ -137,15 +137,15 @@ function drawName(ctx, student, width, height, templateName) {
   const firstText = parts.join(" ").toLocaleUpperCase();
   const lastText = surname.toLocaleUpperCase();
   const accent = getTemplateAccent(templateName);
-  let fontSize = width * 0.072;
-  const maxWidth = width * 0.86;
+  let fontSize = width * 0.078;
+  const maxWidth = width * 0.92;
   const measure = size => {
     ctx.font = `700 ${size}px ${FONT_FAMILY}`;
     return ctx.measureText(firstText + (lastText ? " " + lastText : "")).width;
   };
   const measuredWidth = measure(fontSize);
   if (measuredWidth > maxWidth) {
-    fontSize = Math.max(width * 0.06, fontSize * (maxWidth / measuredWidth));
+    fontSize = Math.max(width * 0.065, fontSize * (maxWidth / measuredWidth));
   }
   ctx.save();
   ctx.font = `700 ${fontSize}px ${FONT_FAMILY}`;
@@ -189,8 +189,8 @@ function drawDetails(ctx, student, width, height, fallbackIndex = 1) {
   const father = titleCase(firstValue(student.fatherOrHusbandName, student.fatherName, student.fatherNameAsPerRecords, student.guardianName, ""));
   const addressLines = getAddressLines(student);
   const x = width * 0.4664;
-  const fontSize = width * 0.033;
-  const registrationFontSize = width * 0.0375;
+  const fontSize = width * 0.035;
+  const registrationFontSize = width * 0.039;
   const baselines = [
     height * 0.633,
     height * 0.661,
