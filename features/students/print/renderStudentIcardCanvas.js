@@ -289,22 +289,23 @@ export async function exportStudentIcards({ students, templateName, outputMode =
     printWindow.document.close();
   }
 
-  let exportList = list;
-  if (outputMode !== "print") {
-    exportList = [];
-    for (const student of list) {
-      if (!student._id) throw new Error("Student ID is missing; unable to assign an ID-card number.");
-      const response = await fetch(`/api/students/${encodeURIComponent(student._id)}/icard-number`, { method: "POST" });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Unable to assign an ID-card number.");
-      exportList.push({ ...student, idCardNo: String(data.idCardNo) });
-    }
+  const exportList = [];
+  for (const student of list) {
+    if (!student._id) throw new Error("Student ID is missing; unable to assign an ID-card number.");
+    const response = await fetch(`/api/students/${encodeURIComponent(student._id)}/icard-number`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: outputMode === "print" ? "print" : "download" }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Unable to assign an ID-card number.");
+    exportList.push({ ...student, idCardNo: String(data.idCardNo) });
   }
 
   if (outputMode === "print") {
     const pages = [];
     try {
-      for (const student of list) {
+      for (const student of exportList) {
         const canvas = await renderStudentIcardCanvas(student, templateName, pages.length + 1);
         const blob = await canvasToJpeg(canvas);
         const url = URL.createObjectURL(blob);
