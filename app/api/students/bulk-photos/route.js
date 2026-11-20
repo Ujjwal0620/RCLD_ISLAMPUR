@@ -15,11 +15,13 @@ const StudentSchema = new mongoose.Schema({
 }, { timestamps: true, strict: false });
 const Student = mongoose.models.Student || mongoose.model("Student", StudentSchema);
 
+const clean = value => String(value ?? "").trim().replace(/\.0$/, "");
+function escapeRegex(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 function registrationFromFilename(filename) {
-  const base = String(filename || "").split("/").pop() || "";
-  const exact = base.match(/(?:^|[_ -])([0-9]{4,})(?=[.][^.]+$)/);
-  if (exact?.[1]) return exact[1];
-  const withoutExtension = base.replace(/[.][^.]+$/, "");
+  const base = String(filename || "").split(/[\\/]/).pop() || "";
+  const withoutExtension = base.replace(/\.[^.]+$/, "");
   const candidates = withoutExtension.match(/[0-9]{4,}/g) || [];
   return candidates.length ? candidates[candidates.length - 1] : "";
 }
@@ -43,6 +45,60 @@ function uploadToCloudinary(client, buffer, registrationNo, extension) {
   });
 }
 
+async function findStudentPhotoTargets(registrationNo) {
+  const suffix = new RegExp("(?:^|[/\\s_-])" + escapeRegex(registrationNo) + "$", "i");
+  const numericCode = /^\d+$/.test(registrationNo) ? Number(registrationNo) : null;
+  const studentQuery = {
+    $or: [
+      { regnNo: registrationNo },
+      { enrollmentNo: registrationNo },
+      { regnNo: suffix },
+      { enrollmentNo: suffix },
+      ...(numericCode === null ? [] : [{ regnNo: numericCode }, { enrollmentNo: numericCode }]),
+    ],
+  };
+  const students = await Student.find(studentQuery)
+    .select("_id regnNo enrollmentNo applicantName").lean();
+  const studentIds = students.map(item => item._id);
+  const enrollmentQuery = {
+    $or: [
+      { stCode: registrationNo },
+      { stCode: suffix },
+      ...(studentIds.length ? [{ legacyStudentId: { $in: studentIds } }] : []),
+    ],
+  };
+  const enrollments = await StudentEnrollment.find(enrollmentQuery)
+    .select("_id studentId legacyStudentId stCode").lean();
+  const masterIdsFromEnrollments = enrollments.map(item => item.studentId).filter(Boolean);
+  const masterQuery = {
+    $or: [
+      { stCodes: registrationNo },
+      { stCodes: suffix },
+      ...(studentIds.length ? [{ legacyStudentIds: { $in: studentIds } }] : []),
+      ...(masterIdsFromEnrollments.length ? [{ _id: { $in: masterIdsFromEnrollments } }] : []),
+    ],
+  };
+  const masters = await StudentMaster.find(masterQuery)
+    .select("_id stCodes legacyStudentIds fullName").lean();
+
+  const uniqueMasterIds = [...new Set(masters.map(item => String(item._id)))];
+  if (uniqueMasterIds.length > 1) {
+    throw new Error("This registration number matches more than one master student profile. Resolve the duplicate registration mapping before uploading.");
+  }
+  const master = masters[0] || null;
+  const linkedIds = new Map();
+  for (const student of students) linkedIds.set(String(student._id), student._id);
+  for (const id of master?.legacyStudentIds || []) linkedIds.set(String(id), id);
+  for (const enrollment of enrollments) {
+    if (enrollment.legacyStudentId) linkedIds.set(String(enrollment.legacyStudentId), enrollment.legacyStudentId);
+  }
+  const linkedStudents = linkedIds.size
+    ? await Student.find({ _id: { $in: [...linkedIds.values()] } }).select("_id regnNo enrollmentNo applicantName").lean()
+    : [];
+  const hasTarget = Boolean(master || linkedStudents.length || enrollments.length);
+  return { master, students: linkedStudents, enrollments, hasTarget };
+}
+
 export async function POST(request) {
   try {
     const session = await getSession();
@@ -60,7 +116,7 @@ export async function POST(request) {
     if (!cloudinary.configured) return NextResponse.json({ error: cloudinary.error }, { status: 503 });
     await connectMongoDB();
 
-    const summary = { matchedAndUpdated: 0, unmatchedFilenames: [], failedFiles: [], updated: [] };
+    const summary = { mapped: 0, unmatchedFilenames: [], failedFiles: [], updated: [] };
     for (const file of files) {
       const filename = String(file.name || "unnamed");
       const extension = filename.split(".").pop().toLowerCase();
@@ -72,40 +128,20 @@ export async function POST(request) {
         summary.failedFiles.push({ filename, reason: "Image exceeds 4 MB." });
         continue;
       }
-      const registrationNo = registrationFromFilename(filename);
+      const registrationNo = clean(registrationFromFilename(filename));
       if (!registrationNo) {
         summary.unmatchedFilenames.push(filename);
         continue;
       }
 
-      const numericRegistrationNo = /^\d+$/.test(registrationNo) ? Number(registrationNo) : null;
-      const [student, masterByCode, enrollment] = await Promise.all([
-        Student.findOne({
-          $or: [
-            { regnNo: registrationNo },
-            { enrollmentNo: registrationNo },
-            ...(numericRegistrationNo === null ? [] : [
-              { regnNo: numericRegistrationNo },
-              { enrollmentNo: numericRegistrationNo },
-            ]),
-          ],
-        }).select("_id regnNo enrollmentNo applicantName").lean(),
-        StudentMaster.findOne({ stCodes: registrationNo })
-          .select("_id stCodes legacyStudentIds fullName").lean(),
-        StudentEnrollment.findOne({ stCode: registrationNo })
-          .select("studentId legacyStudentId stCode").lean(),
-      ]);
-      let master = masterByCode;
-      if (!master && enrollment?.studentId) {
-        master = await StudentMaster.findById(enrollment.studentId)
-          .select("_id stCodes legacyStudentIds fullName").lean();
+      let targets;
+      try {
+        targets = await findStudentPhotoTargets(registrationNo);
+      } catch (error) {
+        summary.failedFiles.push({ filename, regnNo: registrationNo, reason: error.message || "Unable to resolve student." });
+        continue;
       }
-      const linkedStudentIds = [
-        ...(master?.legacyStudentIds || []),
-        ...(enrollment?.legacyStudentId ? [enrollment.legacyStudentId] : []),
-        ...(student?._id ? [student._id] : []),
-      ];
-      if (!student && !master && !enrollment) {
+      if (!targets.hasTarget) {
         summary.unmatchedFilenames.push(filename);
         continue;
       }
@@ -113,44 +149,51 @@ export async function POST(request) {
       try {
         const buffer = Buffer.from(await file.arrayBuffer());
         const uploaded = await uploadToCloudinary(cloudinary.client, buffer, registrationNo, extension);
-        if (linkedStudentIds.length) {
-          await Student.updateMany(
-            { _id: { $in: linkedStudentIds } },
-            { $set: { photoUrl: uploaded.secure_url } }
+        const studentIds = targets.students.map(item => item._id);
+        const studentUpdate = studentIds.length
+          ? await Student.updateMany({ _id: { $in: studentIds } }, { $set: { photoUrl: uploaded.secure_url } })
+          : { matchedCount: 0, modifiedCount: 0 };
+        let masterUpdate = { matchedCount: 0, modifiedCount: 0 };
+        if (targets.master?._id) {
+          masterUpdate = await StudentMaster.updateOne(
+            { _id: targets.master._id },
+            { $set: { photoUrl: uploaded.secure_url }, $addToSet: { stCodes: registrationNo } }
           );
         }
-        if (master?._id) {
-          await StudentMaster.updateOne(
-            { _id: master._id },
-            { $set: { photoUrl: uploaded.secure_url } }
-          );
-        } else if (student?._id) {
-          await StudentMaster.updateOne(
-            { legacyStudentIds: student._id },
-            { $set: { photoUrl: uploaded.secure_url } }
-          );
+
+        const mappedRecords = Number(studentUpdate.matchedCount || 0) + Number(masterUpdate.matchedCount || 0);
+        if (!mappedRecords) {
+          summary.failedFiles.push({
+            filename,
+            regnNo: registrationNo,
+            reason: "The image reached Cloudinary, but no student record was updated. Check the registration number mapping.",
+          });
+          continue;
         }
-        summary.matchedAndUpdated += 1;
+        summary.mapped += 1;
         summary.updated.push({
           filename,
           regnNo: registrationNo,
-          studentName: student?.applicantName || master?.fullName || "",
+          studentName: targets.students[0]?.applicantName || targets.master?.fullName || "",
+          linkedStudentRecords: Number(studentUpdate.matchedCount || 0),
+          masterProfileUpdated: Number(masterUpdate.matchedCount || 0) > 0,
           photoUrl: uploaded.secure_url,
         });
       } catch (error) {
-        summary.failedFiles.push({ filename, regnNo: registrationNo, reason: error.message || "Upload failed." });
+        summary.failedFiles.push({ filename, regnNo: registrationNo, reason: error.message || "Upload or mapping failed." });
       }
     }
 
     return NextResponse.json({
-      message: "Student photo upload completed.",
-      matchedAndUpdated: summary.matchedAndUpdated,
+      message: "Student photo upload and mapping completed.",
+      mapped: summary.mapped,
+      matchedAndUpdated: summary.mapped,
       unmatchedFilenames: summary.unmatchedFilenames,
       failedFiles: summary.failedFiles,
       updated: summary.updated,
     });
   } catch (error) {
-    console.error("[bulk-student-photos]", error);
+    console.error("[bulk-student-photos]", error?.message || error);
     return NextResponse.json({ error: "Unable to process student photo uploads.", detail: error.message }, { status: 500 });
   }
 }
