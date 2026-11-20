@@ -245,10 +245,20 @@ async function main() {
           normalizedFullName: duplicateEnrollment.normalizedFullName,
         }).lean();
         if (canonicalEnrollment) {
-          await mongoose.connection.collection("student_fee_payments").updateMany(
-            { enrollmentId: duplicateEnrollment._id },
-            { $set: { studentId: canonicalId, enrollmentId: canonicalEnrollment._id } }
-          );
+          const duplicateReceipts = await paymentCollection.find({ enrollmentId: duplicateEnrollment._id }).toArray();
+          for (const receipt of duplicateReceipts) {
+            const existingReceipt = await paymentCollection.findOne({
+              mrNo: receipt.mrNo, stCode: receipt.stCode,
+              paymentDate: receipt.paymentDate || null, amountPaid: receipt.amountPaid,
+            });
+            if (existingReceipt && String(existingReceipt._id) !== String(receipt._id)) {
+              await paymentCollection.deleteOne({ _id: receipt._id });
+            } else {
+              await paymentCollection.updateOne({ _id: receipt._id }, {
+                $set: { studentId: canonicalId, enrollmentId: canonicalEnrollment._id }
+              });
+            }
+          }
           if ((!canonicalEnrollment.installments || !canonicalEnrollment.installments.length)
             && duplicateEnrollment.installments?.length) {
             await StudentEnrollment.updateOne({ _id: canonicalEnrollment._id }, {
