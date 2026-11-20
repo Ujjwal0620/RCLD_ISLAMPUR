@@ -46,6 +46,10 @@ export default function StudentFeeWorkspace({
   const currentSemesterPaid = paymentHistory.filter(payment => String(payment.stCode || "") === currentStCode)
     .reduce((sum, payment) => sum + Number(payment.amountPaid ?? payment.amount ?? 0), 0);
   const activeEnrollment = currentEnrollment;
+  const currentCourseName = activeEnrollment?.courseName
+    || (String(activeEnrollment?.courseCode || "").toUpperCase() === String(student.courseCode || "").toUpperCase()
+      ? student.courseName : activeEnrollment?.courseCode)
+    || student.courseName;
   const activeSummary = activeEnrollment?.summary || {};
   const currentPayable = Number(activeEnrollment?.feeConfig?.netPayableFee || activeSummary.totalDue || fee?.payable || 0);
   const currentPaid = Number(activeSummary.totalPaid || currentSemesterPaid || fee?.paid || 0);
@@ -86,7 +90,7 @@ export default function StudentFeeWorkspace({
                 <div className="fee-overview-meta">
                   <span>
                     <b>Course</b>
-                    {value(student.courseName)}
+                    {value(currentCourseName)}
                   </span>
                   <span>
                     <b>Enrollment</b>
@@ -210,7 +214,7 @@ export default function StudentFeeWorkspace({
                           <div className="eyebrow">STUDENT FINANCE</div>
                           <h2 id="fee-workspace-title">Fee & Receipt Workspace</h2>
                           <p>
-                            {student.applicantName} · {student.enrollmentNo || student.formNo}
+                            {student.applicantName} · {currentStCode || student.formNo}
                           </p>
                         </div>
                         <button
