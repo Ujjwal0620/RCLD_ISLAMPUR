@@ -148,23 +148,21 @@ function normalizeSex(value) {
 }
 
 function readSourceRows(workbook) {
-  let selectedSheet = workbook.Sheets["Student Data"];
-  if (!selectedSheet) {
-    const requiredStudentHeaders = ["stcode", "stname", "sex", "address", "qualification", "course"];
-    for (const sheetName of workbook.SheetNames) {
-      const candidate = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: "", raw: true });
-      const hasStudentHeader = candidate.some(row => {
-        const names = row.map(normalizeHeader);
-        return requiredStudentHeaders.every(header => names.includes(header))
-          && names.some(header => ["dob", "dateofbirth"].includes(header))
-          && names.some(header => ["stfather", "father", "fathername"].includes(header))
-          && names.some(header => ["phno", "phoneno", "phone"].includes(header))
-          && names.some(header => ["doa", "dateofadmission", "admissiondate"].includes(header));
-      });
-      if (hasStudentHeader) { selectedSheet = workbook.Sheets[sheetName]; break; }
-    }
+  let selectedSheet = null;
+  const requiredStudentHeaders = ["stcode", "stname", "sex", "address", "qualification", "course", "formno"];
+  for (const sheetName of workbook.SheetNames || []) {
+    const candidate = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: "", raw: true });
+    const hasStudentHeader = candidate.some(row => {
+      const names = row.map(normalizeHeader);
+      return requiredStudentHeaders.every(header => names.includes(header))
+        && names.some(header => ["dob", "dateofbirth"].includes(header))
+        && names.some(header => ["stfather", "father", "fathername"].includes(header))
+        && names.some(header => ["phno", "phoneno", "phone"].includes(header))
+        && names.some(header => ["doa", "dateofadmission", "admissiondate"].includes(header));
+    });
+    if (hasStudentHeader) { selectedSheet = workbook.Sheets[sheetName]; break; }
   }
-  if (!selectedSheet) throw new Error('Could not find the "Student Data" worksheet or St_Code/St_Name headers.');
+  if (!selectedSheet) throw new Error("Could not find a worksheet containing the required student identity and admission headers.");
   const grid = XLSX.utils.sheet_to_json(selectedSheet, { header: 1, defval: "", raw: true });
   const headerIndex = grid.findIndex(row => {
     const headers = row.map(normalizeHeader);
