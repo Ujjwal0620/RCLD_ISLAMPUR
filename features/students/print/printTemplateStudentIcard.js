@@ -157,8 +157,8 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     '.overlay{position:absolute;z-index:2;font-family:Arial,"Helvetica Neue","Liberation Sans",sans-serif;color:#3E454C;overflow:hidden}' +
     '.circular-name{top:48.8%;left:3%;width:94%;text-align:center;font-weight:800;font-size:clamp(20px,6.3cqw,80px);text-transform:uppercase;letter-spacing:.3px;line-height:1.05;white-space:nowrap}' +
     '.circular-id,.circular-registration,.circular-admission,.circular-father,.circular-address{left:46.8%;width:49%;font-family:"Roboto Condensed","Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;font-size:clamp(12px,3.05cqw,40px);line-height:1.12;text-align:left;color:#3E454C;font-weight:400;transform:none;transform-origin:top left}' +
-    '.circular-id{top:64.1%;white-space:nowrap}.circular-registration{top:67.5%;white-space:nowrap}.circular-admission{top:70.3%}.circular-father{top:73.2%}' +
-    '.circular-address{top:76.1%;line-height:1.08;word-break:break-word;overflow-wrap:anywhere;font-size:clamp(11px,2.7cqw,35px);font-weight:400;display:block}' +
+    '.circular-id{top:64.5%;white-space:nowrap}.circular-registration{top:67.8%;white-space:nowrap}.circular-admission{top:71.1%}.circular-father{top:74.4%}' +
+    '.circular-address{top:77.7%;line-height:1.08;word-break:break-word;overflow-wrap:anywhere;font-size:clamp(11px,2.7cqw,35px);font-weight:400;display:block}' +
     '.address-line{display:block;min-height:0;font-weight:400}' +
     '.circular-id .id-number-prefix{font-size:3.05cqw;font-weight:400;color:#3E454C;white-space:nowrap}' +
     '.circular-id .id-number-code{font-size:3.05cqw;font-weight:700;color:#3E454C;white-space:nowrap}' +
