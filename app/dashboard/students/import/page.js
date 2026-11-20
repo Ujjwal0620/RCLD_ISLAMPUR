@@ -100,8 +100,8 @@ export default function BulkImportPage() {
             <span>Student admission file</span>
             <input type="file" accept=".xlsx,.xls,.csv" onChange={event => {
               const selected = event.target.files?.[0] || null;
-              setFile(selected); setPreview(null); setResult(null); setError("");
-              if (selected) createPreview(selected);
+              setFile(selected); setPreview(null); setResult(null); setError(""); setSheetName("");
+              if (selected) createPreview(selected, "");
             }} />
           </label>
           {file && <p className="form-help" style={{ margin: "10px 0 16px" }}>{file.name} · {(file.size / 1024 / 1024).toFixed(2)} MB</p>}
