@@ -44,13 +44,20 @@ export async function GET(req,{params}){
       ? student
       : (await Student.findById(canonicalStudentId).lean()) || student;
     const enrollmentIds = enrollments.map(item => item._id);
+    const linkedStudentIds = masterProfile?.legacyStudentIds?.length
+      ? masterProfile.legacyStudentIds : [student._id];
+    const allEnrollmentCodes = [...new Set([
+      ...(masterProfile?.stCodes || []),
+      ...enrollments.map(item => String(item.stCode || "")),
+    ].filter(Boolean))];
     const paymentQuery = masterProfile
       ? { $or: [
           { studentId: masterProfile._id },
+          { studentId: { $in: linkedStudentIds } },
           { enrollmentId: { $in: enrollmentIds } },
-          { studentId: masterProfile._id, stCode: { $in: [...new Set([...(masterProfile.stCodes || []), ...enrollments.map(item => String(item.stCode || ""))].filter(Boolean))] } }
+          { studentId: masterProfile._id, stCode: { $in: allEnrollmentCodes } },
         ] }
-      : { enrollmentId: { $in: enrollmentIds } };
+      : { $or: [{ studentId: student._id }, { enrollmentId: { $in: enrollmentIds } }] };
     const importedPayments = enrollmentIds.length || masterProfile
       ? await StudentFeePayment.find(paymentQuery).sort({ paymentDate: 1, mrNo: 1 }).lean()
       : [];
@@ -72,7 +79,6 @@ export async function GET(req,{params}){
     });
     const FeeSchema = new mongoose.Schema({ studentId: mongoose.Schema.Types.ObjectId, payments: [mongoose.Schema.Types.Mixed] }, { strict: false });
     const StudentFee = mongoose.models.StudentFee || mongoose.model("StudentFee", FeeSchema);
-    const linkedStudentIds = masterProfile?.legacyStudentIds?.length ? masterProfile.legacyStudentIds : [student._id];
     const [legacyFees, linkedStudentDocs] = await Promise.all([
       StudentFee.find({ studentId: { $in: linkedStudentIds } }).lean(),
       Student.find({ _id: { $in: linkedStudentIds } }).select("_id regnNo enrollmentNo courseCode courseName").lean(),
