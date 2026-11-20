@@ -189,7 +189,10 @@ export async function PATCH(req,{params}){
       else{if(!mongoose.Types.ObjectId.isValid(String(body.referralId)))return NextResponse.json({error:"Invalid referral selection."},{status:400});const referral=await Referral.findOne({_id:body.referralId,status:"Active"}).lean();if(!referral)return NextResponse.json({error:"Selected referral is no longer active."},{status:400});update.referralId=String(referral._id);update.referralName=referral.name;update.marketingEmployeeId=referral.marketingEmployeeId;update.marketingEmployeeName=referral.marketingEmployeeName;}
     }
     const mergedStudent={...current,...update};
-    if(["Admission Pending","Registered","Active",""].includes(String(current.status||""))) update.status=getStudentAdmissionStatus(mergedStudent);
+    const admissionFieldsChanged = ["courseCode", "courseName", "paymentStatus", "dueAmount", "admissionDate"].some((field) => body[field] !== undefined);
+    if (admissionFieldsChanged && ["Admission Pending", "Registered", "Active", ""].includes(String(current.status || ""))) {
+      update.status = getStudentAdmissionStatus(mergedStudent);
+    }
     const student=await Student.findByIdAndUpdate(id,update,{new:true,runValidators:true}).lean();
     if (student) {
       const masterFields = {
