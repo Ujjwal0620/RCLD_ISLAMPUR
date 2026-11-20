@@ -38,7 +38,8 @@ export default function BulkStudentPhotoUploadDialog({ open, onClose, onComplete
           const response = await fetch("/api/students/bulk-photos", { method: "POST", body: form });
           const data = await response.json();
           if (!response.ok) throw new Error(data.error || "Upload failed.");
-          result.mapped += Number(data.mapped ?? data.matchedAndUpdated ?? 0);\n          result.matchedAndUpdated = result.mapped;
+          result.mapped += Number(data.mapped ?? data.matchedAndUpdated ?? 0);
+          result.matchedAndUpdated = result.mapped;
           result.unmatchedFilenames.push(...(data.unmatchedFilenames || []));
           result.failedFiles.push(...(data.failedFiles || []));
           result.updated.push(...(data.updated || []));
