@@ -224,7 +224,7 @@ export async function GET(request) {
     }
     const enrichedStudents = students.map(student => {
       const profile = masterPhotoByStudentId.get(String(student._id));
-      const registrationNo = String(student.regnNo || "").trim();
+      const registrationNo = String(student.regnNo || profile?.stCodes?.[0] || "").trim();
       const photoUrl = student.photoUrl || profile?.photoUrl || (
         registrationNo
           ? `/api/students/photo/${encodeURIComponent(registrationNo)}`
