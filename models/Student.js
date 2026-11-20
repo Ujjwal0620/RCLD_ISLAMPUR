@@ -25,6 +25,7 @@ const StudentSchema = new mongoose.Schema({
   batchId: { type: mongoose.Schema.Types.ObjectId, ref: "Batch", default: null },
   batchCode: String,
   applicantName: { type: String, default: "", trim: true },
+  name: { type: String, default: "", trim: true },
   nationality: String,
   dateOfBirth: String,
   dob: String,
