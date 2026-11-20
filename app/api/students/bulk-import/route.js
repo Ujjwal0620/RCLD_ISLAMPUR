@@ -227,7 +227,7 @@ function asStudentPayload(row, course, sourceName) {
     courseName: course.name || COURSE_NAMES[course.code] || course.code,
     sourceCourseLabel: row.courseLabel || row.course,
     importSource: sourceName, sourceRowNo: row.rowNo,
-    sourceRowKey: [row.regnNo || "NO-REGN", row.rowNo, row.course || "NO-COURSE"].join("|")
+    sourceRowKey: [sourceName, row.regnNo || "NO-REGN", row.rowNo, row.course || "NO-COURSE"].join("|")
   };
 }
 
