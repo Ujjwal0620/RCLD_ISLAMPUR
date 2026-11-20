@@ -28,17 +28,19 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
     return;
   }
 
-  if (outputMode === "jpg") {
-    try {
-      if (!student._id) throw new Error("Student ID is missing; unable to assign an ID-card number.");
-      const response = await fetch(`/api/students/${encodeURIComponent(student._id)}/icard-number`, { method: "POST" });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Unable to assign an ID-card number.");
-      student = { ...student, idCardNo: String(data.idCardNo) };
-    } catch (error) {
-      setMessage(error?.message || "Unable to assign an ID-card number.");
-      return;
-    }
+  try {
+    if (!student._id) throw new Error("Student ID is missing; unable to assign an ID-card number.");
+    const response = await fetch(`/api/students/${encodeURIComponent(student._id)}/icard-number`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: outputMode === "print" ? "print" : "download" }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Unable to assign an ID-card number.");
+    student = { ...student, idCardNo: String(data.idCardNo) };
+  } catch (error) {
+    setMessage(error?.message || "Unable to assign an ID-card number.");
+    return;
   }
 
   // ---------- Institute and print settings ----------
