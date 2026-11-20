@@ -93,6 +93,7 @@ export async function GET(req,{params}){
       photoUrl: canonicalStudent.photoUrl || masterProfile?.photoUrl || "",
       masterProfile,
       enrollments,
+      activeEnrollment,
       paymentHistory,
     };
     return NextResponse.json({ student: enrichedStudent, masterProfile, enrollments, paymentHistory });
