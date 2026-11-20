@@ -209,9 +209,33 @@ export async function GET(request) {
       Student.distinct("sex"),
       Student.distinct("batchCode")
     ]);
+    // Attach the canonical profile photo when one exists; otherwise resolve
+    // the local ID-card photograph using the student's exact registration number.
+    const pageStudentIds = students.map(student => student._id);
+    const masterPhotoProfiles = pageStudentIds.length
+      ? await StudentMaster.find({ legacyStudentIds: { $in: pageStudentIds } })
+          .select("legacyStudentIds photoUrl stCodes").lean()
+      : [];
+    const masterPhotoByStudentId = new Map();
+    for (const profile of masterPhotoProfiles) {
+      for (const legacyId of profile.legacyStudentIds || []) {
+        masterPhotoByStudentId.set(String(legacyId), profile);
+      }
+    }
+    const enrichedStudents = students.map(student => {
+      const profile = masterPhotoByStudentId.get(String(student._id));
+      const registrationNo = String(student.regnNo || "").trim();
+      const photoUrl = student.photoUrl || profile?.photoUrl || (
+        registrationNo
+          ? `/api/students/photo/${encodeURIComponent(registrationNo)}`
+          : ""
+      );
+      return { ...student, photoUrl };
+    });
+
     const courses = [...new Set([...DEFAULT_COURSES, ...dbCourses.filter(Boolean)])].sort();
     return NextResponse.json({
-      students,
+      students: enrichedStudents,
       pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
       filterOptions: { courses, statuses: statuses.filter(Boolean).sort(), sexes: sexes.filter(Boolean).sort(), batchCodes: batchCodes.filter(Boolean).sort() }
     });
