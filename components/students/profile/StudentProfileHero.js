@@ -12,6 +12,10 @@ export default function StudentProfileHero({ student, uploadStudentPhoto, photoU
     : null;
   const activeEnrollment = student.activeEnrollment || semesterEnrollment || enrollments.find(item => item.status === "ACTIVE");
   const currentStCode = activeEnrollment?.stCode || student.regnNo || student.enrollmentNo;
+  const activeCourseName = activeEnrollment?.courseName
+    || (String(activeEnrollment?.courseCode || "").toUpperCase() === String(student.courseCode || "").toUpperCase()
+      ? student.courseName : activeEnrollment?.courseCode)
+    || student.courseName;
   return (
     <section className="student-profile-card student-profile-hero">
       <div className="student-profile-brand">
@@ -63,7 +67,7 @@ export default function StudentProfileHero({ student, uploadStudentPhoto, photoU
         <div className="eyebrow">STUDENT RECORD / REGISTRATION</div>
         <h2>{student.applicantName}</h2>
         <p>
-          St_Code {value(currentStCode)} · {value(student.courseName)} · {value(student.mobileNumber)}
+          St_Code {value(currentStCode)} · {value(activeCourseName)} · {value(student.mobileNumber)}
         </p>
       </div>
       <span className="badge profile-status">{value(student.status)}</span>
