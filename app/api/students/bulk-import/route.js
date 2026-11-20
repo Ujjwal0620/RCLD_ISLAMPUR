@@ -171,8 +171,6 @@ function parseRows(workbook) {
     if (!admissionDate) warnings.push("DOI is missing or invalid.");
     if (!course.code) warnings.push("Course/Semester is missing.");
     const errors = [];
-    if (!regnNo) errors.push("Registration number is required.");
-    if (!name) errors.push("Student name is required.");
     rows.push({
       rowNo: i + 1, regnNo, name, sourceName: clean(get("name")), admissionDate,
       gender: gender.value, fatherName: clean(get("father")), phone: phones.primary,
@@ -229,7 +227,7 @@ function asStudentPayload(row, course, sourceName) {
     courseName: course.name || COURSE_NAMES[course.code] || course.code,
     sourceCourseLabel: row.courseLabel || row.course,
     importSource: sourceName, sourceRowNo: row.rowNo,
-    sourceRowKey: [row.regnNo, row.rowNo, row.course].join("|")
+    sourceRowKey: [row.regnNo || "NO-REGN", row.rowNo, row.course || "NO-COURSE"].join("|")
   };
 }
 
@@ -265,16 +263,16 @@ export async function POST(request) {
     const errors = [...preview.errors];
     let skipped = parsed.rows.length - validRows.length;
     for (const row of validRows) {
-      if (seen.has(row.regnNo)) {
+      if (row.regnNo && seen.has(row.regnNo)) {
         skipped += 1;
         warnings.push({ row: row.rowNo, Regn_No: row.regnNo, reason: "Duplicate registration number within this workbook; the first occurrence was retained." });
         continue;
       }
-      seen.add(row.regnNo);
+      if (row.regnNo) seen.add(row.regnNo);
       uniqueRows.push(row);
     }
 
-    const registrationNumbers = uniqueRows.map(row => row.regnNo);
+    const registrationNumbers = uniqueRows.map(row => row.regnNo).filter(Boolean);
     const numericRegistrationNumbers = registrationNumbers.filter(code => /^\d+$/.test(code)).map(Number);
     const existingRecords = registrationNumbers.length
       ? await Student.find({ $or: [
@@ -301,7 +299,7 @@ export async function POST(request) {
     let updated = 0;
 
     for (const row of uniqueRows) {
-      const existing = existingByCode.get(row.regnNo);
+      const existing = row.regnNo ? existingByCode.get(row.regnNo) : null;
       if (existing && duplicateMode !== "update") {
         skipped += 1;
         warnings.push({ row: row.rowNo, Regn_No: row.regnNo, reason: "Registration number already exists; skipped as requested." });
@@ -316,7 +314,7 @@ export async function POST(request) {
       const payload = asStudentPayload(row, courseInfo, sourceName);
       operations.push({
         updateOne: {
-          filter: existing ? { _id: existing._id } : { regnNo: row.regnNo },
+          filter: existing ? { _id: existing._id } : row.regnNo ? { regnNo: row.regnNo } : { sourceRowKey: row.sourceRowKey },
           update: { $set: payload, $setOnInsert: { status: "Registered", photoUrl: "" } },
           upsert: true
         }
@@ -344,10 +342,15 @@ export async function POST(request) {
       }
     }
 
-    const failedCodes = new Set(errors.map(item => item.Regn_No).filter(Boolean));
-    const importedCodes = operationRows.filter(item => !failedCodes.has(item.row.regnNo)).map(item => item.row.regnNo);
-    const importedStudents = importedCodes.length
-      ? await Student.find({ regnNo: { $in: importedCodes } }).sort({ admissionDate: 1, createdAt: 1 }).lean()
+    const failedRows = new Set(errors.map(item => Number(item.row)).filter(Number.isFinite));
+    const successfulOperations = operationRows.filter(item => !failedRows.has(Number(item.row.rowNo)));
+    const importedStudentFilters = successfulOperations.map(item => item.existing
+      ? { _id: item.existing._id }
+      : item.row.regnNo
+        ? { regnNo: item.row.regnNo }
+        : { sourceRowKey: item.row.sourceRowKey });
+    const importedStudents = importedStudentFilters.length
+      ? await Student.find({ $or: importedStudentFilters }).sort({ admissionDate: 1, createdAt: 1 }).lean()
       : [];
     for (const student of importedStudents) {
       try {
