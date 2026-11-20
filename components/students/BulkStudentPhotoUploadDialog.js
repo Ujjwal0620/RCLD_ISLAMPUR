@@ -28,7 +28,7 @@ export default function BulkStudentPhotoUploadDialog({ open, onClose, onComplete
     if (!files.length || uploading) return;
     setUploading(true);
     setProgress({ done: 0, total: files.length });
-    const result = { matchedAndUpdated: 0, unmatchedFilenames: [], failedFiles: [], updated: [] };
+    const result = { mapped: 0, matchedAndUpdated: 0, unmatchedFilenames: [], failedFiles: [], updated: [] };
     try {
       for (let index = 0; index < files.length; index += 1) {
         const file = files[index];
@@ -38,7 +38,7 @@ export default function BulkStudentPhotoUploadDialog({ open, onClose, onComplete
           const response = await fetch("/api/students/bulk-photos", { method: "POST", body: form });
           const data = await response.json();
           if (!response.ok) throw new Error(data.error || "Upload failed.");
-          result.matchedAndUpdated += Number(data.matchedAndUpdated || 0);
+          result.mapped += Number(data.mapped ?? data.matchedAndUpdated ?? 0);\n          result.matchedAndUpdated = result.mapped;
           result.unmatchedFilenames.push(...(data.unmatchedFilenames || []));
           result.failedFiles.push(...(data.failedFiles || []));
           result.updated.push(...(data.updated || []));
@@ -97,12 +97,12 @@ export default function BulkStudentPhotoUploadDialog({ open, onClose, onComplete
           <div className="bulk-photo-summary">
             <CheckCircle2 size={24}/>
             <strong>Photo upload completed</strong>
-            <div><span>Matched &amp; Updated</span><b>{summary.matchedAndUpdated}</b></div>
+            <div><span>Mapped to student records</span><b>{summary.mapped ?? summary.matchedAndUpdated}</b></div>
             <div><span>Unmatched filenames</span><b>{summary.unmatchedFilenames.length}</b></div>
             <div><span>Failed files</span><b>{summary.failedFiles.length}</b></div>
           </div>
           {summary.unmatchedFilenames.length > 0 && <section className="bulk-photo-result-list"><h3>Unmatched filenames</h3><ul>{summary.unmatchedFilenames.map((name,index)=><li key={name+index}>{name}</li>)}</ul></section>}
-          {summary.failedFiles.length > 0 && <section className="bulk-photo-result-list"><h3>Failed files</h3><ul>{summary.failedFiles.map((item,index)=><li key={item.filename+index}>{item.filename} — {item.reason}</li>)}</ul></section>}
+          {summary.updated?.length > 0 && <section className="bulk-photo-result-list"><h3>Successfully mapped photos</h3><ul>{summary.updated.map((item,index)=><li key={item.regnNo+index}>{item.regnNo}{item.studentName ? " — "+item.studentName : ""} <small>({item.linkedStudentRecords || 0} student record(s))</small></li>)}</ul></section>}\n          {summary.failedFiles.length > 0 && <section className="bulk-photo-result-list"><h3>Failed files</h3><ul>{summary.failedFiles.map((item,index)=><li key={item.filename+index}>{item.filename} — {item.reason}</li>)}</ul></section>}
           <footer><button type="button" className="ghost-btn" onClick={() => { setSummary(null); setFiles([]); }}>Upload more</button><button type="button" className="primary-btn" onClick={onClose}>Done</button></footer>
         </>}
       </section>
