@@ -295,6 +295,38 @@ function buildMissingFields(existing, payload) {
   return fields;
 }
 
+function buildMissingOnlyFilter(existing, fields) {
+  const clauses = [{ _id: existing._id }];
+  const addGroup = (keys, gender = false) => {
+    if (!keys.some(key => Object.prototype.hasOwnProperty.call(fields, key))) return;
+    for (const key of keys) {
+      clauses.push(gender
+        ? { [key]: { $nin: ["M", "F", "MALE", "FEMALE"] } }
+        : { [key]: { $in: [null, ""] } });
+    }
+  };
+  addGroup(["applicantName", "name"]);
+  addGroup(["admissionDate", "dateOfAdmission"]);
+  addGroup(["dateOfBirth", "dob"]);
+  addGroup(["sex", "gender", "sourceSex"], true);
+  addGroup(["fatherOrHusbandName", "fatherName"]);
+  addGroup(["mobileNumber", "phone", "whatsappNumber"]);
+  addGroup(["alternatePhoneNumber", "altPhone", "guardianContactNumber"]);
+  addGroup(["address", "presentAddress", "permanentAddress"]);
+  addGroup(["ward"]);
+  addGroup(["village"]);
+  addGroup(["postOffice", "po"]);
+  addGroup(["policeStation", "ps"]);
+  addGroup(["district"]);
+  addGroup(["pin", "pincode"]);
+  addGroup(["sourceQualification", "qualification"]);
+  addGroup(["formNo"]);
+  addGroup(["courseCode", "courseName", "sourceCourseLabel", "course"]);
+  addGroup(["sourceAddressRaw"]);
+  addGroup(["sourcePhone"]);
+  return { $and: clauses };
+}
+
 export async function POST(request) {
   try {
     const session = await getSession();
@@ -409,7 +441,7 @@ export async function POST(request) {
         if ((existing.applicantName || existing.name) && nameSimilarity(existing.applicantName || existing.name, row.name) < 0.75) { warnings.push({ row: row.rowNo, Regn_No: row.regnNo, reason: "Registration number matched but student name did not; existing student left unchanged." }); continue; }
         const missing = buildMissingFields(existing, payload);
         if (!Object.keys(missing).length) { unchanged += 1; continue; }
-        operations.push({ updateOne: { filter: { _id: existing._id }, update: { $set: missing }, upsert: false } });
+        operations.push({ updateOne: { filter: buildMissingOnlyFilter(existing, missing), update: { $set: missing }, upsert: false } });
         operationRows.push({ row, kind: "existing" });
       } else {
         const insertFilter = row.regnNo
