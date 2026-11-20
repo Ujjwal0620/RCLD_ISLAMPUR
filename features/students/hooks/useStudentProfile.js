@@ -321,7 +321,14 @@ export default function useStudentProfile(params) {
         });
         const saved = await saveResponse.json();
         if (!saveResponse.ok) throw new Error(saved.error || "Photo uploaded, but the student profile could not be updated.");
-        const updatedStudent = { ...student, ...(saved.student || {}), photoUrl: data.url };
+        const refreshedProfile = await fetch("/api/students/" + student._id, { cache: "no-store" });
+        const refreshedData = refreshedProfile.ok ? await refreshedProfile.json() : null;
+        const updatedStudent = {
+          ...student,
+          ...(saved.student || {}),
+          ...(refreshedData?.student || {}),
+          photoUrl: data.url,
+        };
         setStudent(updatedStudent);
         setEditForm(current => ({ ...current, photoUrl: data.url }));
         setMessage("Student photo saved");
