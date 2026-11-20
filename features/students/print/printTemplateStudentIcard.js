@@ -54,11 +54,7 @@ function splitNameMarkup(value, lastNameColor, diploma) {
 }
 
 function idNumberMarkup(value) {
-  const raw = String(value || "—");
-  const match = raw.match(/^(.*\/)(\d+)$/);
-  if (!match) return escapeHtml(raw);
-  return escapeHtml(match[1]) +
-    '<span class="id-number-tail" style="font-size:4.1cqw;font-weight:800;">' + escapeHtml(match[2]) + "</span>";
+  return '<strong class="id-number-full">' + escapeHtml(value || "—") + "</strong>";
 }
 
 function titleCase(value) {
@@ -112,8 +108,14 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
   const config = TEMPLATE_CONFIG[templateName] || { lastNameColor: "#3E454C" };
   const fullName = firstValue(student.applicantName, student.fullName, student.name, "STUDENT");
   const nameMarkup = splitNameMarkup(fullName, config.lastNameColor, diploma);
-  const icardNumber = firstValue(student.regnNo, student.icardNumber, student.iCardNumber, student.idCardNumber, student.cardNumber, student.enrollmentNo, student.admissionNo, "—");
-  const registrationNumber = firstValue(student.regnNo, student.registrationNumber, student.registrationNo, student.registrationId, student.regNo, student.formNo, "—");
+  const rawRegistrationCode = String(firstValue(
+    student.regnNo, student.registrationNumber, student.registrationNo, student.registrationId,
+    student.regNo, student.icardNumber, student.iCardNumber, student.idCardNumber, student.cardNumber,
+    student.enrollmentNo, student.admissionNo, student.formNo, "—"
+  )).trim();
+  const icardNumber = /^RCLD\/ISL-001\//i.test(rawRegistrationCode)
+    ? rawRegistrationCode
+    : "RCLD/ISL-001/" + rawRegistrationCode;
   const fatherName = titleCase(firstValue(student.fatherOrHusbandName, student.fatherName, student.fatherNameAsPerRecords, student.guardianName, "—"));
   const addressMarkup = getAddressMarkup(student);
   const admission = getAdmissionDate(student) || "—";
@@ -122,21 +124,18 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     : '<div class="student-photo photo-empty" aria-label="Student photograph unavailable"></div>';
 
   const overlays = diploma
-    ? '<div class="overlay diploma-registration">' + escapeHtml(registrationNumber) + '</div>' +
-      '<div class="overlay diploma-session">' + escapeHtml(session) + '</div>' +
+    ? '<div class="overlay diploma-session">' + escapeHtml(session) + '</div>' +
       '<div class="overlay diploma-id">' + idNumberMarkup(icardNumber) + '</div>' +
       '<div class="overlay diploma-name">' + nameMarkup + '</div>' +
       '<div class="overlay diploma-father">' + escapeHtml(fatherName) + '</div>' +
       '<div class="overlay diploma-address">' + addressMarkup + '</div>' +
-      '<div class="overlay diploma-course">' + escapeHtml(courseName || firstValue(student.courseName, student.course?.name, student.courseCode, "")) + '</div>' +
       '<div class="overlay diploma-admission">' + escapeHtml(admission) + '</div>'
     : '<div class="overlay circular-name">' + nameMarkup + '</div>' +
       '<div class="overlay circular-id">' + idNumberMarkup(icardNumber) + '</div>' +
-      '<div class="overlay circular-registration">' + escapeHtml(registrationNumber) + '</div>' +
       '<div class="overlay circular-admission">' + escapeHtml(admission) + '</div>' +
       '<div class="overlay circular-father">' + escapeHtml(fatherName) + '</div>' +
       '<div class="overlay circular-address">' + addressMarkup + '</div>' +
-      '<div class="overlay circular-course">' + escapeHtml(courseName || firstValue(student.courseName, student.course?.name, student.courseCode, "—")) + '</div>';
+      '';
 
   return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
     '<title>RCLD I-Card - ' + escapeHtml(fullName) + '</title><style>' +
@@ -150,19 +149,19 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     '.photo-empty{background:transparent}' +
     '.overlay{position:absolute;z-index:2;font-family:Arial,"Helvetica Neue","Liberation Sans",sans-serif;color:#3E454C;overflow:hidden}' +
     '.circular-name{top:48.8%;left:3%;width:94%;text-align:center;font-weight:800;font-size:clamp(20px,6.3cqw,80px);text-transform:uppercase;letter-spacing:.3px;line-height:1.05;white-space:nowrap}' +
-    '.circular-id,.circular-registration,.circular-admission,.circular-father,.circular-address{left:46.8%;width:48.5%;font-family:"Roboto Condensed","Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;font-weight:700;font-size:clamp(14px,3.45cqw,48px);line-height:1.15;text-align:left;color:#3E454C;transform:scaleY(1.12);transform-origin:left center}' +
-    '.circular-id{top:60.9%}.circular-registration{top:63.8%}.circular-admission{top:66.6%}.circular-father{top:69.4%}' +
-    '.circular-address{top:72.2%;left:46.8%;width:48.5%;line-height:1.1;word-break:break-word;overflow-wrap:anywhere;transform-origin:top left;font-size:clamp(12px,2.8cqw,36px);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.address-line{display:block;min-height:0}' +
+    '.circular-id,.circular-admission,.circular-father,.circular-address{left:46.8%;width:48.5%;font-family:"Roboto Condensed","Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;font-weight:700;font-size:clamp(14px,3.45cqw,48px);line-height:1.15;text-align:left;color:#3E454C;transform:scaleY(1.12);transform-origin:left center}' +
+    '.circular-id{top:60.9%;font-weight:900}.circular-admission{top:63.8%}.circular-father{top:66.6%}' +
+    '.circular-address{top:69.4%;left:46.8%;width:48.5%;line-height:1.1;word-break:break-word;overflow-wrap:anywhere;transform-origin:top left;font-size:clamp(12px,2.8cqw,36px);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.address-line{display:block;min-height:0}' +
     '.circular-course{top:81.2%;left:46.8%;width:48.5%;font-size:clamp(12px,3cqw,40px);font-weight:800;color:#2E3192}' +
-    '.circular-id .id-number-tail{font-size:4.1cqw;font-weight:800;color:#3E454C}' +
+    '.circular-id .id-number-full{font-size:3.2cqw;font-weight:900;color:#3E454C;white-space:nowrap}' +
     '.diploma .student-photo{top:34.2%;left:32.1%;transform:none;width:35.8%;height:25%;aspect-ratio:auto;border-radius:10px;object-fit:cover}' +
     '.diploma .overlay:not(.diploma-name){font-family:"Roboto Condensed","Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;font-size:clamp(13px,3.25cqw,44px);line-height:1.15;color:#1E242B;font-weight:700;transform:scaleY(1.10);transform-origin:left center}' +
-    '.diploma-registration{top:2.5%;left:38.5%;font-weight:700}.diploma-session{top:2.5%;left:87.5%;font-weight:700}' +
-    '.diploma-id{top:13%;left:72%;font-weight:700;font-size:clamp(13px,3.25cqw,44px)}' +
+    '.diploma-session{top:2.5%;left:87.5%;font-weight:700}' +
+    '.diploma-id{top:13%;left:72%;font-weight:900;font-size:clamp(13px,3.25cqw,44px)}' +
     '.diploma-name{top:62.5%;left:16.5%;width:80%;font-size:clamp(15px,3.6cqw,48px);font-weight:800;text-transform:uppercase;letter-spacing:.3px;line-height:1.05;white-space:nowrap;color:#1E242B}' +
     '.diploma-father{top:66.2%;left:31%;width:66%;font-weight:700}' +
     '.diploma-address{top:74.7%;left:20.5%;width:75%;line-height:1.1;font-weight:700;white-space:normal;overflow-wrap:anywhere;font-size:clamp(11px,2.8cqw,36px)}.diploma-address .address-line{display:block}' +
-    '.diploma-course{top:81.0%;left:19%;width:76%;font-weight:700}.diploma-admission{top:84.0%;left:29.5%;width:68%;font-weight:700}' +
+    '.diploma-admission{top:84.0%;left:29.5%;width:68%;font-weight:700}' +
     '@media screen{body{padding:24px 0;background:#e9edf3}.card{box-shadow:0 2px 14px #0002}}' +
     '@media print{html,body{width:54mm!important;height:85.6mm!important;min-height:0!important;margin:0!important;padding:0!important;overflow:hidden!important}body{display:block!important}.card{width:54mm!important;height:85.6mm!important;aspect-ratio:auto!important;max-width:none!important;margin:0!important;box-shadow:none!important;container-type:inline-size}}' +
     '</style></head><body><main class="card ' + (diploma ? "diploma" : "circular") + '">' +
