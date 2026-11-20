@@ -124,7 +124,7 @@ function getTemplateAccent(templateName) {
   return ({
     1: "#E31E7D",
     2: "#009846",
-    3: "#008DD2",
+    3: "#00A8E8",
     4: "#E87722",
     5: "#9C2B88",
   })[semester] || "#E87722";
@@ -137,13 +137,16 @@ function drawName(ctx, student, width, height, templateName) {
   const firstText = parts.join(" ").toLocaleUpperCase();
   const lastText = surname.toLocaleUpperCase();
   const accent = getTemplateAccent(templateName);
-  let fontSize = width * 0.056;
-  const maxWidth = width * 0.84;
+  let fontSize = width * 0.072;
+  const maxWidth = width * 0.86;
   const measure = size => {
     ctx.font = `700 ${size}px ${FONT_FAMILY}`;
     return ctx.measureText(firstText + (lastText ? " " + lastText : "")).width;
   };
-  while (fontSize > width * 0.025 && measure(fontSize) > maxWidth) fontSize -= width * 0.001;
+  const measuredWidth = measure(fontSize);
+  if (measuredWidth > maxWidth) {
+    fontSize = Math.max(width * 0.06, fontSize * (maxWidth / measuredWidth));
+  }
   ctx.save();
   ctx.font = `700 ${fontSize}px ${FONT_FAMILY}`;
   ctx.textBaseline = "alphabetic";
@@ -152,7 +155,7 @@ function drawName(ctx, student, width, height, templateName) {
   const spaceWidth = lastText ? ctx.measureText(" ").width : 0;
   const lastWidth = lastText ? ctx.measureText(lastText).width : 0;
   let x = width * 0.5 - (firstWidth + spaceWidth + lastWidth) / 2;
-  const baseline = height * 0.5393;
+  const baseline = height * 0.538;
   ctx.fillStyle = "#3B4248";
   ctx.fillText(firstText, x, baseline);
   if (lastText) {
@@ -177,7 +180,7 @@ function getSequentialStudentId(student, fallbackIndex = 1) {
   const match = String(stored || "").match(/(\d+)$/);
   const parsed = match ? Number(match[1]) : 0;
   const serial = Number.isSafeInteger(parsed) && parsed > 0 ? parsed : Math.max(1, Number(fallbackIndex) || 1);
-  return String(serial).padStart(3, "0");
+  return String(serial).padStart(4, "0");
 }
 
 function drawDetails(ctx, student, width, height, fallbackIndex = 1) {
@@ -186,16 +189,16 @@ function drawDetails(ctx, student, width, height, fallbackIndex = 1) {
   const father = titleCase(firstValue(student.fatherOrHusbandName, student.fatherName, student.fatherNameAsPerRecords, student.guardianName, ""));
   const addressLines = getAddressLines(student);
   const x = width * 0.4664;
-  const fontSize = width * 0.0282;
-  const registrationFontSize = width * 0.0305;
+  const fontSize = width * 0.033;
+  const registrationFontSize = width * 0.0375;
   const baselines = [
-    height * 0.6328,
-    height * 0.6607,
-    height * 0.6886,
-    height * 0.7164,
-    height * 0.7443,
-    height * 0.7721,
-    height * 0.8000,
+    height * 0.633,
+    height * 0.661,
+    height * 0.689,
+    height * 0.717,
+    height * 0.745,
+    height * 0.773,
+    height * 0.801,
   ];
 
   ctx.save();
@@ -206,7 +209,7 @@ function drawDetails(ctx, student, width, height, fallbackIndex = 1) {
   ctx.fillText(`RCLD/ID-NO/${getSequentialStudentId(student, fallbackIndex)}`, x, baselines[0]);
 
   const prefix = "RCLD/ISL-001/";
-  ctx.font = `500 ${fontSize}px ${FONT_FAMILY}`;
+  ctx.font = `600 ${fontSize}px ${FONT_FAMILY}`;
   ctx.fillText(prefix, x, baselines[1]);
   const prefixWidth = ctx.measureText(prefix).width;
   ctx.font = `700 ${registrationFontSize}px ${FONT_FAMILY}`;
@@ -225,7 +228,10 @@ export async function renderStudentIcardCanvas(student, templateName, fallbackIn
     throw new Error("A student and valid ID-card template are required.");
   }
   await document.fonts.ready;
-  await document.fonts.load(`700 36px ${FONT_FAMILY}`).catch(() => []);
+  await document.fonts.load('700 92px "Arial Narrow"').catch(() => []);
+  await document.fonts.load('600 42px "Roboto Condensed"').catch(() => []);
+  await document.fonts.load('700 48px "Roboto Condensed"').catch(() => []);
+  await document.fonts.ready;
   let templatePromise = templateImageCache.get(templateName);
   if (!templatePromise) {
     templatePromise = loadImage(TEMPLATE_ROOT + encodeURIComponent(templateName));
