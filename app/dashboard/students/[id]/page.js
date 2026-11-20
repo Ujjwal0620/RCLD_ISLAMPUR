@@ -71,9 +71,9 @@ export default function StudentDetailsPage({ params }) {
             student={student}
             mode={icardOutputMode}
             onClose={() => setIcardDialogOpen(false)}
-            onSelect={(templateName) => {
+            onSelect={(templateName, _records, mode) => {
               setIcardDialogOpen(false);
-              printStudentICard("", icardOutputMode, templateName);
+              printStudentICard("", mode || icardOutputMode, templateName);
             }}
           />
           <StudentEditPanel
