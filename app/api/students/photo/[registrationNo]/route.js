@@ -53,22 +53,26 @@ export async function GET(_request, { params }) {
     }
 
     // Cloudinary is the durable source of truth; local files are only a fallback.
-    await connectMongoDB();
-    const numericCode = /^\\d+$/.test(code) ? Number(code) : null;
-    const student = await Student.findOne({
-      $or: [
-        { regnNo: code },
-        { enrollmentNo: code },
-        ...(numericCode === null ? [] : [{ regnNo: numericCode }, { enrollmentNo: numericCode }]),
-      ],
-    }).select("photoUrl regnNo enrollmentNo").lean();
+    let cloudinaryUrl = "";
+    try {
+      await connectMongoDB();
+      const numericCode = /^\\d+$/.test(code) ? Number(code) : null;
+      const student = await Student.findOne({
+        $or: [
+          { regnNo: code },
+          { enrollmentNo: code },
+          ...(numericCode === null ? [] : [{ regnNo: numericCode }, { enrollmentNo: numericCode }]),
+        ],
+      }).select("photoUrl regnNo enrollmentNo").lean();
 
-    let cloudinaryUrl = safeCloudinaryUrl(student?.photoUrl);
-    if (!cloudinaryUrl) {
-      const master = await StudentMaster.findOne({
-        stCodes: code,
-      }).select("photoUrl").lean();
-      cloudinaryUrl = safeCloudinaryUrl(master?.photoUrl);
+      cloudinaryUrl = safeCloudinaryUrl(student?.photoUrl);
+      if (!cloudinaryUrl) {
+        const master = await StudentMaster.findOne({ stCodes: code }).select("photoUrl").lean();
+        cloudinaryUrl = safeCloudinaryUrl(master?.photoUrl);
+      }
+    } catch (databaseError) {
+      // Keep local asset fallback available if Atlas is temporarily unreachable.
+      console.warn("[student-photo] Database lookup unavailable:", databaseError?.message || databaseError);
     }
     if (cloudinaryUrl) {
       return NextResponse.redirect(cloudinaryUrl, {
@@ -78,8 +82,9 @@ export async function GET(_request, { params }) {
     }
 
     for (const [extension, contentType] of EXTENSIONS) {
+      for (const filename of [code + extension, code + extension.toUpperCase()]) {
       try {
-        const image = await readFile(path.join(PHOTO_DIRECTORY, code + extension));
+        const image = await readFile(path.join(PHOTO_DIRECTORY, filename));
         return new NextResponse(new Uint8Array(image), {
           status: 200,
           headers: {
@@ -90,6 +95,7 @@ export async function GET(_request, { params }) {
         });
       } catch (error) {
         if (error.code !== "ENOENT") throw error;
+      }
       }
     }
 
