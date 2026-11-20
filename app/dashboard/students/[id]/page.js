@@ -91,7 +91,7 @@ export default function StudentDetailsPage({ params }) {
             uploadStudentPhoto={uploadStudentPhoto}
             photoUploading={photoUploading}
           />
-          <StudentProfileHero student={student} />
+          <StudentProfileHero student={student} uploadStudentPhoto={uploadStudentPhoto} photoUploading={photoUploading} />
           <StudentTransitionPanel
             student={student} batches={batches} history={history} setHistory={setHistory}
             editForm={editForm} setEditForm={setEditForm} setStudent={setStudent}
