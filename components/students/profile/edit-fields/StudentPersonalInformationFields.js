@@ -39,16 +39,15 @@ export default function StudentPersonalInformationFields({ editForm, setEditForm
                                 onChange={(v) => setEditForm((f) => ({ ...f, whatsappNumber: v }))}
                               />
                               <label className="form-field">
-                                <span>Email Address *</span>
+                                <span>Email Address</span>
                                 <input
                                   type="email"
-                                  required
                                   value={editForm.email || ""}
                                   onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
                                 />
                               </label>
                               <label className="form-field">
-                                <span>Aadhaar Card Number *</span>
+                                <span>Aadhaar Card Number</span>
                                 <input
                                   inputMode="numeric"
                                   pattern="[0-9]{12}"
