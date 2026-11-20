@@ -56,9 +56,11 @@ export function buildCfkStudentIcardMarkup({
       .cfk-field strong.cfk-id-code { flex:0 0 auto; font-size:1.95mm; font-weight:700; }
       .cfk-address { white-space:normal!important; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; line-height:1.05; }
       .cfk-semester {
-        position:absolute; left:3.2%; top:74.5%; width:14%; height:13%;
+        position:absolute; left:3.2%; top:75.2%; width:14%; height:12%;
         display:flex; align-items:center; justify-content:center;
-        color:#fff; font-family:Arial,sans-serif; font-weight:800; font-size:5mm;
+        padding-top:1mm; overflow:visible;
+        color:#fff; font-family:Arial,sans-serif; font-weight:800;
+        font-size:4.6mm; line-height:1;
       }
     </style>
     <div class="cfk-template-card">
