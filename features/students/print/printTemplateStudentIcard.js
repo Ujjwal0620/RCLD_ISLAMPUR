@@ -200,7 +200,7 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     '.diploma-course{top:85.2%;left:19%;width:78%;font-weight:400}' +
     '.diploma-admission{top:90.3%;left:29.5%;width:68%;font-weight:400}' +
     '@media screen{body{padding:24px 0;background:#e9edf3}.card{box-shadow:0 2px 14px #0002}}' +
-    '@media print{html,body{width:54mm!important;height:85.6mm!important;min-height:0!important;margin:0!important;padding:0!important;overflow:hidden!important}body{display:block!important}.card{width:54mm!important;height:85.6mm!important;aspect-ratio:auto!important;max-width:none!important;margin:0!important;box-shadow:none!important;container-type:inline-size}}' +
+    '@media print{html,body{width:54mm!important;height:85.6mm!important;min-height:0!important;margin:0!important;padding:0!important;overflow:hidden!important}body{display:block!important}.card{width:640px!important;height:1016px!important;aspect-ratio:auto!important;max-width:none!important;margin:0!important;box-shadow:none!important;container-type:inline-size;transform:scale(.3185)!important;transform-origin:top left!important}}' +
     '</style></head><body><main class="card ' + (diploma ? "diploma" : "circular" + (/robotics/i.test(templateName) ? " robotics" : "")) + '">' +
     '<canvas class="template-background-canvas" aria-hidden="true"></canvas>' +
     '<img class="template-background-source" src="/assets/icardtemplates/' + encodeURIComponent(templateName) + '" alt="" crossorigin="anonymous" style="display:none">' +
