@@ -18,8 +18,8 @@ function loadLocalEnvironment() {
   const mode = process.env.NODE_ENV || "development";
   for (const file of [".env." + mode + ".local", ".env.local", ".env." + mode, ".env"]) {
     if (!existsSync(file)) continue;
-    for (const line of readFileSync(file, "utf8").split(/\\r?\\n/)) {
-      const match = line.trim().match(/^(?:export\\s+)?([A-Za-z_][A-Za-z0-9_]*)\\s*=\\s*(.*)$/);
+    for (const line of readFileSync(file, "utf8").split(/\r?\n/)) {
+      const match = line.trim().match(/^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
       if (!match || process.env[match[1]] !== undefined) continue;
       let value = match[2].trim();
       if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
