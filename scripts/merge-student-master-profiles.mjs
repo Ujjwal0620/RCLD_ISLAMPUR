@@ -15,7 +15,7 @@ import mongoose from "mongoose";
 
 const apply = process.argv.includes("--apply");
 const normalizeName = value => String(value ?? "").trim().normalize("NFKC")
-  .replace(/_\d+\s*$/, "").toUpperCase().replace(/\s+/g, " ")
+  .replace(/[',.]+$/, "").replace(/_\d+\s*$/, "").toUpperCase().replace(/\s+/g, " ")
   .replace(/[',.]+$/, "").trim();
 const normalizeFather = value => normalizeName(value).replace(/[^A-Z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
 const phones = value => [...new Set(String(value ?? "").split(/[,;/|]/)
