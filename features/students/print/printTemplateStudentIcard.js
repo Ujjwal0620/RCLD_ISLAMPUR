@@ -147,6 +147,20 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     '<div class="overlay circular-value circular-admission">' + escapeHtml(admission) + '</div>' +
     '<div class="overlay circular-value circular-father">' + escapeHtml(fatherName) + '</div>' +
     '<div class="overlay circular-value circular-address">' + addressMarkup + '</div>';
+  const circularLabelPatchTemplates = new Set([
+    "ID Card Sem-1.jpg", "ID Card Sem-2.jpg", "ID Card Sem-3.jpg",
+    "ID Card Sem-4.jpg", "ID Card Sem-5.jpg", "ID Card School Course.jpg",
+    "ID Card Robotics 1st year.jpg", "ID Card Robotics 2nd year.jpg",
+    "ID Card Robotics 3rd year.jpg",
+  ]);
+  const hasCircularLabelPatch = !diploma && circularLabelPatchTemplates.has(templateName);
+  const usesSampledRoboticsPatch = hasCircularLabelPatch && templateName.startsWith("ID Card Robotics ");
+  const circularLabelPatch = hasCircularLabelPatch
+    ? '<div class="circular-label-patch' + (usesSampledRoboticsPatch ? ' robotics-label-patch' : '') + '"></div>' +
+      '<div class="overlay circular-label circular-label-admission">Date of Admn. :</div>' +
+      '<div class="overlay circular-label circular-label-father">Father\'s Name :</div>' +
+      '<div class="overlay circular-label circular-label-address">Address :</div>'
+    : "";
   const diplomaValues = diploma
     ? '<div class="overlay diploma-session">' + escapeHtml(session || "—") + '</div>' +
       '<div class="overlay diploma-id">' + idValueMarkup + '</div>' +
@@ -172,6 +186,10 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     '.circular-value{left:46.8%;width:48.5%;text-align:left;font-family:"Roboto Condensed","Arial Narrow",Arial,sans-serif;font-weight:700;font-size:clamp(14px,3.35cqw,46px);color:#3E454C;transform:scaleY(1.10);transform-origin:left center;white-space:nowrap}' +
     '.circular-id{top:60.9%}.circular-id .id-number-prefix{font-size:3.35cqw;font-weight:700}.circular-id .id-number-code{font-size:3.95cqw;font-weight:800}.circular-admission{top:63.8%}.circular-father{top:66.6%}' +
     '.circular-address{top:69.4%;transform-origin:top left;line-height:1.28;word-break:break-word;white-space:normal;max-height:10.8%;overflow:hidden}' +
+    '.circular-label-patch{position:absolute;z-index:3;top:63.3%;left:15%;width:30.5%;height:14.5%;background:#fff;pointer-events:none}' +
+    '.circular-label-patch.robotics-label-patch{background:#fff}' +
+    '.circular-label{z-index:4;left:15%;width:29.8%;text-align:right;font-family:"Roboto Condensed","Arial Narrow",Arial,sans-serif;font-weight:700;font-size:clamp(14px,3.35cqw,46px);color:var(--active-template-badge-color);transform:scaleY(1.10);transform-origin:right center;white-space:nowrap;overflow:visible}' +
+    '.circular-label-admission{top:63.8%}.circular-label-father{top:66.6%}.circular-label-address{top:69.4%}' +
     '.circular-address .address-line{display:block;min-height:0}' +
     '.diploma .student-photo{top:34.2%;left:32.1%;transform:none;width:35.8%;height:25%;aspect-ratio:auto;border-radius:10px;object-fit:cover}' +
     '.diploma .overlay{font-family:Arial,"Helvetica Neue","Liberation Sans",sans-serif;font-size:clamp(13px,3.2cqw,44px);color:#1E242B;font-weight:700;line-height:1.1;transform:none;transform-origin:left top;white-space:nowrap}' +
@@ -185,7 +203,12 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     '@media print{html,body{width:54mm!important;height:85.6mm!important;margin:0!important;padding:0!important;overflow:hidden!important;background:transparent!important}body{display:block!important}.card{width:54mm!important;height:85.6mm!important;max-width:none!important;aspect-ratio:640/1016!important;margin:0!important;box-shadow:none!important}}' +
     '</style></head><body><main class="card ' + (diploma ? "diploma" : "circular") + '">' +
     '<img class="template-background" src="/assets/icardtemplates/' + encodeURIComponent(templateName) + '" alt="" crossorigin="anonymous">' +
-    photo + diplomaValues + '</main></body></html>';
+    (hasCircularLabelPatch ? circularLabelPatch : "") +
+    photo + diplomaValues + '</main>' +
+    '<script>' +
+    'const patch=document.querySelector(".robotics-label-patch");' +
+    'window.__rcldPatchReady=patch?(async()=>{const image=document.querySelector(".template-background");try{if(image.decode)await image.decode();else if(!image.complete)await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=reject});const canvas=document.createElement("canvas");canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;const context=canvas.getContext("2d",{willReadFrequently:true});context.drawImage(image,0,0);const pixel=context.getImageData(Math.round(image.naturalWidth*.2),Math.round(image.naturalHeight*.65),1,1).data;patch.style.backgroundColor="rgb("+pixel[0]+","+pixel[1]+","+pixel[2]+")";}catch(error){console.error("Unable to sample Robotics template patch color",error);}})():Promise.resolve();' +
+    '</script></body></html>';
 }
 
 export async function printTemplateStudentIcard({ student, templateName, outputMode = "print", setMessage }) {
@@ -209,7 +232,7 @@ export async function printTemplateStudentIcard({ student, templateName, outputM
       return;
     }
     win.document.open();
-    win.document.write(html.replace("</body>", '<script>window.addEventListener("load",async()=>{try{const imgs=[...document.images];await Promise.all(imgs.map(async img=>{if(img.decode)await img.decode();else if(!img.complete||!img.naturalWidth)await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;});}));setTimeout(()=>window.print(),150);}catch(error){console.error(error);alert("Unable to prepare this ID card template.");}});</script></body>'));
+    win.document.write(html.replace("</body>", '<script>window.addEventListener("load",async()=>{try{await window.__rcldPatchReady;const imgs=[...document.images];await Promise.all(imgs.map(async img=>{if(img.decode)await img.decode();else if(!img.complete||!img.naturalWidth)await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;});}));setTimeout(()=>window.print(),150);}catch(error){console.error(error);alert("Unable to prepare this ID card template.");}});</script></body>'));
     win.document.close();
     return;
   }
@@ -225,6 +248,7 @@ export async function printTemplateStudentIcard({ student, templateName, outputM
     });
     const doc = frame.contentDocument;
     if (!doc) throw new Error("Unable to prepare the selected template.");
+    await doc.defaultView.__rcldPatchReady;
     
     await Promise.all([...doc.images].map(async img => {
       try {
