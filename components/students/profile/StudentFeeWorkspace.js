@@ -86,7 +86,7 @@ export default function StudentFeeWorkspace({
                   </span>
                   <span>
                     <b>Enrollment</b>
-                    {value(student.enrollmentNo)}
+                    {value(currentStCode)}
                   </span>
                   <span>
                     <b>Fee status</b>
