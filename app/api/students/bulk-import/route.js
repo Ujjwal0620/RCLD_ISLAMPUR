@@ -217,16 +217,20 @@ function asStudentPayload(row, course, sourceName) {
   return {
     regnNo: row.regnNo, enrollmentNo: row.regnNo, formNo: row.formNo,
     applicantName: row.name, sourceStudentName: row.sourceName,
-    dateOfBirth: row.dob, admissionDate: row.admissionDate, dateOfAdmission: row.admissionDate,
-    sex: row.gender, sourceSex: row.gender, fatherOrHusbandName: row.fatherName,
+    dateOfBirth: row.dob, dob: row.dob,
+    admissionDate: row.admissionDate, dateOfAdmission: row.admissionDate,
+    sex: row.gender, sourceSex: row.gender,
+    fatherOrHusbandName: row.fatherName, fatherName: row.fatherName,
     address: row.address, presentAddress: row.address, permanentAddress: row.address,
-    sameAsPresentAddress: Boolean(row.address), postOffice: row.postOffice,
-    policeStation: row.policeStation, district: row.district, pin: row.pin,
-    sourceAddressRaw: row.sourceAddressRaw, mobileNumber: row.phone,
-    whatsappNumber: row.phone, guardianContactNumber: row.secondaryPhone,
-    alternatePhoneNumber: row.secondaryPhone, sourcePhone: row.sourcePhone,
-    sourceQualification: row.qualification, courseCode: course.code,
-    courseName: course.name || COURSE_NAMES[course.code] || course.code,
+    sameAsPresentAddress: Boolean(row.address),
+    ward: row.ward, village: row.village, po: row.po, ps: row.ps,
+    postOffice: row.postOffice, policeStation: row.policeStation,
+    district: row.district, pincode: row.pincode, pin: row.pin,
+    sourceAddressRaw: row.sourceAddressRaw,
+    mobileNumber: row.phone, phone: row.phone, whatsappNumber: row.phone,
+    guardianContactNumber: row.altPhone, alternatePhoneNumber: row.altPhone, altPhone: row.altPhone,
+    sourcePhone: row.sourcePhone, qualification: row.qualification, sourceQualification: row.qualification,
+    course: row.course, courseCode: course.code, courseName: course.name || course.code,
     sourceCourseLabel: row.courseLabel || row.course,
     importSource: sourceName, sourceRowNo: row.rowNo,
     sourceRowKey: [sourceName, row.regnNo || "NO-REGN", row.rowNo, row.course || "NO-COURSE"].join("|")
@@ -335,7 +339,7 @@ export async function POST(request) {
     let imported = 0, enriched = 0, unchanged = 0, skippedNew = 0;
     const courseCodes = [...new Set(uniqueRows.map(row => row.course).filter(Boolean))];
     const baseCodes = [...new Set(courseCodes.map(code => code.split("-")[0]))];
-    const coursePatterns = [...new Set([...courseCodes, ...baseCodes])].map(code => new RegExp("^" + code.replace(/[.*+?^$()|[\\]\\\\]/g, "\\\\$&") + "$", "i"));
+    const coursePatterns = [...new Set([...courseCodes, ...baseCodes])];
     const courses = coursePatterns.length ? await Course.find({ code: { $in: coursePatterns } }).lean() : [];
     const courseMap = new Map(courses.map(course => [String(course.code).toUpperCase(), course]));
     for (const row of uniqueRows) {
@@ -345,7 +349,7 @@ export async function POST(request) {
       const courseInfo = { code: row.course, name: course?.name || COURSE_NAMES[row.course] || row.course };
       const payload = asStudentPayload(row, courseInfo, sourceName);
       if (existing) {
-        if (nameSimilarity(existing.applicantName || existing.name, row.name) < 0.65) { warnings.push({ row: row.rowNo, Regn_No: row.regnNo, reason: "Registration number matched but student name did not; existing student left unchanged." }); continue; }
+        if ((existing.applicantName || existing.name) && nameSimilarity(existing.applicantName || existing.name, row.name) < 0.65) { warnings.push({ row: row.rowNo, Regn_No: row.regnNo, reason: "Registration number matched but student name did not; existing student left unchanged." }); continue; }
         const missing = buildMissingFields(existing, payload);
         if (!Object.keys(missing).length) { unchanged += 1; continue; }
         operations.push({ updateOne: { filter: { _id: existing._id }, update: { $set: missing }, upsert: false } });
