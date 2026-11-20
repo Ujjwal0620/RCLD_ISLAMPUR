@@ -120,7 +120,7 @@ function drawPhoto(ctx, image, width, height) {
 }
 
 function getTemplateAccent(templateName) {
-  const semester = Number(String(templateName || "").match(/sem[-_ ]?(\\d+)/i)?.[1] || 0);
+  const semester = Number(String(templateName || "").match(/sem[-_ ]?(\d+)/i)?.[1] || 0);
   return ({
     1: "#E31E7D",
     2: "#009846",
@@ -131,7 +131,7 @@ function getTemplateAccent(templateName) {
 }
 
 function drawName(ctx, student, width, height, templateName) {
-  const parts = String(firstValue(student.applicantName, student.fullName, student.name, "")).trim().split(/\\s+/).filter(Boolean);
+  const parts = String(firstValue(student.applicantName, student.fullName, student.name, "")).trim().split(/\s+/).filter(Boolean);
   if (!parts.length) return;
   const surname = parts.length > 1 ? parts.pop() : "";
   const firstText = parts.join(" ").toLocaleUpperCase();
@@ -172,9 +172,9 @@ function getSequentialStudentId(student, fallbackIndex = 1) {
   const stored = candidates.find(value => {
     if (typeof value === "number") return Number.isSafeInteger(value) && value > 0;
     const text = String(value || "").trim();
-    return /^\\d+$/.test(text) || /(?:ID[-_ ]?NO|ID[-_ ]?CARD)[/:_-]+\\d+$/i.test(text);
+    return /^\d+$/.test(text) || /(?:ID[-_ ]?NO|ID[-_ ]?CARD)[/:_-]+\d+$/i.test(text);
   });
-  const match = String(stored || "").match(/(\\d+)$/);
+  const match = String(stored || "").match(/(\d+)$/);
   const parsed = match ? Number(match[1]) : 0;
   const serial = Number.isSafeInteger(parsed) && parsed > 0 ? parsed : Math.max(1, Number(fallbackIndex) || 1);
   return String(serial).padStart(3, "0");
@@ -344,22 +344,22 @@ export function getRecommendedIcardTemplate(student, templates) {
     student?.sourceCourseLabel,
     student?.courseName,
   ].map(value => String(value ?? "").trim()).filter(Boolean);
-  const explicitSemester = candidates.find(value => /(?:SM|SEM(?:ESTER)?)\\s*[-_ ]?\\s*(?:VI|IV|V|III|II|I|[1-6])\\b/i.test(value));
+  const explicitSemester = candidates.find(value => /(?:SM|SEM(?:ESTER)?)\s*[-_ ]?\s*(?:VI|IV|V|III|II|I|[1-6])\b/i.test(value));
   const numericSemester = candidates.find(value => /^(?:VI|IV|V|III|II|I|[1-6])$/i.test(value));
   const semesterSource = explicitSemester || numericSemester || "";
   const romanMap = { i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6 };
-  const semesterMatch = semesterSource.match(/(?:SM|SEM(?:ESTER)?)\\s*[-_ ]?\\s*(VI|IV|V|III|II|I|[1-6])\\b/i)
+  const semesterMatch = semesterSource.match(/(?:SM|SEM(?:ESTER)?)\s*[-_ ]?\s*(VI|IV|V|III|II|I|[1-6])\b/i)
     || semesterSource.match(/^(VI|IV|V|III|II|I|[1-6])$/i);
   const token = semesterMatch?.[1] || "";
   const semester = token ? (romanMap[token.toLowerCase()] || Number(token)) : 0;
   let expected = "";
 
   if (/robotics/.test(course)) {
-    const courseYear = Number(course.match(/([1-3])(?:st|nd|rd)?\\s*year/i)?.[1] || 0);
+    const courseYear = Number(course.match(/([1-3])(?:st|nd|rd)?\s*year/i)?.[1] || 0);
     const year = Number(firstValue(student?.roboticsYear, student?.courseYear, student?.yearOfCourse, courseYear || semester || 1));
     const safeYear = Math.min(3, Math.max(1, Number.isFinite(year) ? year : 1));
     expected = "ID Card Robotics " + safeYear + (safeYear === 1 ? "st" : safeYear === 2 ? "nd" : "rd") + " year.jpg";
-  } else if (/coding\\s*for\\s*kids|\\bkids\\b/.test(course) || explicitSemester) {
+  } else if (/coding\s*for\s*kids|\bkids\b/.test(course) || explicitSemester) {
     expected = `ID Card Sem-${Math.min(6, Math.max(1, semester || 1))}.jpg`;
   } else if (/school/.test(course)) {
     expected = "ID Card School Course.jpg";
