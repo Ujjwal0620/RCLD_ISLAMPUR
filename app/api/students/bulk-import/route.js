@@ -54,7 +54,8 @@ function dateValue(value) {
   if (value === null || value === undefined || value === "") return "";
   let year, month, day;
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
-    year = value.getFullYear(); month = value.getMonth() + 1; day = value.getDate();
+    // SheetJS Date cells represent Excel calendar dates; UTC getters avoid server-timezone day shifts.
+    year = value.getUTCFullYear(); month = value.getUTCMonth() + 1; day = value.getUTCDate();
   } else if (typeof value === "number" && Number.isFinite(value)) {
     const parsed = XLSX.SSF.parse_date_code(value);
     if (!parsed) return "";
@@ -180,6 +181,8 @@ function parseRows(workbook, requestedSheet = "") {
     if (!admissionDate) warnings.push("DOI is missing or invalid.");
     if (!course.code) warnings.push("Course/Semester is missing.");
     const errors = [];
+    if (!regnNo) errors.push("Registration number is missing.");
+    if (!name) errors.push("Student name is missing.");
     rows.push({
       rowNo: i + 1, regnNo, name, sourceName: clean(get("name")), admissionDate,
       gender: gender.value, fatherName: clean(get("father")), phone: phones.primary,
