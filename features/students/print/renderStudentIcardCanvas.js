@@ -57,28 +57,28 @@ function getAddressLines(student) {
   const rawParts = typeof address === "string"
     ? address.split(/[,|\n]+/).map(part => part.trim()).filter(Boolean)
     : [];
-  const labelled = (pattern) => rawParts.find(part => pattern.test(part)) || "";
-  const valueAfterLabel = (part) => String(part || "").replace(/^[^:.-]+[:.-]\s*/i, "").replace(/^(?:P\.?\s*O\.?|P\.?\s*S\.?|Dist\.?)\s*/i, "").trim();
+  const labelled = pattern => rawParts.find(part => pattern.test(part)) || "";
+  const valueAfterLabel = part => String(part || "").replace(/^(?:P\.?\s*O\.?|P\.?\s*S\.?|Dist\.?|ward(?:\s*no)?|village|vill|colony)\s*[:.-]?\s*/i, "").trim();
 
   const ward = firstValue(
     source.ward, source.wardNo, source.colony, source.village, source.vill,
     student.ward, student.wardNo, student.colony, student.village, student.vill,
     valueAfterLabel(labelled(/^(?:ward|ward\s*no|village|vill|colony)\b/i)),
-    rawParts.find(part => !/^(?:P\.?\s*O\.?|P\.?\s*S\.?|Dist\.?)\b/i.test(part))
+    rawParts.find(part => !/^(?:P\.?\s*O\.?|P\.?\s*S\.?|Dist\.?)\s*/i.test(part))
   );
   const po = firstValue(
     source.po, source.postOffice, source.post_office,
     student.po, student.postOffice, student.post_office,
-    valueAfterLabel(labelled(/^P\.?\s*O\.?\b/i))
+    valueAfterLabel(labelled(/^P\.?\s*O\.?(?:\s|$)/i))
   );
   const ps = firstValue(
     source.ps, source.policeStation, source.police_station,
     student.ps, student.policeStation, student.police_station,
-    valueAfterLabel(labelled(/^P\.?\s*S\.?\b/i))
+    valueAfterLabel(labelled(/^P\.?\s*S\.?(?:\s|$)/i))
   );
   const district = firstValue(
     source.district, student.district, student.permanentDistrict,
-    valueAfterLabel(labelled(/^Dist\.?\b/i))
+    valueAfterLabel(labelled(/^Dist\.?(?:\s|$)/i))
   );
   const clean = value => String(value || "").trim().replace(/^(?:P\.?\s*O\.?|P\.?\s*S\.?|Dist\.?)\s*/i, "").trim();
   const wardLine = clean(ward);
@@ -89,7 +89,6 @@ function getAddressLines(student) {
   const districtLine = district ? "Dist. " + clean(district) : "";
   return [wardLine, poPsLine, districtLine];
 }
-
 function loadImage(src, { crossOrigin = false } = {}) {
   return new Promise((resolve, reject) => {
     const image = new Image();
@@ -329,9 +328,10 @@ export function getRecommendedIcardTemplate(student, templates) {
     : 0;
   let expected = "";
   if (/robotics/.test(course)) {
-    const courseYear = Number(course.match(/([1-3])(?:st|nd|rd)?\\s*year/i)?.[1] || 0);\n    const year = Number(firstValue(student?.roboticsYear, student?.courseYear, student?.yearOfCourse, courseYear, semester, 1));
+    const courseYear = Number(course.match(/([1-3])(?:st|nd|rd)?\s*year/i)?.[1] || 0);
+    const year = Number(firstValue(student?.roboticsYear, student?.courseYear, student?.yearOfCourse, courseYear || semester || 1));
     const safeYear = Math.min(3, Math.max(1, Number.isFinite(year) ? year : 1));
-    expected = `ID Card Robotics ${safeYear}${safeYear === 1 ? "st" : safeYear === 2 ? "nd" : "rd"} year.jpg`;
+    expected = \`ID Card Robotics \${safeYear}\${safeYear === 1 ? "st" : safeYear === 2 ? "nd" : "rd"} year.jpg\`;
   } else if (/coding\s*for\s*kids|\bkids\b|\bsm[-_ ]|\bsem(?:ester)?\s*[-_ ]?/.test(course) || semester) {
     expected = semester ? `ID Card Sem-${Math.min(6, Math.max(1, semester))}.jpg` : "ID Card Sem-1.jpg";
   } else if (/school/.test(course)) {
