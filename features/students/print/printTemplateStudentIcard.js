@@ -201,7 +201,7 @@ export async function printTemplateStudentIcard({ student, templateName, outputM
       return;
     }
     win.document.open();
-    win.document.write(html.replace("</body>", '<script>window.addEventListener("load",async()=>{await Promise.all([...document.images].map((img)=>img.decode?img.decode().catch(()=>{}):Promise.resolve()));setTimeout(()=>window.print(),150);});</script></body>'));
+    win.document.write(html.replace("</body>", '<script>window.addEventListener("load",async()=>{await Promise.all([...document.images].map(async img=>{try{if(img.decode)await img.decode();else if(!img.complete||!img.naturalWidth)await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;});if(!img.naturalWidth)throw new Error("Image unavailable");}catch(error){if(img.classList.contains("student-photo")){const placeholder=document.createElement("div");placeholder.className="student-photo photo-empty";img.replaceWith(placeholder);}else{throw error;}}}));setTimeout(()=>window.print(),150);});</script></body>'));
     win.document.close();
     return;
   }
