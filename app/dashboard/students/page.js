@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Search, UserPlus, ChevronLeft, ChevronRight, SlidersHorizontal, X, RotateCcw, Filter, Pencil, Trash2, Send, Upload, ShieldCheck, Users, UserRoundCheck, GraduationCap, Download, Printer } from "lucide-react";
+import { Search, UserPlus, ChevronLeft, ChevronRight, SlidersHorizontal, X, RotateCcw, Filter, Pencil, Trash2, Send, Upload, ShieldCheck, Users, UserRoundCheck, GraduationCap, Download, Printer, ImagePlus } from "lucide-react";
 import CodingForKidsIcardDialog from "@/components/students/profile/CodingForKidsIcardDialog";
+import BulkStudentPhotoUploadDialog from "@/components/students/BulkStudentPhotoUploadDialog";
 import { exportStudentIcards } from "@/features/students/print/renderStudentIcardCanvas";
 import ERPLayout from "@/components/ERPLayout";
 
@@ -15,6 +16,7 @@ export default function StudentsPage(){
   const [selectedStudents,setSelectedStudents]=useState([]),[batches,setBatches]=useState([]),[selectedBatch,setSelectedBatch]=useState(""),[assigning,setAssigning]=useState(false);
   const [selectAllMatching,setSelectAllMatching]=useState(false),[bulkStatus,setBulkStatus]=useState(""),[bulkBusy,setBulkBusy]=useState(false);
   const [bulkIcardDialogOpen,setBulkIcardDialogOpen]=useState(false),[bulkIcardMode,setBulkIcardMode]=useState("jpg"),[bulkIcardStudents,setBulkIcardStudents]=useState([]),[bulkIcardLoading,setBulkIcardLoading]=useState(false);
+  const [bulkPhotoDialogOpen,setBulkPhotoDialogOpen]=useState(false);
 
   async function load(page=1,override=filters){
     setLoading(true);
@@ -119,7 +121,7 @@ export default function StudentsPage(){
   }
 
   return <ERPLayout active="/dashboard/students">
-    <header className="topbar"><div><div className="crumb">Students / Registry</div><h1>Students</h1></div><div className="top-actions"><a className="ghost-btn" href="/dashboard/students/import"><Upload size={17}/> Bulk Import</a><a className="primary-btn" href="/dashboard/students/register"><UserPlus size={17}/> Register Student</a></div></header>
+    <header className="topbar"><div><div className="crumb">Students / Registry</div><h1>Students</h1></div><div className="top-actions"><button className="ghost-btn" onClick={()=>setBulkPhotoDialogOpen(true)}><ImagePlus size={17}/> Bulk Upload Photos</button><a className="ghost-btn" href="/dashboard/students/import"><Upload size={17}/> Bulk Import</a><a className="primary-btn" href="/dashboard/students/register"><UserPlus size={17}/> Register Student</a></div></header>
     <section className="directory-overview">
       <div>
         <span className="eyebrow">STUDENT OPERATIONS</span>
@@ -174,5 +176,6 @@ export default function StudentsPage(){
       <div className="pagination"><span>Showing {students.length?((pagination.page-1)*50)+1:0}–{Math.min(pagination.page*50,pagination.total)} of {pagination.total}</span><div><button disabled={pagination.page<=1} onClick={()=>load(pagination.page-1)}><ChevronLeft size={17}/></button><span className="page-no">Page {pagination.page} of {pagination.totalPages}</span><button disabled={pagination.page>=pagination.totalPages} onClick={()=>load(pagination.page+1)}><ChevronRight size={17}/></button></div></div>
     </section>
     <CodingForKidsIcardDialog open={bulkIcardDialogOpen} students={bulkIcardStudents} mode={bulkIcardMode} onClose={()=>setBulkIcardDialogOpen(false)} onSelect={confirmBulkIcards}/>
+    <BulkStudentPhotoUploadDialog open={bulkPhotoDialogOpen} onClose={()=>setBulkPhotoDialogOpen(false)} onComplete={()=>load(pagination.page)}/>
   </ERPLayout>
 }
