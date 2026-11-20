@@ -219,7 +219,11 @@ function readSourceRows(workbook) {
       course: clean(get("course")),
       sourceRowNo: index + 1
     };
-    row.sourceRowKey = [row.regnNo, row.formNo, row.applicantName.toLowerCase(), row.admissionDate, row.course.toUpperCase()].join("|");
+    row.sourceRowKey = [
+      row.regnNo, row.formNo, normalizeHeader(row.applicantName), row.dateOfBirth,
+      normalizeHeader(row.fatherOrHusbandName), row.sourcePhone.replace(/\\D/g, ""),
+      row.admissionDate, row.course.toUpperCase()
+    ].join("|");
     const errors = [];
     if (!row.regnNo) errors.push("St_Code is blank.");
     if (!row.applicantName) errors.push("St_Name is blank.");
@@ -334,7 +338,8 @@ export async function POST(request) {
       const identityFilters = [{ importSource: sourceName, sourceRowKey: row.sourceRowKey }];
       if (row.formNo) identityFilters.push({
         regnNo: row.regnNo, formNo: row.formNo, applicantName: row.applicantName,
-        admissionDate: row.admissionDate, courseCode: course.code
+        dateOfBirth: row.dateOfBirth, fatherOrHusbandName: row.fatherOrHusbandName,
+        sourcePhone: row.sourcePhone, admissionDate: row.admissionDate, courseCode: course.code
       });
       return {
         updateOne: {
