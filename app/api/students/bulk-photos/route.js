@@ -4,6 +4,7 @@ import { connectMongoDB } from "@/lib/mongodb";
 import { getSession } from "@/lib/auth";
 import { configureCloudinary } from "@/lib/cloudinary";
 import StudentMaster from "@/models/StudentMaster";
+import StudentEnrollment from "@/models/StudentEnrollment";
 
 export const runtime = "nodejs";
 
@@ -77,18 +78,34 @@ export async function POST(request) {
         continue;
       }
 
-      const numericRegistrationNo = /^\d+$/.test(registrationNo) ? Number(registrationNo) : null;
-      const student = await Student.findOne({
-        $or: [
-          { regnNo: registrationNo },
-          { enrollmentNo: registrationNo },
-          ...(numericRegistrationNo === null ? [] : [
-            { regnNo: numericRegistrationNo },
-            { enrollmentNo: numericRegistrationNo },
-          ]),
-        ],
-      }).select("_id regnNo enrollmentNo applicantName").lean();
-      if (!student) {
+      const numericRegistrationNo = /^\\d+$/.test(registrationNo) ? Number(registrationNo) : null;
+      const [student, masterByCode, enrollment] = await Promise.all([
+        Student.findOne({
+          $or: [
+            { regnNo: registrationNo },
+            { enrollmentNo: registrationNo },
+            ...(numericRegistrationNo === null ? [] : [
+              { regnNo: numericRegistrationNo },
+              { enrollmentNo: numericRegistrationNo },
+            ]),
+          ],
+        }).select("_id regnNo enrollmentNo applicantName").lean(),
+        StudentMaster.findOne({ stCodes: registrationNo })
+          .select("_id stCodes legacyStudentIds fullName").lean(),
+        StudentEnrollment.findOne({ stCode: registrationNo })
+          .select("studentId legacyStudentId stCode").lean(),
+      ]);
+      let master = masterByCode;
+      if (!master && enrollment?.studentId) {
+        master = await StudentMaster.findById(enrollment.studentId)
+          .select("_id stCodes legacyStudentIds fullName").lean();
+      }
+      const linkedStudentIds = [
+        ...(master?.legacyStudentIds || []),
+        ...(enrollment?.legacyStudentId ? [enrollment.legacyStudentId] : []),
+        ...(student?._id ? [student._id] : []),
+      ];
+      if (!student && !master && !enrollment) {
         summary.unmatchedFilenames.push(filename);
         continue;
       }
@@ -96,23 +113,28 @@ export async function POST(request) {
       try {
         const buffer = Buffer.from(await file.arrayBuffer());
         const uploaded = await uploadToCloudinary(cloudinary.client, buffer, registrationNo, extension);
-        await Student.findByIdAndUpdate(student._id, { $set: { photoUrl: uploaded.secure_url } }, { new: true, runValidators: false });
-        // Link the same Cloudinary URL to the master profile by legacy ID
-        // and by registration code, covering older imports with incomplete links.
-        await StudentMaster.updateOne(
-          {
-            $or: [
-              { legacyStudentIds: student._id },
-              { stCodes: registrationNo },
-            ],
-          },
-          { $set: { photoUrl: uploaded.secure_url } }
-        );
+        if (linkedStudentIds.length) {
+          await Student.updateMany(
+            { _id: { $in: linkedStudentIds } },
+            { $set: { photoUrl: uploaded.secure_url } }
+          );
+        }
+        if (master?._id) {
+          await StudentMaster.updateOne(
+            { _id: master._id },
+            { $set: { photoUrl: uploaded.secure_url } }
+          );
+        } else if (student?._id) {
+          await StudentMaster.updateOne(
+            { legacyStudentIds: student._id },
+            { $set: { photoUrl: uploaded.secure_url } }
+          );
+        }
         summary.matchedAndUpdated += 1;
         summary.updated.push({
           filename,
           regnNo: registrationNo,
-          studentName: student.applicantName || "",
+          studentName: student?.applicantName || master?.fullName || "",
           photoUrl: uploaded.secure_url,
         });
       } catch (error) {
