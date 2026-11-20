@@ -57,7 +57,7 @@ function splitNameMarkup(value, lastNameColor, diploma) {
   const parts = String(value || "").trim().split(/\s+/).filter(Boolean);
   if (!parts.length) return "";
   const last = parts.length > 1 ? parts.pop() : "";
-  const firstColor = diploma ? "#1E242B" : "#374151";
+  const firstColor = diploma ? "#1E242B" : "#3E454C";
   const leading = parts.map((part) => '<span style="color:' + firstColor + '">' + escapeHtml(part) + "</span>").join(" ");
   if (!last) return '<span style="color:' + firstColor + '">' + escapeHtml(parts[0]) + "</span>";
   return leading + ' <span style="color:' + (diploma ? "#2E3192" : lastNameColor) + '">' + escapeHtml(last) + "</span>";
@@ -130,7 +130,7 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
   )).trim();
   const formRegistrationCode = String(firstValue(
     student.formNo, student.formNumber, student.registrationNumber, student.registrationNo,
-    student.registrationId, student.regNo, student.regnNo, "—"
+    student.registrationId, student.regNo, student.regnNo, "-"
   )).trim();
   const prefix = "RCLD/ISL-001/";
   const idCode = rawRegistrationCode.toUpperCase().startsWith(prefix)
@@ -143,8 +143,8 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     ? '<img class="student-photo" crossorigin="anonymous" src="' + escapeHtml(photoUrl) + '" alt="Student photograph">'
     : '<div class="student-photo photo-empty" aria-label="Student photograph unavailable"></div>';
   const circularValues =
-    '<div class="overlay circular-value circular-id">' + escapeHtml(idCode || "—") + '</div>' +
-    '<div class="overlay circular-value circular-registration">' + escapeHtml(formRegistrationCode || "—") + '</div>' +
+    '<div class="overlay circular-value circular-id">' + '<span class="circular-id-code">' + escapeHtml(idCode || "-") + '</span></div>' +
+    '<div class="overlay circular-value circular-registration">' + escapeHtml(formRegistrationCode || "-") + '</div>' +
     '<div class="overlay circular-value circular-admission">' + escapeHtml(admission) + '</div>' +
     '<div class="overlay circular-value circular-father">' + escapeHtml(fatherName) + '</div>' +
     '<div class="overlay circular-value circular-address">' + addressMarkup + '</div>';
@@ -172,7 +172,7 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     '.overlay{position:absolute;z-index:2;overflow:hidden;font-family:Arial,"Helvetica Neue","Liberation Sans",sans-serif}' +
     '.circular-name{top:48.6%;left:3%;width:94%;text-align:center;font-weight:800;font-size:clamp(20px,6cqw,76px);text-transform:uppercase;letter-spacing:.3px;line-height:1.05;white-space:nowrap}' +
     '.circular-value{left:46.8%;width:48.5%;text-align:left;font-family:"Roboto Condensed","Arial Narrow",Arial,sans-serif;font-weight:700;font-size:clamp(14px,3.35cqw,46px);color:#3E454C;transform:scaleY(1.10);transform-origin:left center;white-space:nowrap}' +
-    '.circular-id{top:60.9%}.circular-registration{top:63.8%}.circular-admission{top:66.6%}.circular-father{top:69.4%}' +
+    '.circular-id{top:60.9%}.circular-id-code{font-size:3.95cqw;font-weight:800}.circular-registration{top:63.8%}.circular-admission{top:66.6%}.circular-father{top:69.4%}' +
     '.circular-address{top:72.2%;transform-origin:top left;line-height:1.28;word-break:break-word;white-space:normal;max-height:10.8%;overflow:hidden}' +
     '.circular-address .address-line{display:block;min-height:0}' +
     '.diploma .student-photo{top:34.2%;left:32.1%;transform:none;width:35.8%;height:25%;aspect-ratio:auto;border-radius:10px;object-fit:cover}' +
@@ -211,7 +211,7 @@ export async function printTemplateStudentIcard({ student, templateName, outputM
       return;
     }
     win.document.open();
-    win.document.write(html.replace("</body>", '<script>window.addEventListener("load",async()=>{try{await window.__prepareRcldTemplate();const imgs=[...document.images];await Promise.all(imgs.map(async img=>{if(img.decode)await img.decode();else if(!img.complete||!img.naturalWidth)await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;});}));setTimeout(()=>window.print(),150);}catch(error){console.error(error);alert("Unable to prepare this ID card template.");}});</script></body>'));
+    win.document.write(html.replace("</body>", '<script>window.addEventListener("load",async()=>{try{const imgs=[...document.images];await Promise.all(imgs.map(async img=>{if(img.decode)await img.decode();else if(!img.complete||!img.naturalWidth)await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;});}));setTimeout(()=>window.print(),150);}catch(error){console.error(error);alert("Unable to prepare this ID card template.");}});</script></body>'));
     win.document.close();
     return;
   }
@@ -227,7 +227,7 @@ export async function printTemplateStudentIcard({ student, templateName, outputM
     });
     const doc = frame.contentDocument;
     if (!doc) throw new Error("Unable to prepare the selected template.");
-    await frame.contentWindow.__prepareRcldTemplate();
+    
     await Promise.all([...doc.images].map(async img => {
       try {
         if (img.decode) await img.decode();
