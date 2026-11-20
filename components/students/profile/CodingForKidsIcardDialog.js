@@ -7,7 +7,7 @@ import {
   renderStudentIcardCanvas,
 } from "@/features/students/print/renderStudentIcardCanvas";
 
-const titleFor = name => name.replace(/\\.(jpe?g|png)$/i, "").replace(/\\bsem-(\\d+)/i, "Semester $1");
+const titleFor = name => name.replace(/\.(jpe?g|png)$/i, "").replace(/\bsem-(\d+)/i, "Semester $1");
 
 export default function CodingForKidsIcardDialog({
   open,
