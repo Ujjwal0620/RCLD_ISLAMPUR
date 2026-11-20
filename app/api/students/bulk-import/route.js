@@ -380,60 +380,6 @@ export async function POST(request) {
         try { await linkImportedStudentRecords([student]); } catch (linkError) { errors.push({ row: student.sourceRowNo, Regn_No: student.regnNo, reason: "Student saved, but academic enrollment linking needs review: " + linkError.message }); }
       } catch (rowError) { errors.push({ row: student.sourceRowNo, Regn_No: student.regnNo, reason: "Student saved, but fee initialization failed: " + rowError.message }); }
     }
-    const courseCodes = [...new Set(uniqueRows.map(row => row.course).filter(Boolean))];
-    const baseCodes = [...new Set(courseCodes.map(code => code.split("-")[0]))];
-    const coursePatterns = [...new Set([...courseCodes, ...baseCodes])].map(code => new RegExp("^" + code + "$", "i"));
-    const courses = await Course.find({ code: { $in: coursePatterns } }).lean();
-    const courseMap = new Map(courses.map(course => [String(course.code).toUpperCase(), course]));
-    const operations = [];
-    const operationRows = [];
-    let imported = 0;
-    let updated = 0;
-
-    for (const row of uniqueRows) {
-      const existing = row.regnNo ? existingByCode.get(row.regnNo) : null;
-      if (existing && duplicateMode !== "update") {
-        skipped += 1;
-        warnings.push({ row: row.rowNo, Regn_No: row.regnNo, reason: "Registration number already exists; skipped as requested." });
-        continue;
-      }
-      const course = courseMap.get(row.course) || courseMap.get(row.course.split("-")[0]) || null;
-      const builtInFeeCourse = row.course === "ROBOTICS" || /^SM-(I|II|III|IV|V|VI)$/.test(row.course);
-      if (row.course && !course && !builtInFeeCourse) {
-        warnings.push({ row: row.rowNo, Regn_No: row.regnNo, reason: "Course was not found in Course Master; the student is saved with an unconfigured fee plan for review." });
-      }
-      const courseInfo = { code: row.course, name: course?.name || COURSE_NAMES[row.course] || row.course };
-      const payload = asStudentPayload(row, courseInfo, sourceName);
-      operations.push({
-        updateOne: {
-          filter: existing ? { _id: existing._id } : row.regnNo ? { regnNo: row.regnNo } : { sourceRowKey: row.sourceRowKey },
-          update: { $set: payload, $setOnInsert: { status: "Registered", photoUrl: "" } },
-          upsert: true
-        }
-      });
-      operationRows.push({ row, existing, courseInfo });
-    }
-
-    if (operations.length) {
-      try {
-        const write = await Student.bulkWrite(operations, { ordered: false });
-        imported = Number(write.upsertedCount || 0);
-        updated = Number(write.modifiedCount || write.matchedCount || 0);
-      } catch (writeError) {
-        const failedIndexes = new Map((writeError.writeErrors || []).map(item => [item.index, item]));
-        const result = writeError.result || writeError;
-        imported = Number(result.upsertedCount || 0);
-        updated = Number(result.modifiedCount || result.matchedCount || 0);
-        for (const [index, item] of operationRows.entries()) {
-          const failure = failedIndexes.get(index);
-          if (failure) {
-            skipped += 1;
-            errors.push({ row: item.row.rowNo, Regn_No: item.row.regnNo, reason: failure.errmsg || failure.message || "Database rejected this row." });
-          }
-        }
-      }
-    }
-
     let paymentImport = null;
     try {
       const paymentPreview = parsePaymentWorksheet(workbook);
