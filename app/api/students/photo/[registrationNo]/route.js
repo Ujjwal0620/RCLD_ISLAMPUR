@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import mongoose from "mongoose";
+import { connectMongoDB } from "@/lib/mongodb";
+import StudentMaster from "@/models/StudentMaster";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,7 +15,6 @@ const PHOTO_DIRECTORY = path.join(
   "id card coding images",
   "id card coding"
 );
-
 const EXTENSIONS = [
   [".jpeg", "image/jpeg"],
   [".jpg", "image/jpeg"],
@@ -20,14 +22,59 @@ const EXTENSIONS = [
   [".webp", "image/webp"],
 ];
 
+const StudentSchema = new mongoose.Schema({
+  regnNo: String,
+  enrollmentNo: String,
+  photoUrl: String,
+}, { timestamps: true, strict: false });
+const Student = mongoose.models.Student || mongoose.model("Student", StudentSchema);
+
+function normalizeRegistrationNo(value) {
+  return String(value ?? "").trim().replace(/\\.0$/, "");
+}
+
+function safeCloudinaryUrl(value) {
+  try {
+    const url = new URL(String(value || ""));
+    if (url.protocol !== "https:") return "";
+    if (!/(^|\\.)((res\\.)?cloudinary\\.com)$/i.test(url.hostname)) return "";
+    return url.toString();
+  } catch {
+    return "";
+  }
+}
+
 export async function GET(_request, { params }) {
   try {
     const { registrationNo } = await params;
-    const code = String(registrationNo || "").trim();
-
-    // Only allow a registration-code filename, never a filesystem path.
+    const code = normalizeRegistrationNo(registrationNo);
     if (!/^[a-zA-Z0-9_-]{1,40}$/.test(code)) {
       return NextResponse.json({ error: "Invalid registration number." }, { status: 400 });
+    }
+
+    // Cloudinary is the durable source of truth; local files are only a fallback.
+    await connectMongoDB();
+    const numericCode = /^\\d+$/.test(code) ? Number(code) : null;
+    const student = await Student.findOne({
+      $or: [
+        { regnNo: code },
+        { enrollmentNo: code },
+        ...(numericCode === null ? [] : [{ regnNo: numericCode }, { enrollmentNo: numericCode }]),
+      ],
+    }).select("photoUrl regnNo enrollmentNo").lean();
+
+    let cloudinaryUrl = safeCloudinaryUrl(student?.photoUrl);
+    if (!cloudinaryUrl) {
+      const master = await StudentMaster.findOne({
+        stCodes: code,
+      }).select("photoUrl").lean();
+      cloudinaryUrl = safeCloudinaryUrl(master?.photoUrl);
+    }
+    if (cloudinaryUrl) {
+      return NextResponse.redirect(cloudinaryUrl, {
+        status: 302,
+        headers: { "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400" },
+      });
     }
 
     for (const [extension, contentType] of EXTENSIONS) {
