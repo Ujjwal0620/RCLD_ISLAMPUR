@@ -78,6 +78,9 @@ const StudentSchema = new mongoose.Schema({
   status: { type: String, default: "Admission Pending" }
 }, { timestamps: true });
 
+// Fast registration-code lookups used by safe bulk-import matching.
+StudentSchema.index({ regnNo: 1 });
+
 StudentSchema.index({ enrollmentNo: 1 }, {
   unique: true,
   partialFilterExpression: { enrollmentNo: { $type: "string", $gt: "" } }
