@@ -106,6 +106,7 @@ async function main() {
         identityWarnings: group.identityWarnings || [],
         identityMatchMethod: group.identityWarnings?.length ? "AMBIGUOUS_NEW_PROFILE" : "CLEANUP_NEW_PROFILE",
         legacyStudentIds: [],
+        stCodes: [],
       });
       realMasterIds.set(String(group._id), master._id);
     }
@@ -145,6 +146,7 @@ async function main() {
       });
     }
     master.activeEnrollmentId = enrollment._id;
+    if (!master.stCodes.includes(stCode)) master.stCodes.push(stCode);
     await master.save();
   }
   console.log("Master identity links and enrollment history were saved. Legacy Student documents were intentionally retained.");
