@@ -164,8 +164,8 @@ export async function PATCH(req,{params}){
     const student=await Student.findByIdAndUpdate(id,update,{new:true,runValidators:true}).lean();
     if (student) {
       const masterFields = {
-        fullName: student.applicantName || student.sourceStudentName || "",
-        normalizedFullName: String(student.applicantName || student.sourceStudentName || "")
+        fullName: student.applicantName || student.sourceStudentName || "Student",
+        normalizedFullName: String(student.applicantName || student.sourceStudentName || "Student")
           .normalize("NFKC").replace(/_\\d+\\s*$/, "").toUpperCase().replace(/\\s+/g, " ").replace(/[',.]+$/, "").trim(),
         dob: student.dateOfBirth && !Number.isNaN(new Date(student.dateOfBirth).getTime()) ? new Date(student.dateOfBirth) : undefined,
         fatherName: student.fatherOrHusbandName || "",
@@ -181,9 +181,12 @@ export async function PATCH(req,{params}){
       const master = await StudentMaster.findOne({ legacyStudentIds: student._id });
       if (master) {
         const nonEmptyMasterFields = Object.fromEntries(Object.entries(masterFields).filter(([key, value]) =>
-          value !== undefined && value !== null && value !== "" && (!Array.isArray(value) || value.length > 0)
+          key !== "phoneNumbers" && value !== undefined && value !== null && value !== "" && (!Array.isArray(value) || value.length > 0)
         ));
         Object.assign(master, nonEmptyMasterFields);
+        if (masterFields.phoneNumbers.length) {
+          master.phoneNumbers = [...new Set([...(master.phoneNumbers || []), ...masterFields.phoneNumbers])];
+        }
         if (stCode && !master.stCodes.includes(stCode)) master.stCodes.push(stCode);
         await master.save();
       } else {
