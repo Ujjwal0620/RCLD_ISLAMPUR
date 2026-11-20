@@ -1,5 +1,6 @@
 const FONT_FAMILY = '"Arial Narrow", "Liberation Sans Narrow", "Roboto Condensed", sans-serif';
 const TEMPLATE_ROOT = "/assets/icardtemplates/";
+const templateImageCache = new Map();
 
 function firstValue(...values) {
   return values.find(value => value !== undefined && value !== null && String(value).trim() !== "");
@@ -217,7 +218,13 @@ export async function renderStudentIcardCanvas(student, templateName) {
   }
   await document.fonts.ready;
   await document.fonts.load(`700 24px ${FONT_FAMILY}`).catch(() => []);
-  const template = await loadImage(TEMPLATE_ROOT + encodeURIComponent(templateName));
+  let templatePromise = templateImageCache.get(templateName);
+  if (!templatePromise) {
+    templatePromise = loadImage(TEMPLATE_ROOT + encodeURIComponent(templateName));
+    templateImageCache.set(templateName, templatePromise);
+    templatePromise.catch(() => templateImageCache.delete(templateName));
+  }
+  const template = await templatePromise;
   const width = Math.max(template.naturalWidth, 1200);
   const height = Math.round(width * template.naturalHeight / template.naturalWidth);
   const canvas = document.createElement("canvas");
@@ -268,11 +275,17 @@ export async function exportStudentIcards({ students, templateName, outputMode =
 
   if (outputMode === "print") {
     const pages = [];
-    for (const student of list) {
-      const canvas = await renderStudentIcardCanvas(student, templateName);
-      const blob = await canvasToJpeg(canvas);
-      const url = URL.createObjectURL(blob);
-      pages.push({ url, name: student.applicantName || "Student" });
+    try {
+      for (const student of list) {
+        const canvas = await renderStudentIcardCanvas(student, templateName);
+        const blob = await canvasToJpeg(canvas);
+        const url = URL.createObjectURL(blob);
+        pages.push({ url, name: student.applicantName || "Student" });
+      }
+    } catch (error) {
+      pages.forEach(page => URL.revokeObjectURL(page.url));
+      if (!printWindow.closed) printWindow.close();
+      throw error;
     }
     const html = `<!doctype html><html><head><meta charset="utf-8"><title>RCLD Student ID Cards</title><style>
       @page{size:54mm 85.6mm;margin:0}
