@@ -276,8 +276,8 @@ function buildMissingFields(existing, payload) {
   put("dateOfBirth", ["dateOfBirth", "dob"], "dateOfBirth", [["dob", payload.dob]]);
   put("sex", ["sex", "gender"], "sex", [["gender", payload.gender]]);
   put("fatherOrHusbandName", ["fatherOrHusbandName", "fatherName"], "fatherOrHusbandName", [["fatherName", payload.fatherName]]);
-  put("mobileNumber", ["mobileNumber", "phone", "whatsappNumber"], "mobileNumber", [["phone", payload.phone]]);
-  put("alternatePhoneNumber", ["alternatePhoneNumber", "guardianContactNumber", "altPhone"], "alternatePhoneNumber", [["altPhone", payload.altPhone]]);
+  put("mobileNumber", ["mobileNumber", "phone", "whatsappNumber"], "mobileNumber", [["phone", payload.phone], ["whatsappNumber", payload.whatsappNumber]]);
+  put("alternatePhoneNumber", ["alternatePhoneNumber", "guardianContactNumber", "altPhone"], "alternatePhoneNumber", [["altPhone", payload.altPhone], ["guardianContactNumber", payload.guardianContactNumber]]);
   put("address", ["address", "presentAddress", "permanentAddress"], "address", [["presentAddress", payload.presentAddress], ["permanentAddress", payload.permanentAddress]]);
   put("ward", ["ward"], "ward"); put("village", ["village"], "village");
   put("postOffice", ["postOffice", "po"], "postOffice", [["po", payload.po]]);
