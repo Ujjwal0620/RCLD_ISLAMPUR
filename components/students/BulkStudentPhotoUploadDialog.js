@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { CheckCircle2, FolderOpen, ImagePlus, LoaderCircle, Upload, X } from "lucide-react";
 
-const allowed = /\\.(?:jpe?g|png|webp)$/i;
+const allowed = /\.(?:jpe?g|png|webp)$/i;
 
 export default function BulkStudentPhotoUploadDialog({ open, onClose, onComplete }) {
   const [files, setFiles] = useState([]);
