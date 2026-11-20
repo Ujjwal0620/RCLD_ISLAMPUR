@@ -54,7 +54,7 @@ const StudentEnrollmentSchema = new mongoose.Schema({
   importBatchKey: { type: String, default: "" }
 }, { timestamps: true, collection: "student_enrollments" });
 
-StudentEnrollmentSchema.index({ stCode: 1, normalizedFullName: 1 }, { unique: true });
+StudentEnrollmentSchema.index({ studentId: 1, stCode: 1, normalizedFullName: 1 }, { unique: true });
 StudentEnrollmentSchema.index({ studentId: 1, admissionDate: 1 });
 
 export default mongoose.models.StudentEnrollment || mongoose.model("StudentEnrollment", StudentEnrollmentSchema);
