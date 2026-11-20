@@ -77,7 +77,7 @@ export async function POST(request) {
         continue;
       }
 
-      const numericRegistrationNo = /^\\d+$/.test(registrationNo) ? Number(registrationNo) : null;
+      const numericRegistrationNo = /^\d+$/.test(registrationNo) ? Number(registrationNo) : null;
       const student = await Student.findOne({
         $or: [
           { regnNo: registrationNo },
