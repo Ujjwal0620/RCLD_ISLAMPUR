@@ -128,6 +128,7 @@ export default function StudentICardsPage() {
       <CodingForKidsIcardDialog
         open={templateDialogOpen}
         student={selectedStudent}
+        mode={icardOutputMode}
         onClose={() => setTemplateDialogOpen(false)}
         onSelect={(templateName) => {
           setTemplateDialogOpen(false);
