@@ -19,7 +19,7 @@ const StudentSchema = new mongoose.Schema({
   qualifications: [{ examCourse: String, boardUniversity: String, collegeInstitute: String, year: String, percentage: String }],
   enclosures: { stampPhoto: Boolean, qualifyingCertificates: Boolean, matricAdmitCard: Boolean },
   declarationDate: String, declarationPlace: String, signatureApplicant: String, signatureUrl: String, photoUrl: String,
-  currentSemester: { type: Number, min: 1, max: 6 }, semesterStatus: { type: String, enum: ["Not Started", "Active", "Completed"], default: "Not Started" }, semesterHistory: { type: [mongoose.Schema.Types.Mixed], default: [] }, status: { type: String, default: "Admission Pending" }
+  currentSemester: Number, semesterStatus: { type: String, default: "Not Started" }, semesterHistory: { type: [mongoose.Schema.Types.Mixed], default: [] }, status: { type: String, default: "Admission Pending" }
 }, { timestamps: true });
 
 StudentSchema.index({ enrollmentNo: 1 }, { unique: true, partialFilterExpression: { enrollmentNo: { $type: "string", $gt: "" } } });
@@ -258,7 +258,6 @@ export async function POST(request) {
     if (mobileNumber && !/^\d{10}$/.test(mobileNumber)) return NextResponse.json({ error: "Mobile number must contain exactly 10 digits." }, { status: 400 });
     if (guardianContactNumber && !/^\d{10}$/.test(guardianContactNumber)) return NextResponse.json({ error: "Guardian mobile number must contain exactly 10 digits." }, { status: 400 });
     if (whatsappNumber && !/^\d{10}$/.test(whatsappNumber)) return NextResponse.json({ error: "WhatsApp number must contain exactly 10 digits." }, { status: 400 });
-    if (body.signatureUrl && !String(body.signatureUrl).startsWith("https://res.cloudinary.com/")) return NextResponse.json({ error: "Student signature must be uploaded to Cloudinary." }, { status: 400 });
     await removeLegacyFormNoUniqueIndex();
     const enrollmentSequence = await nextStudentSequence("student-enrollment");
     const enrollmentNo = "RCLD/ISL/" + String(enrollmentSequence).padStart(6, "0");
@@ -270,8 +269,7 @@ export async function POST(request) {
       referralFields = { referralId: String(referral._id), referralName: referral.name, marketingEmployeeId: referral.marketingEmployeeId, marketingEmployeeName: referral.marketingEmployeeName };
     }
     const isKidsCourse = String(body.courseCode || "").toUpperCase() === "KIDS" || /coding\s*for\s*kids/i.test(String(body.courseName || ""));
-    const initialSemester = Number(body.currentSemester || 1);
-    if (isKidsCourse && (!Number.isInteger(initialSemester) || initialSemester < 1 || initialSemester > 6)) return NextResponse.json({ error: "Select a valid Coding for Kids semester from 1 to 6." }, { status: 400 });
+    const initialSemester = Math.min(6, Math.max(1, Number(body.currentSemester) || 1));
     const student = await Student.create({
       ...body,
       currentSemester: isKidsCourse ? initialSemester : undefined,
@@ -285,7 +283,7 @@ export async function POST(request) {
       regnNo: String(body.regnNo || "").trim(),
       enrollmentNo,
       aecCode: "RCLD/ISL-001",
-      applicantName: String(body.applicantName).trim(),
+      applicantName: String(body.applicantName || "").trim(),
       mobileNumber,
       guardianContactNumber,
       whatsappNumber
@@ -299,9 +297,8 @@ export async function POST(request) {
         const FeeSchema = new mongoose.Schema({ studentId:{type:mongoose.Schema.Types.ObjectId,unique:true,index:true,ref:"Student"}, totalFee:{type:Number,default:0}, discount:{type:Number,default:0}, admissionFee:{type:Number,default:0}, registrationFee:{type:Number,default:0}, admissionDate:String, currentSemester:Number, semesterHistory:{type:[mongoose.Schema.Types.Mixed],default:[]}, payments:Array, updatedBy:String }, {timestamps:true});
         const StudentFee = mongoose.models.StudentFee || mongoose.model("StudentFee", FeeSchema);
         const semesterPlan = isKidsCourse ? (course.semesterPlans || []).find(plan => Number(plan.semester) === initialSemester) : null;
-        if (isKidsCourse && !semesterPlan) return NextResponse.json({ error: "The selected Coding for Kids semester has no configured fee plan." }, { status: 400 });
-        if (isKidsCourse) await Student.collection.updateOne({ _id: student._id }, { $set: { semesterHistory: [{ semester: initialSemester, status: "Active", admittedAt: body.admissionDate || new Date().toISOString().slice(0,10), admissionFee: Number(semesterPlan.admissionFee), monthlyFee: Number(semesterPlan.monthlyFee), tuitionFee: Number(semesterPlan.tuitionFee), totalFee: Number(semesterPlan.totalFee), durationMonths: 6 }] } });
-        await StudentFee.findOneAndUpdate({studentId:student._id}, {$set:{totalFee:Number(semesterPlan?.tuitionFee ?? course.fee ?? 0),admissionFee:Number(semesterPlan?.admissionFee ?? course.admissionFee ?? 0),registrationFee:Number(course.registrationFee||0),admissionDate:body.admissionDate||new Date().toISOString().slice(0,10),currentSemester:isKidsCourse?initialSemester:undefined,semesterHistory:isKidsCourse?[{semester:initialSemester,admissionFee:Number(semesterPlan.admissionFee),monthlyFee:Number(semesterPlan.monthlyFee),tuitionFee:Number(semesterPlan.tuitionFee),totalFee:Number(semesterPlan.totalFee),admittedAt:body.admissionDate||new Date().toISOString().slice(0,10)}]:[]}}, {upsert:true,new:true,setDefaultsOnInsert:true});
+        if (isKidsCourse && semesterPlan) await Student.collection.updateOne({ _id: student._id }, { $set: { semesterHistory: [{ semester: initialSemester, status: "Active", admittedAt: body.admissionDate || new Date().toISOString().slice(0,10), admissionFee: Number(semesterPlan.admissionFee), monthlyFee: Number(semesterPlan.monthlyFee), tuitionFee: Number(semesterPlan.tuitionFee), totalFee: Number(semesterPlan.totalFee), durationMonths: 6 }] } });
+        await StudentFee.findOneAndUpdate({studentId:student._id}, {$set:{totalFee:Number(semesterPlan?.tuitionFee ?? course.fee ?? 0),admissionFee:Number(semesterPlan?.admissionFee ?? course.admissionFee ?? 0),registrationFee:Number(course.registrationFee||0),admissionDate:body.admissionDate||new Date().toISOString().slice(0,10),currentSemester:isKidsCourse?initialSemester:undefined,semesterHistory:isKidsCourse && semesterPlan?[{semester:initialSemester,admissionFee:Number(semesterPlan.admissionFee),monthlyFee:Number(semesterPlan.monthlyFee),tuitionFee:Number(semesterPlan.tuitionFee),totalFee:Number(semesterPlan.totalFee),admittedAt:body.admissionDate||new Date().toISOString().slice(0,10)}]:[]}}, {upsert:true,new:true,setDefaultsOnInsert:true});
       }
     }
     // Ensure newly admitted students also receive one durable master identity/enrollment.
