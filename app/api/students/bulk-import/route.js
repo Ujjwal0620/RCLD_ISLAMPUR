@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
+import Student from "@/models/Student";
 import * as XLSX from "xlsx";
 import { connectMongoDB } from "@/lib/mongodb";
 import { getSession } from "@/lib/auth";
@@ -9,18 +10,7 @@ import { importPaymentWorksheet, linkImportedStudentRecords, parsePaymentWorkshe
 
 export const runtime = "nodejs";
 
-const StudentSchema = new mongoose.Schema({
-  formNo: String, enrollmentNo: String, regnNo: String, applicantName: String,
-  sourceStudentName: String, courseCode: String, courseName: String, sourceCourseLabel: String,
-  admissionDate: String, dateOfAdmission: String, dateOfBirth: String, sex: String, sourceSex: String,
-  fatherOrHusbandName: String, address: String, presentAddress: String, permanentAddress: String,
-  sameAsPresentAddress: Boolean, postOffice: String, policeStation: String, district: String,
-  state: String, pin: String, sourceAddressRaw: String, mobileNumber: String, whatsappNumber: String,
-  guardianContactNumber: String, alternatePhoneNumber: String, sourcePhone: String,
-  sourceQualification: String, photoUrl: String, status: String, importSource: String,
-  sourceRowNo: Number, sourceRowKey: String, batchId: mongoose.Schema.Types.ObjectId, batchCode: String
-}, { timestamps: true, strict: false });
-const Student = mongoose.models.Student || mongoose.model("Student", StudentSchema);
+
 
 const FeeSchema = new mongoose.Schema({
   studentId: { type: mongoose.Schema.Types.ObjectId, unique: true, index: true },
