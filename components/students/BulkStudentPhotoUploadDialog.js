@@ -102,7 +102,8 @@ export default function BulkStudentPhotoUploadDialog({ open, onClose, onComplete
             <div><span>Failed files</span><b>{summary.failedFiles.length}</b></div>
           </div>
           {summary.unmatchedFilenames.length > 0 && <section className="bulk-photo-result-list"><h3>Unmatched filenames</h3><ul>{summary.unmatchedFilenames.map((name,index)=><li key={name+index}>{name}</li>)}</ul></section>}
-          {summary.updated?.length > 0 && <section className="bulk-photo-result-list"><h3>Successfully mapped photos</h3><ul>{summary.updated.map((item,index)=><li key={item.regnNo+index}>{item.regnNo}{item.studentName ? " — "+item.studentName : ""} <small>({item.linkedStudentRecords || 0} student record(s))</small></li>)}</ul></section>}\n          {summary.failedFiles.length > 0 && <section className="bulk-photo-result-list"><h3>Failed files</h3><ul>{summary.failedFiles.map((item,index)=><li key={item.filename+index}>{item.filename} — {item.reason}</li>)}</ul></section>}
+          {summary.updated?.length > 0 && <section className="bulk-photo-result-list"><h3>Successfully mapped photos</h3><ul>{summary.updated.map((item,index)=><li key={item.regnNo+index}>{item.regnNo}{item.studentName ? " — "+item.studentName : ""} <small>({item.linkedStudentRecords || 0} student record(s))</small></li>)}</ul></section>}
+          {summary.failedFiles.length > 0 && <section className="bulk-photo-result-list"><h3>Failed files</h3><ul>{summary.failedFiles.map((item,index)=><li key={item.filename+index}>{item.filename} — {item.reason}</li>)}</ul></section>}
           <footer><button type="button" className="ghost-btn" onClick={() => { setSummary(null); setFiles([]); }}>Upload more</button><button type="button" className="primary-btn" onClick={onClose}>Done</button></footer>
         </>}
       </section>
