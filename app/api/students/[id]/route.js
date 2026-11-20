@@ -3,6 +3,9 @@ import { connectMongoDB } from "@/lib/mongodb";
 import mongoose from "mongoose";
 import Course from "@/models/Course";
 import Batch from "@/models/Batch";
+import StudentMaster from "@/models/StudentMaster";
+import StudentEnrollment from "@/models/StudentEnrollment";
+import StudentFeePayment from "@/models/StudentFeePayment";
 import { getStudentAdmissionStatus } from "@/lib/student-admission-status";
 
 const StudentSchema = new mongoose.Schema({
@@ -29,7 +32,50 @@ export async function GET(req,{params}){
     if(!mongoose.Types.ObjectId.isValid(id))return NextResponse.json({error:"Invalid student ID."},{status:400});
     const student=await Student.findById(id).lean();
     if(!student)return NextResponse.json({error:"Student not found."},{status:404});
-    return NextResponse.json({student});
+
+    const masterProfile = await StudentMaster.findOne({ legacyStudentIds: student._id }).lean();
+    const enrollmentQuery = masterProfile ? { studentId: masterProfile._id } : { legacyStudentId: student._id };
+    const enrollments = await StudentEnrollment.find(enrollmentQuery).sort({ admissionDate: 1, createdAt: 1 }).lean();
+    const enrollmentIds = enrollments.map(item => item._id);
+    const paymentQuery = masterProfile
+      ? { $or: [{ studentId: masterProfile._id }, { enrollmentId: { $in: enrollmentIds } }] }
+      : { enrollmentId: { $in: enrollmentIds } };
+    const importedPayments = enrollmentIds.length || masterProfile
+      ? await StudentFeePayment.find(paymentQuery).sort({ paymentDate: 1, mrNo: 1 }).lean()
+      : [];
+    const enrollmentMap = new Map(enrollments.map(item => [String(item._id), item]));
+    const paymentHistory = importedPayments.map(payment => {
+      const enrollment = enrollmentMap.get(String(payment.enrollmentId)) || {};
+      return {
+        ...payment,
+        courseCode: enrollment.courseCode || "",
+        courseName: enrollment.courseName || enrollment.courseCode || "Legacy / Unknown Course",
+        semesterLabel: enrollment.semesterLabel || "LEGACY",
+        installmentApplied: (payment.allocations || []).map(item => item.label + ": ₹" + Number(item.allocatedAmount || 0).toLocaleString("en-IN")).join(", ") || "Legacy receipt / not allocated",
+      };
+    });
+    const FeeSchema = new mongoose.Schema({ studentId: mongoose.Schema.Types.ObjectId, payments: [mongoose.Schema.Types.Mixed] }, { strict: false });
+    const StudentFee = mongoose.models.StudentFee || mongoose.model("StudentFee", FeeSchema);
+    const legacyFee = await StudentFee.findOne({ studentId: student._id }).lean();
+    for (const payment of legacyFee?.payments || []) {
+      paymentHistory.push({
+        _id: payment._id, paymentDate: payment.date || null, mrNo: payment.receiptNo || payment.reference || "—",
+        stCode: student.regnNo || student.enrollmentNo || "—", amountPaid: Number(payment.amount || 0),
+        courseCode: student.courseCode || "", courseName: student.courseName || student.courseCode || "—",
+        semesterLabel: payment.semester ? "SEM-" + payment.semester : "Current",
+        installmentApplied: (payment.items || []).map(item => (item.purpose || item.type || "Fee") + ": ₹" + Number(item.amount || 0).toLocaleString("en-IN")).join(", ") || payment.paymentType || "Course fee",
+        sourceSheet: "ERP Fee Ledger",
+      });
+    }
+    paymentHistory.sort((a, b) => new Date(a.paymentDate || 0) - new Date(b.paymentDate || 0));
+    const enrichedStudent = {
+      ...student,
+      photoUrl: student.photoUrl || masterProfile?.photoUrl || "",
+      masterProfile,
+      enrollments,
+      paymentHistory,
+    };
+    return NextResponse.json({ student: enrichedStudent, masterProfile, enrollments, paymentHistory });
   }catch(error){return NextResponse.json({error:"Unable to load student.",detail:error.message},{status:500});}
 }
 
@@ -91,6 +137,13 @@ export async function PATCH(req,{params}){
     const mergedStudent={...current,...update};
     if(["Admission Pending","Registered","Active",""].includes(String(current.status||""))) update.status=getStudentAdmissionStatus(mergedStudent);
     const student=await Student.findByIdAndUpdate(id,update,{new:true,runValidators:true}).lean();
+    if (student && update.photoUrl !== undefined) {
+      await StudentMaster.findOneAndUpdate(
+        { legacyStudentIds: student._id },
+        { $set: { photoUrl: update.photoUrl } },
+        { new: true }
+      );
+    }
     if(student && (update.courseCode!==undefined || update.courseName!==undefined)){
       const conditions=[];
       if(student.courseCode) conditions.push({code:String(student.courseCode).trim().toUpperCase()});
