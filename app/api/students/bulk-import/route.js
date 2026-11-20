@@ -352,7 +352,9 @@ export async function POST(request) {
       };
     });
 
-    const writeResult = await Student.bulkWrite(operations, { ordered: false });
+    const writeResult = operations.length
+      ? await Student.bulkWrite(operations, { ordered: false })
+      : { upsertedCount: 0, matchedCount: 0 };
     const importedStudents = await Student.find({ importSource: sourceName }).select("_id courseCode").lean();
     const feeOperations = [];
     for (const student of importedStudents) {
