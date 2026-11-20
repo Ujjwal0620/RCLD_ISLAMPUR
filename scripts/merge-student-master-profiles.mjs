@@ -40,10 +40,13 @@ const phones = value => [...new Set(String(value ?? "").split(/[,;/|]/)
   .map(item => item.replace(/\D/g, "")).map(item => item.length > 10 ? item.slice(-10) : item)
   .filter(item => item.length === 10))];
 const tokenOverlap = (a, b) => {
-  const left = new Set(normalizeFather(a).split(" ").filter(Boolean));
-  const right = new Set(normalizeFather(b).split(" ").filter(Boolean));
+  const normalizedLeft = normalizeFather(a), normalizedRight = normalizeFather(b);
+  if (normalizedLeft && normalizedLeft === normalizedRight) return true;
+  const left = new Set(normalizedLeft.split(" ").filter(Boolean));
+  const right = new Set(normalizedRight.split(" ").filter(Boolean));
   if (!left.size || !right.size) return false;
-  return [...left].filter(token => right.has(token)).length / Math.min(left.size, right.size) >= 0.6;
+  const common = [...left].filter(token => right.has(token)).length;
+  return common >= 2 && common / Math.min(left.size, right.size) >= 0.6;
 };
 const similarity = (left, right) => {
   const a = normalizeName(left), b = normalizeName(right);
