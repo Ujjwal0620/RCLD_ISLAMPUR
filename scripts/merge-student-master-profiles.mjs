@@ -50,6 +50,7 @@ const dateKey = value => {
 function findIdentityMatch(row, candidates) {
   const name = normalizeName(row.fullName), father = normalizeFather(row.fatherName);
   const dob = dateKey(row.dob), rowPhones = new Set(row.phoneNumbers || []);
+  if (!name) return { match: null, ambiguous: false, candidateIds: [] };
   const exact = [], spelling = [];
   for (const candidate of candidates) {
     const candidateName = normalizeName(candidate.fullName || candidate.normalizedFullName);
