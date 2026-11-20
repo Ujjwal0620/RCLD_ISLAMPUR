@@ -78,7 +78,7 @@ export async function POST(request) {
         continue;
       }
 
-      const numericRegistrationNo = /^\\d+$/.test(registrationNo) ? Number(registrationNo) : null;
+      const numericRegistrationNo = /^\d+$/.test(registrationNo) ? Number(registrationNo) : null;
       const [student, masterByCode, enrollment] = await Promise.all([
         Student.findOne({
           $or: [
