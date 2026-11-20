@@ -185,7 +185,7 @@ function parseRows(workbook, requestedSheet = "") {
       gender: gender.value, fatherName: clean(get("father")), phone: phones.primary,
       secondaryPhone: phones.secondary, altPhone: phones.secondary, sourcePhone: phones.source, course: course.code,
       courseLabel: course.label, ...address, dob: dateValue(get("dob")),
-      qualification: clean(get("qualification")), formNo: clean(get("formNo")),
+      qualification: clean(get("qualification")), formNo: clean(get("formNo")).replace(/\.0$/, ""),
       warnings, errors
     });
   }
