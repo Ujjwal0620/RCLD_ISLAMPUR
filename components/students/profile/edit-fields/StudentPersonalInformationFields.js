@@ -50,7 +50,7 @@ export default function StudentPersonalInformationFields({ editForm, setEditForm
                                 <span>Aadhaar Card Number</span>
                                 <input
                                   inputMode="numeric"
-                                  pattern="[0-9]{12}"
+                                 
                                   maxLength="12"
 
                                   value={editForm.aadhaarNumber || ""}
