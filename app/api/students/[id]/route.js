@@ -36,6 +36,13 @@ export async function GET(req,{params}){
     const masterProfile = await StudentMaster.findOne({ legacyStudentIds: student._id }).lean();
     const enrollmentQuery = masterProfile ? { studentId: masterProfile._id } : { legacyStudentId: student._id };
     const enrollments = await StudentEnrollment.find(enrollmentQuery).sort({ admissionDate: 1, createdAt: 1 }).lean();
+    const activeEnrollment = masterProfile
+      ? enrollments.find(item => String(item._id) === String(masterProfile.activeEnrollmentId))
+      : null;
+    const canonicalStudentId = activeEnrollment?.legacyStudentId || student._id;
+    const canonicalStudent = String(canonicalStudentId) === String(student._id)
+      ? student
+      : (await Student.findById(canonicalStudentId).lean()) || student;
     const enrollmentIds = enrollments.map(item => item._id);
     const paymentQuery = masterProfile
       ? { $or: [{ studentId: masterProfile._id }, { enrollmentId: { $in: enrollmentIds } }] }
@@ -82,8 +89,8 @@ export async function GET(req,{params}){
     }
     paymentHistory.sort((a, b) => new Date(a.paymentDate || 0) - new Date(b.paymentDate || 0));
     const enrichedStudent = {
-      ...student,
-      photoUrl: student.photoUrl || masterProfile?.photoUrl || "",
+      ...canonicalStudent,
+      photoUrl: canonicalStudent.photoUrl || masterProfile?.photoUrl || "",
       masterProfile,
       enrollments,
       paymentHistory,
