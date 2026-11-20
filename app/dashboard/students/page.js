@@ -47,7 +47,7 @@ export default function StudentsPage(){
     if(/^DOM(?:[-_ ]|$)/.test(v)||v.includes("DIPLOMA IN OFFICE MANAGEMENT"))return "DOM";
     if(/^DCST(?:[-_ ]|$)/.test(v))return "DCST";
     if(/^DCA(?:[-_ ]|$)/.test(v))return "DCA";
-    return v.replace(/\\s+/g,"");
+    return v.replace(new RegExp(String.fromCharCode(92)+"s+","g"),"");
   };
   const selectedCourses=[...new Set(selectedRecords.map(s=>normalizeCourse(s.courseCode||s.courseName||s.sourceCourseLabel)).filter(Boolean))];
   const compatibleBatches=batches.filter(b=>b.available&&(!selectedCourses.length||selectedCourses.length!==1||normalizeCourse(b.courseCode||b.courseName)===selectedCourses[0]));
