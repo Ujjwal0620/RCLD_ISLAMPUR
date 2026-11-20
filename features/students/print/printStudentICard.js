@@ -147,11 +147,14 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
   const issueDate = formatIcardDate(admissionDate);
   const sessionLabel = esc(student.session || student.academicSession || DEFAULT_SESSION);
 
-  const enrollRaw =
-    String(firstNonEmpty(student.regnNo, student.enrollmentNo, student.studentId, student.admissionNo, student.formNo, "—")).trim();
-  const idMatch = enrollRaw.match(/^(.*?)(\d+)$/);
-  const idPrefix = idMatch ? esc(idMatch[1]) : esc(enrollRaw);
-  const idNumber = idMatch ? esc(idMatch[2]) : "";
+  const registrationCode = String(firstNonEmpty(
+    student.regnNo, student.registrationNumber, student.registrationNo, student.registrationId,
+    student.regNo, student.enrollmentNo, student.studentId, student.admissionNo, student.formNo, "—"
+  )).trim();
+  const instituteId = /^RCLD\/ISL-001\//i.test(registrationCode)
+    ? registrationCode
+    : `RCLD/ISL-001/${registrationCode}`;
+  const idNumber = esc(instituteId);
 
   const rawPhoto = firstNonEmpty(
     student.photoUrl,
@@ -217,7 +220,7 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
     cardMarkup = buildCfkStudentIcardMarkup({
       student,
       photoUrl: rawPhoto || "",
-      idNumber: `${idPrefix}${idNumber}`,
+      idNumber,
       issueDate,
       address: addressLines.join(", "),
       semester: activeSemester,
@@ -228,7 +231,7 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
     cardMarkup = buildStandardStudentIcardMarkup({
       student,
       addrMain,
-      idPrefix,
+      idPrefix: "",
       idNumber,
       issueDate,
       photoImg,
