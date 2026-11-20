@@ -172,7 +172,7 @@ function drawName(ctx, student, width, height) {
 }
 
 function getSequentialStudentId(student, fallbackIndex = 1) {
-  const stored = firstValue(
+  const candidates = [
     student.idCardSerial,
     student.idCardNumber,
     student.serialNumber,
@@ -180,18 +180,20 @@ function getSequentialStudentId(student, fallbackIndex = 1) {
     student.sequenceNumber,
     student.studentSerial,
     student.studentId,
-    student.studentCode,
     student.idNumber,
-    student.id
-  );
-  const digits = String(stored || "").match(/(\\d+)/);
-  const parsed = digits ? Number(digits[1]) : 0;
+  ];
+  const stored = candidates.find(value => {
+    if (typeof value === "number") return Number.isSafeInteger(value) && value > 0;
+    const text = String(value || "").trim();
+    return /^\\d+$/.test(text) || /(?:ID[-_ ]?NO|ID[-_ ]?CARD)[/:_-]+\\d+$/i.test(text);
+  });
+  const match = String(stored || "").match(/(\\d+)$/);
+  const parsed = match ? Number(match[1]) : 0;
   const serial = Number.isSafeInteger(parsed) && parsed > 0
     ? parsed
     : Math.max(1, Number(fallbackIndex) || 1);
   return String(serial).padStart(3, "0");
 }
-
 function drawDetails(ctx, student, width, height, fallbackIndex = 1) {
   const regnNo = getRegistrationNumber(student);
   const date = formatAdmissionDate(student);
