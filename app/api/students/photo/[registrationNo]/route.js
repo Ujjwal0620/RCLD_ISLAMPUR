@@ -4,44 +4,55 @@ import path from "node:path";
 import mongoose from "mongoose";
 import { connectMongoDB } from "@/lib/mongodb";
 import StudentMaster from "@/models/StudentMaster";
+import StudentEnrollment from "@/models/StudentEnrollment";
+import { configureCloudinary } from "@/lib/cloudinary";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const PHOTO_DIRECTORY = path.join(
-  process.cwd(),
-  "public",
-  "assets",
-  "id card coding images",
-  "id card coding"
-);
+const PHOTO_DIRECTORIES = [
+  path.join(process.cwd(), "public", "assets", "id card coding images", "id card coding"),
+  path.join(process.cwd(), "public", "assets", "id card coding images"),
+  path.join(process.cwd(), "public", "assets", "uploaded-images"),
+];
 const EXTENSIONS = [
-  [".jpeg", "image/jpeg"],
-  [".jpg", "image/jpeg"],
-  [".png", "image/png"],
-  [".webp", "image/webp"],
+  [".jpg", "image/jpeg"], [".jpeg", "image/jpeg"],
+  [".png", "image/png"], [".webp", "image/webp"],
 ];
 
 const StudentSchema = new mongoose.Schema({
-  regnNo: String,
-  enrollmentNo: String,
-  photoUrl: String,
+  regnNo: String, enrollmentNo: String, photoUrl: String,
 }, { timestamps: true, strict: false });
 const Student = mongoose.models.Student || mongoose.model("Student", StudentSchema);
 
 function normalizeRegistrationNo(value) {
   return String(value ?? "").trim().replace(/\.0$/, "");
 }
-
 function safeCloudinaryUrl(value) {
   try {
     const url = new URL(String(value || ""));
-    if (url.protocol !== "https:") return "";
-    if (!/(^|\.)((res\.)?cloudinary\.com)$/i.test(url.hostname)) return "";
+    if (url.protocol !== "https:" || !/(^|\.)((res\.)?cloudinary\.com)$/i.test(url.hostname)) return "";
     return url.toString();
-  } catch {
-    return "";
+  } catch { return ""; }
+}
+async function findCloudinaryPhoto(client, code) {
+  if (!client) return "";
+  // Bulk uploads use this exact Cloudinary public ID convention.
+  for (const publicId of [
+    "rcld-islampur/students/" + code,
+    code,
+  ]) {
+    try {
+      const resource = await client.api.resource(publicId, { resource_type: "image" });
+      const url = safeCloudinaryUrl(resource?.secure_url);
+      if (url) return url;
+    } catch (error) {
+      if (![404, "not found"].includes(error?.http_code) && !/not found|unknown api/i.test(String(error?.message || ""))) {
+        console.warn("[student-photo] Cloudinary lookup:", error?.message || error);
+      }
+    }
   }
+  return "";
 }
 
 export async function GET(_request, { params }) {
@@ -52,28 +63,51 @@ export async function GET(_request, { params }) {
       return NextResponse.json({ error: "Invalid registration number." }, { status: 400 });
     }
 
-    // Cloudinary is the durable source of truth; local files are only a fallback.
     let cloudinaryUrl = "";
     try {
       await connectMongoDB();
       const numericCode = /^\d+$/.test(code) ? Number(code) : null;
-      const student = await Student.findOne({
-        $or: [
-          { regnNo: code },
-          { enrollmentNo: code },
-          ...(numericCode === null ? [] : [{ regnNo: numericCode }, { enrollmentNo: numericCode }]),
-        ],
-      }).select("photoUrl regnNo enrollmentNo").lean();
+      const [student, masterByCode, enrollment] = await Promise.all([
+        Student.findOne({
+          $or: [
+            { regnNo: code }, { enrollmentNo: code },
+            ...(numericCode === null ? [] : [{ regnNo: numericCode }, { enrollmentNo: numericCode }]),
+          ],
+        }).select("_id photoUrl regnNo enrollmentNo").lean(),
+        StudentMaster.findOne({ stCodes: code }).select("_id photoUrl stCodes legacyStudentIds").lean(),
+        StudentEnrollment.findOne({ stCode: code }).select("studentId legacyStudentId stCode").lean(),
+      ]);
 
-      cloudinaryUrl = safeCloudinaryUrl(student?.photoUrl);
+      let master = masterByCode;
+      if (!master && enrollment?.studentId) {
+        master = await StudentMaster.findById(enrollment.studentId)
+          .select("_id photoUrl stCodes legacyStudentIds").lean();
+      }
+      cloudinaryUrl = safeCloudinaryUrl(student?.photoUrl) || safeCloudinaryUrl(master?.photoUrl);
+
       if (!cloudinaryUrl) {
-        const master = await StudentMaster.findOne({ stCodes: code }).select("photoUrl").lean();
-        cloudinaryUrl = safeCloudinaryUrl(master?.photoUrl);
+        const cloudinary = configureCloudinary();
+        if (cloudinary.configured) {
+          cloudinaryUrl = await findCloudinaryPhoto(cloudinary.client, code);
+          if (cloudinaryUrl) {
+            if (master?._id) {
+              await StudentMaster.updateOne({ _id: master._id }, { $set: { photoUrl: cloudinaryUrl } });
+            }
+            const linkedIds = [
+              ...(master?.legacyStudentIds || []),
+              ...(enrollment?.legacyStudentId ? [enrollment.legacyStudentId] : []),
+              ...(student?._id ? [student._id] : []),
+            ];
+            if (linkedIds.length) {
+              await Student.updateMany({ _id: { $in: linkedIds } }, { $set: { photoUrl: cloudinaryUrl } });
+            }
+          }
+        }
       }
     } catch (databaseError) {
-      // Keep local asset fallback available if Atlas is temporarily unreachable.
-      console.warn("[student-photo] Database lookup unavailable:", databaseError?.message || databaseError);
+      console.warn("[student-photo] Database/Cloudinary lookup unavailable:", databaseError?.message || databaseError);
     }
+
     if (cloudinaryUrl) {
       return NextResponse.redirect(cloudinaryUrl, {
         status: 302,
@@ -81,25 +115,31 @@ export async function GET(_request, { params }) {
       });
     }
 
-    for (const [extension, contentType] of EXTENSIONS) {
-      for (const filename of [code + extension, code + extension.toUpperCase()]) {
-      try {
-        const image = await readFile(path.join(PHOTO_DIRECTORY, filename));
-        return new NextResponse(new Uint8Array(image), {
-          status: 200,
-          headers: {
-            "Content-Type": contentType,
-            "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
-            "X-Content-Type-Options": "nosniff",
-          },
-        });
-      } catch (error) {
-        if (error.code !== "ENOENT") throw error;
-      }
+    // Local fallback supports the current project folder and the previous upload folder.
+    for (const directory of PHOTO_DIRECTORIES) {
+      for (const [extension, contentType] of EXTENSIONS) {
+        for (const filename of [code + extension, code + extension.toUpperCase()]) {
+          try {
+            const image = await readFile(path.join(directory, filename));
+            return new NextResponse(new Uint8Array(image), {
+              status: 200,
+              headers: {
+                "Content-Type": contentType,
+                "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
+                "X-Content-Type-Options": "nosniff",
+              },
+            });
+          } catch (error) {
+            if (error.code !== "ENOENT") throw error;
+          }
+        }
       }
     }
 
-    return NextResponse.json({ error: "No photograph found for this registration number." }, { status: 404 });
+    return NextResponse.json({
+      error: "Photo not found. Upload this registration-number image through Students > Bulk Upload Photos.",
+      registrationNo: code,
+    }, { status: 404 });
   } catch (error) {
     console.error("[student-photo]", error);
     return NextResponse.json({ error: "Unable to load student photograph." }, { status: 500 });
