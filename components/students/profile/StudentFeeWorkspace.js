@@ -24,10 +24,15 @@ export default function StudentFeeWorkspace({
   const [historyScope, setHistoryScope] = useState("all");
   const [selectedStCode, setSelectedStCode] = useState("");
   const paymentHistory = Array.isArray(student.paymentHistory) ? student.paymentHistory : [];
-  const currentStCode = String(student.regnNo || student.enrollmentNo || "");
-  const effectiveStCode = selectedStCode || currentStCode;
   const enrollmentOptions = Array.isArray(student.enrollments) ? student.enrollments : [];
-  const selectedEnrollment = enrollmentOptions.find(item => String(item.stCode || "") === effectiveStCode);
+  const semesterRoman = ["I", "II", "III", "IV", "V", "VI"][Number(student.currentSemester || 0) - 1] || "";
+  const semesterEnrollment = semesterRoman
+    ? enrollmentOptions.find(item => String(item.semesterLabel || "").toUpperCase() === "SM-" + semesterRoman)
+    : null;
+  const currentEnrollment = semesterEnrollment || student.activeEnrollment || enrollmentOptions.find(item => item.status === "ACTIVE");
+  const currentStCode = String(currentEnrollment?.stCode || student.regnNo || student.enrollmentNo || "");
+  const effectiveStCode = selectedStCode || currentStCode;
+  const selectedEnrollment = enrollmentOptions.find(item => String(item.stCode || "") === effectiveStCode) || currentEnrollment;
   const selectedInstallments = Array.isArray(selectedEnrollment?.installments) ? selectedEnrollment.installments : [];
   const selectedSummary = selectedEnrollment?.summary || {};
   const selectedDue = Number(selectedSummary.totalDue || selectedEnrollment?.feeConfig?.netPayableFee || 0);
@@ -40,7 +45,7 @@ export default function StudentFeeWorkspace({
   const totalAcrossSemesters = paymentHistory.reduce((sum, payment) => sum + Number(payment.amountPaid ?? payment.amount ?? 0), 0);
   const currentSemesterPaid = paymentHistory.filter(payment => String(payment.stCode || "") === currentStCode)
     .reduce((sum, payment) => sum + Number(payment.amountPaid ?? payment.amount ?? 0), 0);
-  const activeEnrollment = student.activeEnrollment || enrollmentOptions.find(item => item.status === "ACTIVE");
+  const activeEnrollment = currentEnrollment;
   const activeSummary = activeEnrollment?.summary || {};
   const currentPayable = Number(activeEnrollment?.feeConfig?.netPayableFee || activeSummary.totalDue || fee?.payable || 0);
   const currentPaid = Number(activeSummary.totalPaid || currentSemesterPaid || fee?.paid || 0);
