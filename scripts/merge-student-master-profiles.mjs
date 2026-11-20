@@ -192,6 +192,18 @@ async function main() {
   }
   for (const group of groups.filter(item => item._existing && item.duplicateMasterIds?.length)) {
     const canonicalId = idMap.get(String(group._id));
+    const canonicalMaster = await StudentMaster.findById(canonicalId);
+    if (canonicalMaster) {
+      canonicalMaster.legacyStudentIds = group.legacyStudentIds || canonicalMaster.legacyStudentIds;
+      canonicalMaster.stCodes = [...new Set([...(canonicalMaster.stCodes || []), ...(group.stCodes || [])])];
+      canonicalMaster.phoneNumbers = [...new Set([...(canonicalMaster.phoneNumbers || []), ...(group.phoneNumbers || [])])];
+      canonicalMaster.address = canonicalMaster.address || group.address || "";
+      canonicalMaster.qualification = canonicalMaster.qualification || group.qualification || "";
+      canonicalMaster.photoUrl = canonicalMaster.photoUrl || group.photoUrl || "";
+      canonicalMaster.activeEnrollmentId = canonicalMaster.activeEnrollmentId || group.activeEnrollmentId || null;
+      canonicalMaster.identityWarnings = [...new Set([...(canonicalMaster.identityWarnings || []), ...(group.identityWarnings || [])])];
+      await canonicalMaster.save();
+    }
     for (const duplicateId of group.duplicateMasterIds) {
       const duplicateEnrollments = await StudentEnrollment.find({ studentId: duplicateId }).lean();
       for (const duplicateEnrollment of duplicateEnrollments) {
