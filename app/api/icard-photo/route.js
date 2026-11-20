@@ -8,7 +8,7 @@ export async function GET(request) {
     const raw = new URL(request.url).searchParams.get("url");
     if (!raw) return NextResponse.json({ error: "Photo URL is required." }, { status: 400 });
     const url = new URL(raw);
-    if (url.protocol !== "https:" || !/(^|\\.)res\\.cloudinary\\.com$/i.test(url.hostname)) {
+    if (url.protocol !== "https:" || !/(^|\.)res\.cloudinary\.com$/i.test(url.hostname)) {
       return NextResponse.json({ error: "Only trusted Cloudinary photo URLs are supported." }, { status: 400 });
     }
     const response = await fetch(url, {
@@ -16,11 +16,11 @@ export async function GET(request) {
       signal: AbortSignal.timeout(10000),
       redirect: "follow",
     });
-    if (!response.ok || !/(^image\\/(jpeg|png|webp))$/i.test(response.headers.get("content-type") || "")) {
+    if (!response.ok || !/(^image\/(jpeg|png|webp))$/i.test(response.headers.get("content-type") || "")) {
       return NextResponse.json({ error: "Unable to retrieve the student photo." }, { status: 502 });
     }
     const finalUrl = new URL(response.url);
-    if (!/(^|\\.)res\\.cloudinary\\.com$/i.test(finalUrl.hostname)) {
+    if (!/(^|\.)res\.cloudinary\.com$/i.test(finalUrl.hostname)) {
       return NextResponse.json({ error: "Photo redirect was rejected." }, { status: 502 });
     }
     return new NextResponse(await response.arrayBuffer(), {
