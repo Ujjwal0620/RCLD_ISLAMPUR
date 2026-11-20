@@ -238,7 +238,7 @@ function asStudentPayload(row, course, sourceName) {
 }
 
 function normalizePersonName(value) {
-  return clean(value).toLowerCase().normalize("NFKD").replace(/[^a-z0-9 ]/g, " ").replace(/\\s+/g, " ").trim();
+  return clean(value).toLowerCase().normalize("NFKD").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
 }
 function nameSimilarity(left, right) {
   const a = normalizePersonName(left), b = normalizePersonName(right);
@@ -309,19 +309,18 @@ export async function POST(request) {
     await connectMongoDB();
     await removeLegacyFormNoUniqueIndex();
     const sourceName = String(file.name || "RCLD Student Import").slice(0, 180);
-    const validRows = parsed.rows.filter(row => !row.errors.length);
     const warnings = [...preview.warnings];
     const errors = [...preview.errors];
     const validRows = parsed.rows.filter(row => !row.errors.length);
     const registrationNumbers = [...new Set(validRows.map(row => row.regnNo).filter(Boolean))];
-    const numericRegistrationNumbers = registrationNumbers.filter(code => /^\\d+$/.test(code)).map(Number);
+    const numericRegistrationNumbers = registrationNumbers.filter(code => /^\d+$/.test(code)).map(Number);
     const existingRecords = registrationNumbers.length ? await Student.find({ $or: [
       { regnNo: { $in: [...registrationNumbers, ...numericRegistrationNumbers] } },
       { enrollmentNo: { $in: [...registrationNumbers, ...numericRegistrationNumbers] } }
     ] }).lean() : [];
     const existingByCode = new Map();
     for (const student of existingRecords) for (const rawCode of [student.regnNo, student.enrollmentNo]) {
-      const key = String(rawCode ?? "").replace(/\\.0$/, "");
+      const key = String(rawCode ?? "").replace(/\.0$/, "");
       if (key && !existingByCode.has(key)) existingByCode.set(key, student);
     }
     const grouped = new Map();
