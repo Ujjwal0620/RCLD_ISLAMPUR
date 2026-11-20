@@ -13,8 +13,7 @@ export async function GET() {
     const session = await getSession();
     if (!session) return NextResponse.json({ authenticated: false }, { status: 401 });
 
-    // The bootstrap Super Admin session is self-contained and must remain usable
-    // even before the new MongoDB database has been populated.
+    // A bootstrap Super Admin session is self-contained and works before DB seeding.
     if (session.role === "superadmin" || session.sub === "superadmin") {
       return NextResponse.json({
         authenticated: true,

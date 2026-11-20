@@ -24,30 +24,62 @@ export async function POST(req) {
     let employee;
     let role;
 
-    // Bootstrap Super Admin authentication is independent of MongoDB seed data.
+    // Bootstrap Super Admin authentication does not depend on MongoDB seed data.
     if (isEmail && normalizedLogin === superAdminEmail && password === superAdminPassword) {
-      employee = { _id: "superadmin", employeeId: "SUPERADMIN", name: "Super Admin", email: superAdminEmail, status: "Active", designation: "Super Admin", department: "Administration" };
+      employee = {
+        _id: "superadmin",
+        employeeId: "SUPERADMIN",
+        name: "Super Admin",
+        email: superAdminEmail,
+        status: "Active",
+        designation: "Super Admin",
+        department: "Administration"
+      };
       role = "superadmin";
     } else {
       await connectMongoDB();
+
       if (isEmail) {
         employee = await Employee.findOne({ email: normalizedLogin }).collation({ locale: "en", strength: 2 }).lean();
       } else {
-        employee = await Employee.findOne({ $or: [{ loginId: normalizedLogin }, { mobile: normalizedLogin }, { mobile: rawLogin }] }).lean();
+        employee = await Employee.findOne({
+          $or: [
+            { loginId: normalizedLogin },
+            { mobile: normalizedLogin },
+            { mobile: rawLogin }
+          ]
+        }).lean();
       }
-      if (!employee || employee.status === "Inactive") return NextResponse.json({ error: "Invalid employee login." }, { status: 401 });
-      let ok = employee.password?.startsWith("$2") ? await bcrypt.compare(password, employee.password) : password === employee.password;
+
+      if (!employee || employee.status === "Inactive") {
+        return NextResponse.json({ error: "Invalid employee login." }, { status: 401 });
+      }
+
+      let ok = employee.password?.startsWith("$2")
+        ? await bcrypt.compare(password, employee.password)
+        : password === employee.password;
+
+      // Imported employees without credentials can initialize their password once.
       if (!ok && !employee.password && !isEmail && normalizedLogin && password === "emp@123") {
         const hash = await bcrypt.hash("emp@123", 12);
         await Employee.updateOne({ _id: employee._id }, { $set: { loginId: normalizedLogin, password: hash } });
         ok = true;
       }
+
       if (!ok) return NextResponse.json({ error: "Invalid employee login." }, { status: 401 });
       role = roleOfEmployee(employee);
     }
 
-    const token = await createSession({ sub: String(employee._id), employeeId: employee.employeeId, name: employee.name, role, loginId: normalizedLogin });
-    const res = NextResponse.json({ employee: { id: employee._id, employeeId: employee.employeeId, name: employee.name, role } });
+    const token = await createSession({
+      sub: String(employee._id),
+      employeeId: employee.employeeId,
+      name: employee.name,
+      role,
+      loginId: normalizedLogin
+    });
+    const res = NextResponse.json({
+      employee: { id: employee._id, employeeId: employee.employeeId, name: employee.name, role }
+    });
     res.cookies.set({ ...sessionCookie(token) });
     return res;
   } catch (error) {
