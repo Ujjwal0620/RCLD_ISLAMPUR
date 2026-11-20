@@ -109,9 +109,9 @@ export default function BulkImportPage() {
             <label className="form-field" style={{ marginTop: 18, maxWidth: 420 }}>
               <span>Student worksheet</span>
               <select value={sheetName} onChange={event => { setSheetName(event.target.value); createPreview(file, event.target.value); }}>
-                {preview.availableSheets.map(name => <option key={name} value={name}>{name}</option>)}
+                {preview.availableSheets.map(name => <option key={name} value={name} disabled={!preview.studentSheets?.includes(name)}>{name}{preview.studentSheets?.includes(name) ? "" : " (payment / non-student sheet)"}</option>)}
               </select>
-              <small className="form-help">Payment-only sheets are excluded from this list.</small>
+              <small className="form-help">Choose a student-compatible worksheet. Payment-only sheets are shown but disabled for student import.</small>
             </label>
           )}
           <div style={{ display: "grid", gap: 12, marginTop: 18 }}>
