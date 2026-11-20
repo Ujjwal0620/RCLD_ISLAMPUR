@@ -16,9 +16,9 @@ const Student = mongoose.models.Student || mongoose.model("Student", StudentSche
 
 function registrationFromFilename(filename) {
   const base = String(filename || "").split("/").pop() || "";
-  const exact = base.match(/(?:^|[_ -])([0-9]{4,})(?=\\.[^.]+$)/);
+  const exact = base.match(/(?:^|[_ -])([0-9]{4,})(?=[.][^.]+$)/);
   if (exact?.[1]) return exact[1];
-  const withoutExtension = base.replace(/\\.[^.]+$/, "");
+  const withoutExtension = base.replace(/[.][^.]+$/, "");
   const candidates = withoutExtension.match(/[0-9]{4,}/g) || [];
   return candidates.length ? candidates[candidates.length - 1] : "";
 }
