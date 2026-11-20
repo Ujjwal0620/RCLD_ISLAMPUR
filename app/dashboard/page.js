@@ -96,7 +96,36 @@ export default function DashboardPage(){
  }
  async function loadActivity(){
   setActivityLoading(true);
-  try{const q=new URLSearchParams({mode:period,date,month});const r=await fetch("/api/dashboard/activity?"+q.toString(),{cache:"no-store"});setActivity(await r.json())}finally{setActivityLoading(false)}
+  try{
+   const q=new URLSearchParams({mode:period,date,month});
+   const r=await fetch("/api/dashboard/activity?"+q.toString(),{cache:"no-store"});
+   const payload=await r.json();
+
+   if(!r.ok || payload?.error){
+    console.error("Dashboard activity API failed:",payload);
+    return;
+   }
+
+   setActivity({
+    ...payload,
+    attendance:{
+     day:{Present:0,Absent:0,Leave:0,total:0,...(payload.attendance?.day||{})},
+     statusTotals:{Present:0,Absent:0,Leave:0,...(payload.attendance?.statusTotals||{})},
+     monthly:Array.isArray(payload.attendance?.monthly)?payload.attendance.monthly:[]
+    },
+    faculty:Array.isArray(payload.faculty)?payload.faculty:[],
+    batchAttendance:Array.isArray(payload.batchAttendance)?payload.batchAttendance:[],
+    plannedClasses:Array.isArray(payload.plannedClasses)?payload.plannedClasses:[],
+    fees:{
+     collected:Number(payload.fees?.collected||0),
+     daily:Array.isArray(payload.fees?.daily)?payload.fees.daily:[]
+    }
+   });
+  }catch(error){
+   console.error("Dashboard activity load failed:",error);
+  }finally{
+   setActivityLoading(false);
+  }
  }
  useEffect(()=>{if(user && !["superadmin","office-admin"].includes(user.role))return;load()},[user]);
  useEffect(()=>{
@@ -110,13 +139,14 @@ export default function DashboardPage(){
  const statusTotal=(Array.isArray(data.studentStatus)?data.studentStatus:[]).reduce((n,x)=>n+Number(x?.value||0),0)||data.students;
  const topCourses=data.courses.slice(0,8);
  const capacity=data.batchUtilization||0;
- const attendance=activity.attendance.day;
- const attendanceTotal=period==="day"?attendance.total:activity.attendance.monthly.reduce((n,x)=>n+x.total,0);
- const present=period==="day"?attendance.Present:activity.attendance.monthly.reduce((n,x)=>n+x.Present,0);
- const absent=period==="day"?attendance.Absent:activity.attendance.monthly.reduce((n,x)=>n+x.Absent,0);
- const leave=period==="day"?attendance.Leave:activity.attendance.monthly.reduce((n,x)=>n+x.Leave,0);
- const feeChart=period==="day"?activity.fees.daily:activity.fees.daily;
- const feeTotal=activity.fees.collected;
+ const attendance=activity?.attendance?.day||{Present:0,Absent:0,Leave:0,total:0};
+ const monthlyAttendance=Array.isArray(activity?.attendance?.monthly)?activity.attendance.monthly:[];
+ const attendanceTotal=period==="day"?attendance.total:monthlyAttendance.reduce((n,x)=>n+Number(x?.total||0),0);
+ const present=period==="day"?attendance.Present:monthlyAttendance.reduce((n,x)=>n+Number(x?.Present||0),0);
+ const absent=period==="day"?attendance.Absent:monthlyAttendance.reduce((n,x)=>n+Number(x?.Absent||0),0);
+ const leave=period==="day"?attendance.Leave:monthlyAttendance.reduce((n,x)=>n+Number(x?.Leave||0),0);
+ const feeChart=Array.isArray(activity?.fees?.daily)?activity.fees.daily:[];
+ const feeTotal=Number(activity?.fees?.collected||0);
 
  if(user && !["superadmin","office-admin"].includes(user.role)) return <EmployeeDashboard user={user}/>;
 
