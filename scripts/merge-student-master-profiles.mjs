@@ -76,7 +76,7 @@ function findIdentityMatch(row, candidates) {
     if (!duplicate) distinct.push(candidate);
   }
   if (distinct.length === 1) return { match: distinct[0], ambiguous: false };
-  return { match: null, ambiguous: distinct.length > 1 };
+  return { match: null, ambiguous: distinct.length > 1, candidateIds: distinct.map(candidate => String(candidate._id)) };
 }
 const StudentSchema = new mongoose.Schema({}, { strict: false, timestamps: true });
 const MasterSchema = new mongoose.Schema({
@@ -111,12 +111,18 @@ async function main() {
   const groups = existing.map(master => ({ ...master, _existing: true }));
   const assignments = [];
   let ambiguous = 0, newGroups = 0;
+  const ambiguousSamples = [];
   for (const student of students) {
     const linked = groups.find(master => (master.legacyStudentIds || []).some(id => String(id) === String(student._id)));
     if (linked) { assignments.push({ student, group: linked, method: "ALREADY_LINKED" }); continue; }
     const match = findIdentityMatch(identityOf(student), groups);
     if (match.match) { assignments.push({ student, group: match.match, method: "IDENTITY_MATCH" }); continue; }
-    if (match.ambiguous) ambiguous += 1;
+    if (match.ambiguous) {
+      ambiguous += 1;
+      ambiguousSamples.push({ studentId: String(student._id), name: identityOf(student).fullName,
+        dob: identityOf(student).dob || "", fatherName: identityOf(student).fatherName || "",
+        candidateIds: match.candidateIds || [] });
+    }
     const group = {
       _id: "NEW-" + String(student._id), ...identityOf(student),
       normalizedFullName: normalizeName(identityOf(student).fullName),
@@ -132,6 +138,7 @@ async function main() {
     existingMasterProfiles: existing.length, resultingMasterProfiles: groups.length,
     recordsToLink: assignments.filter(item => item.method !== "ALREADY_LINKED").length,
     newMasterProfiles: newGroups, ambiguousRecordsKeptSeparate: ambiguous,
+    ambiguousSamples: ambiguousSamples.slice(0, 30),
     registrationCodes: assignments.filter(item => stCodeOf(item.student)).length,
   }, null, 2));
   if (!apply) { console.log("No database writes were made. Review the report, then rerun with --apply."); return; }
