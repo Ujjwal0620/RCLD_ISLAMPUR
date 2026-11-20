@@ -131,7 +131,12 @@ function parseAddress(value) {
   if (/^(?:U\s*\/\s*D|U\.?D\.?)$/i.test(district)) district = "Uttar Dinajpur";
   const pinLine = lines.find(line => /\bPIN(?:NO|O|N)?\.?\s*[:.\-]?\s*\d{6}/i.test(line)) || raw;
   const pincode = pinLine.match(/\bPIN(?:NO|O|N)?\.?\s*[:.\-]?\s*(\d{6})/i)?.[1] || "";
-  return { address: raw, ward, village: ward, po, ps, postOffice: po, policeStation: ps, district, pincode, pin: pincode, sourceAddressRaw: raw };
+  const titleCasePlace = value => String(value || "").toLocaleLowerCase().replace(/(^|[\\s'-])([a-z])/g, (_, prefix, letter) => prefix + letter.toLocaleUpperCase());
+  const cleanWard = titleCasePlace(ward);
+  const cleanPo = titleCasePlace(po);
+  const cleanPs = titleCasePlace(ps);
+  const cleanDistrict = titleCasePlace(district);
+  return { address: raw, ward: cleanWard, village: cleanWard, po: cleanPo, ps: cleanPs, postOffice: cleanPo, policeStation: cleanPs, district: cleanDistrict, pincode, pin: pincode, sourceAddressRaw: raw };
 }
 
 function findStudentSheet(workbook, requestedSheet = "") {
@@ -167,7 +172,7 @@ function parseRows(workbook, requestedSheet = "") {
     const values = grid[i];
     if (!values.some(value => clean(value))) continue;
     const get = key => indexes[key] >= 0 ? values[indexes[key]] : "";
-    const regnNo = clean(get("regnNo")).replace(/\.0$/, "");
+    const regnNo = clean(get("regnNo")).replace(/\.0+$/, "");
     const gender = genderValue(get("sex"));
     const phones = parsePhoneValues(get("phone"));
     const course = normalizeCourse(get("course"));
@@ -188,7 +193,7 @@ function parseRows(workbook, requestedSheet = "") {
       gender: gender.value, fatherName: clean(get("father")), phone: phones.primary,
       secondaryPhone: phones.secondary, altPhone: phones.secondary, sourcePhone: phones.source, course: course.code,
       courseLabel: course.label, ...address, dob: dateValue(get("dob")),
-      qualification: clean(get("qualification")), formNo: clean(get("formNo")).replace(/\.0$/, ""),
+      qualification: clean(get("qualification")), formNo: clean(get("formNo")).replace(/\.0+$/, ""),
       warnings, errors
     });
   }
