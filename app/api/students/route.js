@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import Course from "@/models/Course";
 import StudentMaster from "@/models/StudentMaster";
 import StudentEnrollment from "@/models/StudentEnrollment";
+import { linkImportedStudentRecords } from "@/lib/student-import/import-payment-sheet";
 import { getStudentAdmissionStatus } from "@/lib/student-admission-status";
 
 const StudentSchema = new mongoose.Schema({
@@ -264,6 +265,12 @@ export async function POST(request) {
         if (isKidsCourse) await Student.collection.updateOne({ _id: student._id }, { $set: { semesterHistory: [{ semester: initialSemester, status: "Active", admittedAt: body.admissionDate || new Date().toISOString().slice(0,10), admissionFee: Number(semesterPlan.admissionFee), monthlyFee: Number(semesterPlan.monthlyFee), tuitionFee: Number(semesterPlan.tuitionFee), totalFee: Number(semesterPlan.totalFee), durationMonths: 6 }] } });
         await StudentFee.findOneAndUpdate({studentId:student._id}, {$set:{totalFee:Number(semesterPlan?.tuitionFee ?? course.fee ?? 0),admissionFee:Number(semesterPlan?.admissionFee ?? course.admissionFee ?? 0),registrationFee:Number(course.registrationFee||0),admissionDate:body.admissionDate||new Date().toISOString().slice(0,10),currentSemester:isKidsCourse?initialSemester:undefined,semesterHistory:isKidsCourse?[{semester:initialSemester,admissionFee:Number(semesterPlan.admissionFee),monthlyFee:Number(semesterPlan.monthlyFee),tuitionFee:Number(semesterPlan.tuitionFee),totalFee:Number(semesterPlan.totalFee),admittedAt:body.admissionDate||new Date().toISOString().slice(0,10)}]:[]}}, {upsert:true,new:true,setDefaultsOnInsert:true});
       }
+    }
+    // Ensure newly admitted students also receive one durable master identity/enrollment.
+    try {
+      await linkImportedStudentRecords([student.toObject()]);
+    } catch (identityError) {
+      console.error("[student-master-link]", identityError);
     }
     return NextResponse.json({ student }, { status: 201 });
   } catch (error) {
