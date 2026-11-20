@@ -143,44 +143,72 @@ export default function useStudentProfile(params) {
     async function saveStudent(e) {
       e.preventDefault();
       setMessage("");
-      const r = await fetch("/api/students/" + student._id, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...editForm,
-          permanentAddress: editForm.sameAsPresentAddress
-            ? editForm.presentAddress || editForm.address || ""
-            : editForm.permanentAddress,
-        }),
-      });
-      const d = await r.json();
-      if (!r.ok) return setMessage(d.error || "Unable to update student.");
-      const fr = await fetch("/api/students/" + student._id + "/fees", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          totalFee: feeForm.totalFee,
-          discount: feeForm.discount || 0,
-          admissionFee: feeForm.admissionFee,
-          registrationFee: feeForm.registrationFee,
-          lateFine:
-            Number(fee?.lateFine || 0) +
-            paymentItems
-              .filter((item) => item.purpose === "Late Fine")
-              .reduce((sum, item) => sum + Number(item.amount || 0), 0),
-          admissionDate: student.admissionDate,
-        }),
-      });
-      const fd = await fr.json();
-      if (!fr.ok) return setMessage(fd.error || "Student saved, but fee mapping failed.");
-      setFee(fd.fee);
+      if (!student?._id) return;
+
+      // Send only fields the user actually changed. This lets an existing
+      // student update one detail (for example, only the name) without
+      // needing to complete unrelated/blank fields.
+      const protectedFields = new Set(["status", "batchId", "batchCode", "formNo", "enrollmentNo", "aecCode"]);
+      const patch = {};
+      for (const [key, value] of Object.entries(editForm || {})) {
+        if (protectedFields.has(key)) continue;
+        if (JSON.stringify(value ?? null) !== JSON.stringify(student[key] ?? null)) {
+          patch[key] = value;
+        }
+      }
+      if (
+        editForm.sameAsPresentAddress &&
+        (patch.sameAsPresentAddress !== undefined || patch.presentAddress !== undefined || patch.address !== undefined)
+      ) {
+        patch.permanentAddress = editForm.presentAddress || editForm.address || "";
+      }
+
+      const courseChanged =
+        patch.courseCode !== undefined || patch.courseName !== undefined;
+      const feeChanged =
+        courseChanged ||
+        ["totalFee", "discount", "admissionFee", "registrationFee"].some(
+          (key) => Number(feeForm[key] || 0) !== Number(fee?.[key] || 0),
+        );
+
+      if (Object.keys(patch).length) {
+        const r = await fetch("/api/students/" + student._id, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(patch),
+        });
+        const d = await r.json();
+        if (!r.ok) return setMessage(d.error || "Unable to update student.");
+      }
+
+      // Do not touch the fee ledger for a simple personal/profile edit.
+      if (feeChanged) {
+        const fr = await fetch("/api/students/" + student._id + "/fees", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            totalFee: feeForm.totalFee,
+            discount: feeForm.discount || 0,
+            admissionFee: feeForm.admissionFee,
+            registrationFee: feeForm.registrationFee,
+            lateFine: Number(fee?.lateFine || 0),
+            admissionDate: editForm.admissionDate || student.admissionDate,
+          }),
+        });
+        const fd = await fr.json();
+        if (!fr.ok) return setMessage(fd.error || "Student saved, but fee mapping failed.");
+        setFee(fd.fee);
+      }
+
       const refreshedProfile = await fetch("/api/students/" + student._id, { cache: "no-store" });
       const refreshedData = refreshedProfile.ok ? await refreshedProfile.json() : null;
-      const savedStudent = refreshedData?.student || d.student;
+      const savedStudent = refreshedData?.student || { ...student, ...patch };
       setStudent(savedStudent);
       setEditForm(savedStudent);
       setEditing(false);
-      setMessage("Student profile and course fee mapping updated successfully.");
+      setMessage(Object.keys(patch).length || feeChanged
+        ? "Student changes saved successfully."
+        : "No changes to save.");
     }
   
     async function deleteStudent() {
