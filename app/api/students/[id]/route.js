@@ -113,7 +113,14 @@ export async function GET(req,{params}){
         paymentHistory.push(legacyReceipt);
       }
     }
-    paymentHistory.sort((a, b) => new Date(a.paymentDate || 0) - new Date(b.paymentDate || 0));
+    const receiptTime = payment => {
+      const value = payment.paymentDate || payment.date;
+      if (!value) return Number.MAX_SAFE_INTEGER;
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? Number.MAX_SAFE_INTEGER : date.getTime();
+    };
+    paymentHistory.sort((a, b) => receiptTime(a) - receiptTime(b)
+      || String(a.mrNo || "").localeCompare(String(b.mrNo || "")));
     const enrichedStudent = {
       ...canonicalStudent,
       photoUrl: masterProfile?.photoUrl || canonicalStudent.photoUrl || "",
