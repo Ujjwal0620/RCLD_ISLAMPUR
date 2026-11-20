@@ -128,13 +128,14 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     student.regNo, student.icardNumber, student.iCardNumber, student.idCardNumber, student.cardNumber,
     student.enrollmentNo, student.admissionNo, student.formNo, "—"
   )).trim();
-  const formRegistrationCode = String(firstValue(
-    student.formNo, student.formNumber, student.registrationNumber, student.registrationNo,
-    student.registrationId, student.regNo, student.regnNo, "-"
+  const studentCode = String(firstValue(
+    student.stCode, student.activeEnrollment?.stCode, student.studentCode,
+    student.student_code, rawRegistrationCode
   )).trim();
-  const idCode = rawRegistrationCode.includes("/")
-    ? rawRegistrationCode.slice(rawRegistrationCode.lastIndexOf("/") + 1)
-    : rawRegistrationCode;
+  const idCode = studentCode.includes("/")
+    ? studentCode.slice(studentCode.lastIndexOf("/") + 1)
+    : studentCode;
+  const idValueMarkup = '<span class="id-number-prefix">RCLD/ISL-001/</span><strong class="id-number-code">' + escapeHtml(idCode || "-") + '</strong>';
   const fatherName = titleCase(firstValue(student.fatherOrHusbandName, student.fatherName, student.fatherNameAsPerRecords, student.guardianName, "—"));
   const addressMarkup = getAddressMarkup(student) || '<div class="address-line">—</div>';
   const admission = getAdmissionDate(student) || "—";
@@ -142,15 +143,13 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     ? '<img class="student-photo" crossorigin="anonymous" src="' + escapeHtml(photoUrl) + '" alt="Student photograph">'
     : '<div class="student-photo photo-empty" aria-label="Student photograph unavailable"></div>';
   const circularValues =
-    '<div class="overlay circular-value circular-id">' + '<span class="circular-id-code">' + escapeHtml(idCode || "-") + '</span></div>' +
-    '<div class="overlay circular-value circular-registration">' + escapeHtml(formRegistrationCode || "-") + '</div>' +
+    '<div class="overlay circular-value circular-id">' + idValueMarkup + '</div>' +
     '<div class="overlay circular-value circular-admission">' + escapeHtml(admission) + '</div>' +
     '<div class="overlay circular-value circular-father">' + escapeHtml(fatherName) + '</div>' +
     '<div class="overlay circular-value circular-address">' + addressMarkup + '</div>';
   const diplomaValues = diploma
-    ? '<div class="overlay diploma-registration">' + escapeHtml(formRegistrationCode || "—") + '</div>' +
-      '<div class="overlay diploma-session">' + escapeHtml(session || "—") + '</div>' +
-      '<div class="overlay diploma-id">' + escapeHtml(idCode || "—") + '</div>' +
+    ? '<div class="overlay diploma-session">' + escapeHtml(session || "—") + '</div>' +
+      '<div class="overlay diploma-id">' + idValueMarkup + '</div>' +
       '<div class="overlay diploma-name">' + nameMarkup + '</div>' +
       '<div class="overlay diploma-father">' + escapeHtml(fatherName) + '</div>' +
       '<div class="overlay diploma-address">' + addressMarkup + '</div>' +
@@ -171,13 +170,13 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     '.overlay{position:absolute;z-index:2;overflow:hidden;font-family:Arial,"Helvetica Neue","Liberation Sans",sans-serif}' +
     '.circular-name{top:48.6%;left:3%;width:94%;text-align:center;font-weight:800;font-size:clamp(20px,6cqw,76px);text-transform:uppercase;letter-spacing:.3px;line-height:1.05;white-space:nowrap}' +
     '.circular-value{left:46.8%;width:48.5%;text-align:left;font-family:"Roboto Condensed","Arial Narrow",Arial,sans-serif;font-weight:700;font-size:clamp(14px,3.35cqw,46px);color:#3E454C;transform:scaleY(1.10);transform-origin:left center;white-space:nowrap}' +
-    '.circular-id{top:60.9%}.circular-id-code{font-size:3.95cqw;font-weight:800}.circular-registration{top:63.8%}.circular-admission{top:66.6%}.circular-father{top:69.4%}' +
-    '.circular-address{top:72.2%;transform-origin:top left;line-height:1.28;word-break:break-word;white-space:normal;max-height:10.8%;overflow:hidden}' +
+    '.circular-id{top:60.9%}.circular-id .id-number-prefix{font-size:3.35cqw;font-weight:700}.circular-id .id-number-code{font-size:3.95cqw;font-weight:800}.circular-admission{top:63.8%}.circular-father{top:66.6%}' +
+    '.circular-address{top:69.4%;transform-origin:top left;line-height:1.28;word-break:break-word;white-space:normal;max-height:10.8%;overflow:hidden}' +
     '.circular-address .address-line{display:block;min-height:0}' +
     '.diploma .student-photo{top:34.2%;left:32.1%;transform:none;width:35.8%;height:25%;aspect-ratio:auto;border-radius:10px;object-fit:cover}' +
     '.diploma .overlay{font-family:Arial,"Helvetica Neue","Liberation Sans",sans-serif;font-size:clamp(13px,3.2cqw,44px);color:#1E242B;font-weight:700;line-height:1.1;transform:none;transform-origin:left top;white-space:nowrap}' +
-    '.diploma-registration{top:2.5%;left:38.5%;width:48%}.diploma-session{top:2.5%;left:87.5%;width:12%}' +
-    '.diploma-id{top:13%;left:72%;width:26%}' +
+    '.diploma-session{top:2.5%;left:87.5%;width:12%}' +
+    '.diploma-id{top:13%;left:72%;width:26%}.diploma-id .id-number-prefix{font-size:2.7cqw;font-weight:700}.diploma-id .id-number-code{font-size:3.2cqw;font-weight:800}' +
     '.diploma-name{top:62.5%;left:16.5%;width:82%;font-size:clamp(15px,3.6cqw,48px)!important;font-weight:800!important;text-transform:uppercase;white-space:nowrap}' +
     '.diploma-father{top:66.2%;left:31%;width:68%}' +
     '.diploma-address{top:69.2%;left:20.5%;width:75%;line-height:1.28;white-space:normal;word-break:break-word;max-height:7.8%;overflow:hidden}' +
