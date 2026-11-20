@@ -123,7 +123,7 @@ export async function GET(req,{params}){
       || String(a.mrNo || "").localeCompare(String(b.mrNo || "")));
     const enrichedStudent = {
       ...canonicalStudent,
-      photoUrl: masterProfile?.photoUrl || canonicalStudent.photoUrl || (canonicalStudent.regnNo ? `/api/students/photo/${encodeURIComponent(String(canonicalStudent.regnNo).trim())}` : ""),
+      photoUrl: masterProfile?.photoUrl || canonicalStudent.photoUrl || ((canonicalStudent.regnNo || activeEnrollment?.stCode || masterProfile?.stCodes?.[0]) ? `/api/students/photo/${encodeURIComponent(String(canonicalStudent.regnNo || activeEnrollment?.stCode || masterProfile?.stCodes?.[0]).trim())}` : ""),
       masterProfile,
       enrollments,
       activeEnrollment,
