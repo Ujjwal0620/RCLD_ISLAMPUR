@@ -131,7 +131,7 @@ function parseAddress(value) {
   if (/^(?:U\s*\/\s*D|U\.?D\.?)$/i.test(district)) district = "Uttar Dinajpur";
   const pinLine = lines.find(line => /\bPIN(?:NO|O|N)?\.?\s*[:.\-]?\s*\d{6}/i.test(line)) || raw;
   const pincode = pinLine.match(/\bPIN(?:NO|O|N)?\.?\s*[:.\-]?\s*(\d{6})/i)?.[1] || "";
-  const titleCasePlace = value => String(value || "").toLocaleLowerCase().replace(/(^|[\\s'-])([a-z])/g, (_, prefix, letter) => prefix + letter.toLocaleUpperCase());
+  const titleCasePlace = value => String(value || "").toLocaleLowerCase().replace(/(^|[\s'-])([a-z])/g, (_, prefix, letter) => prefix + letter.toLocaleUpperCase());
   const cleanWard = titleCasePlace(ward);
   const cleanPo = titleCasePlace(po);
   const cleanPs = titleCasePlace(ps);
