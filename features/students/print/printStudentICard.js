@@ -203,11 +203,22 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
   const autoPrintScript = outputMode === "jpg" ? "" : `
   <script>
     window.addEventListener("load", async () => {
-      await Promise.all(
-        [...document.images].map((img) =>
-          img.decode ? img.decode() : new Promise((resolve, reject) => { if (img.complete && img.naturalWidth > 0) resolve(); else { img.onload = resolve; img.onerror = () => reject(new Error("An I-card image could not be loaded.")); } })
-        )
-      );
+      await Promise.all([...document.images].map(async (img) => {
+        try {
+          if (img.decode) await img.decode();
+          else if (!img.complete || !img.naturalWidth) await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; });
+          if (!img.naturalWidth) throw new Error("Image unavailable");
+        } catch (error) {
+          if (img.classList.contains("photo-img") || img.classList.contains("cfk-photo")) {
+            const placeholder = document.createElement("div");
+            placeholder.className = "photo-ph";
+            placeholder.textContent = "PHOTO";
+            img.replaceWith(placeholder);
+          } else {
+            throw error;
+          }
+        }
+      }));
       setTimeout(() => window.print(), 300);
     });
   </script>`;
