@@ -4,35 +4,23 @@ import * as XLSX from "xlsx";
 import { connectMongoDB } from "@/lib/mongodb";
 import { getSession } from "@/lib/auth";
 import Course from "@/models/Course";
+import { resolveCourseFeeConfig } from "@/lib/student-import/course-fee-rules";
 import { importPaymentWorksheet, linkImportedStudentRecords, parsePaymentWorksheet } from "@/lib/student-import/import-payment-sheet";
+
+export const runtime = "nodejs";
 
 const StudentSchema = new mongoose.Schema({
   formNo: String, enrollmentNo: String, regnNo: String, applicantName: String,
   sourceStudentName: String, courseCode: String, courseName: String, sourceCourseLabel: String,
-  admissionDate: String, dateOfBirth: String, sex: String, sourceSex: String,
+  admissionDate: String, dateOfAdmission: String, dateOfBirth: String, sex: String, sourceSex: String,
   fatherOrHusbandName: String, address: String, presentAddress: String, permanentAddress: String,
   sameAsPresentAddress: Boolean, postOffice: String, policeStation: String, district: String,
   state: String, pin: String, sourceAddressRaw: String, mobileNumber: String, whatsappNumber: String,
-  guardianContactNumber: String, sourceQualification: String, photoUrl: String, status: String,
-  importSource: String, sourceRowNo: Number, sourceRowKey: String, batchId: mongoose.Schema.Types.ObjectId, batchCode: String
+  guardianContactNumber: String, alternatePhoneNumber: String, sourcePhone: String,
+  sourceQualification: String, photoUrl: String, status: String, importSource: String,
+  sourceRowNo: Number, sourceRowKey: String, batchId: mongoose.Schema.Types.ObjectId, batchCode: String
 }, { timestamps: true, strict: false });
 const Student = mongoose.models.Student || mongoose.model("Student", StudentSchema);
-let formNoIndexMigration;
-async function removeLegacyFormNoUniqueIndex() {
-  if (!formNoIndexMigration) {
-    formNoIndexMigration = (async () => {
-      let indexes = [];
-      try {
-        indexes = await Student.collection.indexes();
-      } catch (error) {
-        if (error.code !== 26 && error.codeName !== "NamespaceNotFound") throw error;
-      }
-      const legacyIndex = indexes.find(index => index.name === "formNo_1" && index.unique);
-      if (legacyIndex) await Student.collection.dropIndex(legacyIndex.name);
-    })();
-  }
-  await formNoIndexMigration;
-}
 
 const FeeSchema = new mongoose.Schema({
   studentId: { type: mongoose.Schema.Types.ObjectId, unique: true, index: true },
@@ -46,6 +34,7 @@ const COURSE_NAMES = {
   DCST: "Diploma in Computer Software Technology",
   DCA: "Diploma in Computer Applications",
   KIDS: "Coding for Kids",
+  ROBOTICS: "Robotics",
   CCA: "Certificate in Computer Applications",
   ADCA: "Advanced Diploma in Computer Applications",
   CCC: "Course on Computer Concepts",
@@ -55,227 +44,192 @@ const COURSE_NAMES = {
   DHNT: "Diploma in Hardware & Networking Technology"
 };
 const clean = value => String(value ?? "").trim();
-const normalizeHeader = value => clean(value).toLowerCase().replace(/[^a-z0-9]/g, "");
+const headerKey = value => clean(value).toLowerCase().replace(/[^a-z0-9]/g, "");
+const aliases = {
+  regnNo: ["regnno", "registrationno", "registrationnumber", "stcode", "studentcode", "enrollmentno"],
+  name: ["studentname", "stname", "applicantname", "name"],
+  admissionDate: ["doi", "doa", "dateofadmission", "dateofjoining", "joiningdate", "admissiondate"],
+  sex: ["sex", "gender"],
+  father: ["fathername", "stfather", "father", "fatherorhusbandname"],
+  phone: ["phno", "phoneno", "phone", "phonenumber", "mobile", "mobileno", "contactnumber"],
+  course: ["course", "coursecode", "semester", "coursesemester"],
+  address: ["address"],
+  dob: ["dob", "dateofbirth"],
+  qualification: ["qualification"],
+  formNo: ["formno", "formnumber"]
+};
 const digits = value => clean(value).replace(/\D/g, "");
 
 function dateValue(value) {
-  if (!value) return "";
+  if (value === null || value === undefined || value === "") return "";
+  let year, month, day;
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
-    return [value.getFullYear(), String(value.getMonth() + 1).padStart(2, "0"), String(value.getDate()).padStart(2, "0")].join("-");
-  }
-  if (typeof value === "number") {
+    year = value.getFullYear(); month = value.getMonth() + 1; day = value.getDate();
+  } else if (typeof value === "number" && Number.isFinite(value)) {
     const parsed = XLSX.SSF.parse_date_code(value);
-    return parsed ? [parsed.y, String(parsed.m).padStart(2, "0"), String(parsed.d).padStart(2, "0")].join("-") : "";
+    if (!parsed) return "";
+    year = parsed.y; month = parsed.m; day = parsed.d;
+  } else {
+    const raw = clean(value);
+    let match = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (match) { year = Number(match[1]); month = Number(match[2]); day = Number(match[3]); }
+    else {
+      match = raw.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})$/);
+      if (!match) return "";
+      day = Number(match[1]); month = Number(match[2]); year = Number(match[3]);
+      if (year < 100) year = year < 50 ? 2000 + year : 1900 + year;
+    }
   }
+  const check = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  if (check.getUTCFullYear() !== Number(year) || check.getUTCMonth() !== Number(month) - 1 || check.getUTCDate() !== Number(day)) return "";
+  return [String(year).padStart(4, "0"), String(month).padStart(2, "0"), String(day).padStart(2, "0")].join("-");
+}
+
+function cleanName(value, registrationNo) {
+  let name = clean(value).normalize("NFKC").replace(/\s+/g, " ").trim();
+  if (registrationNo) name = name.replace(new RegExp("_" + String(registrationNo) + "$", "i"), "");
+  return name.replace(/_\d+\s*$/, "").replace(/\s+/g, " ").trim();
+}
+
+function genderValue(value) {
   const raw = clean(value);
-  let match = raw.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})$/);
-  if (match) {
-    const parsedYear = Number(match[3]);
-    const year = parsedYear < 100 ? (parsedYear < 50 ? 2000 + parsedYear : 1900 + parsedYear) : parsedYear;
-    return String(year) + "-" + match[2].padStart(2, "0") + "-" + match[1].padStart(2, "0");
-  }
-  match = raw.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
-  if (match) return match[1] + "-" + match[2].padStart(2, "0") + "-" + match[3].padStart(2, "0");
-  const parsed = new Date(raw);
-  if (!Number.isNaN(parsed.getTime())) {
-    return [parsed.getFullYear(), String(parsed.getMonth() + 1).padStart(2, "0"), String(parsed.getDate()).padStart(2, "0")].join("-");
-  }
-  return raw;
+  const normalized = raw.replace(/^[^a-z0-9]+|[^a-z0-9]+$/gi, "").toUpperCase();
+  if (normalized === "M" || normalized === "MALE") return { value: "M", cleaned: raw !== "M" && raw !== "Male" };
+  if (normalized === "F" || normalized === "FEMALE") return { value: "F", cleaned: raw !== "F" && raw !== "Female" };
+  return { value: "Other", cleaned: Boolean(raw) };
 }
 
-function normalizePhone(value) {
-  const valueDigits = digits(value);
-  return valueDigits.length > 10 ? valueDigits.slice(-10) : valueDigits;
+function parsePhoneValues(value) {
+  const parts = clean(value).split(",").map(item => item.trim()).filter(Boolean);
+  const firstValid = parts.find(item => digits(item).length === 10) || "";
+  const second = parts.find(item => item !== firstValid) || "";
+  const primary = firstValid ? digits(firstValid) : "";
+  const secondary = second ? digits(second) : "";
+  const warnings = [];
+  if (!primary) warnings.push(parts.length ? "No valid 10-digit primary phone number." : "Phone number is missing.");
+  if (second && secondary.length !== 10) warnings.push("Secondary phone is not 10 digits and was retained for reference.");
+  if (parts.length > 2) warnings.push("More than two phone values were supplied; remaining values were not mapped.");
+  return { primary, secondary, source: parts.join(", "), warnings };
 }
 
-function normalizeCourse(value, courseMap) {
-  const raw = clean(value).toUpperCase();
-  const normalized = raw.replace(/_/g, "-").replace(/\s+/g, " ").trim();
-  const prefix = normalized.match(/^([A-Z0-9]+)(?:-|$)/);
-  let code = prefix ? prefix[1] : normalized;
-  if (code === "SM") code = "KIDS";
-  const course = courseMap.get(code);
-  return { raw, code, name: course?.name || COURSE_NAMES[code] || raw };
-}
-
-function cleanStudentName(value) {
-  return clean(value).replace(/[',.]+$/, "").replace(/_\d+\s*$/, "").replace(/\s+/g, " ").trim();
-}
-
-function cleanAddressPart(value, labels) {
-  return clean(value).replace(labels, "").replace(/^[\s.:;+_-]+|[\s.:;+_-]+$/g, "").trim();
-}
-
-function parsePoPs(line) {
-  const source = clean(line);
-  const marker = /(P\.?\s*O\.?|POST\s*OFFICE|P\.?\s*S\.?|POLICE\s*STATION)\s*[:.]*/gi;
-  const matches = [...source.matchAll(marker)];
-  let postOffice = "";
-  let policeStation = "";
-  for (let index = 0; index < matches.length; index += 1) {
-    const current = matches[index];
-    const start = current.index + current[0].length;
-    const end = index + 1 < matches.length ? matches[index + 1].index : source.length;
-    const value = source.slice(start, end).replace(/^[\s.+;:_-]+|[\s.+;:_-]+$/g, "").trim();
-    const label = current[0].toUpperCase().replace(/[^A-Z]/g, "");
-    if (label === "PO" || label === "POSTOFFICE") postOffice = value;
-    if (label === "PS" || label === "POLICESTATION") policeStation = value;
-  }
-  if (!postOffice && policeStation) postOffice = policeStation;
-  if (!policeStation && postOffice && matches.length > 1) policeStation = postOffice;
-  return { postOffice, policeStation };
+function normalizeCourse(value) {
+  const raw = clean(value).toUpperCase().replace(/_/g, "-").replace(/\s+/g, "");
+  if (raw === "ROBOTICS") return { code: "ROBOTICS", label: raw };
+  if (/^SM-(I|II|III|IV|V|VI)$/i.test(raw)) return { code: raw, label: raw };
+  return { code: raw, label: raw };
 }
 
 function parseAddress(value) {
   const raw = clean(value);
   const lines = raw.split(/\r?\n/).map(clean).filter(Boolean);
-  const firstLine = lines[0] || "";
-  const address = cleanAddressPart(firstLine, /^(?:VILL(?:AGE)?|WARD(?:\s*NO\.?)?|COLONY|TOWN)\s*\.?\s*[:\-]?\s*/i);
-  const poPsLine = lines.find(line => /P\.?\s*O\.?|POST\s*OFFICE|P\.?\s*S\.?|POLICE\s*STATION/i.test(line)) || "";
-  const { postOffice, policeStation } = parsePoPs(poPsLine);
+  const first = lines[0] || "";
+  const address = first.replace(/^(?:VILL(?:AGE)?|WARD(?:\s*NO\.?)?|COLONY|TOWN)\s*\.?\s*[:\-]?\s*/i, "").trim();
+  const pin = raw.match(/\b(\d{6})\b/)?.[1] || "";
   const districtLine = lines.find(line => /^DIST(?:RICT)?\b/i.test(line)) || "";
-  const district = cleanAddressPart(districtLine, /^DIST(?:RICT)?\s*\.?\s*[:\-]?\s*/i);
-  const pinMatch = raw.match(/\b(\d{6})\b/);
-  return {
-    address, postOffice, policeStation, district,
-    pin: pinMatch ? pinMatch[1] : "",
-    sourceAddressRaw: raw
-  };
+  const district = districtLine.replace(/^DIST(?:RICT)?\s*\.?\s*[:\-]?\s*/i, "").trim();
+  const po = lines.find(line => /\b(?:P\.?\s*O\.?|POST\s*OFFICE)\b/i.test(line)) || "";
+  const ps = lines.find(line => /\b(?:P\.?\s*S\.?|POLICE\s*STATION)\b/i.test(line)) || "";
+  const extract = line => line.replace(/^.*?(?:P\.?\s*O\.?|POST\s*OFFICE|P\.?\s*S\.?|POLICE\s*STATION)\s*[:.+-]*/i, "").trim();
+  return { address, postOffice: po ? extract(po) : "", policeStation: ps ? extract(ps) : "", district, pin, sourceAddressRaw: raw };
 }
 
-function normalizeSex(value) {
-  const raw = clean(value);
-  const normalized = raw.toUpperCase().replace(/[.,\s']/g, "");
-  if (normalized === "M" || normalized === "MALE") return "M";
-  if (normalized === "F" || normalized === "FEMALE") return "F";
-  return "";
-}
-
-function readSourceRows(workbook) {
-  let selectedSheet = null;
-  const requiredStudentHeaders = ["stcode", "stname", "sex", "address", "qualification", "course", "formno"];
-  for (const sheetName of workbook.SheetNames || []) {
-    const candidate = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: "", raw: true });
-    const hasStudentHeader = candidate.some(row => {
-      const names = row.map(normalizeHeader);
-      return requiredStudentHeaders.every(header => names.includes(header))
-        && names.some(header => ["dob", "dateofbirth"].includes(header))
-        && names.some(header => ["stfather", "father", "fathername"].includes(header))
-        && names.some(header => ["phno", "phoneno", "phone"].includes(header))
-        && names.some(header => ["doa", "dateofadmission", "admissiondate"].includes(header));
+function findStudentSheet(workbook) {
+  const names = workbook.SheetNames || [];
+  const ordered = [...names].sort((a, b) => Number(/^st\s*list$/i.test(b)) - Number(/^st\s*list$/i.test(a)));
+  for (const sheetName of ordered) {
+    const grid = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: "", raw: true });
+    const headerIndex = grid.findIndex(row => {
+      const keys = row.map(headerKey);
+      return aliases.regnNo.some(key => keys.includes(key)) && aliases.name.some(key => keys.includes(key));
     });
-    if (hasStudentHeader) { selectedSheet = workbook.Sheets[sheetName]; break; }
+    if (headerIndex >= 0) return { sheetName, grid, headerIndex };
   }
-  if (!selectedSheet) throw new Error("Could not find a worksheet containing the required student identity and admission headers.");
-  const grid = XLSX.utils.sheet_to_json(selectedSheet, { header: 1, defval: "", raw: true });
-  const headerIndex = grid.findIndex(row => {
-    const headers = row.map(normalizeHeader);
-    return ["stcode", "stname", "sex", "address", "qualification", "course"].every(header => headers.includes(header))
-      && headers.some(header => ["dob", "dateofbirth"].includes(header))
-      && headers.some(header => ["stfather", "father", "fathername"].includes(header))
-      && headers.some(header => ["phno", "phoneno", "phone"].includes(header))
-      && headers.some(header => ["doa", "dateofadmission", "admissiondate"].includes(header));
-  });
-  if (headerIndex < 0) throw new Error("Student Data worksheet does not contain St_Code and St_Name columns.");
+  throw new Error("No worksheet with Registration Number and Student Name headers was found. Expected the St List sheet or a compatible legacy template.");
+}
 
-  const headers = grid[headerIndex].map(normalizeHeader);
-  const indexes = {
-    regnNo: headers.indexOf("stcode"),
-    name: headers.indexOf("stname"),
-    dob: headers.findIndex(value => ["dob", "dateofbirth"].includes(value)),
-    sex: headers.indexOf("sex"),
-    father: headers.findIndex(value => ["stfather", "father", "fathername"].includes(value)),
-    address: headers.indexOf("address"),
-    phone: headers.findIndex(value => ["phno", "phoneno", "phone"].includes(value)),
-    qualification: headers.indexOf("qualification"),
-    formNo: headers.indexOf("formno"),
-    admissionDate: headers.findIndex(value => ["doa", "dateofadmission", "admissiondate"].includes(value)),
-    course: headers.indexOf("course")
-  };
-
+function parseRows(workbook) {
+  const { sheetName, grid, headerIndex } = findStudentSheet(workbook);
+  const headers = grid[headerIndex].map(headerKey);
+  const indexFor = key => headers.findIndex(header => aliases[key].includes(header));
+  const indexes = Object.fromEntries(Object.keys(aliases).map(key => [key, indexFor(key)]));
   const rows = [];
-  for (let index = headerIndex + 1; index < grid.length; index += 1) {
-    const values = grid[index];
+  for (let i = headerIndex + 1; i < grid.length; i += 1) {
+    const values = grid[i];
     if (!values.some(value => clean(value))) continue;
     const get = key => indexes[key] >= 0 ? values[indexes[key]] : "";
-    const registrationCode = clean(get("regnNo")).replace(/\.0$/, "").trim();
-    const sourceName = clean(get("name"));
-    const name = cleanStudentName(sourceName);
+    const regnNo = clean(get("regnNo")).replace(/\.0$/, "");
+    const gender = genderValue(get("sex"));
+    const phones = parsePhoneValues(get("phone"));
+    const course = normalizeCourse(get("course"));
+    const admissionDate = dateValue(get("admissionDate"));
+    const name = cleanName(get("name"), regnNo);
     const address = parseAddress(get("address"));
-    const phones = clean(get("phone")).split(/[;,]/).map(normalizePhone).filter(Boolean);
-    const rawSex = clean(get("sex"));
-    const row = {
-      regnNo: registrationCode,
-      applicantName: name,
-      sourceStudentName: sourceName,
-      dateOfBirth: dateValue(get("dob")),
-      sex: normalizeSex(rawSex),
-      sourceSex: rawSex,
-      fatherOrHusbandName: clean(get("father")),
-      ...address,
-      mobileNumber: phones[0] || "",
-      whatsappNumber: phones[0] || "",
-      guardianContactNumber: phones[1] || "",
-      sourceQualification: clean(get("qualification")),
-      sourcePhone: clean(get("phone")),
-      formNo: clean(get("formNo")),
-      admissionDate: dateValue(get("admissionDate")),
-      course: clean(get("course")),
-      sourceRowNo: index + 1
-    };
-    row.sourceRowKey = [
-      row.regnNo, row.formNo, normalizeHeader(row.applicantName), row.dateOfBirth,
-      normalizeHeader(row.fatherOrHusbandName), row.sourcePhone.replace(/\D/g, ""),
-      row.admissionDate, row.course.toUpperCase()
-    ].join("|");
+    const warnings = [...phones.warnings];
+    if (!clean(get("father"))) warnings.push("Father name is missing.");
+    if (gender.cleaned) warnings.push("Gender value was cleaned or normalized.");
+    if (!clean(get("sex")) || gender.value === "Other") warnings.push("Gender is blank or unrecognized; stored as Other.");
+    if (!admissionDate) warnings.push("DOI is missing or invalid.");
+    if (!course.code) warnings.push("Course/Semester is missing.");
     const errors = [];
-    if (!row.regnNo) errors.push("St_Code is blank.");
-    if (!row.applicantName) errors.push("St_Name is blank.");
-    if (!row.admissionDate) errors.push("D.O.A is blank or invalid.");
-    if (!row.course) errors.push("Course is blank.");
-    rows.push({ row, errors });
+    if (!regnNo) errors.push("Registration number is required.");
+    if (!name) errors.push("Student name is required.");
+    rows.push({
+      rowNo: i + 1, regnNo, name, sourceName: clean(get("name")), admissionDate,
+      gender: gender.value, fatherName: clean(get("father")), phone: phones.primary,
+      secondaryPhone: phones.secondary, sourcePhone: phones.source, course: course.code,
+      courseLabel: course.label, ...address, dob: dateValue(get("dob")),
+      qualification: clean(get("qualification")), formNo: clean(get("formNo")),
+      warnings, errors
+    });
   }
-  return rows;
+  return { sheetName, rows };
 }
 
-function previewSummary(parsedRows) {
-  const valid = parsedRows.filter(item => item.errors.length === 0);
-  const registrationCounts = new Map();
-  const formCounts = new Map();
-  for (const item of valid) {
-    registrationCounts.set(item.row.regnNo, (registrationCounts.get(item.row.regnNo) || 0) + 1);
-    if (item.row.formNo) formCounts.set(item.row.formNo, (formCounts.get(item.row.formNo) || 0) + 1);
-  }
-  const missing = {
-    dateOfBirth: parsedRows.filter(item => !item.row.dateOfBirth).length,
-    sex: parsedRows.filter(item => !item.row.sex).length,
-    fatherName: parsedRows.filter(item => !item.row.fatherOrHusbandName).length,
-    address: parsedRows.filter(item => !item.row.address).length,
-    phone: parsedRows.filter(item => !item.row.mobileNumber && !item.row.guardianContactNumber).length,
-    formNo: parsedRows.filter(item => !item.row.formNo).length,
-    qualification: parsedRows.filter(item => !item.row.sourceQualification).length,
-    dobOutsideExpectedRange: parsedRows.filter(item => { const year = Number(String(item.row.dateOfBirth || "").slice(0, 4)); return year && (year < 1900 || year > new Date().getFullYear()); }).length,
-    dobAfterAdmission: parsedRows.filter(item => item.row.dateOfBirth && item.row.admissionDate && item.row.dateOfBirth > item.row.admissionDate).length,
-    phoneWithInvalidDigits: parsedRows.filter(item => item.row.sourcePhone.split(/[;,]/).some(part => { const value = digits(part); return value && value.length !== 10; })).length
-  };
+function previewPayload(parsed) {
+  const valid = parsed.rows.filter(row => !row.errors.length);
   return {
-    totalRows: parsedRows.length,
+    sheetName: parsed.sheetName,
+    totalRows: parsed.rows.length,
     validRows: valid.length,
-    invalidRows: parsedRows.length - valid.length,
-    duplicateRegistrationCodes: [...registrationCounts.values()].filter(count => count > 1).length,
-    duplicateFormNumbers: [...formCounts.values()].filter(count => count > 1).length,
-    missing,
-    sampleRows: valid.slice(0, 8).map(item => ({
-      registrationNo: item.row.regnNo, name: item.row.applicantName, dob: item.row.dateOfBirth,
-      gender: item.row.sex || item.row.sourceSex || "—", fatherName: item.row.fatherOrHusbandName,
-      village: item.row.address, postOffice: item.row.postOffice, policeStation: item.row.policeStation,
-      pin: item.row.pin, mobile: item.row.mobileNumber, guardian: item.row.guardianContactNumber,
-      formNo: item.row.formNo, admissionDate: item.row.admissionDate, course: item.row.course,
-      qualification: item.row.sourceQualification
+    invalidRows: parsed.rows.length - valid.length,
+    previewRows: parsed.rows.slice(0, 100).map(row => ({
+      rowNo: row.rowNo, regnNo: row.regnNo, name: row.name,
+      admissionDate: row.admissionDate, gender: row.gender, fatherName: row.fatherName,
+      phone: row.phone, secondaryPhone: row.secondaryPhone, course: row.course,
+      warnings: row.warnings, errors: row.errors
     })),
-    errors: parsedRows.filter(item => item.errors.length).slice(0, 30).map(item => ({
-      row: item.row.sourceRowNo, errors: item.errors
-    }))
+    warnings: parsed.rows.flatMap(row => row.warnings.map(reason => ({ row: row.rowNo, Regn_No: row.regnNo, reason }))).slice(0, 500),
+    errors: parsed.rows.filter(row => row.errors.length).map(row => ({ row: row.rowNo, Regn_No: row.regnNo, reason: row.errors.join(" ") })).slice(0, 200),
+    message: "Preview parsed from " + parsed.sheetName + ". Review cleaned values and warnings before importing."
+  };
+}
+
+async function removeLegacyFormNoUniqueIndex() {
+  const indexes = await Student.collection.indexes().catch(error => {
+    if (error.code === 26 || error.codeName === "NamespaceNotFound") return [];
+    throw error;
+  });
+  const legacy = indexes.find(index => index.name === "formNo_1" && index.unique);
+  if (legacy) await Student.collection.dropIndex(legacy.name);
+}
+
+function asStudentPayload(row, course, sourceName) {
+  return {
+    regnNo: row.regnNo, enrollmentNo: row.regnNo, formNo: row.formNo,
+    applicantName: row.name, sourceStudentName: row.sourceName,
+    dateOfBirth: row.dob, admissionDate: row.admissionDate, dateOfAdmission: row.admissionDate,
+    sex: row.gender, sourceSex: row.gender, fatherOrHusbandName: row.fatherName,
+    address: row.address, presentAddress: row.address, permanentAddress: row.address,
+    sameAsPresentAddress: Boolean(row.address), postOffice: row.postOffice,
+    policeStation: row.policeStation, district: row.district, pin: row.pin,
+    sourceAddressRaw: row.sourceAddressRaw, mobileNumber: row.phone,
+    whatsappNumber: row.phone, guardianContactNumber: row.secondaryPhone,
+    alternatePhoneNumber: row.secondaryPhone, sourcePhone: row.sourcePhone,
+    sourceQualification: row.qualification, courseCode: course.code,
+    courseName: course.name || COURSE_NAMES[course.code] || course.code,
+    sourceCourseLabel: row.courseLabel || row.course,
+    importSource: sourceName, sourceRowNo: row.rowNo,
+    sourceRowKey: [row.regnNo, row.rowNo, row.course].join("|")
   };
 }
 
@@ -287,117 +241,150 @@ export async function POST(request) {
       return NextResponse.json({ error: "You do not have permission to bulk import students." }, { status: 403 });
     }
 
-    await connectMongoDB();
     const form = await request.formData();
     const file = form.get("file");
     const mode = String(form.get("mode") || "preview");
-    if (!file || typeof file.arrayBuffer !== "function") return NextResponse.json({ error: "Choose an Excel file to continue." }, { status: 400 });
-    if (!/\.(xlsx|xls)$/i.test(String(file.name || ""))) return NextResponse.json({ error: "Only .xlsx and .xls files are supported." }, { status: 400 });
-    if (Number(file.size || 0) > 15 * 1024 * 1024) return NextResponse.json({ error: "The Excel file must be smaller than 15 MB." }, { status: 413 });
+    const duplicateMode = String(form.get("duplicateMode") || "skip").toLowerCase();
+    if (!file || typeof file.arrayBuffer !== "function") return NextResponse.json({ error: "Choose an Excel or CSV file." }, { status: 400 });
+    if (!/\.(xlsx|xls|csv)$/i.test(String(file.name || ""))) return NextResponse.json({ error: "Only .xlsx, .xls and .csv files are supported." }, { status: 400 });
+    if (Number(file.size || 0) > 15 * 1024 * 1024) return NextResponse.json({ error: "The file must be smaller than 15 MB." }, { status: 413 });
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const workbook = XLSX.read(buffer, { type: "buffer", cellDates: true });
-    const parsedRows = readSourceRows(workbook);
-    const summary = previewSummary(parsedRows);
-    const paymentPreview = parsePaymentWorksheet(workbook);
-    const paymentSheetSummary = {
-      sheetName: paymentPreview.sheetName,
-      totalRows: paymentPreview.rows.length,
-      validRows: paymentPreview.rows.filter(row => row.valid).length,
-      invalidRows: paymentPreview.rows.filter(row => !row.valid).length,
-    };
-    if (mode !== "import") return NextResponse.json({
-      ...summary, paymentSheet: paymentSheetSummary,
-      message: "Spreadsheet preview is ready. Review both student and receipt worksheets before importing."
-    });
-    if (!summary.validRows && !paymentPreview.rows.length) {
-      return NextResponse.json({ error: "No valid student rows or payment receipts were found.", ...summary, paymentSheet: paymentSheetSummary }, { status: 400 });
+    const parsed = parseRows(workbook);
+    const preview = previewPayload(parsed);
+    if (mode !== "import") return NextResponse.json(preview);
+
+    await connectMongoDB();
+    await removeLegacyFormNoUniqueIndex();
+    const sourceName = String(file.name || "RCLD Student Import").slice(0, 180);
+    const validRows = parsed.rows.filter(row => !row.errors.length);
+    const uniqueRows = [];
+    const seen = new Set();
+    const warnings = [...preview.warnings];
+    const errors = [...preview.errors];
+    let skipped = parsed.rows.length - validRows.length;
+    for (const row of validRows) {
+      if (seen.has(row.regnNo)) {
+        skipped += 1;
+        warnings.push({ row: row.rowNo, Regn_No: row.regnNo, reason: "Duplicate registration number within this workbook; the first occurrence was retained." });
+        continue;
+      }
+      seen.add(row.regnNo);
+      uniqueRows.push(row);
     }
 
-    await removeLegacyFormNoUniqueIndex();
-    const sourceName = String(file.name || "RCLD Student Import.xlsx").slice(0, 180);
-    const rawValidRows = parsedRows.filter(item => item.errors.length === 0);
-    const uniqueRowsByIdentity = new Map();
-    for (const item of rawValidRows) uniqueRowsByIdentity.set(item.row.sourceRowKey, item);
-    const validRows = [...uniqueRowsByIdentity.values()];
-    const duplicateIdentityRowsSkipped = rawValidRows.length - validRows.length;
-    const courseCodes = [...new Set(validRows.map(item => {
-      const normalized = item.row.course.toUpperCase().replace(/_/g, "-").trim();
-      const match = normalized.match(/^([A-Z0-9]+)(?:-|$)/);
-      const code = match ? match[1] : normalized;
-      return code === "SM" ? "KIDS" : code;
-    }))];
-    const courses = await Course.find({ code: { $in: courseCodes } }).lean();
+    const registrationNumbers = uniqueRows.map(row => row.regnNo);
+    const numericRegistrationNumbers = registrationNumbers.filter(code => /^\d+$/.test(code)).map(Number);
+    const existingRecords = registrationNumbers.length
+      ? await Student.find({ $or: [
+          { regnNo: { $in: [...registrationNumbers, ...numericRegistrationNumbers] } },
+          { enrollmentNo: { $in: [...registrationNumbers, ...numericRegistrationNumbers] } }
+        ] }).lean()
+      : [];
+    const existingByCode = new Map();
+    for (const student of existingRecords) {
+      for (const rawCode of [student.regnNo, student.enrollmentNo]) {
+        const key = String(rawCode ?? "").replace(/\.0$/, "");
+        if (key && !existingByCode.has(key)) existingByCode.set(key, student);
+      }
+    }
+
+    const courseCodes = [...new Set(uniqueRows.map(row => row.course).filter(Boolean))];
+    const baseCodes = [...new Set(courseCodes.map(code => code.split("-")[0]))];
+    const coursePatterns = [...new Set([...courseCodes, ...baseCodes])].map(code => new RegExp("^" + code + "$", "i"));
+    const courses = await Course.find({ code: { $in: coursePatterns } }).lean();
     const courseMap = new Map(courses.map(course => [String(course.code).toUpperCase(), course]));
-    const operations = validRows.map(item => {
-      const row = item.row;
-      const course = normalizeCourse(row.course, courseMap);
-      const payload = {
-        regnNo: row.regnNo, formNo: row.formNo, applicantName: row.applicantName,
-        sourceStudentName: row.sourceStudentName, dateOfBirth: row.dateOfBirth,
-        sex: row.sex, sourceSex: row.sourceSex, fatherOrHusbandName: row.fatherOrHusbandName,
-        address: row.address, presentAddress: row.address, permanentAddress: row.address,
-        sameAsPresentAddress: Boolean(row.address), postOffice: row.postOffice,
-        policeStation: row.policeStation, district: row.district, pin: row.pin,
-        sourceAddressRaw: row.sourceAddressRaw, mobileNumber: row.mobileNumber,
-        whatsappNumber: row.whatsappNumber, guardianContactNumber: row.guardianContactNumber,
-        sourceQualification: row.sourceQualification, sourcePhone: row.sourcePhone, courseCode: course.code,
-        courseName: course.name, sourceCourseLabel: row.course, admissionDate: row.admissionDate,
-        importSource: sourceName, sourceRowNo: row.sourceRowNo, sourceRowKey: row.sourceRowKey
-      };
-      const identityFilters = [{ importSource: sourceName, sourceRowKey: row.sourceRowKey }];
-      if (row.formNo) identityFilters.push({
-        regnNo: row.regnNo, formNo: row.formNo, applicantName: row.applicantName,
-        dateOfBirth: row.dateOfBirth, fatherOrHusbandName: row.fatherOrHusbandName,
-        sourcePhone: row.sourcePhone, admissionDate: row.admissionDate, courseCode: course.code
-      });
-      return {
+    const operations = [];
+    const operationRows = [];
+    let imported = 0;
+    let updated = 0;
+
+    for (const row of uniqueRows) {
+      const existing = existingByCode.get(row.regnNo);
+      if (existing && duplicateMode !== "update") {
+        skipped += 1;
+        warnings.push({ row: row.rowNo, Regn_No: row.regnNo, reason: "Registration number already exists; skipped as requested." });
+        continue;
+      }
+      const course = courseMap.get(row.course) || courseMap.get(row.course.split("-")[0]) || null;
+      const builtInFeeCourse = row.course === "ROBOTICS" || /^SM-(I|II|III|IV|V|VI)$/.test(row.course);
+      if (row.course && !course && !builtInFeeCourse) {
+        warnings.push({ row: row.rowNo, Regn_No: row.regnNo, reason: "Course was not found in Course Master; the student is saved with an unconfigured fee plan for review." });
+      }
+      const courseInfo = { code: row.course, name: course?.name || COURSE_NAMES[row.course] || row.course };
+      const payload = asStudentPayload(row, courseInfo, sourceName);
+      operations.push({
         updateOne: {
-          filter: { $or: identityFilters },
+          filter: existing ? { _id: existing._id } : { regnNo: row.regnNo },
           update: { $set: payload, $setOnInsert: { status: "Registered", photoUrl: "" } },
           upsert: true
         }
-      };
-    });
-
-    const writeResult = operations.length
-      ? await Student.bulkWrite(operations, { ordered: false })
-      : { upsertedCount: 0, matchedCount: 0 };
-    const importedStudents = await Student.find({ importSource: sourceName }).select("_id courseCode").lean();
-    const feeOperations = [];
-    for (const student of importedStudents) {
-      const course = courseMap.get(String(student.courseCode || "").toUpperCase());
-      if (!course) continue;
-      feeOperations.push({
-        updateOne: {
-          filter: { studentId: student._id },
-          update: { $setOnInsert: {
-            totalFee: Number(course.fee || 0), admissionFee: Number(course.admissionFee || 0),
-            registrationFee: Number(course.registrationFee || 0), discount: 0,
-            payments: [], updatedBy: "student-bulk-import"
-          } },
-          upsert: true
-        }
       });
+      operationRows.push({ row, existing, courseInfo });
     }
-    if (feeOperations.length) await StudentFee.bulkWrite(feeOperations, { ordered: false });
 
-    // Create/link one durable identity record and one enrollment for each registration code.
-    const linkedStudents = await Student.find({ importSource: sourceName }).sort({ admissionDate: 1, createdAt: 1 }).lean();
-    const masterLinkSummary = await linkImportedStudentRecords(linkedStudents);
-    // Import the dynamically detected fee worksheet; missing/invalid rows are reported, never silently discarded.
-    const paymentImport = await importPaymentWorksheet(workbook, { sourceName });
+    if (operations.length) {
+      try {
+        const write = await Student.bulkWrite(operations, { ordered: false });
+        imported = Number(write.upsertedCount || 0);
+        updated = Number(write.modifiedCount || write.matchedCount || 0);
+      } catch (writeError) {
+        const failedIndexes = new Map((writeError.writeErrors || []).map(item => [item.index, item]));
+        const result = writeError.result || writeError;
+        imported = Number(result.upsertedCount || 0);
+        updated = Number(result.modifiedCount || result.matchedCount || 0);
+        for (const [index, item] of operationRows.entries()) {
+          const failure = failedIndexes.get(index);
+          if (failure) {
+            skipped += 1;
+            errors.push({ row: item.row.rowNo, Regn_No: item.row.regnNo, reason: failure.errmsg || failure.message || "Database rejected this row." });
+          }
+        }
+      }
+    }
+
+    const failedCodes = new Set(errors.map(item => item.Regn_No).filter(Boolean));
+    const importedCodes = operationRows.filter(item => !failedCodes.has(item.row.regnNo)).map(item => item.row.regnNo);
+    const importedStudents = importedCodes.length
+      ? await Student.find({ regnNo: { $in: importedCodes } }).sort({ admissionDate: 1, createdAt: 1 }).lean()
+      : [];
+    for (const student of importedStudents) {
+      try {
+        const rawCode = String(student.sourceCourseLabel || student.courseCode || "").trim().toUpperCase();
+        const resolved = await resolveCourseFeeConfig(rawCode, Course);
+        await StudentFee.updateOne(
+          { studentId: student._id },
+          { $setOnInsert: {
+            totalFee: Number(resolved.feeConfig?.grossFee ?? 0),
+            admissionFee: Number(resolved.feeConfig?.admissionFee ?? 0),
+            registrationFee: Number(resolved.feeConfig?.registrationFee ?? 0),
+            discount: 0, payments: [], updatedBy: "student-bulk-import"
+          } },
+          { upsert: true }
+        );
+        try { await linkImportedStudentRecords([student]); }
+        catch (linkError) {
+          errors.push({ row: student.sourceRowNo, Regn_No: student.regnNo, reason: "Student saved, but academic enrollment linking needs review: " + linkError.message });
+        }
+      } catch (rowError) {
+        errors.push({ row: student.sourceRowNo, Regn_No: student.regnNo, reason: "Student saved, but fee initialization failed: " + rowError.message });
+      }
+    }
+
+    let paymentImport = null;
+    try {
+      const paymentPreview = parsePaymentWorksheet(workbook);
+      if (paymentPreview.rows?.length) paymentImport = await importPaymentWorksheet(workbook, { sourceName });
+    } catch (paymentError) {
+      warnings.push({ row: null, Regn_No: "", reason: "Student rows were imported, but payment-sheet import failed: " + paymentError.message });
+    }
 
     return NextResponse.json({
-      message: "Student import completed. Imported data is ready for profile review.",
-      totalRows: summary.totalRows, imported: validRows.length,
-      created: writeResult.upsertedCount || 0, matched: writeResult.matchedCount || 0,
-      skipped: summary.invalidRows + duplicateIdentityRowsSkipped,
-      duplicateIdentityRowsSkipped, errors: summary.errors,
-      duplicateRegistrationCodes: summary.duplicateRegistrationCodes,
-      duplicateFormNumbers: summary.duplicateFormNumbers, missing: summary.missing,
-      masterProfilesLinked: masterLinkSummary.linked,
-      paymentImport
+      message: "Student import processing completed.",
+      total: parsed.rows.length, imported, updated, skipped,
+      warnings: warnings.slice(0, 500), errors: errors.slice(0, 500),
+      sheetName: parsed.sheetName, duplicateMode, paymentImport
     });
   } catch (error) {
     console.error("[student-bulk-import]", error);
