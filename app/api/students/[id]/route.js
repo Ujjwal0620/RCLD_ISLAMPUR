@@ -56,7 +56,7 @@ export async function GET(req,{params}){
         courseCode: enrollment.courseCode || "",
         courseName: enrollment.courseName || courseNameMap.get(String(enrollment.courseCode || "").toUpperCase()) || enrollment.courseCode || "Legacy / Unknown Course",
         semesterLabel: enrollment.semesterLabel || "LEGACY",
-        installmentApplied: (payment.allocations || []).map(item => item.label + ": ₹" + Number(item.allocatedAmount || 0).toLocaleString("en-IN")).join(", ") || "Legacy receipt / not allocated",
+        installmentApplied: (payment.allocations || []).map(item => item.label + ": ₹" + Number(item.allocatedAmount || 0).toLocaleString("en-IN")).join(", ") || (payment.importWarnings?.length ? "Needs review: " + payment.importWarnings.join(" ") : "Legacy receipt / not allocated"),
       };
     });
     const FeeSchema = new mongoose.Schema({ studentId: mongoose.Schema.Types.ObjectId, payments: [mongoose.Schema.Types.Mixed] }, { strict: false });
