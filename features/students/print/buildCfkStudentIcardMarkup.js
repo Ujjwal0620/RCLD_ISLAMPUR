@@ -52,6 +52,8 @@ export function buildCfkStudentIcardMarkup({
       .cfk-field { display:flex; align-items:center; min-width:0; }
       .cfk-field strong { font-size:1.7mm; font-weight:900; white-space:nowrap; letter-spacing:-.04mm; }
       .cfk-field span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .cfk-field .cfk-id-prefix { flex:0 0 auto; overflow:visible; font-size:1.85mm; font-weight:400; }
+      .cfk-field strong.cfk-id-code { flex:0 0 auto; font-size:1.95mm; font-weight:700; }
       .cfk-address { white-space:normal!important; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; line-height:1.05; }
       .cfk-semester {
         position:absolute; left:3.2%; top:74.5%; width:14%; height:13%;
