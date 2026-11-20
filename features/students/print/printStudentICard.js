@@ -28,6 +28,19 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
     return;
   }
 
+  if (outputMode === "jpg") {
+    try {
+      if (!student._id) throw new Error("Student ID is missing; unable to assign an ID-card number.");
+      const response = await fetch(`/api/students/${encodeURIComponent(student._id)}/icard-number`, { method: "POST" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to assign an ID-card number.");
+      student = { ...student, idCardNo: String(data.idCardNo) };
+    } catch (error) {
+      setMessage(error?.message || "Unable to assign an ID-card number.");
+      return;
+    }
+  }
+
   // ---------- Institute and print settings ----------
   const DEFAULT_SESSION = "2025-2026";
   const AEC_LINE_1 = "AEC: CYBER WORLD, DESHBANDHU PARA, ISLAMPUR";
@@ -77,7 +90,7 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
   const sessionLabel = esc(student.session || student.academicSession || DEFAULT_SESSION);
 
   const enrollRaw =
-    String(firstNonEmpty(student.enrollmentNo, student.studentId, student.admissionNo, student.regnNo, student.formNo, "—")).trim();
+    String(firstNonEmpty(student.idCardNo, student.enrollmentNo, student.studentId, student.admissionNo, student.regnNo, student.formNo, "—")).trim();
   const idMatch = enrollRaw.match(/^(.*?)(\d+)$/);
   const idPrefix = idMatch ? esc(idMatch[1]) : esc(enrollRaw);
   const idNumber = idMatch ? esc(idMatch[2]) : "";
