@@ -50,8 +50,8 @@ export function buildCfkStudentIcardMarkup({
       }
       .cfk-fields {
         position:absolute; left:47.5%; right:4.5%; top:61.5%;
-        display:grid; grid-template-rows:repeat(4, 1fr); height:11.2%;
-        gap:0; font-size:2.35mm; line-height:1.05; font-weight:600;
+        display:grid; grid-template-rows:repeat(6, 1fr); height:15.2%;
+        gap:0; font-size:1.85mm; line-height:1.02; font-weight:600;
       }
       .cfk-field { display:flex; align-items:center; min-width:0; }
       .cfk-field span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -68,9 +68,11 @@ export function buildCfkStudentIcardMarkup({
       <div class="cfk-course">${course}</div>
       <div class="cfk-fields">
         <div class="cfk-field"><span>${id}</span></div>
-        <div class="cfk-field"><span>${date}</span></div>
+        <div class="cfk-field"><span>${safe(student.dateOfBirth || student.dob || "—")}</span></div>
         <div class="cfk-field"><span>${father}</span></div>
+        <div class="cfk-field"><span>${safe(student.mobileNumber || student.phoneNumber || "—")}</span></div>
         <div class="cfk-field"><span class="cfk-address">${addr}</span></div>
+        <div class="cfk-field"><span>${date}</span></div>
       </div>
       <div class="cfk-semester">${sem}</div>
     </div>`;
