@@ -59,8 +59,10 @@ export function getStudentIcardStyles(cardHeight = "88mm") {
     .cfk-row { display:flex;align-items:baseline;margin-bottom:.35mm; }
     .cfk-lbl { width:16.5mm;flex:0 0 16.5mm;text-align:right;padding-right:1mm;font-weight:700;color:#F6801E;white-space:nowrap; }
     .cfk-val { flex:1 1 0;max-width:none;text-align:left;font-weight:500;color:#44515A;min-width:0;overflow-wrap:anywhere; }
-    .cfk-id-val { font-size:1.85mm;font-weight:500;white-space:nowrap; }
+    .cfk-id-val { font-size:1.85mm;font-weight:400;white-space:nowrap; }
     .cfk-id-num { font-size:1.95mm;font-weight:700; }
+    .cfk-id-prefix { font-size:1.85mm;font-weight:400;white-space:nowrap;overflow:visible!important; }
+    .cfk-id-code { font-size:1.95mm;font-weight:700;white-space:nowrap; }
     .cfk-addr-row { align-items:flex-start; }
     .cfk-addr-lines { font-size:1.7mm;line-height:1.2;font-weight:500; }
     .cfk-addr-lines div { line-height:1.2; }
@@ -87,7 +89,7 @@ export function getStudentIcardStyles(cardHeight = "88mm") {
                 .std-id{position:absolute;left:1.8mm;top:3.8mm;width:18.5mm;text-align:center;z-index:3}
                 .std-id .l{font-size:2.15mm;line-height:1.15;font-weight:800;color:#111}
                 .std-id .p{display:none}
-                .std-id .n{font-size:1.65mm;line-height:1.15;font-weight:900;color:#111;margin-top:.1mm;white-space:nowrap;letter-spacing:-.08mm}
+                .std-id .n{font-size:1.65mm;line-height:1.15;font-weight:400;color:#111;margin-top:.1mm;white-space:nowrap;letter-spacing:-.08mm}.std-id .n .id-number-prefix{font-weight:400}.std-id .n .id-number-code{font-weight:700}
         
                 .std-logo{position:absolute;left:21.25mm;top:1.5mm;width:12.5mm;height:14.2mm;object-fit:contain;z-index:3}
         
