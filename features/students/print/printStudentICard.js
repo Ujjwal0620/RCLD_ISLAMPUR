@@ -15,6 +15,25 @@ import { buildCfkStudentIcardMarkup } from "@/features/students/print/buildCfkSt
 import { buildStandardStudentIcardMarkup } from "@/features/students/print/buildStandardStudentIcardMarkup";
 import { printTemplateStudentIcard } from "@/features/students/print/printTemplateStudentIcard";
 
+function resolveActiveEnrollmentStudent(student) {
+  const enrollments = Array.isArray(student?.enrollments) ? student.enrollments : [];
+  const roman = ["I", "II", "III", "IV", "V", "VI"][Number(student?.currentSemester || 0) - 1] || "";
+  const isKids = /coding\\s*for\\s*kids|\\bCFK\\b|\\bKIDS\\b/i.test(String(student?.courseName || student?.courseCode || ""));
+  const semesterEnrollment = isKids && roman
+    ? enrollments.find(item => String(item.semesterLabel || "").toUpperCase() === "SM-" + roman)
+    : null;
+  const activeEnrollment = semesterEnrollment || student?.activeEnrollment || enrollments.find(item => item.status === "ACTIVE");
+  if (!activeEnrollment) return student;
+  return {
+    ...student,
+    regnNo: activeEnrollment.stCode || student.regnNo,
+    enrollmentNo: activeEnrollment.stCode || student.enrollmentNo,
+    courseCode: activeEnrollment.courseCode || student.courseCode,
+    admissionDate: activeEnrollment.admissionDate || student.admissionDate,
+    activeEnrollment,
+  };
+}
+
 async function waitForIcardImages(doc) {
   await Promise.all([...doc.images].map(async img => {
     try {
@@ -46,6 +65,8 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
     );
     return;
   }
+
+  student = resolveActiveEnrollmentStudent(student);
 
   if (selectedTemplate) {
     await printTemplateStudentIcard({ student, templateName: selectedTemplate, outputMode, setMessage });
