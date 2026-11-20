@@ -45,7 +45,11 @@ export async function GET(req,{params}){
       : (await Student.findById(canonicalStudentId).lean()) || student;
     const enrollmentIds = enrollments.map(item => item._id);
     const paymentQuery = masterProfile
-      ? { $or: [{ studentId: masterProfile._id }, { enrollmentId: { $in: enrollmentIds } }] }
+      ? { $or: [
+          { studentId: masterProfile._id },
+          { enrollmentId: { $in: enrollmentIds } },
+          { studentId: masterProfile._id, stCode: { $in: [...new Set([...(masterProfile.stCodes || []), ...enrollments.map(item => String(item.stCode || ""))].filter(Boolean))] } }
+        ] }
       : { enrollmentId: { $in: enrollmentIds } };
     const importedPayments = enrollmentIds.length || masterProfile
       ? await StudentFeePayment.find(paymentQuery).sort({ paymentDate: 1, mrNo: 1 }).lean()
@@ -90,7 +94,7 @@ export async function GET(req,{params}){
     paymentHistory.sort((a, b) => new Date(a.paymentDate || 0) - new Date(b.paymentDate || 0));
     const enrichedStudent = {
       ...canonicalStudent,
-      photoUrl: canonicalStudent.photoUrl || masterProfile?.photoUrl || "",
+      photoUrl: masterProfile?.photoUrl || canonicalStudent.photoUrl || "",
       masterProfile,
       enrollments,
       activeEnrollment,
@@ -158,12 +162,39 @@ export async function PATCH(req,{params}){
     const mergedStudent={...current,...update};
     if(["Admission Pending","Registered","Active",""].includes(String(current.status||""))) update.status=getStudentAdmissionStatus(mergedStudent);
     const student=await Student.findByIdAndUpdate(id,update,{new:true,runValidators:true}).lean();
-    if (student && update.photoUrl !== undefined) {
-      await StudentMaster.findOneAndUpdate(
-        { legacyStudentIds: student._id },
-        { $set: { photoUrl: update.photoUrl } },
-        { new: true }
-      );
+    if (student) {
+      const masterFields = {
+        fullName: student.applicantName || student.sourceStudentName || "Student",
+        normalizedFullName: String(student.applicantName || student.sourceStudentName || "Student")
+          .normalize("NFKC").replace(/_\\d+\\s*$/, "").toUpperCase().replace(/\\s+/g, " ").replace(/[',.]+$/, "").trim(),
+        dob: student.dateOfBirth && !Number.isNaN(new Date(student.dateOfBirth).getTime()) ? new Date(student.dateOfBirth) : null,
+        fatherName: student.fatherOrHusbandName || "",
+        normalizedFatherName: String(student.fatherOrHusbandName || "").toUpperCase().replace(/[^A-Z0-9 ]/g, " ").replace(/\\s+/g, " ").trim(),
+        address: student.presentAddress || student.address || student.permanentAddress || "",
+        phoneNumbers: [...new Set([student.mobileNumber, student.guardianContactNumber, student.whatsappNumber]
+          .map(value => String(value || "").replace(/\\D/g, "").slice(-10))
+          .filter(value => value.length === 10))],
+        qualification: student.sourceQualification || "",
+        ...(update.photoUrl !== undefined ? { photoUrl: update.photoUrl } : {}),
+        ...(student.regnNo || student.enrollmentNo ? { $unused: "" } : {}),
+      };
+      delete masterFields.$unused;
+      const stCode = String(student.regnNo || student.enrollmentNo || "").replace(/\\.0$/, "").trim();
+      const master = await StudentMaster.findOne({ legacyStudentIds: student._id });
+      if (master) {
+        Object.assign(master, Object.fromEntries(Object.entries(masterFields).filter(([key, value]) =>
+          key === "photoUrl" || key === "dob" ? value !== undefined : Boolean(value)
+        )));
+        if (stCode && !master.stCodes.includes(stCode)) master.stCodes.push(stCode);
+        await master.save();
+      } else {
+        await StudentMaster.create({
+          ...masterFields,
+          legacyStudentIds: [student._id],
+          stCodes: stCode ? [stCode] : [],
+          identityMatchMethod: "PROFILE_PATCH",
+        });
+      }
     }
     if(student && (update.courseCode!==undefined || update.courseName!==undefined)){
       const conditions=[];
