@@ -129,7 +129,7 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     : '<div class="student-photo photo-empty" aria-label="Student photograph unavailable"></div>';
 
   const overlays = diploma
-    ? '<div class="overlay diploma-registration">' + escapeHtml(rawRegistrationCode) + '</div>' +
+    ? '<div class="registration-field-mask diploma-registration-mask" aria-hidden="true"></div>' +
       '<div class="overlay diploma-session">' + escapeHtml(session) + '</div>' +
       '<div class="overlay diploma-id">' + idNumberMarkup(icardNumber) + '</div>' +
       '<div class="overlay diploma-name">' + nameMarkup + '</div>' +
@@ -139,7 +139,7 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
       '<div class="overlay diploma-admission">' + escapeHtml(admission) + '</div>'
     : '<div class="overlay circular-name">' + nameMarkup + '</div>' +
       '<div class="overlay circular-id">' + idNumberMarkup(icardNumber) + '</div>' +
-      '<div class="overlay circular-registration">' + escapeHtml(rawRegistrationCode) + '</div>' +
+      '<div class="registration-field-mask circular-registration-mask" aria-hidden="true"></div>' +
       '<div class="overlay circular-admission">' + escapeHtml(admission) + '</div>' +
       '<div class="overlay circular-father">' + escapeHtml(fatherName) + '</div>' +
       '<div class="overlay circular-address">' + addressMarkup + '</div>';
@@ -155,6 +155,9 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
     '.student-photo{position:absolute;z-index:1;top:20.3%;left:50%;transform:translateX(-50%);width:38.6%;aspect-ratio:1/1;height:auto;border-radius:50%;object-fit:cover;object-position:center;display:block}' +
     '.photo-empty{background:transparent}' +
     '.overlay{position:absolute;z-index:2;font-family:Arial,"Helvetica Neue","Liberation Sans",sans-serif;color:#3E454C;overflow:hidden}' +
+    '.registration-field-mask{position:absolute;z-index:3;background:#fff;pointer-events:none}' +
+    '.circular-registration-mask{top:67.1%;left:2.5%;width:95%;height:2.4%}' +
+    '.diploma-registration-mask{top:1.8%;left:2.5%;width:95%;height:2.2%}' +
     '.circular-name{top:48.8%;left:3%;width:94%;text-align:center;font-weight:800;font-size:clamp(20px,6.3cqw,80px);text-transform:uppercase;letter-spacing:.3px;line-height:1.05;white-space:nowrap}' +
     '.circular-id,.circular-registration,.circular-admission,.circular-father,.circular-address{left:46.8%;width:49%;font-family:"Roboto Condensed","Arial Narrow","Liberation Sans Narrow",Arial,sans-serif;font-size:clamp(12px,3.05cqw,40px);line-height:1.12;text-align:left;color:#3E454C;font-weight:400;transform:none;transform-origin:top left}' +
     '.circular-id{top:64.5%;white-space:nowrap}.circular-registration{top:67.8%;white-space:nowrap}.circular-admission{top:71.1%}.circular-father{top:74.4%}' +
