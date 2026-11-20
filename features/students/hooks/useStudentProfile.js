@@ -278,8 +278,21 @@ export default function useStudentProfile(params) {
         const response = await fetch("/api/uploads/student-photo", { method: "POST", body: form });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Unable to upload student photo.");
+
+        // Persist the Cloudinary URL immediately so the profile and I-card use it
+        // without requiring the separate Edit > Save Changes action.
+        const saveResponse = await fetch("/api/students/" + student._id, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ photoUrl: data.url }),
+        });
+        const saved = await saveResponse.json();
+        if (!saveResponse.ok) throw new Error(saved.error || "Photo uploaded, but the student profile could not be updated.");
+
+        const updatedStudent = saved.student || { ...student, photoUrl: data.url };
+        setStudent(updatedStudent);
         setEditForm(current => ({ ...current, photoUrl: data.url }));
-        setMessage("Photo uploaded. Save Changes to update the student profile.");
+        setMessage("Student photograph saved successfully. It will appear on the profile and I-card.");
       } catch (uploadError) {
         setMessage(uploadError.message || "Unable to upload student photo.");
       } finally {
