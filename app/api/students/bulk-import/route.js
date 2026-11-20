@@ -70,7 +70,8 @@ function dateValue(value) {
   const raw = clean(value);
   let match = raw.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})$/);
   if (match) {
-    const year = Number(match[3]) < 100 ? 2000 + Number(match[3]) : Number(match[3]);
+    const parsedYear = Number(match[3]);
+    const year = parsedYear < 100 ? (parsedYear < 50 ? 2000 + parsedYear : 1900 + parsedYear) : parsedYear;
     return String(year) + "-" + match[2].padStart(2, "0") + "-" + match[1].padStart(2, "0");
   }
   match = raw.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
