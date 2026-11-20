@@ -292,7 +292,7 @@ export default function useStudentProfile(params) {
         context.drawImage(image, 0, 0, canvas.width, canvas.height);
         const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.85));
         if (!blob) throw new Error("Unable to compress the selected image.");
-        return new File([blob], (file.name.replace(/\\.[^.]+$/, "") || "student-photo") + ".jpg", { type: "image/jpeg" });
+        return new File([blob], (file.name.replace(/\.[^.]+$/, "") || "student-photo") + ".jpg", { type: "image/jpeg" });
       } finally {
         URL.revokeObjectURL(objectUrl);
       }
