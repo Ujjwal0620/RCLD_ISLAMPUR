@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { ArrowLeft, CreditCard, WalletCards } from "lucide-react";
 import StudentFeePlanSection from "@/components/students/profile/fee-workspace/StudentFeePlanSection";
 import StudentPaymentEntrySection from "@/components/students/profile/fee-workspace/StudentPaymentEntrySection";
@@ -20,6 +21,16 @@ export default function StudentFeeWorkspace({
   uploadPaymentProof,
   printBill,
 }) {
+  const [historyScope, setHistoryScope] = useState("all");
+  const paymentHistory = Array.isArray(student.paymentHistory) ? student.paymentHistory : [];
+  const currentStCode = String(student.regnNo || student.enrollmentNo || "");
+  const historyRows = useMemo(() => paymentHistory.filter(payment =>
+    historyScope === "all" || String(payment.stCode || "") === currentStCode
+  ), [paymentHistory, historyScope, currentStCode]);
+  const totalAcrossSemesters = paymentHistory.reduce((sum, payment) => sum + Number(payment.amountPaid ?? payment.amount ?? 0), 0);
+  const currentSemesterPaid = paymentHistory.filter(payment => String(payment.stCode || "") === currentStCode)
+    .reduce((sum, payment) => sum + Number(payment.amountPaid ?? payment.amount ?? 0), 0);
+  const formatDate = value => value ? new Date(value).toLocaleDateString("en-IN") : "—";
   return (
     <section className="detail-section student-fees-section">
                 <div className="detail-section-title">
@@ -62,6 +73,44 @@ export default function StudentFeeWorkspace({
                     </em>
                   </span>
                 </div>
+                <section className="student-payment-history-ledger" style={{ marginTop: 20, padding: 16, border: "1px solid var(--border,#e3e7ef)", borderRadius: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                    <div>
+                      <h3 style={{ margin: 0 }}>Payment History / Money Receipt Ledger</h3>
+                      <small>Imported receipts and ERP payments across every registration code</small>
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button type="button" className={historyScope === "all" ? "primary-btn" : "ghost-btn"} onClick={() => setHistoryScope("all")}>All Semesters / Full History</button>
+                      <button type="button" className={historyScope === "current" ? "primary-btn" : "ghost-btn"} onClick={() => setHistoryScope("current")}>Current ({currentStCode || "Code"})</button>
+                    </div>
+                  </div>
+                  <div className="student-fee-overview" style={{ marginTop: 12 }}>
+                    <div className="fee-overview-card fee-paid"><span>Total Paid Across All Semesters</span><strong>₹{totalAcrossSemesters.toLocaleString("en-IN")}</strong></div>
+                    <div className="fee-overview-card fee-paid"><span>Current Semester Paid</span><strong>₹{currentSemesterPaid.toLocaleString("en-IN")}</strong></div>
+                    <div className="fee-overview-card fee-due"><span>Current Balance Due</span><strong>₹{Number(fee?.due || 0).toLocaleString("en-IN")}</strong></div>
+                  </div>
+                  <div style={{ overflowX: "auto", marginTop: 12 }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 760 }}>
+                      <thead><tr>
+                        {["Date (D.O.P.)", "MR No", "St_Code", "Course / Semester", "Amount Paid", "Installment / Fee Applied"].map(label =>
+                          <th key={label} style={{ textAlign: "left", padding: "10px 8px", borderBottom: "1px solid var(--border,#e3e7ef)", fontSize: 12 }}>{label}</th>
+                        )}
+                      </tr></thead>
+                      <tbody>
+                        {historyRows.length ? historyRows.map((payment, index) => (
+                          <tr key={String(payment._id || payment.mrNo) + "-" + index}>
+                            <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{formatDate(payment.paymentDate || payment.date)}</td>
+                            <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{payment.mrNo || payment.receiptNo || "—"}</td>
+                            <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{payment.stCode || currentStCode || "—"}</td>
+                            <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{payment.courseName || payment.courseCode || "—"}{payment.semesterLabel ? " / " + payment.semesterLabel : ""}</td>
+                            <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)", fontWeight: 700 }}>₹{Number(payment.amountPaid ?? payment.amount ?? 0).toLocaleString("en-IN")}</td>
+                            <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{payment.installmentApplied || payment.paymentType || "Legacy receipt / not allocated"}</td>
+                          </tr>
+                        )) : <tr><td colSpan={6} style={{ padding: 16, textAlign: "center", color: "var(--muted,#7b8494)" }}>No payment receipts are linked to this student profile yet.</td></tr>}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
                 <button
                   type="button"
                   className="fee-workspace-launch"
