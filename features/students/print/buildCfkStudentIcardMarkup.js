@@ -13,7 +13,6 @@ export function buildCfkStudentIcardMarkup({
   }[char]));
   const name = safe(student.applicantName || "Student");
   const father = safe(student.fatherOrHusbandName || student.fatherName || student.guardianName || "—");
-  const course = safe(courseText);
   const id = safe(idNumber || student.regnNo || student.enrollmentNo || student.studentId || student.admissionNo || "—");
   const date = safe(issueDate || "—");
   const addr = safe(address || "—");
@@ -65,7 +64,6 @@ export function buildCfkStudentIcardMarkup({
     <div class="cfk-template-card">
       ${photo}
       <div class="cfk-name">${name}</div>
-      <div class="cfk-course">${course}</div>
       <div class="cfk-fields">
         <div class="cfk-field"><span>${id}</span></div>
         <div class="cfk-field"><span>${father}</span></div>
