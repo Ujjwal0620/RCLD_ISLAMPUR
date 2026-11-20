@@ -80,6 +80,8 @@ export default function StudentDetailsPage({ params }) {
             setEditing={setEditing}
             editForm={editForm}
             setEditForm={setEditForm}
+            feeForm={feeForm}
+            setFeeForm={setFeeForm}
             courses={courses}
             batches={batches}
             referrals={referrals}
