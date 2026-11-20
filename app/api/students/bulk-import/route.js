@@ -386,13 +386,37 @@ export async function POST(request) {
       }
     }
     const importedStudents = newStudentIds.length ? await Student.find({ _id: { $in: newStudentIds } }).lean() : [];
+    const feeConfigCache = new Map();
+    const feeOperations = [];
     for (const student of importedStudents) {
       try {
         const rawCode = String(student.sourceCourseLabel || student.courseCode || "").trim().toUpperCase();
-        const resolved = await resolveCourseFeeConfig(rawCode, Course);
-        await StudentFee.updateOne({ studentId: student._id }, { $setOnInsert: { totalFee: Number(resolved.feeConfig?.grossFee ?? 0), admissionFee: Number(resolved.feeConfig?.admissionFee ?? 0), registrationFee: Number(resolved.feeConfig?.registrationFee ?? 0), discount: 0, payments: [], updatedBy: "student-bulk-import" } }, { upsert: true });
-        try { await linkImportedStudentRecords([student]); } catch (linkError) { errors.push({ row: student.sourceRowNo, Regn_No: student.regnNo, reason: "Student saved, but academic enrollment linking needs review: " + linkError.message }); }
-      } catch (rowError) { errors.push({ row: student.sourceRowNo, Regn_No: student.regnNo, reason: "Student saved, but fee initialization failed: " + rowError.message }); }
+        if (!feeConfigCache.has(rawCode)) feeConfigCache.set(rawCode, await resolveCourseFeeConfig(rawCode, Course));
+        const resolved = feeConfigCache.get(rawCode);
+        feeOperations.push({
+          updateOne: {
+            filter: { studentId: student._id },
+            update: { $setOnInsert: {
+              totalFee: Number(resolved.feeConfig?.grossFee ?? 0),
+              admissionFee: Number(resolved.feeConfig?.admissionFee ?? 0),
+              registrationFee: Number(resolved.feeConfig?.registrationFee ?? 0),
+              discount: 0, payments: [], updatedBy: "student-bulk-import"
+            } },
+            upsert: true
+          }
+        });
+      } catch (rowError) {
+        errors.push({ row: student.sourceRowNo, Regn_No: student.regnNo, reason: "Student saved, but fee initialization failed: " + rowError.message });
+      }
+    }
+    for (let offset = 0; offset < feeOperations.length; offset += 500) {
+      await StudentFee.bulkWrite(feeOperations.slice(offset, offset + 500), { ordered: false });
+    }
+    if (importedStudents.length) {
+      try { await linkImportedStudentRecords(importedStudents); }
+      catch (linkError) {
+        errors.push({ row: null, Regn_No: "", reason: "New students were saved, but academic enrollment linking needs review: " + linkError.message });
+      }
     }
     let paymentImport = null;
     try {
