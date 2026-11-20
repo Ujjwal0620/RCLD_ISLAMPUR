@@ -86,19 +86,18 @@ function genderValue(value) {
   const normalized = raw.replace(/^[^a-z0-9]+|[^a-z0-9]+$/gi, "").toUpperCase();
   if (normalized === "M" || normalized === "MALE") return { value: "M", cleaned: raw !== "M" && raw !== "Male" };
   if (normalized === "F" || normalized === "FEMALE") return { value: "F", cleaned: raw !== "F" && raw !== "Female" };
-  return { value: "Other", cleaned: Boolean(raw) };
+  return { value: "", cleaned: Boolean(raw) };
 }
 
 function parsePhoneValues(value) {
-  const parts = clean(value).split(",").map(item => item.trim()).filter(Boolean);
-  const firstValid = parts.find(item => digits(item).length === 10) || "";
-  const second = parts.find(item => item !== firstValid) || "";
-  const primary = firstValid ? digits(firstValid) : "";
-  const secondary = second ? digits(second) : "";
+  const parts = clean(value).split(",").map(item => item.trim().replace(/,+$/, "")).filter(Boolean);
+  const valid = parts.map(digits).filter(item => item.length === 10);
+  const primary = valid[0] || "";
+  const secondary = valid[1] || "";
   const warnings = [];
   if (!primary) warnings.push(parts.length ? "No valid 10-digit primary phone number." : "Phone number is missing.");
-  if (second && secondary.length !== 10) warnings.push("Secondary phone is not 10 digits and was retained for reference.");
-  if (parts.length > 2) warnings.push("More than two phone values were supplied; remaining values were not mapped.");
+  if (parts.length > valid.length) warnings.push("One or more phone values were invalid and were ignored.");
+  if (valid.length > 2) warnings.push("More than two valid phone values were supplied; only the first two were mapped.");
   return { primary, secondary, source: parts.join(", "), warnings };
 }
 
@@ -110,35 +109,47 @@ function normalizeCourse(value) {
 }
 
 function parseAddress(value) {
-  const raw = clean(value);
-  const lines = raw.split(/\r?\n/).map(clean).filter(Boolean);
-  const first = lines[0] || "";
-  const address = first.replace(/^(?:VILL(?:AGE)?|WARD(?:\s*NO\.?)?|COLONY|TOWN)\s*\.?\s*[:\-]?\s*/i, "").trim();
-  const pin = raw.match(/\b(\d{6})\b/)?.[1] || "";
-  const districtLine = lines.find(line => /^DIST(?:RICT)?\b/i.test(line)) || "";
-  const district = districtLine.replace(/^DIST(?:RICT)?\s*\.?\s*[:\-]?\s*/i, "").trim();
-  const po = lines.find(line => /\b(?:P\.?\s*O\.?|POST\s*OFFICE)\b/i.test(line)) || "";
-  const ps = lines.find(line => /\b(?:P\.?\s*S\.?|POLICE\s*STATION)\b/i.test(line)) || "";
-  const extract = line => line.replace(/^.*?(?:P\.?\s*O\.?|POST\s*OFFICE|P\.?\s*S\.?|POLICE\s*STATION)\s*[:.+-]*/i, "").trim();
-  return { address, postOffice: po ? extract(po) : "", policeStation: ps ? extract(ps) : "", district, pin, sourceAddressRaw: raw };
+  const raw = String(value ?? "").replace(/\r/g, "").trim();
+  const flat = raw.split(/[\n,;|]+/).map(item => item.trim()).filter(Boolean).join(" ");
+  const extract = pattern => { const match = flat.match(pattern); return match ? String(match[1] || "").replace(/[,.]+$/, "").trim() : ""; };
+  const ward = extract(/(?:VILL(?:AGE)?\.?|WARD(?:\s*NO\.?)?|COLONY|TOWN)\s*[:.\-]?\s*([^,;|\n]+?)(?=\s+(?:P\.?\s*O|P\.?\s*S|PO\b|PS\b|DIST\b|PIN\b)|$)/i);
+  let po = extract(/(?:P\.?\s*O\.?|POST\s*OFFICE)\s*[:.\-+]*\s*([^,;|\n]+?)(?=\s*(?:\+\s*P\.?\s*S\.?|P\.?\s*S\.?|POLICE\s*STATION|DIST\b|PIN\b)|$)/i);
+  let ps = extract(/(?:P\.?\s*S\.?|POLICE\s*STATION)\s*[:.\-+]*\s*([^,;|\n]+?)(?=\s*(?:DIST\b|PIN\b)|$)/i);
+  if (!po && /P\.?\s*O\.?\s*\+\s*P\.?\s*S\.?/i.test(flat)) {
+    const shared = extract(/P\.?\s*O\.?\s*\+\s*P\.?\s*S\.?\s*[:.\-]*\s*([^,;|\n]+?)(?=\s*(?:DIST\b|PIN\b)|$)/i);
+    po = shared; ps = shared;
+  }
+  let district = extract(/DIST(?:RICT)?\.?\s*[:.\-]?\s*([^,;|\n]+?)(?=\s*PIN\b|$)/i);
+  if (/^(?:U\s*\/\s*D|U\.?D\.?)$/i.test(district)) district = "Uttar Dinajpur";
+  const pincode = extract(/PIN(?:NO|O|N)?\.?\s*[:.\-]?\s*(\d{6})/i);
+  return { address: raw, ward, village: ward, po, ps, postOffice: po, policeStation: ps, district, pincode, pin: pincode, sourceAddressRaw: raw };
 }
 
-function findStudentSheet(workbook) {
-  const names = workbook.SheetNames || [];
-  const ordered = [...names].sort((a, b) => Number(/^st\s*list$/i.test(b)) - Number(/^st\s*list$/i.test(a)));
-  for (const sheetName of ordered) {
+function findStudentSheet(workbook, requestedSheet = "") {
+  const compatible = [];
+  for (const sheetName of workbook.SheetNames || []) {
     const grid = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: "", raw: true });
     const headerIndex = grid.findIndex(row => {
       const keys = row.map(headerKey);
-      return aliases.regnNo.some(key => keys.includes(key)) && aliases.name.some(key => keys.includes(key));
+      return aliases.regnNo.some(key => keys.includes(key))
+        && aliases.admissionDate.some(key => keys.includes(key))
+        && !keys.includes("mrno") && !keys.includes("amtpaid");
     });
-    if (headerIndex >= 0) return { sheetName, grid, headerIndex };
+    if (headerIndex >= 0) compatible.push({ sheetName, grid, headerIndex });
   }
-  throw new Error("No worksheet with Registration Number and Student Name headers was found. Expected the St List sheet or a compatible legacy template.");
+  if (requestedSheet) {
+    const selected = compatible.find(item => item.sheetName === requestedSheet);
+    if (!selected) throw new Error("Selected worksheet is not a compatible student-data sheet.");
+    return { ...selected, availableSheets: compatible.map(item => item.sheetName) };
+  }
+  const selected = compatible.find(item => /^student\s*data$/i.test(item.sheetName))
+    || compatible.find(item => /^st\s*list$/i.test(item.sheetName)) || compatible[0];
+  if (!selected) throw new Error("No student worksheet found. Expected St_Code/Regn_No and D_O_A/DOI columns; payment-only sheets are ignored.");
+  return { ...selected, availableSheets: compatible.map(item => item.sheetName) };
 }
 
-function parseRows(workbook) {
-  const { sheetName, grid, headerIndex } = findStudentSheet(workbook);
+function parseRows(workbook, requestedSheet = "") {
+  const { sheetName, grid, headerIndex, availableSheets = [] } = findStudentSheet(workbook, requestedSheet);
   const headers = grid[headerIndex].map(headerKey);
   const indexFor = key => headers.findIndex(header => aliases[key].includes(header));
   const indexes = Object.fromEntries(Object.keys(aliases).map(key => [key, indexFor(key)]));
@@ -157,26 +168,27 @@ function parseRows(workbook) {
     const warnings = [...phones.warnings];
     if (!clean(get("father"))) warnings.push("Father name is missing.");
     if (gender.cleaned) warnings.push("Gender value was cleaned or normalized.");
-    if (!clean(get("sex")) || gender.value === "Other") warnings.push("Gender is blank or unrecognized; stored as Other.");
+    if (!clean(get("sex")) || !gender.value) warnings.push("Gender is blank or invalid; left empty for later completion.");
     if (!admissionDate) warnings.push("DOI is missing or invalid.");
     if (!course.code) warnings.push("Course/Semester is missing.");
     const errors = [];
     rows.push({
       rowNo: i + 1, regnNo, name, sourceName: clean(get("name")), admissionDate,
       gender: gender.value, fatherName: clean(get("father")), phone: phones.primary,
-      secondaryPhone: phones.secondary, sourcePhone: phones.source, course: course.code,
+      secondaryPhone: phones.secondary, altPhone: phones.secondary, sourcePhone: phones.source, course: course.code,
       courseLabel: course.label, ...address, dob: dateValue(get("dob")),
       qualification: clean(get("qualification")), formNo: clean(get("formNo")),
       warnings, errors
     });
   }
-  return { sheetName, rows };
+  return { sheetName, availableSheets, rows };
 }
 
 function previewPayload(parsed) {
   const valid = parsed.rows.filter(row => !row.errors.length);
   return {
     sheetName: parsed.sheetName,
+    availableSheets: parsed.availableSheets || [parsed.sheetName],
     totalRows: parsed.rows.length,
     validRows: valid.length,
     invalidRows: parsed.rows.length - valid.length,
