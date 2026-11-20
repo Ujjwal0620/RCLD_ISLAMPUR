@@ -42,13 +42,22 @@ export async function POST(request, { params }) {
       // Older clients without a request body are treated as downloads.
     }
 
-    const counter = await Counter.findOneAndUpdate(
+    // Use MongoDB's native collection update so the sequence is persisted
+    // atomically in the shared database across requests and server restarts.
+    const counters = mongoose.connection.collection("system_counters");
+    const counterResult = await counters.findOneAndUpdate(
       { _id: "student_icard_number" },
       { $inc: { sequence: 1 } },
-      { new: true, upsert: true, setDefaultsOnInsert: true },
+      { upsert: true, returnDocument: "after" },
     );
+    // MongoDB Node driver v5 returns { value }, while v6 returns the document.
+    const counterDocument = counterResult?.value ?? counterResult;
+    const sequence = Number(counterDocument?.sequence);
+    if (!Number.isSafeInteger(sequence) || sequence < 1) {
+      throw new Error("MongoDB did not return a valid ID-card sequence.");
+    }
 
-    const idCardNo = `RCLD/ID-NO/${String(counter.sequence).padStart(4, "0")}`;
+    const idCardNo = `RCLD/ID-NO/${String(sequence).padStart(4, "0")}`;
 
     await Student.updateOne({ _id: student._id }, { $set: { idCardNo } });
     await ICardIssue.create({
