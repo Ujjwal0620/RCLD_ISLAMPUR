@@ -119,7 +119,7 @@ export default function StudentDetailsPage({ params }) {
           />
           <StudentAttendanceSection attendance={attendance} attForm={attForm} setAttForm={setAttForm} saveAttendance={saveAttendance} />
           <StudentQualificationSection student={student} />
-          {message && <div className="success-msg student-profile-feedback" role="status">{message}</div>}
+          {message && <div className="success-msg student-profile-feedback" role="status" style={{ position: "fixed", top: 18, right: 18, zIndex: 1200, maxWidth: "min(420px, calc(100vw - 32px))" }}>{message}</div>}
         </main>
       )}
     </ERPLayout>
