@@ -1,5 +1,5 @@
 const FONT_FAMILY = '"Arial Narrow", "Liberation Sans Narrow", "Roboto Condensed", sans-serif';
-const TEMPLATE_ROOT = "/assets/icardtemplates/";
+const TEMPLATE_ROOT = "/api/icard-templates/";
 const templateImageCache = new Map();
 
 function firstValue(...values) {
@@ -100,142 +100,124 @@ function loadImage(src, { crossOrigin = false } = {}) {
   });
 }
 
-function drawPlaceholder(ctx, x, y, diameter) {
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(x, y, diameter / 2, 0, Math.PI * 2);
-  ctx.fillStyle = "#F1F3F5";
-  ctx.fill();
-  ctx.fillStyle = "#C7CDD2";
-  ctx.beginPath();
-  ctx.arc(x, y - diameter * 0.11, diameter * 0.13, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(x, y + diameter * 0.24, diameter * 0.25, diameter * 0.19, 0, Math.PI, 0);
-  ctx.fill();
-  ctx.restore();
-}
-
 function drawPhoto(ctx, image, width, height) {
-  const diameter = width * 0.365;
+  if (!image) return; // Preserve the clean, printed template circle when no photo exists.
+  const radius = width * 0.1987;
   const centerX = width * 0.5;
-  const centerY = height * 0.336;
+  const centerY = height * 0.3274;
+  const diameter = radius * 2;
+  const scale = Math.max(diameter / image.naturalWidth, diameter / image.naturalHeight);
+  const drawWidth = image.naturalWidth * scale;
+  const drawHeight = image.naturalHeight * scale;
+  const drawX = centerX - drawWidth / 2;
+  const drawY = centerY - diameter / 2;
   ctx.save();
   ctx.beginPath();
-  ctx.arc(centerX, centerY, diameter / 2, 0, Math.PI * 2);
+  ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
   ctx.clip();
-  if (!image) {
-    drawPlaceholder(ctx, centerX, centerY, diameter);
-  } else {
-    const scale = Math.max(diameter / image.naturalWidth, diameter / image.naturalHeight);
-    const drawWidth = image.naturalWidth * scale;
-    const drawHeight = image.naturalHeight * scale;
-    const drawX = centerX - drawWidth / 2;
-    const drawY = centerY - diameter / 2;
-    ctx.drawImage(image, drawX, drawY, drawWidth, drawHeight);
-  }
+  ctx.drawImage(image, drawX, drawY, drawWidth, drawHeight);
   ctx.restore();
 }
 
-function drawName(ctx, student, width, height) {
-  const parts = String(firstValue(student.applicantName, student.fullName, student.name, "STUDENT")).trim().split(/\s+/).filter(Boolean);
+function getTemplateAccent(templateName) {
+  const semester = Number(String(templateName || "").match(/sem[-_ ]?(\\d+)/i)?.[1] || 0);
+  return ({
+    1: "#E31E7D",
+    2: "#009846",
+    3: "#008DD2",
+    4: "#E87722",
+    5: "#9C2B88",
+    6: "#009846",
+  })[semester] || "#E87722";
+}
+
+function drawName(ctx, student, width, height, templateName) {
+  const parts = String(firstValue(student.applicantName, student.fullName, student.name, "")).trim().split(/\\s+/).filter(Boolean);
   if (!parts.length) return;
   const surname = parts.length > 1 ? parts.pop() : "";
-  const firstNames = parts;
-  const maxWidth = width * 0.82;
+  const firstText = parts.join(" ").toLocaleUpperCase();
+  const lastText = surname.toLocaleUpperCase();
+  const accent = getTemplateAccent(templateName);
   let fontSize = width * 0.056;
+  const maxWidth = width * 0.84;
   const measure = size => {
     ctx.font = `700 ${size}px ${FONT_FAMILY}`;
-    const firstText = firstNames.join(" ");
-    return ctx.measureText(firstText).width + (surname ? ctx.measureText(" " + surname).width : 0);
+    return ctx.measureText(firstText + (lastText ? " " + lastText : "")).width;
   };
-  while (fontSize > width * 0.032 && measure(fontSize) > maxWidth) fontSize -= width * 0.001;
+  while (fontSize > width * 0.025 && measure(fontSize) > maxWidth) fontSize -= width * 0.001;
   ctx.save();
-  ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
   ctx.font = `700 ${fontSize}px ${FONT_FAMILY}`;
-  const firstText = firstNames.join(" ").toLocaleUpperCase();
-  const lastText = surname.toLocaleUpperCase();
+  ctx.textBaseline = "alphabetic";
+  ctx.textAlign = "left";
   const firstWidth = ctx.measureText(firstText).width;
-  const spaceWidth = surname ? ctx.measureText(" ").width : 0;
-  const lastWidth = surname ? ctx.measureText(lastText).width : 0;
+  const spaceWidth = lastText ? ctx.measureText(" ").width : 0;
+  const lastWidth = lastText ? ctx.measureText(lastText).width : 0;
   let x = width * 0.5 - (firstWidth + spaceWidth + lastWidth) / 2;
+  const baseline = height * 0.5393;
   ctx.fillStyle = "#3B4248";
-  ctx.fillText(firstText, x, height * 0.515);
-  x += firstWidth;
-  if (surname) {
-    x += spaceWidth;
-    ctx.fillStyle = "#E87722";
-    ctx.fillText(lastText, x, height * 0.515);
+  ctx.fillText(firstText, x, baseline);
+  if (lastText) {
+    x += firstWidth + spaceWidth;
+    ctx.fillStyle = accent;
+    ctx.fillText(lastText, x, baseline);
   }
   ctx.restore();
 }
 
 function getSequentialStudentId(student, fallbackIndex = 1) {
   const candidates = [
-    student.idCardSerial,
-    student.idCardNumber,
-    student.serialNumber,
-    student.serialNo,
-    student.sequenceNumber,
-    student.studentSerial,
-    student.studentId,
-    student.idNumber,
+    student.idCardSerial, student.idCardNumber, student.serialNumber,
+    student.serialNo, student.sequenceNumber, student.studentSerial,
+    student.studentId, student.idNumber,
   ];
   const stored = candidates.find(value => {
     if (typeof value === "number") return Number.isSafeInteger(value) && value > 0;
     const text = String(value || "").trim();
-    return /^\d+$/.test(text) || /(?:ID[-_ ]?NO|ID[-_ ]?CARD)[/:_-]+\d+$/i.test(text);
+    return /^\\d+$/.test(text) || /(?:ID[-_ ]?NO|ID[-_ ]?CARD)[/:_-]+\\d+$/i.test(text);
   });
-  const match = String(stored || "").match(/(\d+)$/);
+  const match = String(stored || "").match(/(\\d+)$/);
   const parsed = match ? Number(match[1]) : 0;
-  const serial = Number.isSafeInteger(parsed) && parsed > 0
-    ? parsed
-    : Math.max(1, Number(fallbackIndex) || 1);
+  const serial = Number.isSafeInteger(parsed) && parsed > 0 ? parsed : Math.max(1, Number(fallbackIndex) || 1);
   return String(serial).padStart(3, "0");
 }
+
 function drawDetails(ctx, student, width, height, fallbackIndex = 1) {
   const regnNo = getRegistrationNumber(student);
   const date = formatAdmissionDate(student);
   const father = titleCase(firstValue(student.fatherOrHusbandName, student.fatherName, student.fatherNameAsPerRecords, student.guardianName, ""));
   const addressLines = getAddressLines(student);
-  const fontSize = width * 0.028;
-  const registrationFontSize = width * 0.031;
-  const lineStep = height * 0.0245;
-  const startY = height * 0.592;
-  const labelX = width * 0.462;
-  const valueX = width * 0.482;
+  const x = width * 0.4664;
+  const fontSize = width * 0.0282;
+  const registrationFontSize = width * 0.0305;
+  const baselines = [
+    height * 0.6328,
+    height * 0.6607,
+    height * 0.6886,
+    height * 0.7164,
+    height * 0.7443,
+    height * 0.7721,
+    height * 0.8000,
+  ];
 
   ctx.save();
-  ctx.textBaseline = "middle";
-  ctx.textAlign = "right";
-  ctx.fillStyle = "#D97724";
-  ctx.font = `600 ${fontSize}px ${FONT_FAMILY}`;
-
-  const labels = ["ID No :", "Regn. No. :", "Date of Admn. :", "Father's Name :", "Address :"];
-  labels.forEach((label, index) => {
-    ctx.fillText(label, labelX, startY + index * lineStep);
-  });
-
   ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
   ctx.fillStyle = "#2B2F33";
   ctx.font = `600 ${fontSize}px ${FONT_FAMILY}`;
-  ctx.fillText(`RCLD/ID-NO/${getSequentialStudentId(student, fallbackIndex)}`, valueX, startY);
+  ctx.fillText(`RCLD/ID-NO/${getSequentialStudentId(student, fallbackIndex)}`, x, baselines[0]);
 
-  const registrationPrefix = "RCLD/ISL-001/";
-  const registrationY = startY + lineStep;
+  const prefix = "RCLD/ISL-001/";
   ctx.font = `500 ${fontSize}px ${FONT_FAMILY}`;
-  ctx.fillText(registrationPrefix, valueX, registrationY);
-  const prefixWidth = ctx.measureText(registrationPrefix).width;
+  ctx.fillText(prefix, x, baselines[1]);
+  const prefixWidth = ctx.measureText(prefix).width;
   ctx.font = `700 ${registrationFontSize}px ${FONT_FAMILY}`;
-  ctx.fillText(regnNo || "—", valueX + prefixWidth + width * 0.002, registrationY);
+  ctx.fillText(regnNo, x + prefixWidth + width * 0.002, baselines[1]);
 
   ctx.font = `600 ${fontSize}px ${FONT_FAMILY}`;
-  ctx.fillText(date || "—", valueX, startY + lineStep * 2);
-  ctx.fillText(father || "—", valueX, startY + lineStep * 3);
-
+  if (date) ctx.fillText(date, x, baselines[2]);
+  if (father) ctx.fillText(father, x, baselines[3]);
   addressLines.forEach((line, index) => {
-    if (line) ctx.fillText(line, valueX, startY + lineStep * (index + 4));
+    if (line) ctx.fillText(line, x, baselines[index + 4]);
   });
   ctx.restore();
 }
@@ -244,7 +226,7 @@ export async function renderStudentIcardCanvas(student, templateName, fallbackIn
     throw new Error("A student and valid ID-card template are required.");
   }
   await document.fonts.ready;
-  await document.fonts.load(`700 24px ${FONT_FAMILY}`).catch(() => []);
+  await document.fonts.load(`700 36px ${FONT_FAMILY}`).catch(() => []);
   let templatePromise = templateImageCache.get(templateName);
   if (!templatePromise) {
     templatePromise = loadImage(TEMPLATE_ROOT + encodeURIComponent(templateName));
@@ -252,7 +234,7 @@ export async function renderStudentIcardCanvas(student, templateName, fallbackIn
     templatePromise.catch(() => templateImageCache.delete(templateName));
   }
   const template = await templatePromise;
-  const width = Math.max(template.naturalWidth, 1200);
+  const width = template.naturalWidth * 2;
   const height = Math.round(width * template.naturalHeight / template.naturalWidth);
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -270,7 +252,7 @@ export async function renderStudentIcardCanvas(student, templateName, fallbackIn
     catch (error) { console.warn("[icard] Student photo unavailable; using neutral placeholder.", error); }
   }
   drawPhoto(ctx, photo, width, height);
-  drawName(ctx, student, width, height);
+  drawName(ctx, student, width, height, templateName);
   drawDetails(ctx, student, width, height, fallbackIndex);
   return canvas;
 }
@@ -304,7 +286,7 @@ export async function exportStudentIcards({ students, templateName, outputMode =
     const pages = [];
     try {
       for (const student of list) {
-        const canvas = await renderStudentIcardCanvas(student, templateName, index + 1);
+        const canvas = await renderStudentIcardCanvas(student, templateName, pages.length + 1);
         const blob = await canvasToJpeg(canvas);
         const url = URL.createObjectURL(blob);
         pages.push({ url, name: student.applicantName || "Student" });
@@ -334,7 +316,7 @@ export async function exportStudentIcards({ students, templateName, outputMode =
 
   for (let index = 0; index < list.length; index += 1) {
     const student = list[index];
-    const canvas = await renderStudentIcardCanvas(student, templateName);
+    const canvas = await renderStudentIcardCanvas(student, templateName, index + 1);
     const blob = await canvasToJpeg(canvas);
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
