@@ -249,6 +249,14 @@ export default function useStudentProfile(params) {
         return;
       }
       setFee(d.fee);
+      const refreshedProfile = await fetch("/api/students/" + student._id, { cache: "no-store" });
+      if (refreshedProfile.ok) {
+        const refreshedData = await refreshedProfile.json();
+        if (refreshedData.student) {
+          setStudent(refreshedData.student);
+          setEditForm(current => ({ ...current, ...refreshedData.student }));
+        }
+      }
       setFeeForm((f) => ({
         ...f,
         amount: "",
