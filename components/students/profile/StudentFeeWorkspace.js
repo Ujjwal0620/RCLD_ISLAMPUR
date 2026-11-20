@@ -30,6 +30,10 @@ export default function StudentFeeWorkspace({
   const selectedEnrollment = enrollmentOptions.find(item => String(item.stCode || "") === effectiveStCode);
   const selectedInstallments = Array.isArray(selectedEnrollment?.installments) ? selectedEnrollment.installments : [];
   const selectedSummary = selectedEnrollment?.summary || {};
+  const selectedDue = Number(selectedSummary.totalDue || selectedEnrollment?.feeConfig?.netPayableFee || 0);
+  const selectedPaid = Number(selectedSummary.totalPaid || 0);
+  const selectedBalance = Number(selectedSummary.totalDue || 0) > 0
+    ? Number(selectedSummary.balanceDue || 0) : Math.max(0, selectedDue - selectedPaid);
   const historyRows = useMemo(() => paymentHistory.filter(payment =>
     historyScope === "all" || String(payment.stCode || "") === effectiveStCode
   ), [paymentHistory, historyScope, effectiveStCode]);
@@ -135,7 +139,7 @@ export default function StudentFeeWorkspace({
                   <div style={{ marginTop: 18 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                       <h4 style={{ margin: 0 }}>Installment Breakdown — {selectedEnrollment?.semesterLabel || selectedEnrollment?.courseCode || "Selected Semester"} ({effectiveStCode || "—"})</h4>
-                      <small>Due ₹{Number(selectedSummary.totalDue || selectedEnrollment?.feeConfig?.netPayableFee || 0).toLocaleString("en-IN")} · Paid ₹{Number(selectedSummary.totalPaid || 0).toLocaleString("en-IN")} · Balance ₹{Number(selectedSummary.balanceDue || 0).toLocaleString("en-IN")}</small>
+                      <small>Due ₹{selectedDue.toLocaleString("en-IN")} · Paid ₹{selectedPaid.toLocaleString("en-IN")} · Balance ₹{selectedBalance.toLocaleString("en-IN")}</small>
                     </div>
                     <div style={{ overflowX: "auto", marginTop: 8 }}>
                       <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 620 }}>
