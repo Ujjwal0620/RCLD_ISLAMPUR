@@ -171,14 +171,36 @@ function drawName(ctx, student, width, height) {
   ctx.restore();
 }
 
-function drawDetails(ctx, student, width, height) {
+function getSequentialStudentId(student, fallbackIndex = 1) {
+  const stored = firstValue(
+    student.idCardSerial,
+    student.idCardNumber,
+    student.serialNumber,
+    student.serialNo,
+    student.sequenceNumber,
+    student.studentSerial,
+    student.studentId,
+    student.studentCode,
+    student.idNumber,
+    student.id
+  );
+  const digits = String(stored || "").match(/(\\d+)/);
+  const parsed = digits ? Number(digits[1]) : 0;
+  const serial = Number.isSafeInteger(parsed) && parsed > 0
+    ? parsed
+    : Math.max(1, Number(fallbackIndex) || 1);
+  return String(serial).padStart(3, "0");
+}
+
+function drawDetails(ctx, student, width, height, fallbackIndex = 1) {
   const regnNo = getRegistrationNumber(student);
   const date = formatAdmissionDate(student);
   const father = titleCase(firstValue(student.fatherOrHusbandName, student.fatherName, student.fatherNameAsPerRecords, student.guardianName, ""));
   const addressLines = getAddressLines(student);
-  const fontSize = width * 0.03;
-  const lineStep = height * 0.027;
-  const startY = height * 0.606;
+  const fontSize = width * 0.028;
+  const registrationFontSize = width * 0.031;
+  const lineStep = height * 0.0245;
+  const startY = height * 0.592;
   const labelX = width * 0.462;
   const valueX = width * 0.482;
 
@@ -188,31 +210,34 @@ function drawDetails(ctx, student, width, height) {
   ctx.fillStyle = "#D97724";
   ctx.font = `600 ${fontSize}px ${FONT_FAMILY}`;
 
-  const labels = ["ID No :", "Date of Admn. :", "Father's Name :", "Address :", "", ""];
+  const labels = ["ID No :", "Regn. No. :", "Date of Admn. :", "Father's Name :", "Address :"];
   labels.forEach((label, index) => {
-    if (label) ctx.fillText(label, labelX, startY + index * lineStep);
+    ctx.fillText(label, labelX, startY + index * lineStep);
   });
 
   ctx.textAlign = "left";
   ctx.fillStyle = "#2B2F33";
+  ctx.font = `600 ${fontSize}px ${FONT_FAMILY}`;
+  ctx.fillText(`RCLD/ID-NO/${getSequentialStudentId(student, fallbackIndex)}`, valueX, startY);
+
+  const registrationPrefix = "RCLD/ISL-001/";
+  const registrationY = startY + lineStep;
   ctx.font = `500 ${fontSize}px ${FONT_FAMILY}`;
-  const prefix = "RCLD/ISL-001/";
-  ctx.fillText(prefix, valueX, startY);
-  const prefixWidth = ctx.measureText(prefix).width;
-  ctx.font = `700 ${width * 0.033}px ${FONT_FAMILY}`;
-  ctx.fillText(regnNo || "—", valueX + prefixWidth + width * 0.002, startY);
+  ctx.fillText(registrationPrefix, valueX, registrationY);
+  const prefixWidth = ctx.measureText(registrationPrefix).width;
+  ctx.font = `700 ${registrationFontSize}px ${FONT_FAMILY}`;
+  ctx.fillText(regnNo || "—", valueX + prefixWidth + width * 0.002, registrationY);
 
   ctx.font = `600 ${fontSize}px ${FONT_FAMILY}`;
-  ctx.fillText(date || "—", valueX, startY + lineStep);
-  ctx.fillText(father || "—", valueX, startY + lineStep * 2);
+  ctx.fillText(date || "—", valueX, startY + lineStep * 2);
+  ctx.fillText(father || "—", valueX, startY + lineStep * 3);
 
   addressLines.forEach((line, index) => {
-    if (line) ctx.fillText(line, valueX, startY + lineStep * (index + 3));
+    if (line) ctx.fillText(line, valueX, startY + lineStep * (index + 4));
   });
   ctx.restore();
 }
-
-export async function renderStudentIcardCanvas(student, templateName) {
+export async function renderStudentIcardCanvas(student, templateName, fallbackIndex = 1) {
   if (!student || !templateName || templateName.includes("/") || templateName.includes(String.fromCharCode(92))) {
     throw new Error("A student and valid ID-card template are required.");
   }
@@ -244,7 +269,7 @@ export async function renderStudentIcardCanvas(student, templateName) {
   }
   drawPhoto(ctx, photo, width, height);
   drawName(ctx, student, width, height);
-  drawDetails(ctx, student, width, height);
+  drawDetails(ctx, student, width, height, fallbackIndex);
   return canvas;
 }
 
@@ -277,7 +302,7 @@ export async function exportStudentIcards({ students, templateName, outputMode =
     const pages = [];
     try {
       for (const student of list) {
-        const canvas = await renderStudentIcardCanvas(student, templateName);
+        const canvas = await renderStudentIcardCanvas(student, templateName, index + 1);
         const blob = await canvasToJpeg(canvas);
         const url = URL.createObjectURL(blob);
         pages.push({ url, name: student.applicantName || "Student" });
