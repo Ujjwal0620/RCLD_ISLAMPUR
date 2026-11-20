@@ -13,7 +13,9 @@ export function buildCfkStudentIcardMarkup({
   }[char]));
   const name = safe(student.applicantName || "Student");
   const father = safe(student.fatherOrHusbandName || student.fatherName || student.guardianName || "—");
-  const id = safe(idNumber || student.regnNo || student.enrollmentNo || student.studentId || student.admissionNo || "—");
+  const id = safe(idNumber || student.stCode || student.regnNo || student.enrollmentNo || student.studentId || student.admissionNo || "—");
+  const idPrefix = "RCLD/ISL-001/";
+  const idCode = id.toUpperCase().startsWith(idPrefix) ? id.slice(idPrefix.length) : id;
   const date = safe(issueDate || "—");
   const addr = safe(address || "—");
   const photo = photoUrl
@@ -61,7 +63,7 @@ export function buildCfkStudentIcardMarkup({
       ${photo}
       <div class="cfk-name">${name}</div>
       <div class="cfk-fields">
-        <div class="cfk-field"><strong>${id}</strong></div>
+        <div class="cfk-field"><span class="cfk-id-prefix">${idPrefix}</span><strong class="cfk-id-code">${idCode}</strong></div>
         <div class="cfk-field"><span>${father}</span></div>
         <div class="cfk-field"><span class="cfk-address">${addr}</span></div>
         <div class="cfk-field"><span>${date}</span></div>
