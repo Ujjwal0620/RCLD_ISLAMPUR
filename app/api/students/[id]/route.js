@@ -62,13 +62,15 @@ export async function GET(req,{params}){
       ? await StudentFeePayment.find(paymentQuery).sort({ paymentDate: 1, mrNo: 1 }).lean()
       : [];
     const enrollmentMap = new Map(enrollments.map(item => [String(item._id), item]));
+    const enrollmentByCode = new Map(enrollments.map(item => [String(item.stCode || ""), item]));
     const enrollmentCourseCodes = [...new Set(enrollments.map(item => String(item.courseCode || "").toUpperCase()).filter(Boolean))];
     const courseDocuments = enrollmentCourseCodes.length
       ? await Course.find({ code: { $in: enrollmentCourseCodes } }).select("code name").lean()
       : [];
     const courseNameMap = new Map(courseDocuments.map(course => [String(course.code).toUpperCase(), course.name]));
     const paymentHistory = importedPayments.map(payment => {
-      const enrollment = enrollmentMap.get(String(payment.enrollmentId)) || {};
+      const enrollment = enrollmentMap.get(String(payment.enrollmentId))
+        || enrollmentByCode.get(String(payment.stCode || "")) || {};
       return {
         ...payment,
         courseCode: enrollment.courseCode || "",
