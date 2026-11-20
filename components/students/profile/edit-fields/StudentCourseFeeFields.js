@@ -1,6 +1,6 @@
 "use client";
 
-export default function StudentCourseFeeFields({ editForm, setEditForm, courses, batches }) {
+export default function StudentCourseFeeFields({ editForm, setEditForm, feeForm, setFeeForm, courses, batches }) {
   return (
     <div className="edit-card">
                             <h4>Course & Fee</h4>
@@ -41,11 +41,11 @@ export default function StudentCourseFeeFields({ editForm, setEditForm, courses,
                               </label>
                               <label className="form-field">
                                 <span>Course Fee (₹)</span>
-                                <input value={feeForm.totalFee ?? 0} readOnly />
+                                <input value={feeForm?.totalFee ?? 0} readOnly />
                               </label>
                               <label className="form-field">
                                 <span>Admission Fee (₹)</span>
-                                <input value={feeForm.admissionFee ?? 0} readOnly />
+                                <input value={feeForm?.admissionFee ?? 0} readOnly />
                               </label>
                               <label className="form-field">
                                 <span>Due Amount</span>
