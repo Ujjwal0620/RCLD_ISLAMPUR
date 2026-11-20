@@ -16,11 +16,12 @@ function downloadTemplate() {
   XLSX.writeFile(workbook, "RCLD_Student_Import_Template.xlsx");
 }
 
-async function sendFile(file, mode, duplicateMode = "skip") {
+async function sendFile(file, mode, importMode = "fill_and_import", sheetName = "") {
   const form = new FormData();
   form.append("file", file);
   form.append("mode", mode);
-  form.append("duplicateMode", duplicateMode);
+  form.append("importMode", importMode);
+  if (sheetName) form.append("sheetName", sheetName);
   const response = await fetch("/api/students/bulk-import", { method: "POST", body: form });
   const data = await response.json();
   if (!response.ok) throw new Error(data.detail || data.error || "Student import request failed.");
@@ -33,17 +34,19 @@ export default function BulkImportPage() {
   const [result, setResult] = useState(null);
   const [previewing, setPreviewing] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [duplicateMode, setDuplicateMode] = useState("skip");
+  const [importMode, setImportMode] = useState("fill_and_import");
+  const [sheetName, setSheetName] = useState("");
   const [error, setError] = useState("");
 
-  async function createPreview(selectedFile) {
+  async function createPreview(selectedFile, selectedSheet = sheetName) {
     if (!selectedFile) return;
     setPreviewing(true);
     setError("");
     setResult(null);
     try {
-      const data = await sendFile(selectedFile, "preview", duplicateMode);
+      const data = await sendFile(selectedFile, "preview", importMode, selectedSheet);
       setPreview(data);
+      setSheetName(data.sheetName || "");
     } catch (err) {
       setError(err.message || "Unable to preview this spreadsheet.");
       setPreview(null);
@@ -54,12 +57,14 @@ export default function BulkImportPage() {
 
   async function importStudents() {
     if (!file || !preview?.validRows) return;
-    const verb = duplicateMode === "update" ? "update matching registration numbers" : "skip existing registration numbers";
-    if (!window.confirm("Process " + preview.validRows.toLocaleString("en-IN") + " valid rows and " + verb + "?")) return;
+    const verb = importMode === "update_existing_only"
+      ? "update matching existing students only and skip new students"
+      : "fill missing fields on existing students and create new students";
+    if (!window.confirm("Process " + preview.validRows.toLocaleString("en-IN") + " valid rows from " + preview.sheetName + " and " + verb + "?")) return;
     setBusy(true);
     setError("");
     try {
-      const data = await sendFile(file, "import", duplicateMode);
+      const data = await sendFile(file, "import", importMode, sheetName);
       setResult(data);
       setPreview(null);
     } catch (err) {
@@ -80,7 +85,7 @@ export default function BulkImportPage() {
         <div>
           <span className="eyebrow">RCLD ADMISSION WORKBOOK</span>
           <h2>Import student records from Excel or CSV</h2>
-          <p>Reads the St List worksheet (or the first compatible worksheet), cleans values and previews row-level warnings before saving.</p>
+          <p>Detects student-data worksheets automatically, ignores payment-only sheets for student records, and safely fills only missing fields on existing students.</p>
         </div>
         <button className="ghost-btn" type="button" onClick={downloadTemplate}><Download size={16} /> Download Template</button>
       </section>
@@ -100,18 +105,30 @@ export default function BulkImportPage() {
             }} />
           </label>
           {file && <p className="form-help" style={{ margin: "10px 0 16px" }}>{file.name} · {(file.size / 1024 / 1024).toFixed(2)} MB</p>}
-          <div style={{ display: "flex", gap: 18, flexWrap: "wrap", alignItems: "center", marginTop: 14 }}>
-            <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <input type="radio" name="duplicateMode" checked={duplicateMode === "skip"} onChange={() => setDuplicateMode("skip")} />
-              Skip existing Regn_No
+          {preview?.availableSheets?.length > 1 && (
+            <label className="form-field" style={{ marginTop: 18, maxWidth: 420 }}>
+              <span>Student worksheet</span>
+              <select value={sheetName} onChange={event => { setSheetName(event.target.value); createPreview(file, event.target.value); }}>
+                {preview.availableSheets.map(name => <option key={name} value={name}>{name}</option>)}
+              </select>
+              <small className="form-help">Payment-only sheets are excluded from this list.</small>
             </label>
-            <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <input type="radio" name="duplicateMode" checked={duplicateMode === "update"} onChange={() => setDuplicateMode("update")} />
-              Update existing Regn_No
+          )}
+          <div style={{ display: "grid", gap: 12, marginTop: 18 }}>
+            <strong>Import mode</strong>
+            <label style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+              <input type="radio" name="importMode" checked={importMode === "fill_and_import"} onChange={() => setImportMode("fill_and_import")} />
+              <span><b>Fill Missing Fields on Existing + Import New</b><br /><small className="form-help">Default. Preserve populated student details, photos and ID numbers; create students not already found.</small></span>
             </label>
-            <button className="primary-btn" type="button" disabled={!file || previewing || busy} onClick={() => createPreview(file)}>
-              <Eye size={16} /> {previewing ? "Reading file…" : "Refresh Preview"}
-            </button>
+            <label style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+              <input type="radio" name="importMode" checked={importMode === "update_existing_only"} onChange={() => setImportMode("update_existing_only")} />
+              <span><b>Only Update Existing Students (Skip New)</b><br /><small className="form-help">Enrich matching records only. New registration numbers are counted as skipped.</small></span>
+            </label>
+            <div style={{ display: "flex", gap: 18, flexWrap: "wrap", alignItems: "center" }}>
+              <button className="primary-btn" type="button" disabled={!file || previewing || busy} onClick={() => createPreview(file, sheetName)}>
+                <Eye size={16} /> {previewing ? "Reading file…" : "Refresh Preview"}
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -169,12 +186,12 @@ export default function BulkImportPage() {
           <div className="panel-head"><div><h3>Import summary</h3><p>{result.message}</p></div><CheckCircle2 size={22} /></div>
           <div style={{ padding: 20 }}>
             <div className="student-summary-grid">
-              <div className="summary-card"><span>Total</span><strong>{result.total ?? 0}</strong></div>
-              <div className="summary-card"><span>Imported</span><strong>{result.imported ?? 0}</strong></div>
-              <div className="summary-card"><span>Updated</span><strong>{result.updated ?? 0}</strong></div>
-              <div className="summary-card"><span>Skipped</span><strong>{result.skipped ?? 0}</strong></div>
+              <div className="summary-card"><span>Existing Students Enriched</span><strong>{result.existingStudentsEnriched ?? 0}</strong></div>
+              <div className="summary-card"><span>Existing Students Unchanged</span><strong>{result.existingStudentsUnchanged ?? 0}</strong></div>
+              <div className="summary-card"><span>New Students Created</span><strong>{result.newStudentsCreated ?? 0}</strong></div>
+              <div className="summary-card"><span>Skipped New</span><strong>{result.skippedNew ?? 0}</strong></div>
             </div>
-            {result.warnings?.length > 0 && <><h4 style={{ marginTop: 18 }}>Warnings ({result.warnings.length})</h4><div className="form-help">{result.warnings.slice(0, 100).map((item, index) => <div key={index}>Row {item.row ?? "—"} · Regn_No {item.Regn_No || "—"}: {item.reason}</div>)}</div></>}
+            {result.warnings?.length > 0 && <details style={{ marginTop: 18 }} open><summary><b>Warnings / Duplicate IDs Flagged ({result.warningCount ?? result.warnings.length})</b></summary><div className="form-help" style={{ marginTop: 10 }}>{result.warnings.slice(0, 1000).map((item, index) => <div key={index}>Row {item.row ?? "—"} · Regn_No {item.Regn_No || "—"}: {item.reason}</div>)}</div><button className="ghost-btn" type="button" onClick={() => { const ws = XLSX.utils.json_to_sheet(result.warnings); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Import Warnings"); XLSX.writeFile(wb, "RCLD_Student_Import_Warnings.xlsx"); }}><Download size={15} /> Download warning details</button></details>}
             {result.errors?.length > 0 && <><h4 style={{ marginTop: 18 }}>Row errors ({result.errors.length})</h4><div className="error-msg">{result.errors.slice(0, 100).map((item, index) => <div key={index}>Row {item.row ?? "—"} · Regn_No {item.Regn_No || "—"}: {item.reason}</div>)}</div></>}
             <p className="form-help" style={{ marginTop: 14 }}>Student rows are saved independently. Review any warnings or row errors before using the imported records.</p>
             <a className="primary-btn" href="/dashboard/students">Open Student Directory</a>
