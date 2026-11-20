@@ -118,7 +118,7 @@ function buildMarkup({ student, templateName, photoUrl, courseName, session }) {
   const addressMarkup = getAddressMarkup(student);
   const admission = getAdmissionDate(student) || "—";
   const photo = photoUrl
-    ? '<img class="student-photo" src="' + escapeHtml(photoUrl) + '" alt="Student photograph">'
+    ? '<img class="student-photo" crossorigin="anonymous" src="' + escapeHtml(photoUrl) + '" alt="Student photograph">'
     : '<div class="student-photo photo-empty" aria-label="Student photograph unavailable"></div>';
 
   const overlays = diploma
