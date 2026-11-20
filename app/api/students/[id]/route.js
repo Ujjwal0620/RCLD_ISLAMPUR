@@ -171,14 +171,9 @@ export async function PATCH(req,{params}){
     if(update.mobileNumber!==undefined)update.mobileNumber=String(update.mobileNumber).trim();
     const email=String(body.email ?? "").trim().toLowerCase();
     const aadhaarNumber=String(body.aadhaarNumber ?? "").replace(/\D/g, "");
-    if(email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return NextResponse.json({error:"Enter a valid email address."},{status:400});
-    if(aadhaarNumber && !/^\d{12}$/.test(aadhaarNumber))return NextResponse.json({error:"Aadhaar number must contain exactly 12 digits."},{status:400});
     const mobileNumber=String(body.mobileNumber ?? "").replace(/\D/g,"");
     const guardian=String(body.guardianContactNumber||"").replace(/\D/g,"");
     const whatsapp=String(body.whatsappNumber||"").replace(/\D/g,"");
-    if(body.mobileNumber!==undefined && mobileNumber && !/^\d{10}$/.test(mobileNumber))return NextResponse.json({error:"Mobile number must contain exactly 10 digits."},{status:400});
-    if(body.guardianContactNumber!==undefined && guardian && !/^\d{10}$/.test(guardian))return NextResponse.json({error:"Guardian mobile number must contain exactly 10 digits."},{status:400});
-    if(body.whatsappNumber!==undefined && whatsapp && !/^\d{10}$/.test(whatsapp))return NextResponse.json({error:"WhatsApp number must contain exactly 10 digits."},{status:400});
     if(body.mobileNumber!==undefined)update.mobileNumber=mobileNumber;
     if(body.email!==undefined)update.email=email;
     if(body.aadhaarNumber!==undefined)update.aadhaarNumber=aadhaarNumber;
