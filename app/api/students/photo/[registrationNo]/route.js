@@ -30,14 +30,14 @@ const StudentSchema = new mongoose.Schema({
 const Student = mongoose.models.Student || mongoose.model("Student", StudentSchema);
 
 function normalizeRegistrationNo(value) {
-  return String(value ?? "").trim().replace(/\\.0$/, "");
+  return String(value ?? "").trim().replace(/\.0$/, "");
 }
 
 function safeCloudinaryUrl(value) {
   try {
     const url = new URL(String(value || ""));
     if (url.protocol !== "https:") return "";
-    if (!/(^|\\.)((res\\.)?cloudinary\\.com)$/i.test(url.hostname)) return "";
+    if (!/(^|\.)((res\.)?cloudinary\.com)$/i.test(url.hostname)) return "";
     return url.toString();
   } catch {
     return "";
@@ -56,7 +56,7 @@ export async function GET(_request, { params }) {
     let cloudinaryUrl = "";
     try {
       await connectMongoDB();
-      const numericCode = /^\\d+$/.test(code) ? Number(code) : null;
+      const numericCode = /^\d+$/.test(code) ? Number(code) : null;
       const student = await Student.findOne({
         $or: [
           { regnNo: code },
