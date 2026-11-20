@@ -9,6 +9,7 @@ const StudentMasterSchema = new mongoose.Schema({
   normalizedFatherName: { type: String, default: "", index: true },
   address: { type: String, default: "" },
   photoUrl: { type: String, default: "" },
+  stCodes: { type: [String], default: [] },
   phoneNumbers: { type: [String], default: [] },
   qualification: { type: String, default: "" },
   activeEnrollmentId: { type: mongoose.Schema.Types.ObjectId, ref: "StudentEnrollment", default: null },
