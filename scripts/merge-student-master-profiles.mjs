@@ -169,6 +169,39 @@ async function main() {
   const oldEnrollmentIndex = enrollmentIndexes.find(index => index.unique
     && index.key?.stCode === 1 && index.key?.normalizedFullName === 1 && !index.key?.studentId);
   if (oldEnrollmentIndex) await StudentEnrollment.collection.dropIndex(oldEnrollmentIndex.name);
+  const duplicateEnrollmentGroups = await StudentEnrollment.aggregate([
+    { $group: { _id: { studentId: "$studentId", stCode: "$stCode", normalizedFullName: "$normalizedFullName" },
+      count: { $sum: 1 }, ids: { $push: "$_id" } } },
+    { $match: { count: { $gt: 1 } } }
+  ]);
+  const paymentCollection = mongoose.connection.collection("student_fee_payments");
+  for (const group of duplicateEnrollmentGroups) {
+    const records = await StudentEnrollment.find({ _id: { $in: group.ids } }).sort({ createdAt: 1 }).lean();
+    const ranked = [...records].sort((a, b) =>
+      Number(Boolean(b.feeConfig?.configured)) - Number(Boolean(a.feeConfig?.configured))
+      || (b.installments?.length || 0) - (a.installments?.length || 0)
+      || new Date(a.createdAt || 0) - new Date(b.createdAt || 0)
+    );
+    const canonical = ranked[0];
+    for (const duplicate of ranked.slice(1)) {
+      const receipts = await paymentCollection.find({ enrollmentId: duplicate._id }).toArray();
+      for (const receipt of receipts) {
+        const existingReceipt = await paymentCollection.findOne({
+          mrNo: receipt.mrNo, stCode: receipt.stCode,
+          paymentDate: receipt.paymentDate || null, amountPaid: receipt.amountPaid,
+        });
+        if (existingReceipt && String(existingReceipt._id) !== String(receipt._id)) {
+          await paymentCollection.deleteOne({ _id: receipt._id });
+        } else {
+          await paymentCollection.updateOne({ _id: receipt._id }, {
+            $set: { studentId: canonical.studentId, enrollmentId: canonical._id }
+          });
+        }
+      }
+      await StudentMaster.updateOne({ activeEnrollmentId: duplicate._id }, { $set: { activeEnrollmentId: canonical._id } });
+      await StudentEnrollment.deleteOne({ _id: duplicate._id });
+    }
+  }
   await StudentEnrollment.collection.createIndex(
     { studentId: 1, stCode: 1, normalizedFullName: 1 },
     { unique: true, name: "studentId_1_stCode_1_normalizedFullName_1" }
