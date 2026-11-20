@@ -117,7 +117,7 @@ export default function CodingForKidsIcardDialog({
                     aria-pressed={selectedTemplate === template}
                     onClick={() => setSelectedTemplate(template)}
                   >
-                    <img src={`/assets/icardtemplates/${encodeURIComponent(template)}`} alt={`${titleFor(template)} preview`} loading="lazy"/>
+                    <img src={`/api/icard-templates/${encodeURIComponent(template)}`} alt={`${titleFor(template)} preview`} loading="lazy"/>
                     <span className="cfk-template-option-copy">
                       <strong>{titleFor(template)}</strong>
                       <small>{template}</small>
