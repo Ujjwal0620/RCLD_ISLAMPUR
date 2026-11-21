@@ -89,10 +89,14 @@ export async function POST(request, { params }) {
       if (!updated) throw new Error("Unable to save the student's ID-card details.");
 
       const snapshot = issueSnapshot(updated, idCardNumber, issuedAt);
+      // Keep status and lastDownloadedAt out of $setOnInsert because they
+      // are updated explicitly below. MongoDB rejects updating the same path
+      // through both $setOnInsert and $set in one operation.
+      const { status: _snapshotStatus, ...insertSnapshot } = snapshot;
       await IdCardIssue.updateOne(
         { studentId: updated._id },
         {
-          $setOnInsert: snapshot,
+          $setOnInsert: insertSnapshot,
           $set: { lastDownloadedAt: now, status: "Downloaded" },
         },
         { upsert: true, session, setDefaultsOnInsert: true },
