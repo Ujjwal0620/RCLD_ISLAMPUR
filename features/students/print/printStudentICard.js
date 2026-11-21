@@ -28,25 +28,31 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
     return;
   }
 
-  try {
-    if (!student._id) throw new Error("Student ID is missing; unable to assign an ID-card number.");
-    const response = await fetch(`/api/students/${encodeURIComponent(student._id)}/icard-number`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: outputMode === "print" ? "print" : "download" }),
-    });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || "Unable to assign an ID-card number.");
-    student = {
-      ...student,
-      idCardNumber: String(data.idCardNumber || data.idCardNo),
-      idCardNo: String(data.idCardNumber || data.idCardNo),
-      isDownloaded: Boolean(data.isDownloaded),
-    };
-    onStudentUpdated?.(student);
-  } catch (error) {
-    setMessage(error?.message || "Unable to assign an ID-card number.");
-    return;
+  if (outputMode === "jpg") {
+    try {
+      if (!student._id) throw new Error("Student ID is missing; unable to confirm the ID-card download.");
+      const response = await fetch(`/api/students/${encodeURIComponent(student._id)}/icard-number`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "download" }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to confirm the ID-card download.");
+      student = {
+        ...student,
+        ...(data.student || {}),
+        idCardNumber: String(data.idCardNumber || data.idCardNo),
+        idCardNo: String(data.idCardNumber || data.idCardNo),
+        isIdDownloaded: true,
+        isDownloaded: true,
+        idIssuedAt: data.idIssuedAt,
+        lastDownloadedAt: data.lastDownloadedAt,
+      };
+      onStudentUpdated?.(student);
+    } catch (error) {
+      setMessage(error?.message || "Unable to confirm the ID-card download.");
+      return;
+    }
   }
 
   // ---------- Institute and print settings ----------
@@ -97,8 +103,7 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
   const issueDate = formatIcardDate(admissionDate);
   const sessionLabel = esc(student.session || student.academicSession || DEFAULT_SESSION);
 
-  const enrollRaw =
-    String(firstNonEmpty(student.idCardNo, student.enrollmentNo, student.studentId, student.admissionNo, student.regnNo, student.formNo, "—")).trim();
+  const enrollRaw = String(firstNonEmpty(student.idCardNumber, student.idCardNo, "Not Issued Yet")).trim();
   const idMatch = enrollRaw.match(/^(.*?)(\d+)$/);
   const idPrefix = idMatch ? esc(idMatch[1]) : esc(enrollRaw);
   const idNumber = idMatch ? esc(idMatch[2]) : "";
