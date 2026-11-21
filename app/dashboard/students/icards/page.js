@@ -132,7 +132,22 @@ export default function StudentICardsPage() {
         onClose={() => setTemplateDialogOpen(false)}
         onSelect={(templateName) => {
           setTemplateDialogOpen(false);
-          if (selectedStudent) printStudentICard(selectedStudent, setMessage, "", icardOutputMode, templateName);
+          if (selectedStudent) printStudentICard(
+            selectedStudent,
+            setMessage,
+            "",
+            icardOutputMode,
+            templateName,
+            (updatedStudent) => {
+              setStudents((current) => current.map((student) =>
+                student._id === updatedStudent._id ? { ...student, ...updatedStudent } : student
+              ));
+              setSelectedStudent((current) => current?._id === updatedStudent._id
+                ? { ...current, ...updatedStudent }
+                : current
+              );
+            },
+          );
         }}
       />
 
@@ -267,7 +282,11 @@ export default function StudentICardsPage() {
                         ) : (
                           <span className="icard-student-avatar icard-student-avatar-fallback">{initials(student.applicantName)}</span>
                         )}
-                        <span className="icard-student-name">{student.applicantName || "Unnamed student"}</span>
+                        <span className="icard-student-name">
+                          {student.applicantName || "Unnamed student"}
+                          {(student.idCardNumber || student.idCardNo) && <small>{student.idCardNumber || student.idCardNo}</small>}
+                          {student.isDownloaded && <em className="icard-downloaded-badge">Downloaded</em>}
+                        </span>
                       </div>
                     </td>
                     <td><strong>{student.enrollmentNo || student.regnNo || student.formNo || "—"}</strong></td>
@@ -366,7 +385,9 @@ export default function StudentICardsPage() {
         .icard-student-identity{display:flex;align-items:center;gap:10px;min-width:190px}
         :global(.icard-student-avatar){width:42px;height:42px;min-width:42px;border-radius:50%;object-fit:cover;border:1px solid var(--border-color,#e1e6ed);background:#f1f4f8}
         .icard-student-avatar-fallback{display:grid;place-items:center;font-size:12px;font-weight:700;color:#52627a}
-        .icard-student-name{font-weight:650;color:var(--heading-color,inherit)}
+        .icard-student-name{font-weight:650;color:var(--heading-color,inherit);display:flex;flex-direction:column;align-items:flex-start;gap:3px}
+        .icard-student-name small{font-size:11px;font-weight:600;color:var(--text-muted,#778397)}
+        .icard-downloaded-badge{display:inline-flex;align-items:center;width:max-content;padding:2px 7px;border-radius:20px;background:#e8f7ee;color:#187344;font-size:10px;font-style:normal;font-weight:700;line-height:1.5}
         .icard-row-actions{display:flex;align-items:center;gap:7px}.icard-print-button{white-space:nowrap}.icard-print-button:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
         .icard-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 20px;border-top:1px solid var(--border-color,#edf0f4);font-size:12px;color:var(--text-muted,#778397)}
         .icard-pagination-controls{display:flex;align-items:center;gap:5px}
