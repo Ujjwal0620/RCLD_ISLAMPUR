@@ -60,8 +60,8 @@ export async function POST(request, { params }) {
       if (!idCardNumber) {
         const counter = await IdCardCounter.findOneAndUpdate(
           { _id: "student_id_card" },
-          { $inc: { sequence: 1 }, $setOnInsert: { _id: "student_id_card" } },
-          { upsert: true, new: true, session, setDefaultsOnInsert: true },
+          { $inc: { sequence: 1 } },
+          { upsert: true, new: true, session, setDefaultsOnInsert: false },
         ).lean();
 
         const sequence = Number(counter?.sequence);
