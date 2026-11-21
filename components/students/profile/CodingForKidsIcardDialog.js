@@ -130,7 +130,11 @@ export default function CodingForKidsIcardDialog({
 
             <section className="icard-live-preview">
               <div className="icard-preview-heading">
-                <div><strong>Live ID card preview</strong><span>{selectedTemplate || "Choose a template"}</span></div>
+                <div>
+                  <strong>Live ID card preview</strong>
+                  <span>{selectedTemplate || "Choose a template"}</span>
+                  <span className="icard-preview-id-number">ID No: {previewStudent?.idCardNumber || previewStudent?.idCardNo || "Not Issued Yet"}</span>
+                </div>
                 {previewLoading && <span className="icard-preview-progress"><LoaderCircle size={15}/> Rendering</span>}
               </div>
               <div className="icard-preview-stage">
@@ -165,6 +169,7 @@ export default function CodingForKidsIcardDialog({
         .icard-template-check{position:absolute;right:12px;top:12px;border-radius:20px;background:var(--primary,#315efb);color:white;padding:4px 7px;font-size:10px;font-weight:700}
         .icard-live-preview{min-height:0;display:flex;flex-direction:column;border:1px solid var(--border,#e1e5eb);border-radius:14px;padding:14px;background:var(--surface-subtle,#f8f9fb)}
         .icard-preview-heading{margin-bottom:8px}.icard-preview-heading div{display:flex;flex-direction:column;gap:3px}
+        .icard-preview-heading .icard-preview-id-number{font-size:12px;font-weight:700;color:var(--text,#252b33)}
         .icard-preview-stage{flex:1;min-height:280px;max-height:65vh;display:flex;align-items:center;justify-content:center;overflow:auto;background:#e9edf2;border-radius:10px;padding:12px}
         .icard-preview-stage canvas{display:block;width:auto;height:auto;max-width:100%;max-height:58vh;object-fit:contain;box-shadow:0 4px 18px #0002}
         .icard-preview-stage p{font-size:13px;color:var(--muted,#77808d)}
