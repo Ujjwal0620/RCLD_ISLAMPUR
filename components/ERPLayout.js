@@ -19,6 +19,7 @@ const navGroups = [
       { href: "/dashboard/students", label: "Students", icon: Users },
       { href: "/dashboard/students/pending", label: "Pending Admissions", icon: ClipboardCheck },
       { href: "/dashboard/students/icards", label: "I-Cards", icon: IdCard },
+      { href: "/dashboard/id-card-issue", label: "ID CARD ISSUE", icon: ClipboardCheck },
       { href: "/dashboard/employees", label: "Employees", icon: UserRoundCog },
       { href: "/dashboard/batches", label: "Batches & Timetable", icon: Layers3 },
     ],
