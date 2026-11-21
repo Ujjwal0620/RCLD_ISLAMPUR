@@ -90,7 +90,6 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
         idIssuedAt: data.idIssuedAt,
         lastDownloadedAt: data.lastDownloadedAt,
       };
-      onStudentUpdated?.(student);
     } catch (error) {
       setMessage(error?.message || "Unable to confirm the ID-card download.");
       return;
@@ -290,6 +289,7 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
       document.body.appendChild(link);
       link.click();
       link.remove();
+      onStudentUpdated?.(student);
       setMessage("Student I-Card JPG downloaded successfully.");
     } catch (error) {
       console.error("I-Card JPG export failed:", error);
