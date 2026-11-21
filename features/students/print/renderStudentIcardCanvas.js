@@ -168,7 +168,7 @@ function drawName(ctx, student, width, height, templateName) {
 
 function getSequentialStudentId(student, fallbackIndex = 1) {
   const candidates = [
-    student.idCardNo, student.idCardSerial, student.idCardNumber, student.serialNumber,
+    student.idCardNumber, student.idCardNo, student.idCardSerial, student.serialNumber,
     student.serialNo, student.sequenceNumber, student.studentSerial,
     student.studentId, student.idNumber,
   ];
@@ -206,7 +206,8 @@ function drawDetails(ctx, student, width, height, fallbackIndex = 1) {
   ctx.textBaseline = "alphabetic";
   ctx.fillStyle = "#2B2F33";
   ctx.font = `600 ${fontSize}px ${FONT_FAMILY}`;
-  ctx.fillText(`RCLD/ID-NO/${getSequentialStudentId(student, fallbackIndex)}`, x, baselines[0]);
+  const permanentIdCardNumber = String(firstValue(student.idCardNumber, student.idCardNo, "")).trim();
+  ctx.fillText(permanentIdCardNumber || `RCLD/ID-NO/${getSequentialStudentId(student, fallbackIndex)}`, x, baselines[0]);
 
   const prefix = "RCLD/ISL-001/";
   ctx.font = `600 ${fontSize}px ${FONT_FAMILY}`;
@@ -277,7 +278,7 @@ function canvasToJpeg(canvas) {
   });
 }
 
-export async function exportStudentIcards({ students, templateName, outputMode = "jpg", onMessage }) {
+export async function exportStudentIcards({ students, templateName, outputMode = "jpg", onMessage, onStudentUpdated }) {
   const list = Array.isArray(students) ? students.filter(Boolean) : [];
   if (!list.length) throw new Error("Select at least one student.");
   // Open the print tab synchronously during the user click, before async canvas rendering.
@@ -299,7 +300,14 @@ export async function exportStudentIcards({ students, templateName, outputMode =
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Unable to assign an ID-card number.");
-    exportList.push({ ...student, idCardNo: String(data.idCardNo) });
+    const updatedStudent = {
+      ...student,
+      idCardNumber: String(data.idCardNumber || data.idCardNo),
+      idCardNo: String(data.idCardNumber || data.idCardNo),
+      isDownloaded: Boolean(data.isDownloaded),
+    };
+    exportList.push(updatedStudent);
+    onStudentUpdated?.(updatedStudent);
   }
 
   if (outputMode === "print") {
