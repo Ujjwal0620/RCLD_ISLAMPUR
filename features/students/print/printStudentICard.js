@@ -27,33 +27,6 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
     return await printTemplateStudentIcard({ student, templateName: selectedTemplate, outputMode, setMessage, onStudentUpdated });
   }
 
-  if (outputMode === "jpg") {
-    try {
-      if (!student._id) throw new Error("Student ID is missing; unable to confirm the ID-card download.");
-      const response = await fetch(`/api/students/${encodeURIComponent(student._id)}/icard-number`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "download" }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Unable to confirm the ID-card download.");
-      student = {
-        ...student,
-        ...(data.student || {}),
-        idCardNumber: String(data.idCardNumber || data.idCardNo),
-        idCardNo: String(data.idCardNumber || data.idCardNo),
-        isIdDownloaded: true,
-        isDownloaded: true,
-        idIssuedAt: data.idIssuedAt,
-        lastDownloadedAt: data.lastDownloadedAt,
-      };
-      onStudentUpdated?.(student);
-    } catch (error) {
-      setMessage(error?.message || "Unable to confirm the ID-card download.");
-      return;
-    }
-  }
-
   // ---------- Institute and print settings ----------
   const DEFAULT_SESSION = "2025-2026";
   const AEC_LINE_1 = "AEC: CYBER WORLD, DESHBANDHU PARA, ISLAMPUR";
@@ -95,6 +68,33 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
   if (isCFK && !semesterOptions.includes(activeSemester)) {
     setMessage("Please select a valid Coding For Kids semester/module.");
     return;
+  }
+
+  if (outputMode === "jpg") {
+    try {
+      if (!student._id) throw new Error("Student ID is missing; unable to confirm the ID-card download.");
+      const response = await fetch(`/api/students/${encodeURIComponent(student._id)}/icard-number`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "download" }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Unable to confirm the ID-card download.");
+      student = {
+        ...student,
+        ...(data.student || {}),
+        idCardNumber: String(data.idCardNumber || data.idCardNo),
+        idCardNo: String(data.idCardNumber || data.idCardNo),
+        isIdDownloaded: true,
+        isDownloaded: true,
+        idIssuedAt: data.idIssuedAt,
+        lastDownloadedAt: data.lastDownloadedAt,
+      };
+      onStudentUpdated?.(student);
+    } catch (error) {
+      setMessage(error?.message || "Unable to confirm the ID-card download.");
+      return;
+    }
   }
 
   const studentName = esc(student.applicantName);
