@@ -11,7 +11,7 @@ export async function GET(request) {
     const search = String(searchParams.get("search") || "").trim();
     const filter = { status: "Downloaded" };
     if (search) {
-      const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const escaped = search.split("").map(char => "\\^$.*+?()[]{}|".includes(char) ? "\\" + char : char).join("");
       const rx = new RegExp(escaped, "i");
       filter.$or = [
         { idCardNumber: rx }, { formNo: rx }, { applicantName: rx }, { mobile: rx },
