@@ -285,7 +285,7 @@ export default function StudentICardsPage() {
                         <span className="icard-student-name">
                           {student.applicantName || "Unnamed student"}
                           {(student.idCardNumber || student.idCardNo) && <small>{student.idCardNumber || student.idCardNo}</small>}
-                          {student.isDownloaded && <em className="icard-downloaded-badge">Downloaded</em>}
+                          {(student.isIdDownloaded || student.isDownloaded) && <em className="icard-downloaded-badge">Downloaded</em>}
                         </span>
                       </div>
                     </td>
