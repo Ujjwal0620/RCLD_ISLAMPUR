@@ -17,16 +17,17 @@ export async function GET(request) {
         { idCardNumber: rx }, { formNo: rx }, { applicantName: rx }, { mobile: rx },
       ];
     }
-    const [issues, total] = await Promise.all([
+    const [issues, total, totalIssued] = await Promise.all([
       IdCardIssue.find(filter).populate("studentId").lean(),
       IdCardIssue.countDocuments(filter),
+      IdCardIssue.countDocuments({ status: "Downloaded" }),
     ]);
     issues.sort((a, b) => {
       const left = Number(String(a.idCardNumber || "").match(/(\\d+)$/)?.[1] || 0);
       const right = Number(String(b.idCardNumber || "").match(/(\\d+)$/)?.[1] || 0);
       return left - right;
     });
-    return NextResponse.json({ issues, total });
+    return NextResponse.json({ issues, total, totalIssued });
   } catch (error) {
     console.error("[id-card-issues]", error);
     return NextResponse.json({ error: "Unable to load ID-card issue records." }, { status: 500 });
