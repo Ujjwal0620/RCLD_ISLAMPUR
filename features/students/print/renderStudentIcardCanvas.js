@@ -206,8 +206,8 @@ function drawDetails(ctx, student, width, height, fallbackIndex = 1) {
   ctx.textBaseline = "alphabetic";
   ctx.fillStyle = "#2B2F33";
   ctx.font = `600 ${fontSize}px ${FONT_FAMILY}`;
-  const permanentIdCardNumber = String(firstValue(student.idCardNumber, student.idCardNo, "")).trim();
-  ctx.fillText(permanentIdCardNumber || `RCLD/ID-NO/${getSequentialStudentId(student, fallbackIndex)}`, x, baselines[0]);
+  const permanentIdCardNumber = String(firstValue(student.idCardNumber, student.idCardNo, "Not Issued Yet")).trim();
+  ctx.fillText(permanentIdCardNumber, x, baselines[0]);
 
   const prefix = "RCLD/ISL-001/";
   ctx.font = `600 ${fontSize}px ${FONT_FAMILY}`;
@@ -292,19 +292,27 @@ export async function exportStudentIcards({ students, templateName, outputMode =
 
   const exportList = [];
   for (const student of list) {
-    if (!student._id) throw new Error("Student ID is missing; unable to assign an ID-card number.");
+    if (outputMode !== "jpg") {
+      exportList.push(student);
+      continue;
+    }
+    if (!student._id) throw new Error("Student ID is missing; unable to confirm the ID-card download.");
     const response = await fetch(`/api/students/${encodeURIComponent(student._id)}/icard-number`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: outputMode === "print" ? "print" : "download" }),
+      body: JSON.stringify({ action: "download" }),
     });
     const data = await response.json();
-    if (!response.ok) throw new Error(data.error || "Unable to assign an ID-card number.");
+    if (!response.ok) throw new Error(data.error || "Unable to confirm the ID-card download.");
     const updatedStudent = {
       ...student,
+      ...(data.student || {}),
       idCardNumber: String(data.idCardNumber || data.idCardNo),
       idCardNo: String(data.idCardNumber || data.idCardNo),
-      isDownloaded: Boolean(data.isDownloaded),
+      isIdDownloaded: true,
+      isDownloaded: true,
+      idIssuedAt: data.idIssuedAt,
+      lastDownloadedAt: data.lastDownloadedAt,
     };
     exportList.push(updatedStudent);
     onStudentUpdated?.(updatedStudent);
