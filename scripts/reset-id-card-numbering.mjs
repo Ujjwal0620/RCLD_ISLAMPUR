@@ -1,11 +1,13 @@
 import mongoose from "mongoose";
+import { connectMongoDB } from "../lib/mongodb.js";
 
-const MONGODB_URI = process.env.MONGODB_URI;
-if (!MONGODB_URI) throw new Error("MONGODB_URI is required to run the one-time ID-card reset.");
-
-await mongoose.connect(MONGODB_URI);
-const db = mongoose.connection.db;
 const migrationId = "reset_student_id_cards_v1";
+
+// Reuse the ERP's MongoDB connector. It resolves Atlas SRV/TXT records over
+// DNS-over-HTTPS, avoiding native Node querySrv failures on restricted networks.
+await connectMongoDB();
+
+const db = mongoose.connection.db;
 
 try {
   const alreadyRun = await db.collection("system_migrations").findOne({ _id: migrationId });
@@ -23,12 +25,15 @@ try {
           },
           { session },
         );
+
         await db.collection("idCardIssues").deleteMany({}, { session });
+
         await db.collection("id_card_counters").replaceOne(
           { _id: "student_id_card" },
           { _id: "student_id_card", lastIssuedNumber: 0 },
           { upsert: true, session },
         );
+
         await db.collection("system_migrations").insertOne(
           {
             _id: migrationId,
@@ -38,6 +43,7 @@ try {
           { session },
         );
       });
+
       console.log("ID-card reset completed. The next confirmed download will be RCLD/ID-NO/0001.");
     } finally {
       await session.endSession();
