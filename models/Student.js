@@ -72,7 +72,9 @@ const StudentSchema = new mongoose.Schema({
   signatureApplicant: String,
   signatureUrl: String,
   photoUrl: String,
-  idCardNo: String,
+  idCardNo: String, // Legacy compatibility for existing ID-card templates and records.
+  idCardNumber: { type: String, default: null, trim: true },
+  isDownloaded: { type: Boolean, default: false },
   currentSemester: Number,
   semesterStatus: { type: String, default: "Not Started" },
   semesterHistory: { type: [mongoose.Schema.Types.Mixed], default: [] },
