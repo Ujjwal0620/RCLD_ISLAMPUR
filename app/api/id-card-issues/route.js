@@ -11,7 +11,7 @@ export async function GET(request) {
     const search = String(searchParams.get("search") || "").trim();
     const filter = { status: "Downloaded" };
     if (search) {
-      const escaped = search.replace(/[.*+?^${}()|[\\]\\]/g, "\\search.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")");
+      const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const rx = new RegExp(escaped, "i");
       filter.$or = [
         { idCardNumber: rx }, { formNo: rx }, { applicantName: rx }, { mobile: rx },
@@ -23,8 +23,8 @@ export async function GET(request) {
       IdCardIssue.countDocuments({ status: "Downloaded" }),
     ]);
     issues.sort((a, b) => {
-      const left = Number(String(a.idCardNumber || "").match(/(\\d+)$/)?.[1] || 0);
-      const right = Number(String(b.idCardNumber || "").match(/(\\d+)$/)?.[1] || 0);
+      const left = Number(String(a.idCardNumber || "").match(/(\d+)$/)?.[1] || 0);
+      const right = Number(String(b.idCardNumber || "").match(/(\d+)$/)?.[1] || 0);
       return left - right;
     });
     return NextResponse.json({ issues, total, totalIssued });
