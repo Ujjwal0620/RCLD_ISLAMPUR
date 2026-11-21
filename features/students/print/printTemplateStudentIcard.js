@@ -10,8 +10,10 @@ export async function printTemplateStudentIcard({ student, templateName, outputM
       onStudentUpdated,
     });
     if (outputMode === "print") setMessage?.("Student ID card print view is ready.");
+    return true;
   } catch (error) {
     console.error("[student-id-card]", error);
     setMessage?.(error?.message || "Unable to generate the student ID card.");
+    return false;
   }
 }
