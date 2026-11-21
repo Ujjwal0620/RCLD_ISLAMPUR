@@ -141,7 +141,7 @@ export default function CodingForKidsIcardDialog({
               <div className="icard-preview-actions">
                 <button type="button" className="ghost-btn" onClick={onClose} disabled={confirming}>Cancel</button>
                 <button type="button" className="primary-btn" onClick={confirmSelection} disabled={!selectedTemplate || loading || previewLoading || confirming}>
-                  {confirming ? <><LoaderCircle size={16}/> Preparing…</> : mode === "jpg" ? "Confirm & Download JPG" : "Confirm & Print"}
+                  {confirming ? <><LoaderCircle size={16}/> Preparing…</> : mode === "jpg" ? "Confirm Download" : "Print ID Card"}
                 </button>
               </div>
             </section>
