@@ -58,10 +58,18 @@ export async function POST(request, { params }) {
       let idCardNumber = String(student.idCardNumber || student.idCardNo || "").trim();
 
       if (!idCardNumber) {
+        // Create the dedicated counter at zero once, then increment it
+        // atomically inside the same transaction as the student update.
+        await IdCardCounter.updateOne(
+          { _id: "student_id_card" },
+          { $setOnInsert: { sequence: 0 } },
+          { upsert: true, session },
+        );
+
         const counter = await IdCardCounter.findOneAndUpdate(
           { _id: "student_id_card" },
           { $inc: { sequence: 1 } },
-          { upsert: true, new: true, session, setDefaultsOnInsert: false },
+          { new: true, session },
         ).lean();
 
         const sequence = Number(counter?.sequence);
