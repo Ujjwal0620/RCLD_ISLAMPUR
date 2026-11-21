@@ -114,7 +114,7 @@ export default function IdCardIssuePage() {
                   <td>{issue.course || "—"}</td><td>{issue.batch || "—"}</td><td>{issue.mobile || "—"}</td>
                   <td>{formatDate(issue.issuedAt)}</td>
                   <td><span className="id-issue-badge">Downloaded</span></td>
-                  <td><button type="button" className="ghost-btn id-issue-download" disabled={!issue.studentId?._id || downloading === issue._id} onClick={() => { setDownloading(issue._id); openRedownload(issue); setDownloading(""); }}>
+                  <td><button type="button" className="ghost-btn id-issue-download" disabled={!issue.studentId?._id || (dialogOpen && selectedStudent?._id === issue.studentId?._id)} onClick={() => openRedownload(issue)}>
                     <Download size={14}/> Re-download ID Card
                   </button></td>
                 </tr>
