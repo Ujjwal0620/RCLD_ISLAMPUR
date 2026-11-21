@@ -14,7 +14,8 @@ try {
     console.log("ID-card reset already completed; no changes made.");
   } else {
     const session = await mongoose.startSession();
-    await session.withTransaction(async () => {
+    try {
+      await session.withTransaction(async () => {
       await db.collection("students").updateMany(
         {},
         {
@@ -33,9 +34,8 @@ try {
         { _id: migrationId, completedAt: new Date(), description: "Reset student ID-card numbering to start at 1." },
         { session },
       );
-    });
-    await session.endSession();
-    console.log("ID-card reset completed. The next confirmed download will be RCLD/ID-NO/0001.");
+      });
+      console.log("ID-card reset completed. The next confirmed download will be RCLD/ID-NO/0001.");
   }
 } finally {
   await mongoose.disconnect();
