@@ -15,7 +15,7 @@ import { buildCfkStudentIcardMarkup } from "@/features/students/print/buildCfkSt
 import { buildStandardStudentIcardMarkup } from "@/features/students/print/buildStandardStudentIcardMarkup";
 import { printTemplateStudentIcard } from "@/features/students/print/printTemplateStudentIcard";
 
-export async function printStudentICard(student, setMessage, selectedSemester = "", outputMode = "print", selectedTemplate = "") {
+export async function printStudentICard(student, setMessage, selectedSemester = "", outputMode = "print", selectedTemplate = "", onStudentUpdated) {
   if (!student || !isIcardEligible(student)) {
     setMessage(
       "I-Card is unavailable until all required details are complete and admission is not pending."
@@ -24,7 +24,7 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
   }
 
   if (selectedTemplate) {
-    await printTemplateStudentIcard({ student, templateName: selectedTemplate, outputMode, setMessage });
+    await printTemplateStudentIcard({ student, templateName: selectedTemplate, outputMode, setMessage, onStudentUpdated });
     return;
   }
 
@@ -37,7 +37,13 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Unable to assign an ID-card number.");
-    student = { ...student, idCardNo: String(data.idCardNo) };
+    student = {
+      ...student,
+      idCardNumber: String(data.idCardNumber || data.idCardNo),
+      idCardNo: String(data.idCardNumber || data.idCardNo),
+      isDownloaded: Boolean(data.isDownloaded),
+    };
+    onStudentUpdated?.(student);
   } catch (error) {
     setMessage(error?.message || "Unable to assign an ID-card number.");
     return;
