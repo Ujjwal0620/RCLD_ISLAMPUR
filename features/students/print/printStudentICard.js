@@ -24,8 +24,7 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
   }
 
   if (selectedTemplate) {
-    await printTemplateStudentIcard({ student, templateName: selectedTemplate, outputMode, setMessage, onStudentUpdated });
-    return;
+    return await printTemplateStudentIcard({ student, templateName: selectedTemplate, outputMode, setMessage, onStudentUpdated });
   }
 
   if (outputMode === "jpg") {
