@@ -290,33 +290,7 @@ export async function exportStudentIcards({ students, templateName, outputMode =
     printWindow.document.close();
   }
 
-  const exportList = [];
-  for (const student of list) {
-    if (outputMode !== "jpg") {
-      exportList.push(student);
-      continue;
-    }
-    if (!student._id) throw new Error("Student ID is missing; unable to confirm the ID-card download.");
-    const response = await fetch(`/api/students/${encodeURIComponent(student._id)}/icard-number`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "download" }),
-    });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || "Unable to confirm the ID-card download.");
-    const updatedStudent = {
-      ...student,
-      ...(data.student || {}),
-      idCardNumber: String(data.idCardNumber || data.idCardNo),
-      idCardNo: String(data.idCardNumber || data.idCardNo),
-      isIdDownloaded: true,
-      isDownloaded: true,
-      idIssuedAt: data.idIssuedAt,
-      lastDownloadedAt: data.lastDownloadedAt,
-    };
-    exportList.push(updatedStudent);
-    onStudentUpdated?.(updatedStudent);
-  }
+  const exportList = list;
 
   if (outputMode === "print") {
     const pages = [];
@@ -351,7 +325,25 @@ export async function exportStudentIcards({ students, templateName, outputMode =
   }
 
   for (let index = 0; index < exportList.length; index += 1) {
-    const student = exportList[index];
+    let student = exportList[index];
+    if (!student._id) throw new Error("Student ID is missing; unable to confirm the ID-card download.");
+    const response = await fetch(`/api/students/${encodeURIComponent(student._id)}/icard-number`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "download" }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Unable to confirm the ID-card download.");
+    student = {
+      ...student,
+      ...(data.student || {}),
+      idCardNumber: String(data.idCardNumber || data.idCardNo),
+      idCardNo: String(data.idCardNumber || data.idCardNo),
+      isIdDownloaded: true,
+      isDownloaded: true,
+      idIssuedAt: data.idIssuedAt,
+      lastDownloadedAt: data.lastDownloadedAt,
+    };
     const canvas = await renderStudentIcardCanvas(student, templateName, index + 1);
     const blob = await canvasToJpeg(canvas);
     const url = URL.createObjectURL(blob);
@@ -364,6 +356,7 @@ export async function exportStudentIcards({ students, templateName, outputMode =
     link.click();
     link.remove();
     window.setTimeout(() => URL.revokeObjectURL(url), 30000);
+    onStudentUpdated?.(student);
     if (index < exportList.length - 1) await new Promise(resolve => window.setTimeout(resolve, 180));
   }
   onMessage?.(exportList.length === 1 ? "Student ID Card JPG downloaded." : `${exportList.length} student ID cards downloaded.`);
