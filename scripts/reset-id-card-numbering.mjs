@@ -13,7 +13,7 @@ try {
   if (alreadyRun) {
     console.log("ID-card reset already completed; no changes made.");
   } else {
-    const session = mongoose.startSession();
+    const session = await mongoose.startSession();
     await session.withTransaction(async () => {
       await db.collection("students").updateMany(
         {},
