@@ -134,7 +134,7 @@ export default function IdCardIssuePage() {
           if (!selectedStudent) return;
           setDownloading(selectedStudent._id);
           try {
-            await printStudentICard(
+            const success = await printStudentICard(
               selectedStudent,
               setMessage,
               "",
@@ -148,6 +148,7 @@ export default function IdCardIssuePage() {
                 ));
               },
             );
+            if (!success) return;
             setDialogOpen(false);
             await load(query);
           } finally {
