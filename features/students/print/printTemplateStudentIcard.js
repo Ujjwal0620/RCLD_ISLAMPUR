@@ -1,12 +1,13 @@
 import { exportStudentIcards } from "@/features/students/print/renderStudentIcardCanvas";
 
-export async function printTemplateStudentIcard({ student, templateName, outputMode = "print", setMessage }) {
+export async function printTemplateStudentIcard({ student, templateName, outputMode = "print", setMessage, onStudentUpdated }) {
   try {
     await exportStudentIcards({
       students: [student],
       templateName,
       outputMode,
       onMessage: setMessage,
+      onStudentUpdated,
     });
     if (outputMode === "print") setMessage?.("Student ID card print view is ready.");
   } catch (error) {
