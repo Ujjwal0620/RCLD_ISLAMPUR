@@ -130,9 +130,8 @@ export default function StudentICardsPage() {
         student={selectedStudent}
         mode={icardOutputMode}
         onClose={() => setTemplateDialogOpen(false)}
-        onSelect={(templateName) => {
-          setTemplateDialogOpen(false);
-          if (selectedStudent) printStudentICard(
+        onSelect={async (templateName) => {
+          if (selectedStudent) await printStudentICard(
             selectedStudent,
             setMessage,
             "",
@@ -148,6 +147,7 @@ export default function StudentICardsPage() {
               );
             },
           );
+          setTemplateDialogOpen(false);
         }}
       />
 
