@@ -3,21 +3,27 @@ import mongoose from "mongoose";
 import { connectMongoDB } from "@/lib/mongodb";
 import Student from "@/models/Student";
 import IdCardCounter from "@/models/IdCardCounter";
+import IdCardIssue from "@/models/IdCardIssue";
 
 export const runtime = "nodejs";
 
-const ICardIssueEventSchema = new mongoose.Schema({
-  studentId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
-  idCardNo: { type: String, required: true },
-  action: { type: String, enum: ["download", "print"], required: true },
-  issuedAt: { type: Date, default: Date.now, index: true },
-}, { versionKey: false, collection: "student_icard_issue_events" });
+function formatIdCardNumber(number) {
+  return `RCLD/ID-NO/${String(number).padStart(4, "0")}`;
+}
 
-const ICardIssueEvent = mongoose.models.StudentICardIssueEvent
-  || mongoose.model("StudentICardIssueEvent", ICardIssueEventSchema);
-
-function formatIdCardNumber(sequence) {
-  return `RCLD/ID-NO/${String(sequence).padStart(4, "0")}`;
+function issueSnapshot(student, idCardNumber, issuedAt) {
+  return {
+    idCardNumber,
+    studentId: student._id,
+    formNo: String(student.formNo || ""),
+    applicantName: String(student.applicantName || student.name || ""),
+    photoUrl: String(student.photoUrl || ""),
+    course: String(student.courseCode || student.courseName || student.course || ""),
+    batch: String(student.batchCode || ""),
+    mobile: String(student.mobileNumber || student.phone || ""),
+    issuedAt,
+    status: "Downloaded",
+  };
 }
 
 export async function POST(request, { params }) {
@@ -28,91 +34,86 @@ export async function POST(request, { params }) {
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json({ error: "Invalid student ID." }, { status: 400 });
     }
-
-    let action = "download";
-    try {
-      const body = await request.json();
-      if (body?.action === "print") action = "print";
-    } catch {
-      // Older clients without a request body are treated as downloads.
+    const body = await request.json().catch(() => ({}));
+    if (body?.action !== "download") {
+      return NextResponse.json({ error: "An explicit download confirmation is required." }, { status: 400 });
     }
 
     session = await mongoose.startSession();
     let result;
-
-    // Counter increment and student update commit together. MongoDB retries
-    // transient transaction conflicts, so simultaneous requests for one
-    // student reuse the first assigned number instead of consuming extras.
     await session.withTransaction(async () => {
-      const student = await Student.findById(id)
-        .select("_id idCardNumber idCardNo isDownloaded")
-        .session(session)
-        .lean();
-
+      const student = await Student.findById(id).session(session).lean();
       if (!student) {
         const error = new Error("Student not found.");
         error.status = 404;
         throw error;
       }
 
-      let idCardNumber = String(student.idCardNumber || student.idCardNo || "").trim();
+      const now = new Date();
+      let idCardNumber = String(student.idCardNumber || "").trim();
+      let issuedAt = student.idIssuedAt || now;
+      const firstIssue = !idCardNumber;
 
-      if (!idCardNumber) {
-        // Create the dedicated counter at zero once, then increment it
-        // atomically inside the same transaction as the student update.
+      if (firstIssue) {
         await IdCardCounter.updateOne(
           { _id: "student_id_card" },
-          { $setOnInsert: { sequence: 0 } },
+          { $setOnInsert: { lastIssuedNumber: 0 } },
           { upsert: true, session },
         );
-
         const counter = await IdCardCounter.findOneAndUpdate(
           { _id: "student_id_card" },
-          { $inc: { sequence: 1 } },
+          { $inc: { lastIssuedNumber: 1 } },
           { new: true, session },
         ).lean();
-
-        const sequence = Number(counter?.sequence);
-        if (!Number.isSafeInteger(sequence) || sequence < 1) {
-          throw new Error("Unable to allocate the next ID-card sequence.");
+        const nextNumber = Number(counter?.lastIssuedNumber);
+        if (!Number.isSafeInteger(nextNumber) || nextNumber < 1) {
+          throw new Error("Unable to allocate the next ID-card number.");
         }
-        idCardNumber = formatIdCardNumber(sequence);
+        idCardNumber = formatIdCardNumber(nextNumber);
       }
 
       const update = {
         idCardNumber,
         idCardNo: idCardNumber,
+        isIdDownloaded: true,
+        isDownloaded: true,
+        lastDownloadedAt: now,
       };
-      if (action === "download") update.isDownloaded = true;
+      if (firstIssue) update.idIssuedAt = issuedAt;
 
-      const updatedStudent = await Student.findByIdAndUpdate(
+      const updated = await Student.findByIdAndUpdate(
         id,
         { $set: update },
         { new: true, session, runValidators: true },
-      ).select("_id idCardNumber isDownloaded").lean();
+      ).lean();
+      if (!updated) throw new Error("Unable to save the student's ID-card details.");
 
-      if (!updatedStudent) throw new Error("Unable to save the student's ID-card details.");
-
-      await new ICardIssueEvent({
-        studentId: student._id,
-        idCardNo: idCardNumber,
-        action,
-        issuedAt: new Date(),
-      }).save({ session });
+      const snapshot = issueSnapshot(updated, idCardNumber, issuedAt);
+      await IdCardIssue.updateOne(
+        { studentId: updated._id },
+        {
+          $setOnInsert: snapshot,
+          $set: { lastDownloadedAt: now, status: "Downloaded" },
+        },
+        { upsert: true, session, setDefaultsOnInsert: true },
+      );
 
       result = {
-        idCardNumber: updatedStudent.idCardNumber,
-        idCardNo: updatedStudent.idCardNumber,
-        isDownloaded: Boolean(updatedStudent.isDownloaded),
+        idCardNumber,
+        idCardNo: idCardNumber,
+        isIdDownloaded: true,
+        isDownloaded: true,
+        idIssuedAt: issuedAt,
+        lastDownloadedAt: now,
+        student: updated,
       };
     });
-
     return NextResponse.json(result);
   } catch (error) {
-    console.error("[student-icard-number]", error);
+    console.error("[student-icard-download-confirm]", error);
     return NextResponse.json(
-      { error: error.message === "Student not found." ? error.message : "Unable to save student ID-card details." },
-      { status: error.status || 500 },
+      { error: error.message === "Student not found." ? error.message : "Unable to confirm and save the ID-card download." },
+      { status: error.status || (error.code === 11000 ? 409 : 500) },
     );
   } finally {
     if (session) await session.endSession();
