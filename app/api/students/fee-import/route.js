@@ -160,9 +160,47 @@ async function findStudent(row) {
 
   if (!row.studentName || !row.phone) return { reason: "Student ID is blank; normalized student name and phone are both required for fallback matching." };
   const name = normalizeName(row.studentName);
+  const phoneMasters = await StudentMaster.find({ phoneNumbers: row.phone }).limit(25).lean();
+  const masters = phoneMasters.filter(master => normalizeName(master.fullName || master.normalizedFullName) === name);
+  if (masters.length === 1) return { master: masters[0], reason: "" };
+  if (masters.length > 1) return { reason: "Name and phone match multiple permanent profiles." };
+
+  const phonePattern = new RegExp(row.phone.replace(/[.*+?^${}()|[\]\\]/g, "\\  const name = normalizeName(row.studentName);
   const masters = await StudentMaster.find({ normalizedFullName: name, phoneNumbers: row.phone }).limit(3).lean();
   if (masters.length === 1) return { master: masters[0], reason: "" };
-  return { reason: masters.length ? "Name and phone match multiple permanent profiles." : "No student matched the supplied name and phone." };
+  return { reason: masters.length ? "Name and phone match multiple permanent profiles." : "No student matched the supplied name and phone." };"));
+  const legacyCandidates = await Student.find({
+    $or: [
+      { mobileNumber: phonePattern }, { phone: phonePattern },
+      { whatsappNumber: phonePattern }, { guardianContactNumber: phonePattern }
+    ]
+  }).limit(25).lean();
+  const legacyMatches = legacyCandidates.filter(student =>
+    normalizePhone(student.mobileNumber || student.phone || student.whatsappNumber || student.guardianContactNumber) === row.phone
+    && normalizeName(student.applicantName || student.sourceStudentName || student.name) === name
+  );
+  if (legacyMatches.length !== 1) {
+    return { reason: legacyMatches.length ? "Name and phone match multiple legacy student records." : "No student matched the supplied name and phone." };
+  }
+  const legacy = legacyMatches[0];
+  let master = await StudentMaster.findOne({ legacyStudentIds: legacy._id }).lean();
+  if (!master) {
+    master = await StudentMaster.create({
+      fullName: legacy.applicantName || legacy.sourceStudentName || legacy.name || row.studentName,
+      normalizedFullName: normalizeName(legacy.applicantName || legacy.sourceStudentName || legacy.name || row.studentName),
+      dob: legacy.dateOfBirth || legacy.dob || null,
+      fatherName: legacy.fatherOrHusbandName || legacy.fatherName || "",
+      address: legacy.address || legacy.presentAddress || "",
+      photoUrl: legacy.photoUrl || "",
+      hasPhoto: Boolean(legacy.photoUrl),
+      phoneNumbers: [row.phone],
+      stCodes: [normalizeStCode(legacy.regnNo || legacy.enrollmentNo)].filter(Boolean),
+      legacyStudentIds: [legacy._id],
+      identityMatchMethod: "FEE_IMPORT_NAME_PHONE"
+    });
+    master = master.toObject();
+  }
+  return { master, legacy, reason: "" };
 }
 
 async function findCourse(raw, courses, aliasMap) {
