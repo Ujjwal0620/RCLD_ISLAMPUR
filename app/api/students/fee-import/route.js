@@ -165,10 +165,7 @@ async function findStudent(row) {
   if (masters.length === 1) return { master: masters[0], reason: "" };
   if (masters.length > 1) return { reason: "Name and phone match multiple permanent profiles." };
 
-  const phonePattern = new RegExp(row.phone.replace(/[.*+?^${}()|[\]\\]/g, "\\  const name = normalizeName(row.studentName);
-  const masters = await StudentMaster.find({ normalizedFullName: name, phoneNumbers: row.phone }).limit(3).lean();
-  if (masters.length === 1) return { master: masters[0], reason: "" };
-  return { reason: masters.length ? "Name and phone match multiple permanent profiles." : "No student matched the supplied name and phone." };"));
+  const phonePattern = new RegExp(row.phone);
   const legacyCandidates = await Student.find({
     $or: [
       { mobileNumber: phonePattern }, { phone: phonePattern },
