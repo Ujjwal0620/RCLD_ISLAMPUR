@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import mongoose from "mongoose";
 import { createHash } from "node:crypto";
 import * as XLSX from "xlsx";
 import { connectMongoDB } from "@/lib/mongodb";
@@ -43,7 +42,7 @@ async function ensureFeeImportIndexes() {
 const HEADER_ALIASES = {
   studentId: ["studentid", "studentcode", "registrationcode", "registrationno", "regnno", "regno", "stcode", "enrollmentno", "admissionno"],
   studentName: ["studentname", "name", "stname", "applicantname"],
-  phone: ["phone", "mobile", "mobileno", "mobilenumber", "contact", "contactno", "whatsappnumber"],
+  phone: ["phone", "mobile", "mobileno", "mobilenumber", "contact", "contactno", "whatsappnumber", "phno", "phoneno"],
   course: ["course", "coursename", "coursecode", "program", "programname", "courselabel"],
   totalFee: ["totalfee", "coursefee", "grossfee", "feeamount", "fee"],
   discount: ["discount", "discountamount", "concession"],
@@ -216,6 +215,10 @@ export async function POST(request) {
     let createdPayments = 0, updatedPayments = 0, processed = 0;
     for (const row of worksheet.rows) {
       processed += 1;
+      if ([row.totalFee, row.discount, row.paidAmount].some(value => value !== null && value < 0)) {
+        unmatchedRows.push({ row: row.rowNo, studentId: row.studentId, course: row.courseRaw, reason: "Fee, discount and payment amounts cannot be negative." });
+        continue;
+      }
       if (!row.courseRaw) { unmatchedRows.push({ row: row.rowNo, studentId: row.studentId, course: "", reason: "Course name/code is blank." }); continue; }
       const match = await findStudent(row);
       if (!match.master) { unmatchedRows.push({ row: row.rowNo, studentId: row.studentId, course: row.courseRaw, reason: match.reason }); continue; }
@@ -235,7 +238,9 @@ export async function POST(request) {
           legacyStudentId: match.legacy?._id || master.legacyStudentIds?.[0] || null,
           stCode, normalizedFullName,
           courseCode: course.code,
-          courseCategory: String(course.category || "").toUpperCase().includes("DOM") ? "DOM" : "OTHER",
+          courseCategory: /ROBOTICS/.test(String(course.category || "").toUpperCase()) ? "ROBOTICS"
+            : /CODING/.test(String(course.category || "").toUpperCase()) ? "CODING_FOR_KIDS"
+            : /DOM/.test(String(course.category || "").toUpperCase()) ? "DOM" : "OTHER",
           semesterLabel: course.code,
           admissionDate: null,
           status: courseStatusFromRow(row.courseStatus, ""),
@@ -275,7 +280,6 @@ export async function POST(request) {
       };
       await enrollment.save();
 
-      let paymentCreated = false;
       if (row.paidAmount !== null && row.paidAmount > 0) {
         if (row.paymentDate === null && !row.receiptNo) {
           unmatchedRows.push({ row: row.rowNo, studentId: stCode, course: course.code, reason: "Paid amount has neither a receipt number nor a valid payment date." });
@@ -307,7 +311,6 @@ export async function POST(request) {
           } else {
             await StudentFeePayment.create(paymentValues);
             createdPayments += 1;
-            paymentCreated = true;
           }
         }
       }
