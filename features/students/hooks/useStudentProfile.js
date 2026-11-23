@@ -2,8 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import useStudentPrint from "@/features/students/hooks/useStudentPrint";
+import { useErpCache } from "@/components/providers/ERPUIProvider";
 
 export default function useStudentProfile(params) {
+    const { fetchCached, invalidate } = useErpCache();
     const [student, setStudent] = useState(null),
       [error, setError] = useState(""),
       [loading, setLoading] = useState(true);
@@ -108,21 +110,32 @@ export default function useStudentProfile(params) {
         try {
           const { id } = await params;
           const [
-            courseResponse, batchResponse, referralResponse, studentResponse,
+            courseData, batchData, referralData, studentResponse,
             historyResponse, contactResponse, feeResponse, attendanceResponse
           ] = await Promise.all([
-            fetch("/api/courses", { cache: "no-store" }),
-            fetch("/api/batches", { cache: "no-store" }),
-            fetch("/api/referrals", { cache: "no-store" }),
+            fetchCached("lookup:courses", async () => {
+              const response = await fetch("/api/courses", { cache: "no-store" });
+              if (!response.ok) throw new Error("Unable to load courses.");
+              return response.json();
+            }),
+            fetchCached("lookup:batches", async () => {
+              const response = await fetch("/api/batches", { cache: "no-store" });
+              if (!response.ok) throw new Error("Unable to load batches.");
+              return response.json();
+            }),
+            fetchCached("lookup:referrals", async () => {
+              const response = await fetch("/api/referrals", { cache: "no-store" });
+              if (!response.ok) throw new Error("Unable to load referrals.");
+              return response.json();
+            }),
             fetch("/api/students/" + id, { cache: "no-store" }),
             fetch("/api/students/" + id + "/batch-history", { cache: "no-store" }),
             fetch("/api/students/" + id + "/contact-log", { cache: "no-store" }),
             fetch("/api/students/" + id + "/fees", { cache: "no-store" }),
             fetch("/api/students/" + id + "/attendance", { cache: "no-store" }),
           ]);
-          const [courseData, batchData, referralData, studentData, historyData, contactData, feeData, attendanceData] = await Promise.all([
-            courseResponse.json(), batchResponse.json(), referralResponse.json(), studentResponse.json(),
-            historyResponse.json(), contactResponse.json(), feeResponse.json(), attendanceResponse.json(),
+          const [studentData, historyData, contactData, feeData, attendanceData] = await Promise.all([
+            studentResponse.json(), historyResponse.json(), contactResponse.json(), feeResponse.json(), attendanceResponse.json(),
           ]);
           if (!studentResponse.ok) throw new Error(studentData.error || "Unable to load student.");
           setCourses(courseData.courses || []);
