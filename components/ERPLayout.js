@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import RAGAssistant from "@/components/RAGAssistant";
 import RCLDLogo from "@/components/RCLDLogo";
+import { useErpCache } from "@/components/providers/ERPUIProvider";
 import {
   LayoutDashboard, Users, UserRoundCog, Menu, X, ShieldCheck, Layers3, BookOpen, BrainCircuit,
   BarChart3, UserRoundX, Clock3, ClipboardList, LogOut, GraduationCap, BookMarked,
@@ -51,6 +52,7 @@ const navGroups = [
 ];
 
 export default function ERPLayout({ active, children, hideAssistant = true }) {
+  const { fetchCached } = useErpCache();
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState({});
@@ -83,14 +85,14 @@ export default function ERPLayout({ active, children, hideAssistant = true }) {
     const timer=setTimeout(async()=>{
       setCommandLoading(true);
       try{
-        const [studentsRes,employeesRes,coursesRes,batchesRes,subjectsRes]=await Promise.all([
+        const [studentsRes,employeesRes,courses,batches,subjectsRes]=await Promise.all([
           fetch("/api/students?search="+encodeURIComponent(query)+"&limit=5&globalSearch=1&status=all",{cache:"no-store"}),
           fetch("/api/employees?search="+encodeURIComponent(query)+"&limit=5&globalSearch=1&status=all",{cache:"no-store"}),
-          fetch("/api/courses",{cache:"no-store"}),
-          fetch("/api/batches",{cache:"no-store"}),
+          fetchCached("lookup:courses",async()=>{const response=await fetch("/api/courses",{cache:"no-store"});if(!response.ok)throw new Error("Unable to load courses");return response.json()}),
+          fetchCached("lookup:batches",async()=>{const response=await fetch("/api/batches",{cache:"no-store"});if(!response.ok)throw new Error("Unable to load batches");return response.json()}),
           fetch("/api/subjects",{cache:"no-store"})
         ]);
-        const [students,employees,courses,batches,subjects]=await Promise.all([studentsRes.json(),employeesRes.json(),coursesRes.json(),batchesRes.json(),subjectsRes.json()]);
+        const [students,employees,subjects]=await Promise.all([studentsRes.json(),employeesRes.json(),subjectsRes.json()]);
         if(!active)return;
         const q=query.toLowerCase();
         const results=[
@@ -105,7 +107,7 @@ export default function ERPLayout({ active, children, hideAssistant = true }) {
       finally{if(active)setCommandLoading(false)}
     },280);
     return()=>{active=false;clearTimeout(timer)};
-  },[commandQuery]);
+  },[commandQuery,fetchCached]);
 
   useEffect(() => {
     const onShortcut = event => {
