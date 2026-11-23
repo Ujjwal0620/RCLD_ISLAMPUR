@@ -106,35 +106,46 @@ export default function useStudentProfile(params) {
       initialLoadStarted.current = true;
       (async () => {
         try {
-          const [courseResponse, batchResponse, referralResponse] = await Promise.all([
+          const { id } = await params;
+          const [
+            courseResponse, batchResponse, referralResponse, studentResponse,
+            historyResponse, contactResponse, feeResponse, attendanceResponse
+          ] = await Promise.all([
             fetch("/api/courses", { cache: "no-store" }),
             fetch("/api/batches", { cache: "no-store" }),
             fetch("/api/referrals", { cache: "no-store" }),
+            fetch("/api/students/" + id, { cache: "no-store" }),
+            fetch("/api/students/" + id + "/batch-history", { cache: "no-store" }),
+            fetch("/api/students/" + id + "/contact-log", { cache: "no-store" }),
+            fetch("/api/students/" + id + "/fees", { cache: "no-store" }),
+            fetch("/api/students/" + id + "/attendance", { cache: "no-store" }),
           ]);
-          const [courseData, batchData, referralData] = await Promise.all([
-            courseResponse.json(),
-            batchResponse.json(),
-            referralResponse.json(),
+          const [courseData, batchData, referralData, studentData, historyData, contactData, feeData, attendanceData] = await Promise.all([
+            courseResponse.json(), batchResponse.json(), referralResponse.json(), studentResponse.json(),
+            historyResponse.json(), contactResponse.json(), feeResponse.json(), attendanceResponse.json(),
           ]);
+          if (!studentResponse.ok) throw new Error(studentData.error || "Unable to load student.");
           setCourses(courseData.courses || []);
           setBatches(batchData.batches || []);
-          setReferrals((referralData.referrals || []).filter((x) => x.status === "Active"));
-          const { id } = await params;
-          const r = await fetch("/api/students/" + id, { cache: "no-store" });
-          const d = await r.json();
-          if (!r.ok) throw new Error(d.error || "Unable to load student.");
-          setStudent(d.student);
-          setEditForm(d.student);
-          const hr = await fetch("/api/students/" + id + "/batch-history", { cache: "no-store" });
-          const hd = await hr.json();
-          if (hr.ok) setHistory(hd.history || []);
-          const cr = await fetch("/api/students/" + id + "/contact-log", { cache: "no-store" });
-          const cd = await cr.json();
-          if (cr.ok) setContactLogs(cd.logs || []);
+          setReferrals((referralData.referrals || []).filter(item => item.status === "Active"));
+          setStudent(studentData.student);
+          setEditForm(studentData.student);
+          if (historyResponse.ok) setHistory(historyData.history || []);
+          if (contactResponse.ok) setContactLogs(contactData.logs || []);
+          if (feeResponse.ok) {
+            setFee(feeData.fee);
+            setFeeForm(current => ({
+              ...current,
+              totalFee: current.totalFee || feeData.fee.totalFee || "",
+              discount: current.discount || feeData.fee.discount || "",
+              admissionFee: current.admissionFee || feeData.fee.admissionFee || "",
+              registrationFee: current.registrationFee || feeData.fee.registrationFee || "",
+            }));
+          }
+          if (attendanceResponse.ok) setAttendance(attendanceData);
           if (new URLSearchParams(window.location.search).get("edit") === "1") setEditing(true);
-          await loadOperational(id);
-        } catch (e) {
-          setError(e.message);
+        } catch (error) {
+          setError(error.message || "Unable to load student profile.");
         } finally {
           setLoading(false);
         }
