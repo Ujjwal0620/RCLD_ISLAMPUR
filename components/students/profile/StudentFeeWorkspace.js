@@ -22,7 +22,7 @@ export default function StudentFeeWorkspace({
   printBill,
 }) {
   const [historyScope, setHistoryScope] = useState("all");
-  const [selectedStCode, setSelectedStCode] = useState("");
+  const [selectedEnrollmentId, setSelectedEnrollmentId] = useState("");
   const paymentHistory = Array.isArray(student.paymentHistory) ? student.paymentHistory : [];
   const enrollmentOptions = Array.isArray(student.enrollments) ? student.enrollments : [];
   const semesterRoman = ["I", "II", "III", "IV", "V", "VI"][Number(student.currentSemester || 0) - 1] || "";
@@ -31,8 +31,9 @@ export default function StudentFeeWorkspace({
     : null;
   const currentEnrollment = student.activeEnrollment || semesterEnrollment || enrollmentOptions.find(item => item.status === "ACTIVE");
   const currentStCode = String(currentEnrollment?.stCode || student.regnNo || student.enrollmentNo || "");
-  const effectiveStCode = selectedStCode || currentStCode;
-  const selectedEnrollment = enrollmentOptions.find(item => String(item.stCode || "") === effectiveStCode) || currentEnrollment;
+  const effectiveEnrollmentId = selectedEnrollmentId || String(currentEnrollment?._id || "");
+  const selectedEnrollment = enrollmentOptions.find(item => String(item._id) === effectiveEnrollmentId) || currentEnrollment;
+  const effectiveStCode = String(selectedEnrollment?.stCode || currentStCode);
   const selectedInstallments = Array.isArray(selectedEnrollment?.installments) ? selectedEnrollment.installments : [];
   const selectedSummary = selectedEnrollment?.summary || {};
   const selectedDue = Number(selectedSummary.totalDue || selectedEnrollment?.feeConfig?.netPayableFee || 0);
@@ -40,7 +41,7 @@ export default function StudentFeeWorkspace({
   const selectedBalance = Number(selectedSummary.totalDue || 0) > 0
     ? Number(selectedSummary.balanceDue || 0) : Math.max(0, selectedDue - selectedPaid);
   const historyRows = useMemo(() => paymentHistory.filter(payment =>
-    historyScope === "all" || String(payment.stCode || "") === effectiveStCode
+    historyScope === "all" || (payment.enrollmentId ? String(payment.enrollmentId) === effectiveEnrollmentId : String(payment.stCode || "") === effectiveStCode)
   ), [paymentHistory, historyScope, effectiveStCode]);
   const totalAcrossSemesters = paymentHistory.reduce((sum, payment) => sum + Number(payment.amountPaid ?? payment.amount ?? 0), 0);
   const currentSemesterPaid = paymentHistory.filter(payment => String(payment.stCode || "") === currentStCode)
@@ -110,17 +111,17 @@ export default function StudentFeeWorkspace({
                       <small>Imported receipts and ERP payments across every registration code</small>
                     </div>
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                      <select aria-label="Select semester registration code" value={effectiveStCode}
-                        onChange={event => { setSelectedStCode(event.target.value); setHistoryScope("selected"); }}
+                      <select aria-label="Select course enrollment" value={effectiveEnrollmentId}
+                        onChange={event => { setSelectedEnrollmentId(event.target.value); setHistoryScope("selected"); }}
                         style={{ minHeight: 36, borderRadius: 8, padding: "6px 10px", border: "1px solid var(--border,#d9deea)", background: "var(--surface,#fff)", color: "inherit" }}>
                         {enrollmentOptions.length ? enrollmentOptions.map(enrollment =>
                           <option key={String(enrollment._id)} value={enrollment.stCode}>
-                            {enrollment.semesterLabel || enrollment.courseCode || "Semester"} ({enrollment.stCode})
+                            {enrollment.courseCode || enrollment.semesterLabel || "Course"} ({enrollment.stCode})
                           </option>
                         ) : <option value={currentStCode}>{currentStCode || "Current registration"}</option>}
                       </select>
                       <button type="button" className={historyScope === "all" ? "primary-btn" : "ghost-btn"} onClick={() => setHistoryScope("all")}>All Semesters / Full History</button>
-                      <button type="button" className={historyScope === "current" ? "primary-btn" : "ghost-btn"} onClick={() => { setSelectedStCode(currentStCode); setHistoryScope("current"); }}>Current ({currentStCode || "Code"})</button>
+                      <button type="button" className={historyScope === "current" ? "primary-btn" : "ghost-btn"} onClick={() => { setSelectedEnrollmentId(String(currentEnrollment?._id || "")); setHistoryScope("current"); }}>Current ({currentStCode || "Code"})</button>
                     </div>
                   </div>
                   <div className="student-fee-overview" style={{ marginTop: 12 }}>
