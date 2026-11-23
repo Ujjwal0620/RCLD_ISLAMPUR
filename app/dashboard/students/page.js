@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Search, UserPlus, ChevronLeft, ChevronRight, SlidersHorizontal, X, RotateCcw, Filter, Pencil, Trash2, Send, Upload, ShieldCheck, Users, UserRoundCheck, GraduationCap, Download, Printer, ImagePlus } from "lucide-react";
 import CodingForKidsIcardDialog from "@/components/students/profile/CodingForKidsIcardDialog";
 import BulkStudentPhotoUploadDialog from "@/components/students/BulkStudentPhotoUploadDialog";
@@ -30,7 +30,8 @@ export default function StudentsPage(){
   }
   async function loadBatches(){const r=await fetch("/api/students/bulk-assign-batch",{cache:"no-store"});const d=await r.json();setBatches(d.batches||[])}
   useEffect(()=>{const timer=setTimeout(()=>load(1),260);return()=>clearTimeout(timer)},[filters.sex,filters.course,filters.status,filters.registration,filters.fromDate,filters.toDate,filters.formNo,filters.enrollmentNo,filters.regnNo,filters.aecCode,filters.fatherOrHusbandName,filters.mobileNumber,filters.whatsappNumber,filters.guardianContactNumber,filters.email,filters.aadhaarNumber,filters.nationality,filters.dateOfBirth,filters.district,filters.state,filters.pin,filters.postOffice,filters.policeStation,filters.nearestLandmark,filters.permanentDistrict,filters.permanentState,filters.permanentPin,filters.permanentPostOffice,filters.permanentNearestLandmark,filters.courseCode,filters.batchCode,filters.referralName,filters.marketingEmployeeName,filters.paymentStatus,filters.declarationPlace,filters.address,filters.presentAddress,filters.permanentAddress,filters.sourceCourseLabel,filters.importSource,filters.signatureApplicant,filters.declarationDate,filters.referralId,filters.marketingEmployeeId,filters.sameAsPresentAddress,filters.hasPhoto,filters.hasSignature,filters.stampPhoto,filters.qualifyingCertificates,filters.matricAdmitCard,filters.qualification,filters.dueMin,filters.dueMax,filters.admissionFrom,filters.admissionTo,filters.updatedFrom,filters.updatedTo]);
-  useEffect(()=>{loadBatches()},[]);
+  const batchesLoadStarted = useRef(false);
+  useEffect(()=>{if(batchesLoadStarted.current)return;batchesLoadStarted.current=true;loadBatches()},[]);
   useEffect(()=>{setSelectedStudents([]);setSelectAllMatching(false);setSelectedBatch("")},[students]);
 
   function updateFilter(k,v){setFilters(c=>({...c,[k]:v}))}
