@@ -14,6 +14,7 @@ const empty = {
   fee: 0,
   admissionFee: 0,
   description: "",
+  aliases: [],
   requiredSkills: [],
 };
 
@@ -187,6 +188,7 @@ export default function CoursesPage() {
               ))}
               <label className="form-field"><span>Category</span><select name="category" value={form.category} onChange={change}><option>Certificate</option><option>Foundation</option><option>Diploma</option><option>Advanced Diploma</option><option>Professional</option><option>Special</option></select></label>
             </div>
+            <label className="form-field full"><span>Course Aliases (comma separated)</span><input value={(form.aliases || []).join(", ")} onChange={(event) => setForm({ ...form, aliases: event.target.value.split(",").map((value) => value.trim()).filter(Boolean) })}/></label>
             <label className="form-field full"><span>Required Skills (comma separated)</span><input value={(form.requiredSkills || []).join(", ")} onChange={(event) => setForm({ ...form, requiredSkills: event.target.value.split(",").map((value) => value.trim()).filter(Boolean) })}/></label>
             <label className="form-field full"><span>Description</span><textarea name="description" value={form.description} onChange={change} rows="4"/></label>
             {error && <div className="error-msg" role="alert">{error}</div>}
