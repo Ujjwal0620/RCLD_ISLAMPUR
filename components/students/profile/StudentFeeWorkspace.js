@@ -42,7 +42,7 @@ export default function StudentFeeWorkspace({
     ? Number(selectedSummary.balanceDue || 0) : Math.max(0, selectedDue - selectedPaid);
   const historyRows = useMemo(() => paymentHistory.filter(payment =>
     historyScope === "all" || (payment.enrollmentId ? String(payment.enrollmentId) === effectiveEnrollmentId : String(payment.stCode || "") === effectiveStCode)
-  ), [paymentHistory, historyScope, effectiveStCode]);
+  ), [paymentHistory, historyScope, effectiveStCode, effectiveEnrollmentId]);
   const totalAcrossSemesters = paymentHistory.reduce((sum, payment) => sum + Number(payment.amountPaid ?? payment.amount ?? 0), 0);
   const currentSemesterPaid = paymentHistory.filter(payment => payment.enrollmentId
     ? String(payment.enrollmentId) === String(currentEnrollment?._id || "")
