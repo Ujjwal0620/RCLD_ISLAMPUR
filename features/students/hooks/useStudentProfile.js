@@ -5,7 +5,7 @@ import useStudentPrint from "@/features/students/hooks/useStudentPrint";
 import { useErpCache } from "@/components/providers/ERPUIProvider";
 
 export default function useStudentProfile(params) {
-    const { fetchCached, invalidate } = useErpCache();
+    const { fetchCached } = useErpCache();
     const [student, setStudent] = useState(null),
       [error, setError] = useState(""),
       [loading, setLoading] = useState(true);
