@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import useStudentPrint from "@/features/students/hooks/useStudentPrint";
 
 export default function useStudentProfile(params) {
@@ -55,6 +55,7 @@ export default function useStudentProfile(params) {
     const [transitioning, setTransitioning] = useState(false);
     const [icardDialogOpen, setIcardDialogOpen] = useState(false);
     const [semesterBusy, setSemesterBusy] = useState(false);
+    const initialLoadStarted = useRef(false);
   
     async function loadOperational(id) {
       const [fr, ar] = await Promise.all([
@@ -103,6 +104,8 @@ export default function useStudentProfile(params) {
     }
   
     useEffect(() => {
+      if (initialLoadStarted.current) return;
+      initialLoadStarted.current = true;
       (async () => {
         try {
           const [courseResponse, batchResponse, referralResponse] = await Promise.all([
