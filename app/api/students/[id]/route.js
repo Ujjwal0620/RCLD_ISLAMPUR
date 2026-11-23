@@ -47,15 +47,22 @@ export async function GET(req,{params}){
           { studentId: masterProfile._id, stCode: { $in: allEnrollmentCodes } },
         ] }
       : { $or: [{ studentId: student._id }, { enrollmentId: { $in: enrollmentIds } }] };
-    const importedPayments = enrollmentIds.length || masterProfile
-      ? await StudentFeePayment.find(paymentQuery).sort({ paymentDate: 1, mrNo: 1 }).lean()
-      : [];
+    const enrollmentCourseCodes = [...new Set(enrollments.map(item => String(item.courseCode || "").toUpperCase()).filter(Boolean))];
+    const [importedPayments, courseDocuments, legacyData] = await Promise.all([
+      enrollmentIds.length || masterProfile
+        ? StudentFeePayment.find(paymentQuery).sort({ paymentDate: 1, mrNo: 1 }).lean()
+        : Promise.resolve([]),
+      enrollmentCourseCodes.length
+        ? Course.find({ code: { $in: enrollmentCourseCodes } }).select("code name").lean()
+        : Promise.resolve([]),
+      Promise.all([
+        StudentFee.find({ studentId: { $in: linkedStudentIds } }).lean(),
+        Student.find({ _id: { $in: linkedStudentIds } }).select("_id regnNo enrollmentNo courseCode courseName").lean(),
+      ]),
+    ]);
+    const [legacyFees, linkedStudentDocs] = legacyData;
     const enrollmentMap = new Map(enrollments.map(item => [String(item._id), item]));
     const enrollmentByCode = new Map(enrollments.map(item => [String(item.stCode || ""), item]));
-    const enrollmentCourseCodes = [...new Set(enrollments.map(item => String(item.courseCode || "").toUpperCase()).filter(Boolean))];
-    const courseDocuments = enrollmentCourseCodes.length
-      ? await Course.find({ code: { $in: enrollmentCourseCodes } }).select("code name").lean()
-      : [];
     const courseNameMap = new Map(courseDocuments.map(course => [String(course.code).toUpperCase(), course.name]));
     const paymentHistory = importedPayments.map(payment => {
       const enrollment = enrollmentMap.get(String(payment.enrollmentId))
@@ -77,10 +84,6 @@ export async function GET(req,{params}){
     const knownReceiptKeys = new Set(paymentHistory.map(receiptKey));
     const FeeSchema = new mongoose.Schema({ studentId: mongoose.Schema.Types.ObjectId, payments: [mongoose.Schema.Types.Mixed] }, { strict: false });
     const StudentFee = mongoose.models.StudentFee || mongoose.model("StudentFee", FeeSchema);
-    const [legacyFees, linkedStudentDocs] = await Promise.all([
-      StudentFee.find({ studentId: { $in: linkedStudentIds } }).lean(),
-      Student.find({ _id: { $in: linkedStudentIds } }).select("_id regnNo enrollmentNo courseCode courseName").lean(),
-    ]);
     const linkedStudentMap = new Map(linkedStudentDocs.map(item => [String(item._id), item]));
     for (const legacyFee of legacyFees) {
       const linkedStudent = linkedStudentMap.get(String(legacyFee.studentId)) || student;
