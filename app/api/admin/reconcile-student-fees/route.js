@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import { connectMongoDB } from "@/lib/mongodb";
 import { getSession } from "@/lib/auth";
-import { reconcileStudentFees } from "@/lib/student-import/reconcile-student-fees";
+import { reconcileStudentFeesOnly } from "@/lib/student-import/reconcile-student-fees-only";
 
 export const runtime = "nodejs";
 
@@ -27,7 +27,7 @@ export async function POST(request) {
     await connectMongoDB();
     const buffer = Buffer.from(await file.arrayBuffer());
     const workbook = XLSX.read(buffer, { type: "buffer", cellDates: true });
-    const result = await reconcileStudentFees(workbook, { sourceName: String(file.name || "Fee reconciliation").slice(0, 180) });
+    const result = await reconcileStudentFeesOnly(workbook, { sourceName: String(file.name || "Fee reconciliation").slice(0, 180) });
     return NextResponse.json({
       message: "Fee reconciliation completed. Student profile and non-fee records were not imported or overwritten.",
       ...result
