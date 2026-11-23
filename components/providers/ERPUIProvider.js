@@ -10,10 +10,8 @@ export function ERPUIProvider({ children }) {
   const inFlightRef = useRef(new Map());
   const toastTimerRef = useRef(new Map());
   const [toasts, setToasts] = useState([]);
-  const [cacheVersion, setCacheVersion] = useState(0);
 
   const emit = useCallback(() => {
-    setCacheVersion((version) => version + 1);
     listenersRef.current.forEach((listener) => listener());
   }, []);
 
@@ -32,12 +30,12 @@ export function ERPUIProvider({ children }) {
     emit();
   }, [emit]);
 
-  const fetchCached = useCallback((key, fetcher, { force = false } = {}) => {
+  const fetchCached = useCallback((key, fetcher, { force = false, staleTime = 60_000 } = {}) => {
     const cached = cacheRef.current.get(key);
     if (!force && cached?.expiresAt > Date.now()) return Promise.resolve(cached.data);
     if (inFlightRef.current.has(key)) return inFlightRef.current.get(key);
     const request = Promise.resolve().then(fetcher).then((data) => {
-      cacheRef.current.set(key, { data, expiresAt: Date.now() + 60_000 });
+      cacheRef.current.set(key, { data, expiresAt: Date.now() + staleTime });
       emit();
       return data;
     }).finally(() => inFlightRef.current.delete(key));
@@ -65,12 +63,12 @@ export function ERPUIProvider({ children }) {
   }, []);
 
   const value = useMemo(() => ({
-    getCache, setCache, invalidate, fetchCached, notify, dismissToast, cacheVersion,
+    getCache, setCache, invalidate, fetchCached, notify, dismissToast,
     subscribe: (listener) => {
       listenersRef.current.add(listener);
       return () => listenersRef.current.delete(listener);
     },
-  }), [getCache, setCache, invalidate, fetchCached, notify, dismissToast, cacheVersion]);
+  }), [getCache, setCache, invalidate, fetchCached, notify, dismissToast]);
 
   return (
     <ERPUIContext.Provider value={value}>
@@ -119,7 +117,7 @@ export function useErpQuery(key, fetcher, options = {}) {
       return;
     }
     setLoading(true);
-    context.fetchCached(key, fetcher).then(() => {
+    context.fetchCached(key, fetcher, { staleTime }).then(() => {
       if (active) { setError(null); setLoading(false); }
     }).catch((reason) => {
       if (active) { setError(reason); setLoading(false); }
