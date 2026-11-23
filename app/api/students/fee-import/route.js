@@ -290,7 +290,7 @@ export async function POST(request) {
           let existing = await StudentFeePayment.findOne({
             studentId: master._id, enrollmentId: enrollment._id, mrNo
           }).select("_id").lean();
-          if (!existing && !row.receiptNo) {
+          if (!existing) {
             existing = await StudentFeePayment.findOne({
               studentId: master._id, enrollmentId: enrollment._id,
               sourceSheet: worksheet.sheetName, sourceRowNo: row.rowNo,
