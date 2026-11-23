@@ -7,6 +7,7 @@ import { getSession } from "@/lib/auth";
 import Course from "@/models/Course";
 import { resolveCourseFeeConfig } from "@/lib/student-import/course-fee-rules";
 import { linkImportedStudentRecords } from "@/lib/student-import/import-payment-sheet";
+import { reconcileStudentFees } from "@/lib/student-import/reconcile-student-fees";
 
 export const runtime = "nodejs";
 
@@ -354,6 +355,16 @@ export async function POST(request) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const workbook = XLSX.read(buffer, { type: "buffer", cellDates: true });
+    if (String(form.get("feeOnly") || "").toLowerCase() === "true") {
+      await connectMongoDB();
+      const feeResult = await reconcileStudentFees(workbook, { sourceName: String(file.name || "Fee-only reconciliation").slice(0, 180) });
+      return NextResponse.json({
+        message: "Fee-only reconciliation completed. Student and non-fee records were not imported or modified.",
+        feeImport: feeResult,
+        feeOnly: true
+      });
+    }
+
     const parsed = parseRows(workbook, requestedSheet);
     const preview = previewPayload(parsed);
     if (mode !== "import") return NextResponse.json(preview);
@@ -508,9 +519,16 @@ export async function POST(request) {
         errors.push({ row: null, Regn_No: "", reason: "New students were saved, but academic enrollment linking needs review: " + linkError.message });
       }
     }
-    // Payment-receipt worksheets are deliberately excluded from this student import.
-    // They contain MR_No/Amt_Paid rows and must be handled by a separate fee-import workflow.
-    const paymentImport = { skipped: true, message: "Payment-only worksheets were not processed by student import." };
+    // When the workbook also contains the fee worksheet, process it with the same
+    // identity rules. The feeOnly flag above is available for re-imports that must
+    // leave all student/profile fields untouched.
+    let paymentImport = { skipped: true, message: "No fee worksheet was found in this workbook." };
+    try {
+      paymentImport = await reconcileStudentFees(workbook, { sourceName });
+    } catch (feeError) {
+      errors.push({ row: null, Regn_No: "", reason: "Student import completed, but fee reconciliation needs review: " + feeError.message });
+      paymentImport = { failed: true, message: feeError.message };
+    }
 
     return NextResponse.json({
       message: "Student import processing completed.",
