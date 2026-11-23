@@ -163,7 +163,7 @@ export default function useStudentProfile(params) {
           setLoading(false);
         }
       })();
-    }, [params]);
+    }, [params, fetchCached]);
   
     async function saveStudent(e) {
       e.preventDefault();
