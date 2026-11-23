@@ -65,15 +65,16 @@ export default function StudentUnifiedFeeLedger({ student }) {
       <h3 style={{ margin: "20px 0 8px" }}>Money Receipt History</h3>
       <div style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 620 }}>
-          <thead><tr>{["Date (D.O.P.)","MR No","St_Code","Course","Amount Paid"].map(label => <th key={label} style={{ textAlign: "left", padding: 9, borderBottom: "1px solid var(--border,#ddd)" }}>{label}</th>)}</tr></thead>
+          <thead><tr>{["Date (D.O.P.)","MR No","St_Code","Course","Payment Mode","Amount Paid"].map(label => <th key={label} style={{ textAlign: "left", padding: 9, borderBottom: "1px solid var(--border,#ddd)" }}>{label}</th>)}</tr></thead>
           <tbody>{visibleRows.map((row,index) => <tr key={String(row._id || row.mrNo) + index}>
             <td style={{ padding: 9, borderBottom: "1px solid var(--border,#eee)" }}>{dateLabel(row.paymentDate || row.rawPaymentDate)}</td>
             <td style={{ padding: 9, borderBottom: "1px solid var(--border,#eee)" }}>{row.mrNo || "—"}</td>
             <td style={{ padding: 9, borderBottom: "1px solid var(--border,#eee)" }}>{row.stCode || "—"}</td>
             <td style={{ padding: 9, borderBottom: "1px solid var(--border,#eee)" }}>{row.courseName || row.courseCode || row.semesterLabel || "LEGACY"}</td>
+            <td style={{ padding: 9, borderBottom: "1px solid var(--border,#eee)" }}>{row.paymentMode || "—"}</td>
             <td style={{ padding: 9, borderBottom: "1px solid var(--border,#eee)", fontWeight: 700 }}>{money(row.amountPaid)}</td>
           </tr>)}
-          {!visibleRows.length && <tr><td colSpan={5} style={{ padding: 16, textAlign: "center", color: "var(--muted,#778)" }}>No receipts found for this selection.</td></tr>}</tbody>
+          {!visibleRows.length && <tr><td colSpan={6} style={{ padding: 16, textAlign: "center", color: "var(--muted,#778)" }}>No receipts found for this selection.</td></tr>}</tbody>
         </table>
       </div>
     </section>
