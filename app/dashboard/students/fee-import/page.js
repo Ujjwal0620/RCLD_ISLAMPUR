@@ -26,7 +26,7 @@ export default function StudentFeeImportPage() {
       if (!response.ok) throw new Error(data.detail || data.error || "Fee import failed.");
       setReport(data);
       notify("Fee workbook imported. Student and course fee summaries are ready.", "success");
-      invalidate(["students:", "student-detail:", "student-fees:", "dashboard-stats", "batches:"]);
+      invalidate(["lookup:", "students:", "student-detail:", "student-fees:", "dashboard-stats", "batches:"]);
     } catch (err) {
       setError(err.message || "Unable to upload fee workbook.");
       notify(err.message || "Unable to upload fee workbook.", "error");
