@@ -16,7 +16,16 @@ const StudentMasterSchema = new mongoose.Schema({
   activeEnrollmentId: { type: mongoose.Schema.Types.ObjectId, ref: "StudentEnrollment", default: null },
   legacyStudentIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Student" }],
   identityMatchMethod: { type: String, default: "IMPORT" },
-  identityWarnings: { type: [String], default: [] }
+  identityWarnings: { type: [String], default: [] },
+  feeSummary: {
+    totalFee: { type: Number, default: 0 },
+    discount: { type: Number, default: 0 },
+    totalPaid: { type: Number, default: 0 },
+    balanceDue: { type: Number, default: 0 },
+    feeStatus: { type: String, enum: ["Paid", "Partial", "Unpaid"], default: "Unpaid" },
+    courseCount: { type: Number, default: 0 },
+    updatedAt: { type: Date, default: null }
+  }
 }, { timestamps: true, collection: "student_master_profiles" });
 
 StudentMasterSchema.index({ normalizedFullName: 1, dob: 1 });
