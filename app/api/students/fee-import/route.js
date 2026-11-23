@@ -317,7 +317,7 @@ export async function POST(request) {
       const grossFee = row.totalFee !== null ? row.totalFee : Number(enrollment.feeConfig?.grossFee ?? course.fee ?? 0);
       const discount = row.discount !== null ? row.discount : Number(enrollment.feeConfig?.discountAmount || 0);
       const netPayable = Math.max(0, grossFee - Math.max(0, discount));
-      const nextStatus = courseStatusFromRow(row.courseStatus, enrollment.status || inferredBatchStatus);
+      const nextStatus = courseStatusFromRow(row.courseStatus, inferredBatchStatus === "COMPLETED" ? "COMPLETED" : (enrollment.status || inferredBatchStatus));
       enrollment.courseId = course._id;
       enrollment.courseCode = course.code;
       enrollment.status = nextStatus;
