@@ -134,7 +134,7 @@ export default function StudentFeeWorkspace({
                   <div style={{ overflowX: "auto", marginTop: 12 }}>
                     <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 760 }}>
                       <thead><tr>
-                        {["Date (D.O.P.)", "MR No", "St_Code", "Course / Semester", "Amount Paid", "Installment / Fee Applied"].map(label =>
+                        {["Date (D.O.P.)", "MR No", "St_Code", "Course / Semester", "Payment Mode", "Amount Paid", "Installment / Fee Applied"].map(label =>
                           <th key={label} style={{ textAlign: "left", padding: "10px 8px", borderBottom: "1px solid var(--border,#e3e7ef)", fontSize: 12 }}>{label}</th>
                         )}
                       </tr></thead>
@@ -145,6 +145,7 @@ export default function StudentFeeWorkspace({
                             <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{payment.mrNo || payment.receiptNo || "—"}</td>
                             <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{payment.stCode || currentStCode || "—"}</td>
                             <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{payment.courseName || payment.courseCode || "—"}{payment.semesterLabel ? " / " + payment.semesterLabel : ""}</td>
+                            <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{payment.paymentMode || "—"}</td>
                             <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)", fontWeight: 700 }}>₹{Number(payment.amountPaid ?? payment.amount ?? 0).toLocaleString("en-IN")}</td>
                             <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{payment.installmentApplied || payment.paymentType || "Legacy receipt / not allocated"}</td>
                           </tr>
