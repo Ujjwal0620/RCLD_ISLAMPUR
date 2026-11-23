@@ -26,6 +26,6 @@ const StudentFeePaymentSchema = new mongoose.Schema({
   importBatchKey: { type: String, default: "" }
 }, { timestamps: true, collection: "student_fee_payments" });
 
-StudentFeePaymentSchema.index({ studentId: 1, enrollmentId: 1, mrNo: 1, paymentDate: 1, amountPaid: 1 });
+StudentFeePaymentSchema.index({ studentId: 1, enrollmentId: 1, mrNo: 1, paymentDate: 1, amountPaid: 1 }, { name: "student_course_receipt_lookup" });
 
 export default mongoose.models.StudentFeePayment || mongoose.model("StudentFeePayment", StudentFeePaymentSchema);
