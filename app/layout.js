@@ -2,6 +2,7 @@ import "./globals.css";
 import "./styles/design-system.css";
 import "./styles/public-home.css";
 import "./styles/registration-print.css";
+import { ERPUIProvider } from "@/components/providers/ERPUIProvider";
 
 export const metadata = {
   title: "RCLD Islampur ERP",
@@ -16,7 +17,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body suppressHydrationWarning>{children}</body>
+      <body suppressHydrationWarning><ERPUIProvider>{children}</ERPUIProvider></body>
     </html>
   );
 }
