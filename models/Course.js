@@ -14,6 +14,7 @@ const CourseSchema = new mongoose.Schema({
   otherCharges:{type:Number,default:0,min:0},
   admissionIncludedInTotal:{type:Boolean,default:true},
   description:{type:String,default:""},
+  aliases:{type:[String],default:[]},
   semesterPlans:{type:[{semester:Number,durationMonths:Number,admissionFee:Number,monthlyFee:Number,monthlyInstallment:Number,tuitionFee:Number,totalFee:Number}],default:[]},
   requiredSkills:{type:[String],default:[]},
   active:{type:Boolean,default:true},
