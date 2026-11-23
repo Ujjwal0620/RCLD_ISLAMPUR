@@ -70,7 +70,7 @@ export default function StudentsPage(){
       const d=await r.json();
       if(!r.ok)return alert(d.error||"Bulk action failed.");
       notify(d.message||"Bulk action completed.", "success");
-      invalidate(["students:", "student-detail:", "student-fees:", "dashboard-stats", "batches:"]);
+      invalidate(["lookup:", "students:", "student-detail:", "student-fees:", "dashboard-stats", "batches:"]);
       setSelectedStudents([]);setSelectAllMatching(false);setBulkStatus("");
       await load(pagination.page);await loadBatches();
     }finally{setBulkBusy(false)}
