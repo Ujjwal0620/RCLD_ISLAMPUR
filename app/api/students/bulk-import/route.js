@@ -6,8 +6,7 @@ import { connectMongoDB } from "@/lib/mongodb";
 import { getSession } from "@/lib/auth";
 import Course from "@/models/Course";
 import { resolveCourseFeeConfig } from "@/lib/student-import/course-fee-rules";
-import { linkImportedStudentRecords } from "@/lib/student-import/import-payment-sheet";
-import { reconcileStudentFees } from "@/lib/student-import/reconcile-student-fees";
+import { reconcileStudentFees, linkStudentRecordsSafely } from "@/lib/student-import/reconcile-student-fees";
 
 export const runtime = "nodejs";
 
@@ -514,7 +513,7 @@ export async function POST(request) {
       await StudentFee.bulkWrite(feeOperations.slice(offset, offset + 500), { ordered: false });
     }
     if (importedStudents.length) {
-      try { await linkImportedStudentRecords(importedStudents); }
+      try { await linkStudentRecordsSafely(importedStudents); }
       catch (linkError) {
         errors.push({ row: null, Regn_No: "", reason: "New students were saved, but academic enrollment linking needs review: " + linkError.message });
       }
