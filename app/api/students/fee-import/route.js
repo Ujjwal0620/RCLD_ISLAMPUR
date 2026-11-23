@@ -173,7 +173,7 @@ async function findStudent(row) {
     ]
   }).limit(25).lean();
   const legacyMatches = legacyCandidates.filter(student =>
-    normalizePhone(student.mobileNumber || student.phone || student.whatsappNumber || student.guardianContactNumber) === row.phone
+    [student.mobileNumber, student.phone, student.whatsappNumber, student.guardianContactNumber].some(value => normalizePhone(value) === row.phone)
     && normalizeName(student.applicantName || student.sourceStudentName || student.name) === name
   );
   if (legacyMatches.length !== 1) {
