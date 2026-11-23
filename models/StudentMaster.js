@@ -28,6 +28,8 @@ const StudentMasterSchema = new mongoose.Schema({
   }
 }, { timestamps: true, collection: "student_master_profiles" });
 
+StudentMasterSchema.index({ stCodes: 1 });
+StudentMasterSchema.index({ phoneNumbers: 1 });
 StudentMasterSchema.index({ normalizedFullName: 1, dob: 1 });
 StudentMasterSchema.index({ normalizedFullName: 1, normalizedFatherName: 1 });
 
