@@ -280,7 +280,9 @@ export async function POST(request) {
       };
       await enrollment.save();
 
-      if (row.paidAmount !== null && row.paidAmount > 0) {
+      if (row.receiptNo && row.paidAmount === null) {
+        unmatchedRows.push({ row: row.rowNo, studentId: stCode, course: course.code, reason: "Receipt number is present but Paid Amount is blank or invalid." });
+      } else if (row.paidAmount !== null && row.paidAmount >= 0 && (row.paidAmount > 0 || row.receiptNo)) {
         if (row.paymentDate === null && !row.receiptNo) {
           unmatchedRows.push({ row: row.rowNo, studentId: stCode, course: course.code, reason: "Paid amount has neither a receipt number nor a valid payment date." });
         } else {
@@ -288,6 +290,13 @@ export async function POST(request) {
           let existing = await StudentFeePayment.findOne({
             studentId: master._id, enrollmentId: enrollment._id, mrNo
           }).select("_id").lean();
+          if (!existing && !row.receiptNo) {
+            existing = await StudentFeePayment.findOne({
+              studentId: master._id, enrollmentId: enrollment._id,
+              sourceSheet: worksheet.sheetName, sourceRowNo: row.rowNo,
+              importBatchKey: String(file.name || "fee-upload").slice(0, 180)
+            }).select("_id").lean();
+          }
           if (!existing && row.paymentDate) {
             existing = await StudentFeePayment.findOne({
               studentId: master._id, enrollmentId: enrollment._id,
@@ -308,7 +317,7 @@ export async function POST(request) {
           if (existing) {
             await StudentFeePayment.updateOne({ _id: existing._id }, { $set: paymentValues });
             updatedPayments += 1;
-          } else {
+          } else if (row.paidAmount > 0) {
             await StudentFeePayment.create(paymentValues);
             createdPayments += 1;
           }
