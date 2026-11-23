@@ -16,13 +16,11 @@ function downloadTemplate() {
   XLSX.writeFile(workbook, "RCLD_Student_Import_Template.xlsx");
 }
 
-async function sendFile(file, mode, importMode = "fill_and_import", sheetName = "", feeOnly = false) {
+async function sendFile(file, mode) {
   const form = new FormData();
   form.append("file", file);
   form.append("mode", mode);
-  form.append("importMode", importMode);
-  if (sheetName) form.append("sheetName", sheetName);
-  if (feeOnly) form.append("feeOnly", "true");
+  form.append("importMode", "fill_and_import");
   const response = await fetch("/api/students/bulk-import", { method: "POST", body: form });
   const data = await response.json();
   if (!response.ok) throw new Error(data.detail || data.error || "Student import request failed.");
@@ -35,20 +33,18 @@ export default function BulkImportPage() {
   const [result, setResult] = useState(null);
   const [previewing, setPreviewing] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [importMode, setImportMode] = useState("fill_and_import");
-  const [sheetName, setSheetName] = useState("");
+
   const [error, setError] = useState("");
   const feeResult = result?.feeImport || result?.paymentImport;
 
-  async function createPreview(selectedFile, selectedSheet = sheetName) {
+  async function createPreview(selectedFile) {
     if (!selectedFile) return;
     setPreviewing(true);
     setError("");
     setResult(null);
     try {
-      const data = await sendFile(selectedFile, "preview", importMode, selectedSheet);
+      const data = await sendFile(selectedFile, "preview");
       setPreview(data);
-      setSheetName(data.sheetName || "");
     } catch (err) {
       setError(err.message || "Unable to preview this spreadsheet.");
       setPreview(null);
@@ -57,32 +53,13 @@ export default function BulkImportPage() {
     }
   }
 
-  async function reconcileFeesOnly() {
-    if (!file) return;
-    if (!window.confirm("Reconcile fee receipts from " + file.name + " only? Student personal details, admissions, batches, attendance and ID-card data will not be imported or overwritten.")) return;
-    setBusy(true);
-    setError("");
-    setPreview(null);
-    try {
-      const data = await sendFile(file, "import", importMode, "", true);
-      setResult(data);
-    } catch (err) {
-      setError(err.message || "Unable to reconcile fee receipts.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function importStudents() {
     if (!file || !preview?.validRows) return;
-    const verb = importMode === "update_existing_only"
-      ? "update matching existing students only and skip new students"
-      : "fill missing fields on existing students and create new students";
-    if (!window.confirm("Process " + preview.validRows.toLocaleString("en-IN") + " valid rows from " + preview.sheetName + " and " + verb + "?")) return;
+    if (!window.confirm("Process " + preview.validRows.toLocaleString("en-IN") + " valid rows from the automatically detected student worksheet, update existing profiles safely, create new students and reconcile fee receipts found in this workbook?")) return;
     setBusy(true);
     setError("");
     try {
-      const data = await sendFile(file, "import", importMode, sheetName);
+      const data = await sendFile(file, "import");
       setResult(data);
       setPreview(null);
     } catch (err) {
@@ -118,40 +95,22 @@ export default function BulkImportPage() {
             <span>Student admission file</span>
             <input type="file" accept=".xlsx,.xls,.csv" onChange={event => {
               const selected = event.target.files?.[0] || null;
-              setFile(selected); setPreview(null); setResult(null); setError(""); setSheetName("");
-              if (selected) createPreview(selected, "");
+              setFile(selected); setPreview(null); setResult(null); setError("");
+              if (selected) createPreview(selected);
             }} />
           </label>
           {file && <p className="form-help" style={{ margin: "10px 0 16px" }}>{file.name} · {(file.size / 1024 / 1024).toFixed(2)} MB</p>}
-          {file && (
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
-              <button className="ghost-btn" type="button" disabled={busy || previewing} onClick={reconcileFeesOnly}>
-                <Upload size={16} /> {busy ? "Processing…" : "Reconcile Fees Only"}
-              </button>
-              <small className="form-help" style={{ alignSelf: "center" }}>Use this when re-uploading an existing workbook to update receipts without changing student records.</small>
+          {preview?.sheetName && (
+            <div className="form-help" style={{ marginTop: 16 }}>
+              <b>Automatically detected worksheet:</b> {preview.sheetName}
+              <br />The system selects the student-admission sheet itself. Fee-receipt sheets are detected separately and reconciled after student records are processed.
             </div>
           )}
-          {preview?.availableSheets?.length > 1 && (
-            <label className="form-field" style={{ marginTop: 18, maxWidth: 420 }}>
-              <span>Student worksheet</span>
-              <select value={sheetName} onChange={event => { setSheetName(event.target.value); createPreview(file, event.target.value); }}>
-                {preview.availableSheets.map(name => <option key={name} value={name} disabled={!preview.studentSheets?.includes(name)}>{name}{preview.studentSheets?.includes(name) ? "" : " (payment / non-student sheet)"}</option>)}
-              </select>
-              <small className="form-help">Choose a student-compatible worksheet. Payment-only sheets are shown but disabled for student import.</small>
-            </label>
-          )}
           <div style={{ display: "grid", gap: 12, marginTop: 18 }}>
-            <strong>Import mode</strong>
-            <label style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-              <input type="radio" name="importMode" checked={importMode === "fill_and_import"} onChange={() => setImportMode("fill_and_import")} />
-              <span><b>Fill Missing Fields on Existing + Import New</b><br /><small className="form-help">Default. Preserve populated student details, photos and ID numbers; create students not already found.</small></span>
-            </label>
-            <label style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-              <input type="radio" name="importMode" checked={importMode === "update_existing_only"} onChange={() => setImportMode("update_existing_only")} />
-              <span><b>Only Update Existing Students (Skip New)</b><br /><small className="form-help">Enrich matching records only. New registration numbers are counted as skipped.</small></span>
-            </label>
+            <strong>Automatic import settings</strong>
+            <p className="form-help">Existing student details are preserved; only missing fields are filled. New registration numbers are added as new students. Fee receipts in the workbook are matched and tracked against the student's course enrollment. Duplicate receipts are not added twice; uncertain matches are sent for review.</p>
             <div style={{ display: "flex", gap: 18, flexWrap: "wrap", alignItems: "center" }}>
-              <button className="primary-btn" type="button" disabled={!file || previewing || busy} onClick={() => createPreview(file, sheetName)}>
+              <button className="primary-btn" type="button" disabled={!file || previewing || busy} onClick={() => createPreview(file)}>
                 <Eye size={16} /> {previewing ? "Reading file…" : "Refresh Preview"}
               </button>
             </div>
@@ -199,7 +158,7 @@ export default function BulkImportPage() {
             {preview.totalRows > 100 && <p className="form-help" style={{ marginTop: 10 }}>Showing first 100 rows. All {preview.totalRows.toLocaleString("en-IN")} rows are included in the import.</p>}
             <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 18 }}>
               <button className="primary-btn" type="button" disabled={!preview.validRows || busy || previewing} onClick={importStudents}>
-                <Upload size={16} /> {busy ? "Importing…" : "Import " + preview.validRows.toLocaleString("en-IN") + " Students"}
+                <Upload size={16} /> {busy ? "Importing students & fees…" : "Import Students & Track Fees"}
               </button>
             </div>
           </div>
@@ -235,7 +194,7 @@ export default function BulkImportPage() {
 
             {result.warnings?.length > 0 && <details style={{ marginTop: 18 }} open><summary><b>Warnings / Duplicate IDs Flagged ({result.warningCount ?? result.warnings.length})</b></summary><div className="form-help" style={{ marginTop: 10 }}>{result.warnings.map((item, index) => <div key={index}>Row {item.row ?? "—"} · Regn_No {item.Regn_No || "—"}: {item.reason}</div>)}</div><button className="ghost-btn" type="button" onClick={() => { const ws = XLSX.utils.json_to_sheet(result.warnings); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Import Warnings"); XLSX.writeFile(wb, "RCLD_Student_Import_Warnings.xlsx"); }}><Download size={15} /> Download warning details</button></details>}
             {result.errors?.length > 0 && <><h4 style={{ marginTop: 18 }}>Row errors ({result.errors.length})</h4><div className="error-msg">{result.errors.slice(0, 100).map((item, index) => <div key={index}>Row {item.row ?? "—"} · Regn_No {item.Regn_No || "—"}: {item.reason}</div>)}</div></>}
-            <p className="form-help" style={{ marginTop: 14 }}>{result.feeOnly ? "Fee-only reconciliation did not import or overwrite student profile fields." : "Student rows are saved independently. Review any warnings or row errors before using the imported records."}</p>
+            <p className="form-help" style={{ marginTop: 14 }}>Student profiles, course enrollments and fee receipts are processed together. Review any unmatched or ambiguous receipt warnings before considering the fee ledger complete.</p>
             <a className="primary-btn" href="/dashboard/students">Open Student Directory</a>
           </div>
         </section>
