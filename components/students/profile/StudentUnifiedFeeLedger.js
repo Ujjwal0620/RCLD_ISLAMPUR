@@ -50,14 +50,17 @@ export default function StudentUnifiedFeeLedger({ student }) {
       </div>
       <h3 style={{ margin: "18px 0 8px" }}>Semester-wise Summary</h3>
       <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 680 }}>
-          <thead><tr>{["St_Code","Course / Semester","D.O.A.","Status","Subtotal","Receipts"].map(label => <th key={label} style={{ textAlign: "left", padding: 9, borderBottom: "1px solid var(--border,#ddd)" }}>{label}</th>)}</tr></thead>
+        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 980 }}>
+          <thead><tr>{["St_Code","Course / Semester","D.O.A.","Status","Total Fee","Discount","Paid","Balance Due","Receipts"].map(label => <th key={label} style={{ textAlign: "left", padding: 9, borderBottom: "1px solid var(--border,#ddd)" }}>{label}</th>)}</tr></thead>
           <tbody>{breakdown.map(item => <tr key={String(item._id || item.stCode)} onClick={() => setSelectedCode(String(item._id || item.stCode || "ALL"))} style={{ cursor: "pointer" }}>
             <td style={{ padding: 9, borderBottom: "1px solid var(--border,#eee)" }}>{item.stCode || "—"}</td>
             <td style={{ padding: 9, borderBottom: "1px solid var(--border,#eee)" }}>{item.courseCode || item.semesterLabel || "LEGACY"}</td>
             <td style={{ padding: 9, borderBottom: "1px solid var(--border,#eee)" }}>{dateLabel(item.admissionDate)}</td>
             <td style={{ padding: 9, borderBottom: "1px solid var(--border,#eee)" }}>{item.status || "LEGACY"}</td>
-            <td style={{ padding: 9, borderBottom: "1px solid var(--border,#eee)", fontWeight: 700 }}>{money(item.subtotal)}</td>
+            <td style={{ padding: 9, borderBottom: "1px solid var(--border,#eee)" }}>{money(item.summary?.totalFee ?? item.feeConfig?.grossFee ?? 0)}</td>
+            <td style={{ padding: 9, borderBottom: "1px solid var(--border,#eee)" }}>{money(item.feeConfig?.discountAmount || 0)}</td>
+            <td style={{ padding: 9, borderBottom: "1px solid var(--border,#eee)", fontWeight: 700 }}>{money(item.summary?.totalPaid ?? item.subtotal)}</td>
+            <td style={{ padding: 9, borderBottom: "1px solid var(--border,#eee)" }}>{money(item.summary?.balanceDue ?? 0)}</td>
             <td style={{ padding: 9, borderBottom: "1px solid var(--border,#eee)" }}>{item.receiptCount}</td>
           </tr>)}</tbody>
         </table>
