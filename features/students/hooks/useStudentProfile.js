@@ -54,16 +54,6 @@ export default function useStudentProfile(params) {
     const [semesterBusy, setSemesterBusy] = useState(false);
     const initialLoadStarted = useRef(false);
 
-    useEffect(() => {
-      const today = new Date().toISOString().slice(0, 10);
-      setFeeForm(current => ({ ...current, date: current.date || today }));
-      setAttForm(current => ({ ...current, date: current.date || today }));
-      if (new Date().getDate() > 10) {
-        setPaymentItems(current => current.some(item => item.id === "late-fine-initial")
-          ? current
-          : [...current, { id: "late-fine-initial", purpose: "Late Fine", amount: "50", installmentMonth: "" }]);
-      }
-    }, []);
   
     async function loadOperational(id) {
       const [fr, ar] = await Promise.all([
@@ -225,7 +215,7 @@ export default function useStudentProfile(params) {
           payment: paymentItems.some((item) => Number(item.amount) > 0)
             ? {
                 amount: paymentItems.reduce((sum, item) => sum + Number(item.amount || 0), 0),
-                date: feeForm.date,
+                date: feeForm.date || new Date().toISOString().slice(0, 10),
                 method: feeForm.method,
                 reference: feeForm.reference,
                 utrNumber: feeForm.utrNumber,
@@ -361,7 +351,7 @@ export default function useStudentProfile(params) {
       const r = await fetch("/api/students/" + student._id + "/attendance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(attForm),
+        body: JSON.stringify({ ...attForm, date: attForm.date || new Date().toISOString().slice(0, 10) }),
       });
       const d = await r.json();
       if (!r.ok) {
