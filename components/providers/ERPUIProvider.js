@@ -123,7 +123,7 @@ export function useErpQuery(key, fetcher, options = {}) {
       if (active) { setError(reason); setLoading(false); }
     });
     return () => { active = false; };
-  }, [context, key, enabled, fetcher, staleTime]);
+  }, [context, key, enabled, fetcher, staleTime, snapshot]);
 
   return { data: snapshot?.data ?? null, loading, error, setData: (value) => context.setCache(key, { data: value, expiresAt: Date.now() + staleTime }) };
 }
