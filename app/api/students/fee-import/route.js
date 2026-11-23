@@ -247,6 +247,7 @@ export async function POST(request) {
     const unmatchedRows = [];
     const studentCourseCounts = new Map();
     let createdPayments = 0, updatedPayments = 0, processed = 0;
+    const dueChecks = [];
     for (const row of worksheet.rows) {
       processed += 1;
       if ([row.totalFee, row.discount, row.paidAmount].some(value => value !== null && value < 0)) {
@@ -362,10 +363,10 @@ export async function POST(request) {
       const summary = studentCourseCounts.get(key) || { master, courses: new Set() };
       summary.courses.add(String(course._id));
       studentCourseCounts.set(key, summary);
-      if (row.dueAmount !== null && Math.abs(row.dueAmount - Math.max(0, netPayable - Number(enrollment.summary?.totalPaid || 0))) > 1) {
-        // Report-only validation: imported due is not allowed to override the ledger calculation.
-        unmatchedRows.push({ row: row.rowNo, studentId: stCode, course: course.code, reason: "Excel Due Amount differs from the calculated course balance; ledger balance was recalculated from receipts." });
-      }
+      if (row.dueAmount !== null) dueChecks.push({
+        row: row.rowNo, studentId: stCode, course: course.code,
+        enrollmentId: enrollment._id, excelDue: row.dueAmount
+      });
     }
 
     // Recalculate every enrollment (including courses absent from this workbook)
@@ -388,6 +389,17 @@ export async function POST(request) {
             "summary.balanceDue": balanceDue,
             "summary.feeStatus": status
           }
+        });
+      }
+    }
+
+    for (const check of dueChecks) {
+      const latestEnrollment = await StudentEnrollment.findById(check.enrollmentId).select("summary").lean();
+      const calculatedDue = Number(latestEnrollment?.summary?.balanceDue || 0);
+      if (Math.abs(check.excelDue - calculatedDue) > 1) {
+        unmatchedRows.push({
+          row: check.row, studentId: check.studentId, course: check.course,
+          reason: "Excel Due Amount differs from the recalculated course balance; the ledger uses Total Fee, Discount and matched receipts."
         });
       }
     }
