@@ -47,6 +47,8 @@ export async function GET(req,{params}){
           { studentId: masterProfile._id, stCode: { $in: allEnrollmentCodes } },
         ] }
       : { $or: [{ studentId: student._id }, { enrollmentId: { $in: enrollmentIds } }] };
+    const FeeSchema = new mongoose.Schema({ studentId: mongoose.Schema.Types.ObjectId, payments: [mongoose.Schema.Types.Mixed] }, { strict: false });
+    const StudentFee = mongoose.models.StudentFee || mongoose.model("StudentFee", FeeSchema);
     const enrollmentCourseCodes = [...new Set(enrollments.map(item => String(item.courseCode || "").toUpperCase()).filter(Boolean))];
     const [importedPayments, courseDocuments, legacyData] = await Promise.all([
       enrollmentIds.length || masterProfile
@@ -82,8 +84,6 @@ export async function GET(req,{params}){
         String(payment.stCode || ""), dateKey, Number(payment.amountPaid ?? payment.amount ?? 0).toFixed(2)].join("|");
     };
     const knownReceiptKeys = new Set(paymentHistory.map(receiptKey));
-    const FeeSchema = new mongoose.Schema({ studentId: mongoose.Schema.Types.ObjectId, payments: [mongoose.Schema.Types.Mixed] }, { strict: false });
-    const StudentFee = mongoose.models.StudentFee || mongoose.model("StudentFee", FeeSchema);
     const linkedStudentMap = new Map(linkedStudentDocs.map(item => [String(item._id), item]));
     for (const legacyFee of legacyFees) {
       const linkedStudent = linkedStudentMap.get(String(legacyFee.studentId)) || student;
