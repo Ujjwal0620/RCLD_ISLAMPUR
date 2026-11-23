@@ -62,7 +62,7 @@ export default function ERPLayout({ active, children, hideAssistant = true }) {
   const [commandOpen,setCommandOpen]=useState(false);
   const [commandLoading,setCommandLoading]=useState(false);
   const commandInputRef=useRef(null);
-  const authLoadStarted = useRef(false);
+  const authRequest = useRef(null);
 
   useEffect(() => {
     const savedTheme = window.localStorage.getItem("rcld-erp-theme");
@@ -139,16 +139,14 @@ export default function ERPLayout({ active, children, hideAssistant = true }) {
   };
 
   useEffect(() => {
-    if (authLoadStarted.current) return;
-    authLoadStarted.current = true;
-    let mounted = true;
-    fetch("/api/auth/me", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (mounted && data?.authenticated) setUser(data.user);
-      })
-      .catch(() => {});
-    return () => { mounted = false; };
+    if (!authRequest.current) {
+      authRequest.current = fetch("/api/auth/me", { cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null);
+    }
+    authRequest.current.then((data) => {
+      if (data?.authenticated) setUser(data.user);
+    });
   }, []);
 
   const roleLabel = user?.isSuperAdmin ? "Super Admin" : (user?.designation || user?.role || "RCLD User");
