@@ -370,23 +370,28 @@ export async function POST(request) {
       }
     }
 
-    for (const enrollment of touchedEnrollments.values()) {
-      const payments = await StudentFeePayment.find({ enrollmentId: enrollment._id }).select("amountPaid paymentDate").lean();
-      const totalPaid = payments.reduce((sum, payment) => sum + Number(payment.amountPaid || 0), 0);
-      const grossFee = Number(enrollment.feeConfig?.grossFee || 0);
-      const discount = Number(enrollment.feeConfig?.discountAmount || 0);
-      const payable = Math.max(0, grossFee - discount);
-      const balanceDue = Math.max(0, payable - totalPaid);
-      const status = feeStatus(payable, totalPaid);
-      await StudentEnrollment.updateOne({ _id: enrollment._id }, {
-        $set: {
-          "feeConfig.netPayableFee": payable,
-          "summary.totalDue": payable,
-          "summary.totalPaid": totalPaid,
-          "summary.balanceDue": balanceDue,
-          "summary.feeStatus": status
-        }
-      });
+    // Recalculate every enrollment (including courses absent from this workbook)
+    // for each touched student, so a multi-course profile remains internally consistent.
+    for (const { master } of studentCourseCounts.values()) {
+      const allStudentEnrollments = await StudentEnrollment.find({ studentId: master._id }).lean();
+      for (const enrollment of allStudentEnrollments) {
+        const payments = await StudentFeePayment.find({ enrollmentId: enrollment._id }).select("amountPaid").lean();
+        const totalPaid = payments.reduce((sum, payment) => sum + Number(payment.amountPaid || 0), 0);
+        const grossFee = Number(enrollment.feeConfig?.grossFee || 0);
+        const discount = Number(enrollment.feeConfig?.discountAmount || 0);
+        const payable = Math.max(0, grossFee - discount);
+        const balanceDue = Math.max(0, payable - totalPaid);
+        const status = feeStatus(payable, totalPaid);
+        await StudentEnrollment.updateOne({ _id: enrollment._id }, {
+          $set: {
+            "feeConfig.netPayableFee": payable,
+            "summary.totalDue": payable,
+            "summary.totalPaid": totalPaid,
+            "summary.balanceDue": balanceDue,
+            "summary.feeStatus": status
+          }
+        });
+      }
     }
 
     const updatedStudents = [];
