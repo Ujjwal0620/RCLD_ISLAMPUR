@@ -117,7 +117,7 @@ export default function StudentFeeWorkspace({
                         onChange={event => { setSelectedEnrollmentId(event.target.value); setHistoryScope("selected"); }}
                         style={{ minHeight: 36, borderRadius: 8, padding: "6px 10px", border: "1px solid var(--border,#d9deea)", background: "var(--surface,#fff)", color: "inherit" }}>
                         {enrollmentOptions.length ? enrollmentOptions.map(enrollment =>
-                          <option key={String(enrollment._id)} value={enrollment.stCode}>
+                          <option key={String(enrollment._id)} value={String(enrollment._id)}>
                             {enrollment.courseCode || enrollment.semesterLabel || "Course"} ({enrollment.stCode})
                           </option>
                         ) : <option value={currentStCode}>{currentStCode || "Current registration"}</option>}
