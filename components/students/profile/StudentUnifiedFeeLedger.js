@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 
 const money = value => "₹" + Number(value || 0).toLocaleString("en-IN");
 const dateLabel = value => value && !Number.isNaN(new Date(value).getTime())
-  ? new Date(value).toLocaleDateString("en-IN") : "—";
+  ? new Date(value).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" }) : "—";
 
 export default function StudentUnifiedFeeLedger({ student }) {
   const [selectedCode, setSelectedCode] = useState("ALL");
