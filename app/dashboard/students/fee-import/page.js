@@ -36,7 +36,7 @@ export default function StudentFeeImportPage() {
   }
 
   return (
-    <ERPLayout active="/dashboard/students">
+    <ERPLayout active="/dashboard/students/fee-import">
       <header className="topbar">
         <div><div className="crumb">Students / Fee Mapping</div><h1>Excel Fee Upload & Student Mapping</h1></div>
         <a className="ghost-btn" href="/dashboard/students/import"><ArrowLeft size={16} /> Back to Student Import</a>
