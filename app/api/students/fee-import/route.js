@@ -250,6 +250,7 @@ export async function POST(request) {
     const dueChecks = [];
     for (const row of worksheet.rows) {
       processed += 1;
+      try {
       if ([row.totalFee, row.discount, row.paidAmount].some(value => value !== null && value < 0)) {
         unmatchedRows.push({ row: row.rowNo, studentId: row.studentId, course: row.courseRaw, reason: "Fee, discount and payment amounts cannot be negative." });
         continue;
@@ -367,6 +368,12 @@ export async function POST(request) {
         row: row.rowNo, studentId: stCode, course: course.code,
         enrollmentId: enrollment._id, excelDue: row.dueAmount
       });
+      } catch (rowError) {
+        unmatchedRows.push({
+          row: row.rowNo, studentId: row.studentId, course: row.courseRaw,
+          reason: "Row could not be fully imported: " + String(rowError?.message || "Unknown row error")
+        });
+      }
     }
 
     // Recalculate every enrollment (including courses absent from this workbook)
