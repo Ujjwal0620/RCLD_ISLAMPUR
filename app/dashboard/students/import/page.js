@@ -38,6 +38,7 @@ export default function BulkImportPage() {
   const [importMode, setImportMode] = useState("fill_and_import");
   const [sheetName, setSheetName] = useState("");
   const [error, setError] = useState("");
+  const feeResult = result?.feeImport || result?.paymentImport;
 
   async function createPreview(selectedFile, selectedSheet = sheetName) {
     if (!selectedFile) return;
@@ -210,12 +211,15 @@ export default function BulkImportPage() {
         <section className="panel" style={{ marginTop: 18 }}>
           <div className="panel-head"><div><h3>Import summary</h3><p>{result.message}</p></div><CheckCircle2 size={22} /></div>
           <div style={{ padding: 20 }}>
-            {result.feeImport && (
+            {feeResult && (
               <div className="student-summary-grid" style={{ marginBottom: 16 }}>
-                <div className="summary-card"><span>Receipts Linked</span><strong>{result.feeImport.linkedReceipts ?? 0}</strong></div>
-                <div className="summary-card"><span>Duplicate Receipts</span><strong>{result.feeImport.duplicates ?? 0}</strong></div>
-                <div className="summary-card"><span>Legacy Receipts Linked</span><strong>{result.feeImport.legacyReceiptsLinked ?? 0}</strong></div>
-                <div className="summary-card"><span>Ambiguous Receipts for Review</span><strong>{result.feeImport.ambiguousReceiptsFlagged ?? 0}</strong></div>
+                <div className="summary-card"><span>Receipts Linked</span><strong>{feeResult.linkedReceipts ?? 0}</strong></div>
+                <div className="summary-card"><span>Duplicate Receipts</span><strong>{feeResult.duplicates ?? 0}</strong></div>
+                <div className="summary-card"><span>Legacy Receipts Linked</span><strong>{feeResult.legacyReceiptsLinked ?? 0}</strong></div>
+                <div className="summary-card"><span>Ambiguous Receipts for Review</span><strong>{feeResult.ambiguousReceiptsFlagged ?? 0}</strong></div>
+                <div className="summary-card"><span>Invalid Fee Rows</span><strong>{feeResult.invalidRows ?? 0}</strong></div>
+                <div className="summary-card"><span>Unified Student Profiles</span><strong>{feeResult.unifiedStudents ?? 0}</strong></div>
+                <div className="summary-card"><span>Multi-semester Profiles</span><strong>{feeResult.multiSemesterStudentsMerged ?? 0}</strong></div>
               </div>
             )}
             {!result.feeOnly && <div className="student-summary-grid">
