@@ -6,7 +6,8 @@ import { connectMongoDB } from "@/lib/mongodb";
 import { getSession } from "@/lib/auth";
 import Course from "@/models/Course";
 import { resolveCourseFeeConfig } from "@/lib/student-import/course-fee-rules";
-import { reconcileStudentFees, linkStudentRecordsSafely } from "@/lib/student-import/reconcile-student-fees";
+import { reconcileStudentFees } from "@/lib/student-import/reconcile-student-fees";
+import { reconcileStudentFeesOnly } from "@/lib/student-import/reconcile-student-fees-only";
 
 export const runtime = "nodejs";
 
@@ -356,7 +357,7 @@ export async function POST(request) {
     const workbook = XLSX.read(buffer, { type: "buffer", cellDates: true });
     if (String(form.get("feeOnly") || "").toLowerCase() === "true") {
       await connectMongoDB();
-      const feeResult = await reconcileStudentFees(workbook, { sourceName: String(file.name || "Fee-only reconciliation").slice(0, 180) });
+      const feeResult = await reconcileStudentFeesOnly(workbook, { sourceName: String(file.name || "Fee-only reconciliation").slice(0, 180) });
       return NextResponse.json({
         message: "Fee-only reconciliation completed. Student and non-fee records were not imported or modified.",
         feeImport: feeResult,
