@@ -35,6 +35,7 @@ export default function StudentDetailsPage({ params }) {
     saveAttendance,
   } = useStudentProfile(params);
   const [icardOutputMode, setIcardOutputMode] = useState("print");
+  const [activeTab, setActiveTab] = useState("overview");
   const notify = useErpToast();
   const { invalidate } = useErpCache();
 
@@ -76,7 +77,6 @@ export default function StudentDetailsPage({ params }) {
       )}
       {student && (
         <main className="student-details student-profile-page">
-          <CodingForKidsSemesterPanel student={student} courses={courses} semesterBusy={semesterBusy} onUpdateSemester={updateCfkSemester} />
           <CodingForKidsIcardDialog
             open={icardDialogOpen}
             student={student}
@@ -104,34 +104,56 @@ export default function StudentDetailsPage({ params }) {
             photoUploading={photoUploading}
           />
           <StudentProfileHero student={student} uploadStudentPhoto={uploadStudentPhoto} photoUploading={photoUploading} />
-          <StudentTransitionPanel
-            student={student} batches={batches} history={history} setHistory={setHistory}
-            editForm={editForm} setEditForm={setEditForm} setStudent={setStudent}
-            transition={transition} setTransition={setTransition}
-            transitioning={transitioning} setTransitioning={setTransitioning} setMessage={setMessage}
-          />
-          <StudentContactHistory contactLogs={contactLogs} />
-          <StudentSummaryCards fee={fee} attendance={attendance} student={student} />
-          <StudentPersonalDetails student={student} />
-          <StudentAcademicDetails student={student} />
-          <StudentFeeWorkspace
-            student={student}
-            fee={fee}
-            value={value}
-            feeWorkspaceOpen={feeWorkspaceOpen}
-            setFeeWorkspaceOpen={setFeeWorkspaceOpen}
-            feeForm={feeForm}
-            setFeeForm={setFeeForm}
-            paymentItems={paymentItems}
-            setPaymentItems={setPaymentItems}
-            saveFees={saveFees}
-            proofUploading={proofUploading}
-            uploadPaymentProof={uploadPaymentProof}
-            printBill={printBill}
-          />
-          <StudentUnifiedFeeLedger student={student} />
-          <StudentAttendanceSection attendance={attendance} attForm={attForm} setAttForm={setAttForm} saveAttendance={saveAttendance} />
-          <StudentQualificationSection student={student} />
+          <nav className="student-profile-tabs" aria-label="Student profile sections">
+            {[
+              ["overview", "Overview"],
+              ["courses-fees", "Courses & Fees"],
+              ["attendance", "Attendance"],
+              ["batch-history", "Batch History"],
+              ["contact-log", "Contact Log"],
+            ].map(([key, label]) => (
+              <button key={key} type="button" className={activeTab === key ? "active" : ""} aria-current={activeTab === key ? "page" : undefined} onClick={() => setActiveTab(key)}>{label}</button>
+            ))}
+          </nav>
+          <div className="student-profile-tab-panel" hidden={activeTab !== "overview"}>
+            <StudentSummaryCards fee={fee} attendance={attendance} student={student} />
+            <StudentPersonalDetails student={student} />
+            <StudentQualificationSection student={student} />
+          </div>
+          <div className="student-profile-tab-panel" hidden={activeTab !== "courses-fees"}>
+            <CodingForKidsSemesterPanel student={student} courses={courses} semesterBusy={semesterBusy} onUpdateSemester={updateCfkSemester} />
+            <StudentAcademicDetails student={student} />
+            <StudentFeeWorkspace
+              student={student}
+              fee={fee}
+              value={value}
+              feeWorkspaceOpen={feeWorkspaceOpen}
+              setFeeWorkspaceOpen={setFeeWorkspaceOpen}
+              feeForm={feeForm}
+              setFeeForm={setFeeForm}
+              paymentItems={paymentItems}
+              setPaymentItems={setPaymentItems}
+              saveFees={saveFees}
+              proofUploading={proofUploading}
+              uploadPaymentProof={uploadPaymentProof}
+              printBill={printBill}
+            />
+            <StudentUnifiedFeeLedger student={student} />
+          </div>
+          <div className="student-profile-tab-panel" hidden={activeTab !== "attendance"}>
+            <StudentAttendanceSection attendance={attendance} attForm={attForm} setAttForm={setAttForm} saveAttendance={saveAttendance} />
+          </div>
+          <div className="student-profile-tab-panel" hidden={activeTab !== "batch-history"}>
+            <StudentTransitionPanel
+              student={student} batches={batches} history={history} setHistory={setHistory}
+              editForm={editForm} setEditForm={setEditForm} setStudent={setStudent}
+              transition={transition} setTransition={setTransition}
+              transitioning={transitioning} setTransitioning={setTransitioning} setMessage={setMessage}
+            />
+          </div>
+          <div className="student-profile-tab-panel" hidden={activeTab !== "contact-log"}>
+            <StudentContactHistory contactLogs={contactLogs} />
+          </div>
           {message && <div className="success-msg student-profile-feedback" role="status" style={{ position: "fixed", top: 18, right: 18, zIndex: 1200, maxWidth: "min(420px, calc(100vw - 32px))" }}>{message}</div>}
         </main>
       )}
