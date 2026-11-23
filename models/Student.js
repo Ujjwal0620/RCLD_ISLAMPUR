@@ -72,6 +72,7 @@ const StudentSchema = new mongoose.Schema({
   signatureApplicant: String,
   signatureUrl: String,
   photoUrl: String,
+  hasPhoto: { type: Boolean, default: undefined },
   idCardNo: String, // Legacy compatibility for existing ID-card templates and records.
   idCardNumber: { type: String, default: null, trim: true },
   isIdDownloaded: { type: Boolean, default: false },
