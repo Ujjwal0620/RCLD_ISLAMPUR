@@ -251,7 +251,7 @@ export async function POST(request) {
     for (const row of worksheet.rows) {
       processed += 1;
       try {
-      if ([row.totalFee, row.discount, row.paidAmount].some(value => value !== null && value < 0)) {
+      if ([row.totalFee, row.discount, row.paidAmount, row.dueAmount].some(value => value !== null && value < 0)) {
         unmatchedRows.push({ row: row.rowNo, studentId: row.studentId, course: row.courseRaw, reason: "Fee, discount and payment amounts cannot be negative." });
         continue;
       }
@@ -295,7 +295,7 @@ export async function POST(request) {
             configured: true
           },
           installments: [],
-          summary: { totalDue: Number(course.fee || 0), totalPaid: 0, balanceDue: Number(course.fee || 0), feeStatus: "Unpaid" }
+          summary: { totalFee: Number(course.fee || 0), totalDue: Number(course.fee || 0), totalPaid: 0, balanceDue: Number(course.fee || 0), feeStatus: "Unpaid" }
         });
       }
 
@@ -391,6 +391,7 @@ export async function POST(request) {
         await StudentEnrollment.updateOne({ _id: enrollment._id }, {
           $set: {
             "feeConfig.netPayableFee": payable,
+            "summary.totalFee": grossFee,
             "summary.totalDue": payable,
             "summary.totalPaid": totalPaid,
             "summary.balanceDue": balanceDue,
