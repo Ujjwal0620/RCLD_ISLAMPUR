@@ -9,7 +9,7 @@ const dateLabel = value => value && !Number.isNaN(new Date(value).getTime())
 export default function StudentUnifiedFeeLedger({ student }) {
   const [selectedCode, setSelectedCode] = useState("ALL");
   const enrollments = student?.enrollments || [];
-  const receipts = student?.paymentHistory || [];
+  const receipts = useMemo(() => student?.paymentHistory || [], [student?.paymentHistory]);
   const rows = useMemo(() => [...receipts].sort((a, b) =>
     new Date(a.paymentDate || 0).getTime() - new Date(b.paymentDate || 0).getTime()
   ), [receipts]);
