@@ -344,8 +344,7 @@ export async function POST(request) {
           if (!existing) {
             existing = await StudentFeePayment.findOne({
               studentId: master._id, enrollmentId: enrollment._id,
-              sourceSheet: worksheet.sheetName, sourceRowNo: row.rowNo,
-              importBatchKey: String(file.name || "fee-upload").slice(0, 180)
+              sourceSheet: worksheet.sheetName, sourceRowNo: row.rowNo
             }).select("_id").lean();
           }
           if (!existing && row.paymentDate) {
@@ -362,8 +361,7 @@ export async function POST(request) {
             amountPaid: row.paidAmount, paymentDate: row.paymentDate,
             rawPaymentDate: row.paymentDate, paymentMode: row.paymentMode,
             importWarnings: [], allocations: [],
-            sourceSheet: worksheet.sheetName, sourceRowNo: row.rowNo,
-            importBatchKey: String(file.name || "fee-upload").slice(0, 180)
+            sourceSheet: worksheet.sheetName, sourceRowNo: row.rowNo
           };
           if (existing) {
             await StudentFeePayment.updateOne({ _id: existing._id }, { $set: paymentValues });
