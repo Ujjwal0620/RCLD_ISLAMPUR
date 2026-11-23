@@ -9,11 +9,13 @@ const AllocationSchema = new mongoose.Schema({
 const StudentFeePaymentSchema = new mongoose.Schema({
   studentId: { type: mongoose.Schema.Types.ObjectId, ref: "StudentMaster", required: true, index: true },
   enrollmentId: { type: mongoose.Schema.Types.ObjectId, ref: "StudentEnrollment", required: true, index: true },
+  courseId: { type: mongoose.Schema.Types.ObjectId, ref: "Course", default: null, index: true },
   stCode: { type: String, required: true, trim: true },
   financialYear: { type: String, default: "" },
   stNameKey: { type: String, default: "", index: true },
   courseCode: { type: String, default: "" },
   mrNo: { type: String, required: true, trim: true },
+  paymentMode: { type: String, default: "" },
   amountPaid: { type: Number, required: true, min: 0 },
   paymentDate: { type: Date, default: null },
   rawPaymentDate: { type: mongoose.Schema.Types.Mixed, default: null },
@@ -24,9 +26,6 @@ const StudentFeePaymentSchema = new mongoose.Schema({
   importBatchKey: { type: String, default: "" }
 }, { timestamps: true, collection: "student_fee_payments" });
 
-StudentFeePaymentSchema.index(
-  { mrNo: 1, stCode: 1, paymentDate: 1, amountPaid: 1 },
-  { unique: true }
-);
+StudentFeePaymentSchema.index({ studentId: 1, enrollmentId: 1, mrNo: 1, paymentDate: 1, amountPaid: 1 });
 
 export default mongoose.models.StudentFeePayment || mongoose.model("StudentFeePayment", StudentFeePaymentSchema);
