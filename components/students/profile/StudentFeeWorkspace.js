@@ -44,7 +44,9 @@ export default function StudentFeeWorkspace({
     historyScope === "all" || (payment.enrollmentId ? String(payment.enrollmentId) === effectiveEnrollmentId : String(payment.stCode || "") === effectiveStCode)
   ), [paymentHistory, historyScope, effectiveStCode]);
   const totalAcrossSemesters = paymentHistory.reduce((sum, payment) => sum + Number(payment.amountPaid ?? payment.amount ?? 0), 0);
-  const currentSemesterPaid = paymentHistory.filter(payment => String(payment.stCode || "") === currentStCode)
+  const currentSemesterPaid = paymentHistory.filter(payment => payment.enrollmentId
+    ? String(payment.enrollmentId) === String(currentEnrollment?._id || "")
+    : String(payment.stCode || "") === currentStCode)
     .reduce((sum, payment) => sum + Number(payment.amountPaid ?? payment.amount ?? 0), 0);
   const activeEnrollment = currentEnrollment;
   const currentCourseName = activeEnrollment?.courseName
