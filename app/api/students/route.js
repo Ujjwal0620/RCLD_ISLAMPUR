@@ -178,7 +178,7 @@ export async function GET(request) {
     const pageStudentIds = students.map(student => student._id);
     const masterPhotoProfiles = pageStudentIds.length
       ? await StudentMaster.find({ legacyStudentIds: { $in: pageStudentIds } })
-          .select("legacyStudentIds photoUrl stCodes").lean()
+          .select("legacyStudentIds photoUrl stCodes feeSummary").lean()
       : [];
     const masterPhotoByStudentId = new Map();
     for (const profile of masterPhotoProfiles) {
@@ -194,7 +194,8 @@ export async function GET(request) {
           ? `/api/students/photo/${encodeURIComponent(registrationNo)}`
           : ""
       );
-      return { ...student, photoUrl };
+      const feeSummary = profile?.feeSummary || null;
+      return { ...student, photoUrl, feeSummary, dueAmount: feeSummary ? feeSummary.balanceDue : student.dueAmount };
     });
 
     const courses = [...new Set([...DEFAULT_COURSES, ...dbCourses.filter(Boolean)])].sort();
