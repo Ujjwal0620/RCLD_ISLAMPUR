@@ -8,18 +8,19 @@ const dateLabel = value => value && !Number.isNaN(new Date(value).getTime())
 
 export default function StudentUnifiedFeeLedger({ student }) {
   const [selectedCode, setSelectedCode] = useState("ALL");
+  const aggregate = student?.masterProfile?.feeSummary || {};
   const enrollments = student?.enrollments || [];
   const receipts = useMemo(() => student?.paymentHistory || [], [student?.paymentHistory]);
   const rows = useMemo(() => [...receipts].sort((a, b) =>
     new Date(a.paymentDate || 0).getTime() - new Date(b.paymentDate || 0).getTime()
   ), [receipts]);
-  const visibleRows = selectedCode === "ALL" ? rows : rows.filter(row => String(row.stCode || "") === selectedCode);
+  const visibleRows = selectedCode === "ALL" ? rows : rows.filter(row => String(row.enrollmentId || "") === selectedCode || (!row.enrollmentId && String(row.stCode || "") === selectedCode));
   const lifetimePaid = rows.reduce((sum, row) => sum + Number(row.amountPaid || 0), 0);
   const active = enrollments.find(item => String(item._id) === String(student?.activeEnrollmentId || student?.activeEnrollment?._id))
     || enrollments.find(item => item.status === "ACTIVE")
     || student?.activeEnrollment;
   const breakdown = enrollments.map(enrollment => {
-    const items = rows.filter(row => String(row.stCode || "") === String(enrollment.stCode || ""));
+    const items = rows.filter(row => String(row.enrollmentId || "") === String(enrollment._id) || (!row.enrollmentId && String(row.stCode || "") === String(enrollment.stCode || "")));
     return { ...enrollment, subtotal: items.reduce((sum, row) => sum + Number(row.amountPaid || 0), 0), receiptCount: items.length };
   });
   const seenCodes = new Set(breakdown.map(item => String(item.stCode || "")));
@@ -36,11 +37,14 @@ export default function StudentUnifiedFeeLedger({ student }) {
         <div><h2 style={{ margin: 0 }}>Unified Student Fee Ledger</h2><p style={{ margin: "5px 0 0", color: "var(--muted,#778)" }}>All linked semesters, registrations and money receipts</p></div>
         <select aria-label="Filter fee ledger by semester" value={selectedCode} onChange={event => setSelectedCode(event.target.value)} style={{ minHeight: 38, padding: "6px 10px", borderRadius: 8, border: "1px solid var(--border,#ddd)", background: "var(--surface,#fff)", color: "inherit" }}>
           <option value="ALL">All Semesters</option>
-          {breakdown.map(item => <option key={String(item.stCode)} value={String(item.stCode)}>{item.semesterLabel || item.courseCode || "Semester"} · {item.stCode}</option>)}
+          {breakdown.map(item => <option key={String(item._id || item.stCode)} value={String(item._id || item.stCode)}>{item.courseCode || item.semesterLabel || "Course"} · {item.stCode}</option>)}
         </select>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 12, margin: "16px 0" }}>
-        <div className="fee-overview-card fee-paid"><span>Lifetime Paid</span><strong>{money(lifetimePaid)}</strong></div>
+        <div className="fee-overview-card"><span>Total Course Fees</span><strong>{money(aggregate.totalFee)}</strong></div>
+        <div className="fee-overview-card"><span>Total Discount</span><strong>{money(aggregate.discount)}</strong></div>
+        <div className="fee-overview-card fee-paid"><span>Lifetime Paid</span><strong>{money(aggregate.totalPaid ?? lifetimePaid)}</strong></div>
+        <div className="fee-overview-card fee-due"><span>Balance Due Across Courses</span><strong>{money(aggregate.balanceDue)}</strong></div>
         <div className="fee-overview-card"><span>Active Course / St_Code</span><strong style={{ fontSize: 16 }}>{active?.courseCode || active?.semesterLabel || "—"} / {active?.stCode || "—"}</strong></div>
         <div className="fee-overview-card"><span>Total Receipts</span><strong>{rows.length}</strong></div>
       </div>
@@ -48,7 +52,7 @@ export default function StudentUnifiedFeeLedger({ student }) {
       <div style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 680 }}>
           <thead><tr>{["St_Code","Course / Semester","D.O.A.","Status","Subtotal","Receipts"].map(label => <th key={label} style={{ textAlign: "left", padding: 9, borderBottom: "1px solid var(--border,#ddd)" }}>{label}</th>)}</tr></thead>
-          <tbody>{breakdown.map(item => <tr key={String(item._id || item.stCode)} onClick={() => setSelectedCode(String(item.stCode || "ALL"))} style={{ cursor: "pointer" }}>
+          <tbody>{breakdown.map(item => <tr key={String(item._id || item.stCode)} onClick={() => setSelectedCode(String(item._id || item.stCode || "ALL"))} style={{ cursor: "pointer" }}>
             <td style={{ padding: 9, borderBottom: "1px solid var(--border,#eee)" }}>{item.stCode || "—"}</td>
             <td style={{ padding: 9, borderBottom: "1px solid var(--border,#eee)" }}>{item.courseCode || item.semesterLabel || "LEGACY"}</td>
             <td style={{ padding: 9, borderBottom: "1px solid var(--border,#eee)" }}>{dateLabel(item.admissionDate)}</td>
