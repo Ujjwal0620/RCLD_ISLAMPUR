@@ -114,7 +114,7 @@ export async function GET(_request, { params }) {
           .select("_id photoUrl stCodes legacyStudentIds").lean();
       }
       cloudinaryUrl = safeCloudinaryUrl(student?.photoUrl) || safeCloudinaryUrl(master?.photoUrl);
-      const explicitlyHasNoPhoto = student?.hasPhoto === false && master?.hasPhoto === false;
+      const explicitlyHasNoPhoto = Boolean((student && student.hasPhoto === false) || (master && master.hasPhoto === false));
       if (!cloudinaryUrl && explicitlyHasNoPhoto) {
         return NextResponse.json({ error: "Student photograph is not available.", registrationNo: code }, {
           status: 404,
