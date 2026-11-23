@@ -62,7 +62,7 @@ const numberValue = value => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 const normalizePhone = value => clean(value).replace(/\D/g, "").slice(-10);
-const feeStatus = (payable, paid) => paid >= payable && payable > 0 ? "Paid" : paid > 0 ? "Partial" : "Unpaid";
+const feeStatus = (payable, paid) => payable <= 0 || paid >= payable ? "Paid" : paid > 0 ? "Partial" : "Unpaid";
 const financialYear = date => {
   if (!date) return "";
   const year = date.getUTCFullYear();
