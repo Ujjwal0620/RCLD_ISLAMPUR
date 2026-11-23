@@ -15,6 +15,8 @@ const PHOTO_DIRECTORIES = [
   path.join(process.cwd(), "public", "assets", "id card coding images"),
   path.join(process.cwd(), "public", "assets", "uploaded-images"),
 ];
+const PHOTO_LOOKUP_TTL_MS = 30 * 60 * 1000;
+const photoLookupCache = new Map();
 const EXTENSIONS = [
   [".jpg", "image/jpeg"], [".jpeg", "image/jpeg"],
   [".png", "image/png"], [".webp", "image/webp"],
@@ -37,6 +39,14 @@ function safeCloudinaryUrl(value) {
 }
 async function findCloudinaryPhoto(client, code) {
   if (!client) return "";
+  const cached = photoLookupCache.get(code);
+  if (cached && cached.expiresAt > Date.now()) return cached.url || "";
+  if (cached) photoLookupCache.delete(code);
+  // De-duplicate concurrent lookups and cache misses so a missing photo cannot
+  // trigger repeated slow Cloudinary Admin API requests on every page render.
+  const pending = photoLookupCache.get("pending:" + code);
+  if (pending?.promise) return pending.promise;
+  const lookupPromise = (async () => {
   // Bulk uploads use this exact Cloudinary public ID convention.
   for (const publicId of [
     "rcld-islampur/students/" + code,
@@ -47,12 +57,25 @@ async function findCloudinaryPhoto(client, code) {
       const url = safeCloudinaryUrl(resource?.secure_url);
       if (url) return url;
     } catch (error) {
+      // Never log Cloudinary error/request objects: they can contain API credentials.
       if (![404, "not found"].includes(error?.http_code) && !/not found|unknown api/i.test(String(error?.message || ""))) {
-        console.warn("[student-photo] Cloudinary lookup:", error?.message || error);
+        console.warn("[student-photo] Cloudinary lookup failed (details suppressed).");
       }
     }
   }
   return "";
+  })();
+  photoLookupCache.set("pending:" + code, { promise: lookupPromise, expiresAt: Date.now() + PHOTO_LOOKUP_TTL_MS });
+  try {
+    const url = await lookupPromise;
+    photoLookupCache.delete("pending:" + code);
+    photoLookupCache.set(code, { url, expiresAt: Date.now() + (url ? 60 * 60 * 1000 : PHOTO_LOOKUP_TTL_MS) });
+    return url;
+  } catch (error) {
+    photoLookupCache.delete("pending:" + code);
+    photoLookupCache.set(code, { url: "", expiresAt: Date.now() + PHOTO_LOOKUP_TTL_MS });
+    return "";
+  }
 }
 
 export async function GET(_request, { params }) {
@@ -78,8 +101,8 @@ export async function GET(_request, { params }) {
             { regnNo: code }, { enrollmentNo: code },
             ...(numericCode === null ? [] : [{ regnNo: numericCode }, { enrollmentNo: numericCode }]),
           ],
-        }).select("_id photoUrl regnNo enrollmentNo").lean(),
-        StudentMaster.findOne({ stCodes: code }).select("_id photoUrl stCodes legacyStudentIds").lean(),
+        }).select("_id photoUrl hasPhoto regnNo enrollmentNo").lean(),
+        StudentMaster.findOne({ stCodes: code }).select("_id photoUrl hasPhoto stCodes legacyStudentIds").lean(),
         StudentEnrollment.findOne({ stCode: code }).select("studentId legacyStudentId stCode").lean(),
       ]);
 
@@ -91,8 +114,15 @@ export async function GET(_request, { params }) {
           .select("_id photoUrl stCodes legacyStudentIds").lean();
       }
       cloudinaryUrl = safeCloudinaryUrl(student?.photoUrl) || safeCloudinaryUrl(master?.photoUrl);
+      const explicitlyHasNoPhoto = student?.hasPhoto === false && master?.hasPhoto === false;
+      if (!cloudinaryUrl && explicitlyHasNoPhoto) {
+        return NextResponse.json({ error: "Student photograph is not available.", registrationNo: code }, {
+          status: 404,
+          headers: { "Cache-Control": "public, max-age=1800, stale-while-revalidate=86400" },
+        });
+      }
     } catch (databaseError) {
-      console.warn("[student-photo] Database lookup unavailable:", databaseError?.message || databaseError);
+      console.warn("[student-photo] Database lookup unavailable (details suppressed).");
     }
 
     // Cloudinary lookup is independent of MongoDB availability. This is important
@@ -146,11 +176,11 @@ export async function GET(_request, { params }) {
     }
 
     return NextResponse.json({
-      error: "Photo not found. Upload this registration-number image through Students > Bulk Upload Photos.",
+      error: "Student photograph is not available.",
       registrationNo: code,
-    }, { status: 404 });
+    }, { status: 404, headers: { "Cache-Control": "public, max-age=1800, stale-while-revalidate=86400" } });
   } catch (error) {
-    console.error("[student-photo]", error);
+    console.error("[student-photo] Request failed (details suppressed).");
     return NextResponse.json({ error: "Unable to load student photograph." }, { status: 500 });
   }
 }
