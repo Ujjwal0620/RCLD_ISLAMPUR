@@ -8,6 +8,7 @@ import Course from "@/models/Course";
 import { resolveCourseFeeConfig } from "@/lib/student-import/course-fee-rules";
 import { reconcileStudentFees } from "@/lib/student-import/reconcile-student-fees";
 import { reconcileStudentFeesOnly } from "@/lib/student-import/reconcile-student-fees-only";
+import { linkImportedStudentRecords } from "@/lib/student-import/import-payment-sheet";
 
 export const runtime = "nodejs";
 
@@ -442,6 +443,7 @@ export async function POST(request) {
     }
 
     const operations = []; const operationRows = [];
+    const studentIdsToLink = new Set();
     let imported = 0, enriched = 0, unchanged = 0, skippedNew = 0;
     const courseCodes = [...new Set(uniqueRows.map(row => row.course).filter(Boolean))];
     const baseCodes = [...new Set(courseCodes.map(code => code.split("-")[0]))];
@@ -456,6 +458,8 @@ export async function POST(request) {
       const payload = asStudentPayload(row, courseInfo, sourceName);
       if (existing) {
         if ((existing.applicantName || existing.name) && nameSimilarity(existing.applicantName || existing.name, row.name) < 0.75) { warnings.push({ row: row.rowNo, Regn_No: row.regnNo, reason: "Registration number matched but student name did not; existing student left unchanged." }); continue; }
+        // Link even unchanged legacy records to their permanent identity.
+        studentIdsToLink.add(String(existing._id));
         const missing = buildMissingFields(existing, payload);
         if (!Object.keys(missing).length) { unchanged += 1; continue; }
         operations.push({ updateOne: { filter: buildMissingOnlyFilter(existing, missing), update: { $set: missing }, upsert: false } });
@@ -474,7 +478,9 @@ export async function POST(request) {
       try {
         const write = await Student.bulkWrite(chunk, { ordered: false });
         imported += Number(write.upsertedCount || 0); enriched += Number(write.modifiedCount || 0);
-        for (const [index, value] of Object.entries(write.upsertedIds || {})) if (operationRows[offset + Number(index)]?.kind === "new") newStudentIds.push(value._id || value);
+        for (const [index, value] of Object.entries(write.upsertedIds || {})) {
+          if (operationRows[offset + Number(index)]?.kind === "new") newStudentIds.push(value._id || value);
+        }
       } catch (writeError) {
         const failed = new Map((writeError.writeErrors || []).map(item => [item.index, item]));
         const result = writeError.result || writeError;
@@ -486,7 +492,13 @@ export async function POST(request) {
         }
       }
     }
-    const importedStudents = newStudentIds.length ? await Student.find({ _id: { $in: newStudentIds } }).lean() : [];
+    for (const id of newStudentIds) studentIdsToLink.add(String(id));
+    const studentsToLink = studentIdsToLink.size
+      ? await Student.find({ _id: { $in: [...studentIdsToLink].map(id => new mongoose.Types.ObjectId(id)) } }).lean()
+      : [];
+    const importedStudents = newStudentIds.length
+      ? studentsToLink.filter(student => newStudentIds.some(id => String(id) === String(student._id)))
+      : [];
     const feeConfigCache = new Map();
     const feeOperations = [];
     for (const student of importedStudents) {
@@ -513,10 +525,17 @@ export async function POST(request) {
     for (let offset = 0; offset < feeOperations.length; offset += 500) {
       await StudentFee.bulkWrite(feeOperations.slice(offset, offset + 500), { ordered: false });
     }
-    if (importedStudents.length) {
-      try { await linkStudentRecordsSafely(importedStudents); }
-      catch (linkError) {
-        errors.push({ row: null, Regn_No: "", reason: "New students were saved, but academic enrollment linking needs review: " + linkError.message });
+    if (studentsToLink.length) {
+      try {
+        const linkResult = await linkImportedStudentRecords(studentsToLink);
+        if (linkResult?.linked !== undefined) {
+          console.info("[student-bulk-import] linked student records:", linkResult.linked);
+        }
+      } catch (linkError) {
+        errors.push({
+          row: null, Regn_No: "",
+          reason: "Student data was imported, but profile/course linking needs review: " + linkError.message
+        });
       }
     }
     // When the workbook also contains the fee worksheet, process it with the same
