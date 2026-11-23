@@ -149,7 +149,7 @@ export default function StudentFeeWorkspace({
                             <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)", fontWeight: 700 }}>₹{Number(payment.amountPaid ?? payment.amount ?? 0).toLocaleString("en-IN")}</td>
                             <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{payment.installmentApplied || payment.paymentType || "Legacy receipt / not allocated"}</td>
                           </tr>
-                        )) : <tr><td colSpan={6} style={{ padding: 16, textAlign: "center", color: "var(--muted,#7b8494)" }}>No payment receipts are linked to this student profile yet.</td></tr>}
+                        )) : <tr><td colSpan={7} style={{ padding: 16, textAlign: "center", color: "var(--muted,#7b8494)" }}>No payment receipts are linked to this student profile yet.</td></tr>}
                       </tbody>
                     </table>
                   </div>
