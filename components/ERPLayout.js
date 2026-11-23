@@ -62,6 +62,7 @@ export default function ERPLayout({ active, children, hideAssistant = true }) {
   const [commandOpen,setCommandOpen]=useState(false);
   const [commandLoading,setCommandLoading]=useState(false);
   const commandInputRef=useRef(null);
+  const authLoadStarted = useRef(false);
 
   useEffect(() => {
     const savedTheme = window.localStorage.getItem("rcld-erp-theme");
@@ -138,6 +139,8 @@ export default function ERPLayout({ active, children, hideAssistant = true }) {
   };
 
   useEffect(() => {
+    if (authLoadStarted.current) return;
+    authLoadStarted.current = true;
     let mounted = true;
     fetch("/api/auth/me", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
