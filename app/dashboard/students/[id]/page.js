@@ -8,6 +8,7 @@ import CodingForKidsSemesterPanel from "@/components/students/profile/CodingForK
 import CodingForKidsIcardDialog from "@/components/students/profile/CodingForKidsIcardDialog";
 import StudentEditPanel from "@/components/students/profile/StudentEditPanel";
 import StudentFeeWorkspace from "@/components/students/profile/StudentFeeWorkspace";
+import StudentUnifiedFeeLedger from "@/components/students/profile/StudentUnifiedFeeLedger";
 import StudentAttendanceSection from "@/components/students/profile/StudentAttendanceSection";
 import StudentQualificationSection from "@/components/students/profile/StudentQualificationSection";
 import StudentTransitionPanel from "@/components/students/profile/StudentTransitionPanel";
@@ -118,6 +119,7 @@ export default function StudentDetailsPage({ params }) {
             uploadPaymentProof={uploadPaymentProof}
             printBill={printBill}
           />
+          <StudentUnifiedFeeLedger student={student} />
           <StudentAttendanceSection attendance={attendance} attForm={attForm} setAttForm={setAttForm} saveAttendance={saveAttendance} />
           <StudentQualificationSection student={student} />
           {message && <div className="success-msg student-profile-feedback" role="status" style={{ position: "fixed", top: 18, right: 18, zIndex: 1200, maxWidth: "min(420px, calc(100vw - 32px))" }}>{message}</div>}
