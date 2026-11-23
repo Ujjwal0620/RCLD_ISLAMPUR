@@ -24,9 +24,10 @@ export async function PATCH(req,{params}){
   try{
     await connectMongoDB();
     const id=await idOf(params),body=await req.json();
-    const allowed=["code","name","category","durationMonths","classesPerWeek","fee","admissionFee","description","requiredSkills","active"];
+    const allowed=["code","name","category","durationMonths","classesPerWeek","fee","admissionFee","description","aliases","requiredSkills","active"];
     const update={};for(const k of allowed)if(body[k]!==undefined)update[k]=body[k];
     if(update.code)update.code=String(update.code).trim().toUpperCase();
+    if(update.aliases!==undefined)update.aliases=Array.isArray(update.aliases)?update.aliases.map(value=>String(value).trim()).filter(Boolean):[];
     for(const k of ["durationMonths","classesPerWeek","fee","admissionFee"])if(update[k]!==undefined)update[k]=Number(update[k]);
 
     const before=await Course.findById(id).lean();
