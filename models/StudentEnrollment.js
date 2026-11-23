@@ -46,6 +46,7 @@ const StudentEnrollmentSchema = new mongoose.Schema({
   },
   installments: { type: [InstallmentSchema], default: [] },
   summary: {
+    totalFee: { type: Number, default: 0 },
     totalDue: { type: Number, default: 0 },
     totalPaid: { type: Number, default: 0 },
     balanceDue: { type: Number, default: 0 },
