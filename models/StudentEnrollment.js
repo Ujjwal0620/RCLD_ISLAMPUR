@@ -20,6 +20,7 @@ const InstallmentSchema = new mongoose.Schema({
 
 const StudentEnrollmentSchema = new mongoose.Schema({
   studentId: { type: mongoose.Schema.Types.ObjectId, ref: "StudentMaster", required: true, index: true },
+  courseId: { type: mongoose.Schema.Types.ObjectId, ref: "Course", default: null, index: true },
   legacyStudentId: { type: mongoose.Schema.Types.ObjectId, ref: "Student", default: null, index: true },
   stCode: { type: String, required: true, trim: true },
   normalizedFullName: { type: String, required: true, index: true },
@@ -48,13 +49,14 @@ const StudentEnrollmentSchema = new mongoose.Schema({
     totalDue: { type: Number, default: 0 },
     totalPaid: { type: Number, default: 0 },
     balanceDue: { type: Number, default: 0 },
-    nextDueDate: { type: Date, default: null }
+    nextDueDate: { type: Date, default: null },
+    feeStatus: { type: String, enum: ["Paid", "Partial", "Unpaid"], default: "Unpaid" }
   },
   sourceRowNo: Number,
   importBatchKey: { type: String, default: "" }
 }, { timestamps: true, collection: "student_enrollments" });
 
-StudentEnrollmentSchema.index({ studentId: 1, stCode: 1, normalizedFullName: 1 }, { unique: true });
+StudentEnrollmentSchema.index({ studentId: 1, stCode: 1, normalizedFullName: 1, courseCode: 1 }, { unique: true, name: "student_course_enrollment_unique" });
 StudentEnrollmentSchema.index({ studentId: 1, admissionDate: 1 });
 
 export default mongoose.models.StudentEnrollment || mongoose.model("StudentEnrollment", StudentEnrollmentSchema);
