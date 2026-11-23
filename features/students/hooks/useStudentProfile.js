@@ -21,7 +21,7 @@ export default function useStudentProfile(params) {
       admissionFee: "",
       registrationFee: "",
       amount: "",
-      date: new Date().toISOString().slice(0, 10),
+      date: "",
       method: "Cash",
       reference: "",
       utrNumber: "",
@@ -32,15 +32,12 @@ export default function useStudentProfile(params) {
     });
     const [paymentItems, setPaymentItems] = useState(() => [
       { id: "payment-line-1", purpose: "Course Fee", amount: "", installmentMonth: "" },
-      ...(new Date().getDate() > 10
-        ? [{ id: "late-fine-initial", purpose: "Late Fine", amount: "50", installmentMonth: "" }]
-        : []),
     ]);
     const [proofUploading, setProofUploading] = useState(false);
     const [photoUploading, setPhotoUploading] = useState(false);
     const [feeWorkspaceOpen, setFeeWorkspaceOpen] = useState(false);
     const [attForm, setAttForm] = useState({
-      date: new Date().toISOString().slice(0, 10),
+      date: "",
       status: "Present",
       subject: "",
       batch: "",
@@ -56,6 +53,17 @@ export default function useStudentProfile(params) {
     const [icardDialogOpen, setIcardDialogOpen] = useState(false);
     const [semesterBusy, setSemesterBusy] = useState(false);
     const initialLoadStarted = useRef(false);
+
+    useEffect(() => {
+      const today = new Date().toISOString().slice(0, 10);
+      setFeeForm(current => ({ ...current, date: current.date || today }));
+      setAttForm(current => ({ ...current, date: current.date || today }));
+      if (new Date().getDate() > 10) {
+        setPaymentItems(current => current.some(item => item.id === "late-fine-initial")
+          ? current
+          : [...current, { id: "late-fine-initial", purpose: "Late Fine", amount: "50", installmentMonth: "" }]);
+      }
+    }, []);
   
     async function loadOperational(id) {
       const [fr, ar] = await Promise.all([
