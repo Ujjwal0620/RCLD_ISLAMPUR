@@ -16,12 +16,13 @@ function downloadTemplate() {
   XLSX.writeFile(workbook, "RCLD_Student_Import_Template.xlsx");
 }
 
-async function sendFile(file, mode, importMode = "fill_and_import", sheetName = "") {
+async function sendFile(file, mode, importMode = "fill_and_import", sheetName = "", feeOnly = false) {
   const form = new FormData();
   form.append("file", file);
   form.append("mode", mode);
   form.append("importMode", importMode);
   if (sheetName) form.append("sheetName", sheetName);
+  if (feeOnly) form.append("feeOnly", "true");
   const response = await fetch("/api/students/bulk-import", { method: "POST", body: form });
   const data = await response.json();
   if (!response.ok) throw new Error(data.detail || data.error || "Student import request failed.");
@@ -55,6 +56,22 @@ export default function BulkImportPage() {
     }
   }
 
+  async function reconcileFeesOnly() {
+    if (!file) return;
+    if (!window.confirm("Reconcile fee receipts from " + file.name + " only? Student personal details, admissions, batches, attendance and ID-card data will not be imported or overwritten.")) return;
+    setBusy(true);
+    setError("");
+    setPreview(null);
+    try {
+      const data = await sendFile(file, "import", importMode, "", true);
+      setResult(data);
+    } catch (err) {
+      setError(err.message || "Unable to reconcile fee receipts.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function importStudents() {
     if (!file || !preview?.validRows) return;
     const verb = importMode === "update_existing_only"
@@ -85,7 +102,7 @@ export default function BulkImportPage() {
         <div>
           <span className="eyebrow">RCLD ADMISSION WORKBOOK</span>
           <h2>Import student records from Excel or CSV</h2>
-          <p>Detects student-data worksheets automatically. Payment-receipt sheets are excluded from this student import. Existing student records are enriched only where fields are missing.</p>
+          <p>Detects student-data worksheets automatically. Workbooks may contain both Student Data and fee-receipt sheets. You can import student rows normally or run a fee-only reconciliation that leaves student and non-fee records untouched.</p>
         </div>
         <button className="ghost-btn" type="button" onClick={downloadTemplate}><Download size={16} /> Download Template</button>
       </section>
@@ -105,6 +122,14 @@ export default function BulkImportPage() {
             }} />
           </label>
           {file && <p className="form-help" style={{ margin: "10px 0 16px" }}>{file.name} · {(file.size / 1024 / 1024).toFixed(2)} MB</p>}
+          {file && (
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
+              <button className="ghost-btn" type="button" disabled={busy || previewing} onClick={reconcileFeesOnly}>
+                <Upload size={16} /> {busy ? "Processing…" : "Reconcile Fees Only"}
+              </button>
+              <small className="form-help" style={{ alignSelf: "center" }}>Use this when re-uploading an existing workbook to update receipts without changing student records.</small>
+            </div>
+          )}
           {preview?.availableSheets?.length > 1 && (
             <label className="form-field" style={{ marginTop: 18, maxWidth: 420 }}>
               <span>Student worksheet</span>
@@ -185,7 +210,15 @@ export default function BulkImportPage() {
         <section className="panel" style={{ marginTop: 18 }}>
           <div className="panel-head"><div><h3>Import summary</h3><p>{result.message}</p></div><CheckCircle2 size={22} /></div>
           <div style={{ padding: 20 }}>
-            <div className="student-summary-grid">
+            {result.feeImport && (
+              <div className="student-summary-grid" style={{ marginBottom: 16 }}>
+                <div className="summary-card"><span>Receipts Linked</span><strong>{result.feeImport.linkedReceipts ?? 0}</strong></div>
+                <div className="summary-card"><span>Duplicate Receipts</span><strong>{result.feeImport.duplicates ?? 0}</strong></div>
+                <div className="summary-card"><span>Legacy Receipts Linked</span><strong>{result.feeImport.legacyReceiptsLinked ?? 0}</strong></div>
+                <div className="summary-card"><span>Ambiguous Receipts for Review</span><strong>{result.feeImport.ambiguousReceiptsFlagged ?? 0}</strong></div>
+              </div>
+            )}
+            {!result.feeOnly && <div className="student-summary-grid">
               <div className="summary-card"><span>Existing Students Enriched (missing fields filled)</span><strong>{result.existingStudentsEnriched ?? 0}</strong></div>
               <div className="summary-card"><span>Existing Students Unchanged (already complete)</span><strong>{result.existingStudentsUnchanged ?? 0}</strong></div>
               {result.importMode === "update_existing_only" ? (
@@ -194,10 +227,11 @@ export default function BulkImportPage() {
                 <div className="summary-card"><span>New Students Created</span><strong>{result.newStudentsCreated ?? 0}</strong></div>
               )}
               <div className="summary-card"><span>Warnings / Duplicate IDs Flagged</span><strong>{result.warningCount ?? result.warnings?.length ?? 0}</strong></div>
-            </div>
+            </div>}
+
             {result.warnings?.length > 0 && <details style={{ marginTop: 18 }} open><summary><b>Warnings / Duplicate IDs Flagged ({result.warningCount ?? result.warnings.length})</b></summary><div className="form-help" style={{ marginTop: 10 }}>{result.warnings.map((item, index) => <div key={index}>Row {item.row ?? "—"} · Regn_No {item.Regn_No || "—"}: {item.reason}</div>)}</div><button className="ghost-btn" type="button" onClick={() => { const ws = XLSX.utils.json_to_sheet(result.warnings); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Import Warnings"); XLSX.writeFile(wb, "RCLD_Student_Import_Warnings.xlsx"); }}><Download size={15} /> Download warning details</button></details>}
             {result.errors?.length > 0 && <><h4 style={{ marginTop: 18 }}>Row errors ({result.errors.length})</h4><div className="error-msg">{result.errors.slice(0, 100).map((item, index) => <div key={index}>Row {item.row ?? "—"} · Regn_No {item.Regn_No || "—"}: {item.reason}</div>)}</div></>}
-            <p className="form-help" style={{ marginTop: 14 }}>Student rows are saved independently. Review any warnings or row errors before using the imported records.</p>
+            <p className="form-help" style={{ marginTop: 14 }}>{result.feeOnly ? "Fee-only reconciliation did not import or overwrite student profile fields." : "Student rows are saved independently. Review any warnings or row errors before using the imported records."}</p>
             <a className="primary-btn" href="/dashboard/students">Open Student Directory</a>
           </div>
         </section>
