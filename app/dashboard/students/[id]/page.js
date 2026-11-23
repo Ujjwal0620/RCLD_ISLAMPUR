@@ -20,7 +20,8 @@ import useStudentProfile from "@/features/students/hooks/useStudentProfile";
 import indiaLocations from "@/lib/indiaStatesDistricts.json";
 import { isIcardEligible } from "@/features/students/utils/studentProfile";
 import { formatDisplayValue as value } from "@/lib/formatters";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useErpCache, useErpToast } from "@/components/providers/ERPUIProvider";
 
 export default function StudentDetailsPage({ params }) {
   const {
@@ -34,6 +35,15 @@ export default function StudentDetailsPage({ params }) {
     saveAttendance,
   } = useStudentProfile(params);
   const [icardOutputMode, setIcardOutputMode] = useState("print");
+  const notify = useErpToast();
+  const { invalidate } = useErpCache();
+
+  useEffect(() => {
+    if (!message) return;
+    const failed = /unable|failed|error|cannot|could not/i.test(message);
+    notify(message, failed ? "error" : "success");
+    if (!failed) invalidate(["students:", "student-detail:", "student-fees:", "dashboard-stats", "batches:"]);
+  }, [message, notify, invalidate]);
 
   return (
     <ERPLayout active="/dashboard/students">
