@@ -3,12 +3,15 @@
 import { useState } from "react";
 import { ArrowLeft, Upload, FileSpreadsheet, CheckCircle2, AlertTriangle } from "lucide-react";
 import ERPLayout from "@/components/ERPLayout";
+import { useErpCache, useErpToast } from "@/components/providers/ERPUIProvider";
 
 export default function StudentFeeImportPage() {
   const [file, setFile] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [report, setReport] = useState(null);
+  const notify = useErpToast();
+  const { invalidate } = useErpCache();
 
   async function upload() {
     if (!file || busy) return;
@@ -22,8 +25,11 @@ export default function StudentFeeImportPage() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.detail || data.error || "Fee import failed.");
       setReport(data);
+      notify("Fee workbook imported. Student and course fee summaries are ready.", "success");
+      invalidate(["students:", "student-detail:", "student-fees:", "dashboard-stats", "batches:"]);
     } catch (err) {
       setError(err.message || "Unable to upload fee workbook.");
+      notify(err.message || "Unable to upload fee workbook.", "error");
     } finally {
       setBusy(false);
     }
