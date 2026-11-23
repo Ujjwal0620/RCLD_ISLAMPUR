@@ -1333,3 +1333,16 @@ html[data-theme="dark"] .erp-command-search { background: #202d41; border-color:
 html[data-theme="dark"] .student-profile-page .student-detail-field,
 html[data-theme="dark"] .student-profile-page .fee-overview-card { background: #202d41 !important; border-color: #344258 !important; }
 html[data-theme="dark"] .erp-toast { background: #1b2739; border-color: #344258; color: #e8edf5; }
+
+
+/* Student profile navigation: stateful client tabs keep all panel state mounted. */
+.student-profile-tabs { display:flex; align-items:center; gap:5px; margin:17px 0 14px; padding:5px; overflow-x:auto; border:1px solid #e5eaf1; border-radius:11px; background:#fff; scrollbar-width:thin; }
+.student-profile-tabs button { flex:0 0 auto; min-height:36px; padding:0 14px; border:1px solid transparent; border-radius:8px; background:transparent; color:#667085; font-size:11px; font-weight:700; cursor:pointer; transition:background .15s ease,color .15s ease,border-color .15s ease; }
+.student-profile-tabs button:hover { background:#f5f6ff; color:#4338ca; }
+.student-profile-tabs button.active { border-color:#e0e7ff; background:#eef2ff; color:#4338ca; box-shadow:0 1px 2px rgba(15,23,42,.04); }
+.student-profile-tab-panel[hidden] { display:none !important; }
+.student-profile-tab-panel { min-width:0; animation:student-tab-in .16s ease-out; }
+@keyframes student-tab-in { from { opacity:.65; transform:translateY(3px); } to { opacity:1; transform:translateY(0); } }
+html[data-theme="dark"] .student-profile-tabs { border-color:#344258; background:#1b2739; }
+html[data-theme="dark"] .student-profile-tabs button { color:#a0aec0; }
+html[data-theme="dark"] .student-profile-tabs button.active { border-color:#4b5c82; background:#2a3854; color:#c7d2fe; }
