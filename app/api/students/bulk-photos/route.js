@@ -151,13 +151,13 @@ export async function POST(request) {
         const uploaded = await uploadToCloudinary(cloudinary.client, buffer, registrationNo, extension);
         const studentIds = targets.students.map(item => item._id);
         const studentUpdate = studentIds.length
-          ? await Student.updateMany({ _id: { $in: studentIds } }, { $set: { photoUrl: uploaded.secure_url } })
+          ? await Student.updateMany({ _id: { $in: studentIds } }, { $set: { photoUrl: uploaded.secure_url, hasPhoto: true } })
           : { matchedCount: 0, modifiedCount: 0 };
         let masterUpdate = { matchedCount: 0, modifiedCount: 0 };
         if (targets.master?._id) {
           masterUpdate = await StudentMaster.updateOne(
             { _id: targets.master._id },
-            { $set: { photoUrl: uploaded.secure_url }, $addToSet: { stCodes: registrationNo } }
+            { $set: { photoUrl: uploaded.secure_url, hasPhoto: true }, $addToSet: { stCodes: registrationNo } }
           );
         }
 
