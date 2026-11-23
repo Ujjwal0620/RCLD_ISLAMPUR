@@ -73,7 +73,7 @@ export default function BulkImportPage() {
     <ERPLayout active="/dashboard/students">
       <header className="topbar">
         <div><div className="crumb">Students / Bulk Import</div><h1>Bulk Student Import</h1></div>
-        <a className="ghost-btn" href="/dashboard/students"><ArrowLeft size={16} /> Back</a>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><a className="ghost-btn" href="/dashboard/students/fee-import"><FileSpreadsheet size={16} /> Excel Fee Mapping</a><a className="ghost-btn" href="/dashboard/students"><ArrowLeft size={16} /> Back</a></div>
       </header>
 
       <section className="welcome">
