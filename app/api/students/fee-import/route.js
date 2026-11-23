@@ -246,7 +246,6 @@ export async function POST(request) {
 
     const unmatchedRows = [];
     const studentCourseCounts = new Map();
-    const touchedEnrollments = new Map();
     let createdPayments = 0, updatedPayments = 0, processed = 0;
     for (const row of worksheet.rows) {
       processed += 1;
@@ -363,7 +362,6 @@ export async function POST(request) {
       const summary = studentCourseCounts.get(key) || { master, courses: new Set() };
       summary.courses.add(String(course._id));
       studentCourseCounts.set(key, summary);
-      touchedEnrollments.set(String(enrollment._id), enrollment);
       if (row.dueAmount !== null && Math.abs(row.dueAmount - Math.max(0, netPayable - Number(enrollment.summary?.totalPaid || 0))) > 1) {
         // Report-only validation: imported due is not allowed to override the ledger calculation.
         unmatchedRows.push({ row: row.rowNo, studentId: stCode, course: course.code, reason: "Excel Due Amount differs from the calculated course balance; ledger balance was recalculated from receipts." });
