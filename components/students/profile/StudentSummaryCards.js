@@ -15,12 +15,12 @@ export default function StudentSummaryCards({ fee, attendance, student }) {
             <div className="summary-card">
               <WalletCards size={18} />
               <span>Total Fees Paid (All Courses)</span>
-              <strong>₹{Number(aggregate.totalPaid || 0).toLocaleString("en-IN")}</strong>
+              <strong>₹{Number(aggregate.totalPaid ?? fee?.paid ?? 0).toLocaleString("en-IN")}</strong>
             </div>
             <div className="summary-card">
               <WalletCards size={18} />
               <span>Total Course Fees</span>
-              <strong>₹{Number(aggregate.totalFee || 0).toLocaleString("en-IN")}</strong>
+              <strong>₹{Number(aggregate.totalFee ?? fee?.totalFee ?? 0).toLocaleString("en-IN")}</strong>
             </div>
             <div className="summary-card">
               <ClipboardCheck size={18} />
