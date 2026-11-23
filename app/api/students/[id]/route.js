@@ -135,7 +135,7 @@ export async function PATCH(req,{params}){
     const allowed=[
       "formNo","aecCode","regnNo","enrollmentNo","admissionDate","guardianContactNumber","dueAmount","paymentStatus","sourceCourseLabel","importSource","sourceStudentName","sourceSex","sourceQualification","sourceAddressRaw","sourcePhone","sourceRowKey","courseName","courseCode","applicantName","nationality","dateOfBirth","sex","fatherOrHusbandName",
       "address","presentAddress","permanentAddress","sameAsPresentAddress","postOffice","policeStation","nearestLandmark","district","state","permanentPostOffice","permanentNearestLandmark","permanentPin","permanentDistrict","permanentState","pin","whatsappNumber","guardianContactNumber","mobileNumber","email","aadhaarNumber","referralId","referralName","marketingEmployeeId","marketingEmployeeName","qualifications","batchId","batchCode",
-      "enclosures","declarationDate","declarationPlace","signatureApplicant","signatureUrl","photoUrl","currentSemester","semesterStatus","semesterHistory","status"
+      "enclosures","declarationDate","declarationPlace","signatureApplicant","signatureUrl","photoUrl","hasPhoto","currentSemester","semesterStatus","semesterHistory","status"
     ];
     const update={};
     for(const k of allowed)if(body[k]!==undefined)update[k]=body[k];
@@ -156,6 +156,7 @@ export async function PATCH(req,{params}){
     if(update.formNo!==undefined) delete update.formNo;
     if(update.enrollmentNo!==undefined) delete update.enrollmentNo;
     update.aecCode = "RCLD/ISL-001";
+    if(update.photoUrl !== undefined) update.hasPhoto = Boolean(String(update.photoUrl || "").trim());
     if(update.applicantName!==undefined)update.applicantName=String(update.applicantName).trim();
     if(update.mobileNumber!==undefined)update.mobileNumber=String(update.mobileNumber).trim();
     const email=String(body.email ?? "").trim().toLowerCase();
@@ -184,7 +185,7 @@ export async function PATCH(req,{params}){
           .map(value => String(value || "").replace(/\D/g, "").slice(-10))
           .filter(value => value.length === 10))],
         qualification: student.sourceQualification || "",
-        ...(update.photoUrl !== undefined ? { photoUrl: update.photoUrl } : {}),
+        ...(update.photoUrl !== undefined ? { photoUrl: update.photoUrl, hasPhoto: update.hasPhoto } : {}),
       };
       const stCode = String(student.regnNo || student.enrollmentNo || "").replace(/\.0$/, "").trim();
       const master = await StudentMaster.findOne({ legacyStudentIds: student._id });
