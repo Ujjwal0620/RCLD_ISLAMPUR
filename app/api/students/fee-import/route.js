@@ -6,6 +6,7 @@ import { getSession } from "@/lib/auth";
 import Student from "@/models/Student";
 import StudentMaster from "@/models/StudentMaster";
 import Course from "@/models/Course";
+import Batch from "@/models/Batch";
 import StudentEnrollment from "@/models/StudentEnrollment";
 import StudentFeePayment from "@/models/StudentFeePayment";
 import { normalizeHeader, normalizeStCode, normalizeName, parseExcelDate } from "@/lib/student-import/normalization";
@@ -263,6 +264,20 @@ export async function POST(request) {
 
       const master = match.master;
       const stCode = row.studentId || normalizeStCode(master.stCodes?.[0]) || ("MASTER-" + String(master._id).slice(-8));
+      let inferredBatchStatus = "";
+      const legacyForBatch = match.legacy || (master.legacyStudentIds?.length
+        ? await Student.findById(master.legacyStudentIds[0]).select("courseCode courseName batchId").lean()
+        : null);
+      if (legacyForBatch?.batchId) {
+        const legacyCourseMatches = [legacyForBatch.courseCode, legacyForBatch.courseName]
+          .some(value => normCourse(value) === normCourse(course.code) || normCourse(value) === normCourse(course.name));
+        if (legacyCourseMatches) {
+          const linkedBatch = await Batch.findById(legacyForBatch.batchId).select("courseCode status").lean();
+          if (linkedBatch && String(linkedBatch.courseCode || "").toUpperCase() === String(course.code).toUpperCase()) {
+            inferredBatchStatus = linkedBatch.status === "Completed" ? "COMPLETED" : "ACTIVE";
+          }
+        }
+      }
       const normalizedFullName = normalizeName(master.fullName || row.studentName);
       let enrollment = await StudentEnrollment.findOne({
         studentId: master._id, stCode, normalizedFullName, courseCode: course.code
@@ -279,7 +294,7 @@ export async function POST(request) {
             : /DOM/.test(String(course.category || "").toUpperCase()) ? "DOM" : "OTHER",
           semesterLabel: course.code,
           admissionDate: null,
-          status: courseStatusFromRow(row.courseStatus, ""),
+          status: courseStatusFromRow(row.courseStatus, inferredBatchStatus),
           feeConfig: {
             admissionFee: Number(course.admissionFee || 0),
             monthlyInstallment: Number(course.monthlyInstallment || course.monthlyFee || 0),
@@ -302,7 +317,7 @@ export async function POST(request) {
       const grossFee = row.totalFee !== null ? row.totalFee : Number(enrollment.feeConfig?.grossFee ?? course.fee ?? 0);
       const discount = row.discount !== null ? row.discount : Number(enrollment.feeConfig?.discountAmount || 0);
       const netPayable = Math.max(0, grossFee - Math.max(0, discount));
-      const nextStatus = courseStatusFromRow(row.courseStatus, enrollment.status);
+      const nextStatus = courseStatusFromRow(row.courseStatus, enrollment.status || inferredBatchStatus);
       enrollment.courseId = course._id;
       enrollment.courseCode = course.code;
       enrollment.status = nextStatus;
