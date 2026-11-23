@@ -80,7 +80,7 @@ export default function BulkImportPage() {
         <div>
           <span className="eyebrow">RCLD ADMISSION WORKBOOK</span>
           <h2>Import student records from Excel or CSV</h2>
-          <p>Detects student-data worksheets automatically. Workbooks may contain both Student Data and fee-receipt sheets. You can import student rows normally or run a fee-only reconciliation that leaves student and non-fee records untouched.</p>
+          <p>Upload your workbook once. RCLD automatically detects the student-admission worksheet, imports student records, and reconciles fee receipts from any matching fee worksheet in the same workbook.</p>
         </div>
         <button className="ghost-btn" type="button" onClick={downloadTemplate}><Download size={16} /> Download Template</button>
       </section>
@@ -171,7 +171,10 @@ export default function BulkImportPage() {
           <div className="panel-head"><div><h3>Import summary</h3><p>{result.message}</p></div><CheckCircle2 size={22} /></div>
           <div style={{ padding: 20 }}>
             {feeResult && (
+              <>
+              {feeResult.skipped && <p className="form-help" style={{ marginBottom: 12 }}>{feeResult.message || "No fee worksheet was detected. Student records were imported, but no receipts were reconciled."}</p>}
               <div className="student-summary-grid" style={{ marginBottom: 16 }}>
+                <div className="summary-card"><span>Fee Rows Scanned</span><strong>{feeResult.totalRows ?? 0}</strong></div>
                 <div className="summary-card"><span>Receipts Linked</span><strong>{feeResult.linkedReceipts ?? 0}</strong></div>
                 <div className="summary-card"><span>Duplicate Receipts</span><strong>{feeResult.duplicates ?? 0}</strong></div>
                 <div className="summary-card"><span>Legacy Receipts Linked</span><strong>{feeResult.legacyReceiptsLinked ?? 0}</strong></div>
@@ -180,6 +183,7 @@ export default function BulkImportPage() {
                 <div className="summary-card"><span>Unified Student Profiles</span><strong>{feeResult.unifiedStudents ?? 0}</strong></div>
                 <div className="summary-card"><span>Multi-semester Profiles</span><strong>{feeResult.multiSemesterStudentsMerged ?? 0}</strong></div>
               </div>
+              </>
             )}
             {!result.feeOnly && <div className="student-summary-grid">
               <div className="summary-card"><span>Existing Students Enriched (missing fields filled)</span><strong>{result.existingStudentsEnriched ?? 0}</strong></div>
