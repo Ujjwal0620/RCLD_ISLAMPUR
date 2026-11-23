@@ -30,10 +30,13 @@ export default function CodingForKidsIcardDialog({
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    setLoading(true);
-    setError("");
-    fetch("/api/icard-templates", { cache: "no-store" })
-      .then(async response => {
+    Promise.resolve().then(() => {
+      if (cancelled) return null;
+      setLoading(true);
+      setError("");
+      return fetch("/api/icard-templates", { cache: "no-store" });
+    }).then(async response => {
+        if (!response) return null;
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Unable to load templates.");
         if (cancelled) return;
