@@ -104,14 +104,13 @@ export default function StudentFeeWorkspace({
         return sum + (configuredFee(enrollment) ? Number(enrollment?.feeConfig?.grossFee ?? enrollment?.summary?.totalFee ?? 0) : 0);
       }, 0)
     : configuredFee(selectedEnrollment) ? Number(selectedEnrollment?.feeConfig?.grossFee ?? selectedEnrollment?.summary?.totalFee ?? 0) : null;
-  const selectedBalance = selectedCode === "ALL"
+  const selectedPayable = selectedCode === "ALL"
     ? codeCards.reduce((sum, item) => {
         const enrollment = enrollmentOptions.find(entry => String(entry.registrationId || "") === String(item.registrationId));
-        if (!configuredFee(enrollment)) return sum;
-        const payable = Number(enrollment?.feeConfig?.netPayableFee ?? enrollment?.summary?.totalDue ?? 0);
-        return sum + Math.max(0, payable - Number(item.paidTotal || 0));
+        return sum + (configuredFee(enrollment) ? Number(enrollment?.feeConfig?.netPayableFee ?? enrollment?.summary?.totalDue ?? 0) : 0);
       }, 0)
-    : selectedTotalFee === null ? null : Math.max(0, selectedTotalFee - selectedPaid);
+    : configuredFee(selectedEnrollment) ? Number(selectedEnrollment?.feeConfig?.netPayableFee ?? selectedEnrollment?.summary?.totalDue ?? 0) : null;
+  const selectedBalance = selectedPayable === null ? null : Math.max(0, selectedPayable - selectedPaid);
   const currentPayable = Number(currentEnrollment?.feeConfig?.netPayableFee || currentEnrollment?.summary?.totalDue || fee?.payable || 0);
   const currentPaid = Number(currentEnrollment?.summary?.totalPaid || fee?.paid || 0);
   const currentBalanceDue = Number(currentEnrollment?.summary?.balanceDue ?? Math.max(0, currentPayable - currentPaid));
