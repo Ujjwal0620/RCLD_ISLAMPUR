@@ -74,7 +74,7 @@ export default function StudentFeeWorkspace({
         return paymentId === id.toUpperCase() || (!paymentId && codeCounts.get(code) === 1 && String(payment.stCode || "") === code);
       });
       return { ...item, paidTotal: matchingRows.reduce((sum, payment) => sum + Number(payment.amountPaid ?? payment.amount ?? 0), 0) };
-    }).sort((a, b) => new Date(b.dateOfAdmission || b.admissionDate || 0).getTime() - new Date(a.dateOfAdmission || a.admissionDate || 0).getTime());
+    }).sort((a, b) => new Date(b.dateOfAdmission || b.admissionDate || b.earliestPaymentDate || 0).getTime() - new Date(a.dateOfAdmission || a.admissionDate || a.earliestPaymentDate || 0).getTime());
   }, [historyMetadata, enrollmentOptions, paymentHistory]);
   const selectedEnrollment = enrollmentOptions.find(item => String(item.registrationId || "") === selectedCode)
     || (selectedCode !== "ALL" ? enrollmentOptions.find(item => String(item.stCode) === String(codeCards.find(item => item.registrationId === selectedCode)?.stCode || "")) : null);
@@ -161,7 +161,7 @@ export default function StudentFeeWorkspace({
             <span style={{ fontWeight: 800 }}>#{item.stCode} <small style={{ marginLeft: 5, padding: "3px 7px", borderRadius: 999, background: current ? "#dcfce7" : "#eef2f7", color: current ? "#166534" : "#596579", fontSize: 10 }}>{current ? "Current" : "Previous"}</small></span>
             <span style={{ fontSize: 11, overflowWrap: "anywhere" }}>{id}</span>
             <span style={{ fontSize: 12 }}>{item.course || item.courseCode || "Previous Course (Legacy)"}</span>
-            <span style={{ fontSize: 11, opacity: .8 }}>Admission: {dateLabel(item.dateOfAdmission || item.admissionDate)} · {money(item.paidTotal)} paid</span>
+            <span style={{ fontSize: 11, opacity: .8 }}>{item.dateOfAdmission || item.admissionDate ? "Admission: " + dateLabel(item.dateOfAdmission || item.admissionDate) : "First payment: " + dateLabel(item.earliestPaymentDate)} · {money(item.paidTotal)} paid</span>
           </button>;
         })}
       </div>
