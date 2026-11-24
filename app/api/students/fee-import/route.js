@@ -191,7 +191,7 @@ export async function POST(request) {
           admissionDate: row.dateOfAdmission ? row.dateOfAdmission.toISOString().slice(0, 10) : "",
           dateOfAdmission: row.dateOfAdmission ? row.dateOfAdmission.toISOString().slice(0, 10) : "",
           courseName: courseForStudent?.name || row.course,
-          courseCode: courseForStudent?.code || normCourse(row.course).replace(/\\s/g, "-"),
+          courseCode: courseForStudent?.code || normCourse(row.course).replace(/\s/g, "-"),
           course: row.course, sourceCourseLabel: row.course,
           sourceSex: row.gender, sourceAddressRaw: row.address,
           status: "Active", hasPhoto: false
