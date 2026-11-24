@@ -14,7 +14,7 @@ export default function StudentProfileHero({ student, uploadStudentPhoto, photoU
   const currentStCode = student.masterProfile?.currentStCode || activeEnrollment?.stCode || student.regnNo || student.enrollmentNo;
   const currentRegistrationId = student.masterProfile?.currentRegistrationId || student.currentRegistrationId || activeEnrollment?.registrationId || "";
   const registrationItems = student.masterProfile?.registrations?.length ? student.masterProfile.registrations : (student.masterProfile?.enrollments || []);
-  const profileName = String(student.masterProfile?.fullName || student.applicantName || "").trim().toUpperCase().replace(/\\s+/g, " ");
+  const profileName = String(student.masterProfile?.fullName || student.applicantName || "").trim().toUpperCase().replace(/\s+/g, " ");
   const registrationPreview = registrationItems.slice(0, 4).map(item => item.registrationId || ((item.cleanName || profileName) && item.stCode ? (item.cleanName || profileName) + "_" + item.stCode : item.stCode)).filter(Boolean);
   const activeCourseName = activeEnrollment?.courseName
     || (String(activeEnrollment?.courseCode || "").toUpperCase() === String(student.courseCode || "").toUpperCase()
