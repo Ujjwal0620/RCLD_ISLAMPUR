@@ -68,7 +68,10 @@ export default function StudentFeeWorkspace({
   const selectedPaid = visibleRows.reduce((sum, item) => sum + Number(item.amountPaid ?? item.amount ?? 0), 0);
   const selectedCourse = selectedEnrollment?.courseName || selectedEnrollment?.courseCode || selectedHistory.course || (selectedCode === "ALL" ? "All Courses" : "Previous Course (Legacy)");
   const hasFeeRule = selectedCode !== "ALL" && selectedEnrollment
-    ? selectedEnrollment.feeConfig?.configured !== false && selectedEnrollment.feeConfig?.feeRuleSource !== "NO_FEE_RULE"
+    ? selectedEnrollment.feeConfig?.configured !== false
+      && selectedEnrollment.feeConfig?.feeRuleSource !== "NO_FEE_RULE"
+      && String(selectedEnrollment.courseCode || "").toUpperCase() !== "PREVIOUS-LEGACY"
+      && String(selectedEnrollment.courseName || selectedEnrollment.semesterLabel || "").toLowerCase() !== "previous course (legacy)"
     : false;
   const selectedTotalFee = hasFeeRule
     ? Number(selectedEnrollment?.feeConfig?.grossFee ?? selectedEnrollment?.summary?.totalFee ?? 0)
