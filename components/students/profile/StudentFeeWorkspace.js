@@ -102,7 +102,7 @@ export default function StudentFeeWorkspace({
       ...payment,
       registrationId: payment.registrationId || payment.stNameKey || matchedCard?.registrationId || "",
       stCode: payment.stCode || matchedCard?.stCode || "",
-      courseName: payment.courseName || payment.courseCode || matchedCard?.course || matchedCard?.courseName || "Previous Course (Legacy)"
+      courseName: payment.courseName || matchedCard?.course || matchedCard?.courseName || payment.courseCode || "Previous Course (Legacy)"
     };
   }), [visibleRows, codeCards]);
   const selectedPaid = paymentRows.reduce((sum, item) => sum + Number(item.amountPaid ?? item.amount ?? 0), 0);
