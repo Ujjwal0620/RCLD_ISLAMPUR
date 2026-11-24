@@ -111,6 +111,10 @@ function buildWorkbookPayload(workbook) {
     }
   }
 
+  const studentCodeCounts = new Map();
+  for (const record of registrations.values()) studentCodeCounts.set(record.stCode, (studentCodeCounts.get(record.stCode) || 0) + 1);
+  for (const record of registrations.values()) record.stCodeUnique = studentCodeCounts.get(record.stCode) === 1;
+
   const byName = new Map();
   for (const record of registrations.values()) byName.set(record.cleanName, [...(byName.get(record.cleanName) || []), record]);
   const parent = new Map([...registrations.keys()].map(key => [key, key]));
