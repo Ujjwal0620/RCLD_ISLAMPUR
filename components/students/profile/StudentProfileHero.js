@@ -12,7 +12,7 @@ export default function StudentProfileHero({ student, uploadStudentPhoto, photoU
     : null;
   const activeEnrollment = student.activeEnrollment || semesterEnrollment || enrollments.find(item => item.status === "ACTIVE");
   const currentStCode = student.masterProfile?.currentStCode || activeEnrollment?.stCode || student.regnNo || student.enrollmentNo;
-  const currentRegistrationId = student.masterProfile?.currentRegistrationId || student.currentRegistrationId || activeEnrollment?.registrationId || "";
+  const currentRegistrationId = student.masterProfile?.currentRegistrationId || student.currentRegistrationId || activeEnrollment?.registrationId || (currentStCode && (student.masterProfile?.fullName || student.applicantName) ? String(student.masterProfile?.fullName || student.applicantName).trim().toUpperCase().replace(/\s+/g, " ") + "_" + currentStCode : "");
   const registrationItems = student.masterProfile?.registrations?.length ? student.masterProfile.registrations : (student.masterProfile?.enrollments || []);
   const profileName = String(student.masterProfile?.fullName || student.applicantName || "").trim().toUpperCase().replace(/\s+/g, " ");
   const registrationPreview = registrationItems.slice(0, 4).map(item => item.registrationId || ((item.cleanName || profileName) && item.stCode ? (item.cleanName || profileName) + "_" + item.stCode : item.stCode)).filter(Boolean);
