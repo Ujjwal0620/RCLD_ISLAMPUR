@@ -53,7 +53,7 @@ export default function StudentFeeImportPage() {
 
       <section className="panel">
         <div className="panel-head">
-          <div><h3>1. Select fee workbook</h3><p>Required: Student ID or Student Name + Phone, Course, and at least one fee column.</p></div>
+          <div><h3>1. Select student + fee workbook</h3><p>Required sheets: Student Data and one fee sheet. Registration codes are linked across current and previous courses.</p></div>
           <Upload size={22} />
         </div>
         <div style={{ padding: 24, display: "grid", gap: 16 }}>
