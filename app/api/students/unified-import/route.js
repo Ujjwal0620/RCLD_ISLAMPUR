@@ -552,7 +552,7 @@ async function finalizeFeeSummaries(rawStudentIds = []) {
   const enrollmentOps = [];
   const masterTotals = new Map();
   for (const enrollment of enrollments) {
-    const totalFee = Number(enrollment.feeConfig?.grossFee || enrollment.summary?.totalFee || 0);
+    const totalFee = Number(enrollment.feeConfig?.grossFee ?? enrollment.summary?.totalFee ?? 0);
     const totalDue = Number(enrollment.feeConfig?.netPayableFee ?? enrollment.summary?.totalDue ?? 0);
     const totalPaid = paidByEnrollment.get(String(enrollment._id)) || 0;
     const balanceDue = Math.max(0, totalDue - totalPaid);
