@@ -111,6 +111,9 @@ export default function StudentFeeWorkspace({
       }, 0)
     : configuredFee(selectedEnrollment) ? Number(selectedEnrollment?.feeConfig?.netPayableFee ?? selectedEnrollment?.summary?.totalDue ?? 0) : null;
   const selectedBalance = selectedPayable === null ? null : Math.max(0, selectedPayable - selectedPaid);
+  const selectedDiscount = selectedCode === "ALL"
+    ? enrollmentOptions.reduce((sum, item) => sum + (configuredFee(item) ? Number(item.feeConfig?.discountAmount || 0) : 0), 0)
+    : Number(selectedEnrollment?.feeConfig?.discountAmount || 0);
   const currentPayable = Number(currentEnrollment?.feeConfig?.netPayableFee || currentEnrollment?.summary?.totalDue || fee?.payable || 0);
   const currentPaid = Number(currentEnrollment?.summary?.totalPaid || fee?.paid || 0);
   const currentBalanceDue = Number(currentEnrollment?.summary?.balanceDue ?? Math.max(0, currentPayable - currentPaid));
@@ -160,8 +163,8 @@ export default function StudentFeeWorkspace({
                 <tr key={String(payment._id || payment.mrNo) + "-" + index}>
                   <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{dateLabel(payment.paymentDate || payment.rawPaymentDate || payment.date)}</td>
                   <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{payment.mrNo || payment.receiptNo || "—"}</td>
-                  <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{payment.courseName || payment.courseCode || "Previous Course (Legacy)"}</td>
                   <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>#{payment.stCode || "—"}<small style={{ display: "block", fontSize: 10, opacity: .75 }}>{payment.registrationId || payment.stNameKey || "—"}</small></td>
+                  <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{payment.courseName || payment.courseCode || "Previous Course (Legacy)"}</td>
                   <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)", fontWeight: 700 }}>{money(payment.amountPaid ?? payment.amount)}</td>
                   <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>
                     <button type="button" className="ghost-btn" onClick={() => printReceipt(payment, student)}><Printer size={14} /> View / Print</button>
