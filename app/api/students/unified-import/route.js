@@ -169,12 +169,17 @@ async function syncStudentGroups(groups = []) {
     if (!registrations.length) continue;
     registrations.sort(registrationSort);
     const newest = registrations[0];
+    const groupRegistrationIds = new Set(registrations.map(item => item.registrationId.toUpperCase()));
     const codeCandidates = [...new Map(registrations.flatMap(item => studentByCode.get(item.stCode) || [])
       .map(student => [String(student._id), student])).values()];
     const existingLegacy = codeCandidates.filter(student => {
       const sourceName = String(student.applicantName || student.name || student.sourceStudentName || "")
         .replace(/_[A-Z0-9-]+$/i, "");
       if (normalizeName(sourceName) !== normalizeName(group.cleanName)) return false;
+      const rawSourceName = String(student.sourceStudentName || "");
+      const sourceCode = rawSourceName.match(/_([A-Z0-9-]+)$/i)?.[1] || "";
+      const sourceRegistrationId = sourceCode ? normalizeName(rawSourceName.replace(/_[A-Z0-9-]+$/i, "")) + "_" + sourceCode : "";
+      if (sourceRegistrationId && groupRegistrationIds.has(sourceRegistrationId.toUpperCase())) return true;
       const studentPhones = [student.mobileNumber, student.phone, student.whatsappNumber, student.guardianContactNumber, student.sourcePhone]
         .join(",").split(/[,;/|]/).map(value => clean(value).replace(/\D/g, "")).filter(value => value.length === 10);
       return hasIdentityAnchor(group, {
@@ -185,7 +190,6 @@ async function syncStudentGroups(groups = []) {
       });
     });
     const linkedMasterIds = new Set(existingLegacy.map(item => masterByStudentId.get(String(item._id))).filter(Boolean).map(item => String(item._id)));
-    const groupRegistrationIds = new Set(registrations.map(item => item.registrationId.toUpperCase()));
     const registrationCandidates = existingMasters.filter(candidate =>
       [...(candidate.registrations || []), ...(candidate.enrollments || [])]
         .some(item => {
