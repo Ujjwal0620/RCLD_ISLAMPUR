@@ -153,10 +153,18 @@ async function syncStudentGroups(groups = []) {
     const existingLegacy = codeCandidates.filter(student => {
       const sourceName = String(student.applicantName || student.name || student.sourceStudentName || "")
         .replace(/_[A-Z0-9-]+$/i, "");
-      return normalizeName(sourceName) === normalizeName(group.cleanName);
+      if (normalizeName(sourceName) !== normalizeName(group.cleanName)) return false;
+      const studentPhones = [student.mobileNumber, student.phone, student.whatsappNumber, student.guardianContactNumber, student.sourcePhone]
+        .join(",").split(/[,;/|]/).map(value => clean(value).replace(/\\D/g, "")).filter(value => value.length === 10);
+      return hasIdentityAnchor(group, {
+        fullName: sourceName,
+        dob: student.dateOfBirth || student.dob,
+        fatherName: student.fatherOrHusbandName || student.fatherName,
+        phoneNumbers: studentPhones
+      });
     });
     const codeCollision = codeCandidates.length > existingLegacy.length || registrations.some(item => item.stCodeUnique === false);
-    if (codeCollision) flaggedRows.push({ row: registrations[0]?.rowNo || "", studentId: registrations.map(item => item.registrationId).join(", "), reason: "A registration code is already used by a different student name. The existing record was not linked; a separate profile was created." });
+    if (codeCollision) flaggedRows.push({ row: registrations[0]?.rowNo || "", studentId: registrations.map(item => item.registrationId).join(", "), reason: "A registration code is reused or the existing record lacks a matching identity anchor. The code-only match was rejected; a separate profile was created." });
     const linkedMasterIds = new Set(existingLegacy.map(item => masterByStudentId.get(String(item._id))).filter(Boolean).map(item => String(item._id)));
     const byLinked = linkedMasterIds.size === 1 ? existingMasters.find(item => String(item._id) === [...linkedMasterIds][0]) : null;
     const candidates = existingMasters.filter(candidate => hasIdentityAnchor(group, candidate));
