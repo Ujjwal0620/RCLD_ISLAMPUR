@@ -144,7 +144,9 @@ function buildWorkbookPayload(workbook) {
     return {
       cleanName: latest.cleanName,
       dob: items.find(item => item.dob)?.dob || null,
+      dobs: [...new Set(items.map(item => item.dob).filter(Boolean))],
       fatherName: items.find(item => item.fatherName)?.fatherName || "",
+      fatherNames: [...new Set(items.map(item => item.fatherName).filter(Boolean))],
       phones: [...new Set(items.flatMap(item => item.phones))],
       registrations: items.map(item => ({ ...item, isCurrent: item.registrationId === latest.registrationId }))
     };
