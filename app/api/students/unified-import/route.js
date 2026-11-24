@@ -106,7 +106,7 @@ async function syncStudentGroups(groups = []) {
         ...(fathers.length ? [{ normalizedFatherName: { $in: fathers } }] : [])
       ]
     }).lean(),
-    StudentEnrollment.find({ registrationId: { $in: registrationIds } }).lean()
+    StudentEnrollment.find({ $or: [{ registrationId: { $in: registrationIds } }, { stCode: { $in: codes } }] }).lean()
   ]);
 
   const studentByCode = new Map();
@@ -120,7 +120,11 @@ async function syncStudentGroups(groups = []) {
   for (const master of existingMasters) {
     for (const id of master.legacyStudentIds || []) masterByStudentId.set(String(id), master);
   }
-  const enrollmentByRegistration = new Map(existingEnrollments.map(item => [String(item.registrationId), item]));
+  const enrollmentByRegistration = new Map();
+  for (const item of existingEnrollments) {
+    const key = String(item.registrationId || (item.stCode ? normalizeName(item.normalizedFullName) + "_" + clean(item.stCode) : ""));
+    if (key) enrollmentByRegistration.set(key.toUpperCase(), item);
+  }
   const studentOps = [];
   const masterOps = [];
   const enrollmentOps = [];
@@ -249,7 +253,7 @@ async function syncStudentGroups(groups = []) {
     masterOps.push({ updateOne: { filter: { _id: masterId }, update: { $set: masterSet, $setOnInsert: { photoUrl: "", hasPhoto: false } }, upsert: true } });
 
     for (const registration of registrations) {
-      const existingEnrollment = enrollmentByRegistration.get(registration.registrationId);
+      const existingEnrollment = enrollmentByRegistration.get(registration.registrationId.toUpperCase());
       const courseCode = registration.course === "Previous Course (Legacy)" ? "PREVIOUS-LEGACY" : registration.course.toUpperCase();
       const enrollmentId = existingEnrollment?._id || new mongoose.Types.ObjectId();
       const courseRuleKey = courseCode;
@@ -288,8 +292,11 @@ async function syncStudentGroups(groups = []) {
         enrollmentOps.push({ updateOne: { filter: { _id: enrollmentId }, update: { $setOnInsert: enrollmentSet }, upsert: true } });
       } else {
         const patch = {};
-        if (!existingEnrollment.courseName || existingEnrollment.courseName === "LEGACY") patch.courseName = registration.course;
+        if (!existingEnrollment.courseName || existingEnrollment.courseName === "LEGACY" || existingEnrollment.courseName === "Previous Course (Legacy)") patch.courseName = registration.course;
         if (!existingEnrollment.registrationId) patch.registrationId = registration.registrationId;
+        if ((!existingEnrollment.courseCode || existingEnrollment.courseCode === "LEGACY") && courseCode !== "PREVIOUS-LEGACY") patch.courseCode = courseCode;
+        if (existingEnrollment.feeConfig?.configured === false && courseRule.feeConfig?.configured) patch.feeConfig = courseRule.feeConfig;
+        if (!existingEnrollment.semesterLabel && registration.course) patch.semesterLabel = registration.course;
         if (!existingEnrollment.formNo && registration.formNo) patch.formNo = registration.formNo;
         if (!existingEnrollment.admissionDate && registration.dateOfAdmission) patch.admissionDate = registration.dateOfAdmission;
         if (Object.keys(patch).length) enrollmentOps.push({ updateOne: { filter: { _id: existingEnrollment._id }, update: { $set: patch } } });
