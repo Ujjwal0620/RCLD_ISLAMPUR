@@ -278,7 +278,8 @@ export default function BulkImportPage() {
     try {
       const studentBatches = [];
       for (let i = 0; i < preview.profiles.length; i += 500) studentBatches.push(preview.profiles.slice(i, i + 500));
-      setProgress({ stage: "Syncing Students", percent: 10, done: 0, total: studentBatches.length });
+      let studentsSynced = 0;
+      setProgress({ stage: "Syncing Students", percent: 10, done: 0, total: preview.profiles.length });
       for (let index = 0; index < studentBatches.length; index += 1) {
         const data = await postBatch({ action: "students", groups: studentBatches[index] });
         summary.studentsMatchedUpdated += Number(data.studentsMatchedUpdated || 0);
@@ -286,17 +287,20 @@ export default function BulkImportPage() {
         summary.registrationsLinked += Number(data.registrationsLinked || 0);
         (data.registrationMap || []).forEach(item => { if (item.studentId) touchedStudentIds.add(item.studentId); });
         summary.unmatchedRows.push(...(data.flaggedRows || []));
-        setProgress({ stage: "Syncing Students", percent: 10 + Math.round(((index + 1) / studentBatches.length) * 45), done: index + 1, total: studentBatches.length });
+        studentsSynced += studentBatches[index].length;
+        setProgress({ stage: "Syncing Students", percent: 10 + Math.round((studentsSynced / Math.max(1, preview.profiles.length)) * 45), done: studentsSynced, total: preview.profiles.length });
       }
       const feeBatches = [];
       for (let i = 0; i < preview.feeRows.length; i += 1000) feeBatches.push(preview.feeRows.slice(i, i + 1000));
-      setProgress({ stage: "Syncing Fees", percent: 55, done: 0, total: feeBatches.length });
+      let feesSynced = 0;
+      setProgress({ stage: "Syncing Fees", percent: 55, done: 0, total: preview.feeRows.length });
       for (let index = 0; index < feeBatches.length; index += 1) {
         const data = await postBatch({ action: "fees", rows: feeBatches[index] });
         summary.newReceiptsAdded += Number(data.newReceiptsAdded || 0);
         summary.existingReceiptsUpdatedOrSkipped += Number(data.existingReceiptsUpdatedOrSkipped || 0);
         summary.unmatchedRows.push(...(data.unmatchedRows || []));
-        setProgress({ stage: "Syncing Fees", percent: 55 + Math.round(((index + 1) / Math.max(1, feeBatches.length)) * 40), done: index + 1, total: feeBatches.length });
+        feesSynced += feeBatches[index].length;
+        setProgress({ stage: "Syncing Fees", percent: 55 + Math.round((feesSynced / Math.max(1, preview.feeRows.length)) * 40), done: feesSynced, total: preview.feeRows.length });
       }
       const finalizeBatches = [...touchedStudentIds].reduce((batches, id, index) => {
         const batchIndex = Math.floor(index / 500);
@@ -305,10 +309,12 @@ export default function BulkImportPage() {
         return batches;
       }, []);
       if (finalizeBatches.length) {
-        setProgress({ stage: "Finalizing Fee Summaries", percent: 95, done: 0, total: finalizeBatches.length });
+        let studentsFinalized = 0;
+        setProgress({ stage: "Finalizing Fee Summaries", percent: 95, done: 0, total: touchedStudentIds.size });
         for (let index = 0; index < finalizeBatches.length; index += 1) {
           await postBatch({ action: "finalize", studentIds: finalizeBatches[index] });
-          setProgress({ stage: "Finalizing Fee Summaries", percent: 95 + Math.round(((index + 1) / finalizeBatches.length) * 4), done: index + 1, total: finalizeBatches.length });
+          studentsFinalized += finalizeBatches[index].length;
+          setProgress({ stage: "Finalizing Fee Summaries", percent: 95 + Math.round((studentsFinalized / Math.max(1, touchedStudentIds.size)) * 4), done: studentsFinalized, total: touchedStudentIds.size });
         }
       }
       setProgress({ stage: "Complete", percent: 100, done: 1, total: 1 });
@@ -356,7 +362,7 @@ export default function BulkImportPage() {
           {progress.stage !== "Idle" && <div style={{ display: "grid", gap: 8 }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}><strong>{progress.stage}</strong><b>{progress.percent}%</b></div>
             <div style={{ height: 10, borderRadius: 99, background: "var(--border,#e5e7eb)", overflow: "hidden" }}><div style={{ height: "100%", width: progress.percent + "%", background: "var(--primary,#315efb)", transition: "width .2s ease" }}/></div>
-            {progress.total > 0 && <small className="form-help">Batch {progress.done} of {progress.total}</small>}
+            {progress.total > 0 && <small className="form-help">{progress.done.toLocaleString("en-IN")} / {progress.total.toLocaleString("en-IN")} records</small>}
           </div>}
           {error && <div className="error-msg" role="alert">{error}</div>}
           <div><button className="primary-btn" type="button" disabled={!preview || busy} onClick={runImport}><Upload size={16}/>{busy ? "Import running…" : "Import Students + Fees"}</button></div>
