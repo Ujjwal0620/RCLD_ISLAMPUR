@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, CreditCard, WalletCards, Printer } from "lucide-react";
 import StudentFeePlanSection from "@/components/students/profile/fee-workspace/StudentFeePlanSection";
 import StudentPaymentEntrySection from "@/components/students/profile/fee-workspace/StudentPaymentEntrySection";
@@ -50,6 +50,7 @@ export default function StudentFeeWorkspace({
   const currentRegistrationId = String(student.masterProfile?.currentRegistrationId || currentEnrollment?.registrationId || "");
   const [selectedCodeState, setSelectedCodeState] = useState("ALL");
   const selectedCode = selectedCodeState || "ALL";
+  useEffect(() => { setSelectedCodeState("ALL"); }, [student._id]);
   const codeCards = useMemo(() => {
     const map = new Map();
     for (const item of historyMetadata) {
