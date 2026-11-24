@@ -217,7 +217,7 @@ async function syncStudentGroups(groups = []) {
     const incomingPhones = [...new Set([...(master?.phoneNumbers || []), ...(group.phones || [])])];
     const existingRegs = new Map();
     for (const item of [...(master?.registrations || []), ...(master?.enrollments || [])]) {
-      const id = clean(item.registrationId) || (clean(item.stCode) && normalizeName(group.cleanName) ? normalizeName(group.cleanName) + "_" + clean(item.stCode) : "");
+      const id = clean(item.registrationId) || (clean(item.stCode) ? displayName(master?.fullName || group.cleanName) + "_" + clean(item.stCode) : "");
       if (id && !existingRegs.has(id)) existingRegs.set(id, {
         stCode: clean(item.stCode), registrationId: id, course: clean(item.course || item.courseCode) || "Previous Course (Legacy)",
         dateOfAdmission: asDate(item.dateOfAdmission || item.admissionDate),
@@ -274,7 +274,10 @@ async function syncStudentGroups(groups = []) {
 
     let currentEnrollmentId = null;
     for (const registration of registrations) {
-      const existingEnrollment = enrollmentByRegistration.get(registration.registrationId.toUpperCase());
+      const existingEnrollment = enrollmentByRegistration.get(registration.registrationId.toUpperCase())
+        || existingEnrollments.find(item => String(item.studentId) === String(masterId)
+          && String(item.stCode || "") === registration.stCode
+          && normalizeName(item.normalizedFullName) === normalizeName(group.cleanName));
       const courseCode = registration.course === "Previous Course (Legacy)" ? "PREVIOUS-LEGACY" : registration.course.toUpperCase();
       const enrollmentId = existingEnrollment?._id || new mongoose.Types.ObjectId();
       if (registration.registrationId === current.registrationId) currentEnrollmentId = enrollmentId;
