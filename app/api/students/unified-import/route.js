@@ -304,11 +304,12 @@ async function syncStudentGroups(groups = []) {
 
     let currentEnrollmentId = null;
     for (const registration of registrations) {
+      const courseCode = registration.course === "Previous Course (Legacy)" ? "PREVIOUS-LEGACY" : registration.course.toUpperCase();
       const existingEnrollment = enrollmentByRegistration.get(registration.registrationId.toUpperCase())
         || existingEnrollments.find(item => String(item.studentId) === String(masterId)
           && String(item.stCode || "") === registration.stCode
-          && normalizeName(item.normalizedFullName) === normalizeName(group.cleanName));
-      const courseCode = registration.course === "Previous Course (Legacy)" ? "PREVIOUS-LEGACY" : registration.course.toUpperCase();
+          && normalizeName(item.normalizedFullName) === normalizeName(group.cleanName)
+          && (String(item.courseCode || "").toUpperCase() === courseCode || !item.courseCode || String(item.courseCode).toUpperCase() === "LEGACY"));
       const enrollmentId = existingEnrollment?._id || new mongoose.Types.ObjectId();
       if (registration.registrationId === current.registrationId) currentEnrollmentId = enrollmentId;
       const courseRuleKey = normalizeCourseCode(courseCode);
@@ -352,9 +353,9 @@ async function syncStudentGroups(groups = []) {
         enrollmentOps.push({ updateOne: { filter: { _id: enrollmentId }, update: { $setOnInsert: enrollmentSet }, upsert: true } });
       } else {
         const patch = {};
-        if (!existingEnrollment.courseName || existingEnrollment.courseName === "LEGACY" || existingEnrollment.courseName === "Previous Course (Legacy)") patch.courseName = registration.course;
+        if (existingEnrollment.courseName !== registration.course) patch.courseName = registration.course;
         if (!existingEnrollment.registrationId) patch.registrationId = registration.registrationId;
-        if ((!existingEnrollment.courseCode || existingEnrollment.courseCode === "LEGACY") && courseCode !== "PREVIOUS-LEGACY") patch.courseCode = courseCode;
+        if (existingEnrollment.courseCode !== courseCode && (existingEnrollment.registrationId === registration.registrationId || !existingEnrollment.courseCode || String(existingEnrollment.courseCode).toUpperCase() === "LEGACY")) patch.courseCode = courseCode;
         if (existingEnrollment.feeConfig?.configured === false && courseRule.feeConfig?.configured) patch.feeConfig = courseRule.feeConfig;
         if (!existingEnrollment.semesterLabel && registration.course) patch.semesterLabel = registration.course;
         if (!existingEnrollment.formNo && registration.formNo) patch.formNo = registration.formNo;
