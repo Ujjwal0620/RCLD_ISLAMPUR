@@ -10,7 +10,7 @@ import { useErpCache, useErpToast } from "@/components/providers/ERPUIProvider";
 const clean = value => String(value ?? "").trim();
 const headerKey = value => clean(value).toLowerCase().replace(/[^a-z0-9]/g, "");
 const normalizeName = value => clean(value).normalize("NFKC").toUpperCase().replace(/\s+/g, " ").trim();
-const normalizeFather = value => normalizeName(value).replace(/[^A-Z0-9 ]/g, " ").replace(/\bKR\b/g, "KUMAR").replace(/\bMD\b|\bMOHD\b/g, "MOHAMMAD").replace(/\bSK\b/g, "SHEIKH").replace(/\s+/g, " ").trim();
+const normalizeFather = value => normalizeName(value).replace(/[^A-Z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
 
 function parseDate(value) {
   if (value === null || value === undefined || value === "") return null;
@@ -204,7 +204,7 @@ function buildWorkbookPayload(workbook) {
       continue;
     }
     if (!registration.course || registration.course === "Previous Course (Legacy)") registration.course = "Previous Course (Legacy)";
-    feeRows.push({ registrationId, stCode: identity.stCode, cleanName: identity.cleanName, course: registration.course, paymentDate, amountPaid, mrNo, sourceSheet: feeSheet.name, rowNo: index + 1 });
+    feeRows.push({ registrationId, stCode: registration.stCode || identity.stCode, cleanName: registration.cleanName || identity.cleanName, course: registration.course, paymentDate, amountPaid, mrNo, sourceSheet: feeSheet.name, rowNo: index + 1 });
     if (registration.course === "Previous Course (Legacy)") {
       const priorDate = parseDate(registration.earliestPaymentDate);
       if (!priorDate || new Date(paymentDate) < new Date(priorDate)) registration.earliestPaymentDate = paymentDate;
