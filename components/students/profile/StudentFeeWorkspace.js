@@ -39,46 +39,80 @@ export default function StudentFeeWorkspace({
   const [selectedCodeState, setSelectedCodeState] = useState("");
   const paymentHistory = Array.isArray(student.paymentHistory) ? student.paymentHistory : [];
   const enrollmentOptions = Array.isArray(student.enrollments) ? student.enrollments : [];
-  const historyMetadata = Array.isArray(student.masterProfile?.enrollments) ? student.masterProfile.enrollments : [];
+  const historyMetadata = Array.isArray(student.masterProfile?.registrations) && student.masterProfile.registrations.length
+    ? student.masterProfile.registrations
+    : Array.isArray(student.masterProfile?.enrollments) ? student.masterProfile.enrollments : [];
   const currentEnrollment = student.activeEnrollment
+    || enrollmentOptions.find(item => String(item.registrationId || "") === String(student.masterProfile?.currentRegistrationId || ""))
     || enrollmentOptions.find(item => String(item.stCode) === String(student.masterProfile?.currentStCode || ""))
     || enrollmentOptions.find(item => item.status === "ACTIVE")
     || enrollmentOptions[0];
   const currentStCode = String(student.masterProfile?.currentStCode || currentEnrollment?.stCode || student.regnNo || student.enrollmentNo || "");
-  const selectedCode = selectedCodeState || currentStCode || "ALL";
+  const currentRegistrationId = String(student.masterProfile?.currentRegistrationId || currentEnrollment?.registrationId || "");
+  const [selectedCodeState, setSelectedCodeState] = useState("ALL");
+  const selectedCode = selectedCodeState || "ALL";
   const codeCards = useMemo(() => {
     const map = new Map();
-    for (const item of historyMetadata) map.set(String(item.stCode), { ...item });
-    for (const item of enrollmentOptions) {
-      const code = String(item.stCode || "");
-      if (!code) continue;
-      const old = map.get(code) || {};
-      map.set(code, { ...old, ...item, course: item.courseName || item.courseCode || old.course, dateOfAdmission: item.admissionDate || old.dateOfAdmission });
+    for (const item of historyMetadata) {
+      const id = String(item.registrationId || (item.cleanName && item.stCode ? item.cleanName + "_" + item.stCode : "") || "");
+      if (id) map.set(id, { ...item, registrationId: id });
     }
-    return [...map.values()].filter(item => item.stCode).sort((a, b) =>
-      new Date(b.dateOfAdmission || 0).getTime() - new Date(a.dateOfAdmission || 0).getTime()
-    );
-  }, [historyMetadata, enrollmentOptions]);
-  const selectedEnrollment = enrollmentOptions.find(item => String(item.stCode) === selectedCode) || null;
-  const selectedHistory = historyMetadata.find(item => String(item.stCode) === selectedCode) || {};
+    for (const item of enrollmentOptions) {
+      const id = String(item.registrationId || "");
+      if (!id) continue;
+      const old = map.get(id) || {};
+      map.set(id, { ...old, ...item, registrationId: id, course: item.courseName || item.courseCode || old.course, dateOfAdmission: item.admissionDate || old.dateOfAdmission });
+    }
+    const codeCounts = new Map();
+    for (const item of map.values()) codeCounts.set(String(item.stCode), (codeCounts.get(String(item.stCode)) || 0) + 1);
+    return [...map.values()].filter(item => item.stCode).map(item => {
+      const code = String(item.stCode);
+      const id = String(item.registrationId);
+      const matchingRows = paymentHistory.filter(payment => {
+        const paymentId = String(payment.registrationId || payment.stNameKey || "").toUpperCase();
+        return paymentId === id.toUpperCase() || (!paymentId && codeCounts.get(code) === 1 && String(payment.stCode || "") === code);
+      });
+      return { ...item, paidTotal: matchingRows.reduce((sum, payment) => sum + Number(payment.amountPaid ?? payment.amount ?? 0), 0) };
+    }).sort((a, b) => new Date(b.dateOfAdmission || b.admissionDate || 0).getTime() - new Date(a.dateOfAdmission || a.admissionDate || 0).getTime());
+  }, [historyMetadata, enrollmentOptions, paymentHistory]);
+  const selectedEnrollment = enrollmentOptions.find(item => String(item.registrationId || "") === selectedCode)
+    || (selectedCode !== "ALL" ? enrollmentOptions.find(item => String(item.stCode) === String(codeCards.find(item => item.registrationId === selectedCode)?.stCode || "")) : null);
+  const selectedHistory = historyMetadata.find(item => String(item.registrationId || "") === selectedCode) || {};
+  const selectedRegistration = codeCards.find(item => item.registrationId === selectedCode) || selectedHistory;
+  const codeCount = new Map();
+  for (const item of codeCards) codeCount.set(String(item.stCode), (codeCount.get(String(item.stCode)) || 0) + 1);
   const visibleRows = useMemo(() => [...paymentHistory]
-    .filter(payment => selectedCode === "ALL" || String(payment.stCode || "") === selectedCode)
+    .filter(payment => {
+      if (selectedCode === "ALL") return true;
+      const id = String(payment.registrationId || payment.stNameKey || "").toUpperCase();
+      if (id) return id === selectedCode.toUpperCase();
+      const card = codeCards.find(item => item.registrationId === selectedCode);
+      return Boolean(card && codeCount.get(String(card.stCode)) === 1 && String(payment.stCode || "") === String(card.stCode));
+    })
     .sort((a, b) => new Date(a.paymentDate || a.rawPaymentDate || 0).getTime() - new Date(b.paymentDate || b.rawPaymentDate || 0).getTime()),
-  [paymentHistory, selectedCode]);
+  [paymentHistory, selectedCode, codeCards]);
   const selectedPaid = visibleRows.reduce((sum, item) => sum + Number(item.amountPaid ?? item.amount ?? 0), 0);
-  const selectedCourse = selectedEnrollment?.courseName || selectedEnrollment?.courseCode || selectedHistory.course || (selectedCode === "ALL" ? "All Courses" : "Previous Course (Legacy)");
-  const hasFeeRule = selectedCode !== "ALL" && selectedEnrollment
-    ? selectedEnrollment.feeConfig?.configured !== false
-      && selectedEnrollment.feeConfig?.feeRuleSource !== "NO_FEE_RULE"
-      && String(selectedEnrollment.courseCode || "").toUpperCase() !== "PREVIOUS-LEGACY"
-      && String(selectedEnrollment.courseName || selectedEnrollment.semesterLabel || "").toLowerCase() !== "previous course (legacy)"
-    : false;
-  const selectedTotalFee = hasFeeRule
-    ? Number(selectedEnrollment?.feeConfig?.grossFee ?? selectedEnrollment?.summary?.totalFee ?? 0)
-    : null;
-  const selectedDiscount = hasFeeRule ? Number(selectedEnrollment?.feeConfig?.discountAmount || 0) : 0;
-  const selectedPayable = selectedTotalFee === null ? null : Math.max(0, selectedTotalFee - selectedDiscount);
-  const selectedBalance = selectedPayable === null ? null : Math.max(0, selectedPayable - selectedPaid);
+  const selectedCourse = selectedCode === "ALL"
+    ? [...new Set(codeCards.map(item => item.course || item.courseName || item.courseCode).filter(Boolean))].join(", ") || "All Registrations"
+    : selectedEnrollment?.courseName || selectedEnrollment?.courseCode || selectedRegistration?.course || selectedRegistration?.courseCode || "Previous Course (Legacy)";
+  const configuredFee = enrollment => enrollment && enrollment.feeConfig?.configured !== false
+    && enrollment.feeConfig?.feeRuleSource !== "NO_FEE_RULE"
+    && String(enrollment.courseCode || "").toUpperCase() !== "PREVIOUS-LEGACY"
+    && String(enrollment.courseName || enrollment.semesterLabel || "").toLowerCase() !== "previous course (legacy)";
+  const selectedTotalFee = selectedCode === "ALL"
+    ? codeCards.reduce((sum, item) => {
+        const enrollment = enrollmentOptions.find(entry => String(entry.registrationId || "") === String(item.registrationId));
+        return sum + (configuredFee(enrollment) ? Number(enrollment?.feeConfig?.netPayableFee ?? enrollment?.summary?.totalDue ?? 0) : 0);
+      }, 0)
+    : configuredFee(selectedEnrollment) ? Number(selectedEnrollment?.feeConfig?.netPayableFee ?? selectedEnrollment?.summary?.totalDue ?? 0) : null;
+  const selectedBalance = selectedCode === "ALL"
+    ? codeCards.reduce((sum, item) => {
+        const enrollment = enrollmentOptions.find(entry => String(entry.registrationId || "") === String(item.registrationId));
+        if (!configuredFee(enrollment)) return sum;
+        const payable = Number(enrollment?.feeConfig?.netPayableFee ?? enrollment?.summary?.totalDue ?? 0);
+        return sum + Math.max(0, payable - Number(item.paidTotal || 0));
+      }, 0)
+    : selectedTotalFee === null ? null : Math.max(0, selectedTotalFee - selectedPaid);
   const currentPayable = Number(currentEnrollment?.feeConfig?.netPayableFee || currentEnrollment?.summary?.totalDue || fee?.payable || 0);
   const currentPaid = Number(currentEnrollment?.summary?.totalPaid || fee?.paid || 0);
   const currentBalanceDue = Number(currentEnrollment?.summary?.balanceDue ?? Math.max(0, currentPayable - currentPaid));
@@ -90,25 +124,25 @@ export default function StudentFeeWorkspace({
       </div>
 
       <div className="student-code-switcher" style={{ display: "flex", flexWrap: "wrap", gap: 10, margin: "16px 0" }}>
-        <button type="button" className={selectedCode === "ALL" ? "primary-btn" : "ghost-btn"} onClick={() => setSelectedCodeState("ALL")}>All Codes</button>
+        <button type="button" className={selectedCode === "ALL" ? "primary-btn" : "ghost-btn"} onClick={() => setSelectedCodeState("ALL")} aria-pressed={selectedCode === "ALL"}>All Registrations</button>
         {codeCards.map(item => {
-          const code = String(item.stCode);
-          const current = code === currentStCode || Boolean(item.isCurrent);
-          const active = selectedCode === code;
-          return <button key={code} type="button" onClick={() => setSelectedCodeState(code)}
-            className={active ? "primary-btn" : "ghost-btn"}
-            aria-pressed={active}
-            style={{ minWidth: 170, textAlign: "left", display: "grid", gap: 4, padding: "9px 12px" }}>
-            <span style={{ fontWeight: 800 }}>#{code} <small style={{ marginLeft: 6, opacity: .85 }}>{current ? "Current" : "Previous"}</small></span>
+          const id = String(item.registrationId);
+          const current = id === currentRegistrationId || Boolean(item.isCurrent);
+          const active = selectedCode === id;
+          return <button key={id} type="button" onClick={() => setSelectedCodeState(id)}
+            className={active ? "primary-btn" : "ghost-btn"} aria-pressed={active}
+            style={{ minWidth: 190, textAlign: "left", display: "grid", gap: 4, padding: "9px 12px" }}>
+            <span style={{ fontWeight: 800 }}>#{item.stCode} <small style={{ marginLeft: 5 }}>{current ? "Current" : "Previous"}</small></span>
+            <span style={{ fontSize: 11, overflowWrap: "anywhere" }}>{id}</span>
             <span style={{ fontSize: 12 }}>{item.course || item.courseCode || "Previous Course (Legacy)"}</span>
-            <span style={{ fontSize: 11, opacity: .8 }}>Admission: {dateLabel(item.dateOfAdmission || item.admissionDate)}</span>
+            <span style={{ fontSize: 11, opacity: .8 }}>Admission: {dateLabel(item.dateOfAdmission || item.admissionDate)} · {money(item.paidTotal)} paid</span>
           </button>;
         })}
       </div>
 
       <div className="student-fee-overview">
         <div className="fee-overview-card"><span>Course Name</span><strong style={{ fontSize: 17 }}>{selectedCourse || "—"}</strong></div>
-        <div className="fee-overview-card"><span>Registration Code</span><strong>{selectedCode === "ALL" ? "All Codes" : "#" + selectedCode}</strong></div>
+        <div className="fee-overview-card"><span>Registration Code</span><strong>{selectedCode === "ALL" ? "All Registrations" : selectedCode}</strong></div>
         <div className="fee-overview-card fee-total"><span>Total Course Fee</span><strong>{selectedTotalFee === null ? "—" : money(selectedTotalFee)}</strong><small>{selectedDiscount ? "Discount: " + money(selectedDiscount) : "Course fee rule"}</small></div>
         <div className="fee-overview-card fee-paid"><span>Total Paid</span><strong>{money(selectedPaid)}</strong><small>{visibleRows.length} receipt(s)</small></div>
         <div className="fee-overview-card fee-due"><span>Balance Due</span><strong>{selectedBalance === null ? "—" : money(selectedBalance)}</strong></div>
@@ -116,11 +150,11 @@ export default function StudentFeeWorkspace({
 
       <section className="student-payment-history-ledger" style={{ marginTop: 20, padding: 16, border: "1px solid var(--border,#e3e7ef)", borderRadius: 12 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <div><h3 style={{ margin: 0 }}>Date-wise Payment Ledger</h3><small>Sorted chronologically by D_O_P · {selectedCode === "ALL" ? "all registration codes" : "registration #" + selectedCode}</small></div>
+          <div><h3 style={{ margin: 0 }}>Date-wise Payment Ledger</h3><small>Sorted chronologically by D_O_P · {selectedCode === "ALL" ? "all registration codes" : selectedCode}</small></div>
         </div>
         <div style={{ overflowX: "auto", marginTop: 12 }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 820 }}>
-            <thead><tr>{["Payment Date (D_O_P)", "MR No", "Course", "St_Code", "Amount Paid (₹)", "View / Print Receipt"].map(label =>
+            <thead><tr>{["Date (D_O_P)", "MR No", "St_Code / Registration ID", "Course", "Amount Paid (₹)", "Receipt"].map(label =>
               <th key={label} style={{ textAlign: "left", padding: "10px 8px", borderBottom: "1px solid var(--border,#e3e7ef)", fontSize: 12 }}>{label}</th>
             )}</tr></thead>
             <tbody>
@@ -129,7 +163,7 @@ export default function StudentFeeWorkspace({
                   <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{dateLabel(payment.paymentDate || payment.rawPaymentDate || payment.date)}</td>
                   <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{payment.mrNo || payment.receiptNo || "—"}</td>
                   <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{payment.courseName || payment.courseCode || "Previous Course (Legacy)"}</td>
-                  <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>#{payment.stCode || "—"}</td>
+                  <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>#{payment.stCode || "—"}<small style={{ display: "block", fontSize: 10, opacity: .75 }}>{payment.registrationId || payment.stNameKey || "—"}</small></td>
                   <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)", fontWeight: 700 }}>{money(payment.amountPaid ?? payment.amount)}</td>
                   <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>
                     <button type="button" className="ghost-btn" onClick={() => printReceipt(payment, student)}><Printer size={14} /> View / Print</button>
