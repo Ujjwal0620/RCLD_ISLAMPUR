@@ -21,8 +21,10 @@ async function ensureReceiptIndex() {
         if (error.code === 26 || error.codeName === "NamespaceNotFound") return [];
         throw error;
       });
-      const legacy = indexes.find(index => index.name === "stcode_receipt_date_amount_unique" && index.unique);
-      if (legacy) await StudentFeePayment.collection.dropIndex(legacy.name);
+      const legacyIndexes = indexes.filter(index => index.unique
+        && !index.key?.registrationId
+        && ["stCode", "mrNo", "paymentDate", "amountPaid"].every(key => index.key?.[key] === 1));
+      for (const legacy of legacyIndexes) await StudentFeePayment.collection.dropIndex(legacy.name);
       await StudentFeePayment.collection.createIndex(
         { registrationId: 1, mrNo: 1, paymentDate: 1, amountPaid: 1 },
         {
