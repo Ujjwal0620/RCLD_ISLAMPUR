@@ -266,6 +266,7 @@ export default function BulkImportPage() {
     runningRef.current = true;
     setBusy(true); setError(""); setResult(null);
     const summary = { studentsMatchedUpdated: 0, newStudentsCreated: 0, registrationsLinked: 0, newReceiptsAdded: 0, existingReceiptsUpdatedOrSkipped: 0, unmatchedRows: [...preview.warnings] };
+    const touchedStudentIds = new Set();
     try {
       const studentBatches = [];
       for (let i = 0; i < preview.profiles.length; i += 500) studentBatches.push(preview.profiles.slice(i, i + 500));
@@ -275,6 +276,7 @@ export default function BulkImportPage() {
         summary.studentsMatchedUpdated += Number(data.studentsMatchedUpdated || 0);
         summary.newStudentsCreated += Number(data.newStudentsCreated || 0);
         summary.registrationsLinked += Number(data.registrationsLinked || 0);
+        (data.registrationMap || []).forEach(item => { if (item.studentId) touchedStudentIds.add(item.studentId); });
         summary.unmatchedRows.push(...(data.flaggedRows || []));
         setProgress({ stage: "Syncing Students", percent: 10 + Math.round(((index + 1) / studentBatches.length) * 45), done: index + 1, total: studentBatches.length });
       }
@@ -287,6 +289,19 @@ export default function BulkImportPage() {
         summary.existingReceiptsUpdatedOrSkipped += Number(data.existingReceiptsUpdatedOrSkipped || 0);
         summary.unmatchedRows.push(...(data.unmatchedRows || []));
         setProgress({ stage: "Syncing Fees", percent: 55 + Math.round(((index + 1) / Math.max(1, feeBatches.length)) * 40), done: index + 1, total: feeBatches.length });
+      }
+      const finalizeBatches = [...touchedStudentIds].reduce((batches, id, index) => {
+        const batchIndex = Math.floor(index / 500);
+        batches[batchIndex] = batches[batchIndex] || [];
+        batches[batchIndex].push(id);
+        return batches;
+      }, []);
+      if (finalizeBatches.length) {
+        setProgress({ stage: "Finalizing Fee Summaries", percent: 95, done: 0, total: finalizeBatches.length });
+        for (let index = 0; index < finalizeBatches.length; index += 1) {
+          await postBatch({ action: "finalize", studentIds: finalizeBatches[index] });
+          setProgress({ stage: "Finalizing Fee Summaries", percent: 95 + Math.round(((index + 1) / finalizeBatches.length) * 4), done: index + 1, total: finalizeBatches.length });
+        }
       }
       setProgress({ stage: "Complete", percent: 100, done: 1, total: 1 });
       setResult(summary);
