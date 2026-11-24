@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { ArrowLeft, Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, Download, ImagePlus, LoaderCircle } from "lucide-react";
+import { useState } from "react";
+import { ArrowLeft, Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, Download, ImagePlus } from "lucide-react";
 import * as XLSX from "xlsx";
 import ERPLayout from "@/components/ERPLayout";
 import BulkStudentPhotoUploadDialog from "@/components/students/BulkStudentPhotoUploadDialog";
@@ -48,7 +48,8 @@ function parseIdentity(rawName, fallbackCode) {
   const splitAt = firstLine.lastIndexOf("_");
   let name = splitAt > 0 ? firstLine.slice(0, splitAt).replace(/\s+/g, " ").trim() : firstLine;
   let code = splitAt > 0 ? firstLine.slice(splitAt + 1).trim() : "";
-  if (!code) code = clean(fallbackCode).split(/\r?\n/)[0].replace(/[^A-Za-z0-9-]/g, "").replace(/\.0+$/, "").trim().toUpperCase();
+  if (!code) code = clean(fallbackCode).split(/\r?\n/)[0].replace(/\.0+$/, "").replace(/[^A-Za-z0-9-]/g, "").trim().toUpperCase();
+  code = code.replace(/\.0+$/, "");
   if (!name || !code) return { cleanName: name, stCode: code, registrationId: "" };
   return { cleanName: name, stCode: code, registrationId: name + "_" + code };
 }
