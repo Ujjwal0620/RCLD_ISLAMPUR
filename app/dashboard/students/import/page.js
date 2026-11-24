@@ -354,7 +354,7 @@ export default function BulkImportPage() {
       <section className="panel" style={{ marginBottom: 18 }}>
         <div className="panel-head"><div><h3>1. Bulk Import — Unified Excel Upload</h3><p>Upload one .xlsx workbook with Student Data and Fee sheets. Students, course registrations and receipts are synced in batches.</p></div><FileSpreadsheet size={22}/></div>
         <div style={{ padding: 22, display: "grid", gap: 14 }}>
-          <label className="form-field"><span>Admission + Fee workbook (.xlsx)</span><input type="file" accept=".xlsx" disabled={busy} onChange={event => { const selected = event.target.files?.[0] || null; setFile(selected); parseSelectedWorkbook(selected); }}/></label>
+          <label className="form-field"><span>Admission + Fee workbook (.xlsx)</span><input type="file" accept=".xlsx" disabled={busy} onChange={event => { const selected = event.target.files?.[0] || null; setFile(selected); parseSelectedWorkbook(selected); event.target.value = ""; }}/></label>
           {file && <div className="form-help">{file.name} · {(file.size / 1024 / 1024).toFixed(2)} MB</div>}
           {preview && <div className="student-summary-grid">
             <div className="summary-card"><span>Student Data rows</span><strong>{preview.studentRows.toLocaleString("en-IN")}</strong></div>
