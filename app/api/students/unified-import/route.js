@@ -188,9 +188,16 @@ async function syncStudentGroups(groups = []) {
     const groupRegistrationIds = new Set(registrations.map(item => item.registrationId.toUpperCase()));
     const registrationCandidates = existingMasters.filter(candidate =>
       [...(candidate.registrations || []), ...(candidate.enrollments || [])]
-        .some(item => groupRegistrationIds.has(String(item.registrationId || "").toUpperCase()))
+        .some(item => {
+          const storedId = item.registrationId || (item.stCode
+            ? normalizeName(candidate.fullName || candidate.normalizedFullName) + "_" + clean(item.stCode)
+            : "");
+          return groupRegistrationIds.has(String(storedId).toUpperCase());
+        })
       || existingEnrollments.some(item => String(item.studentId) === String(candidate._id)
-        && groupRegistrationIds.has(String(item.registrationId || "").toUpperCase()))
+        && groupRegistrationIds.has(String(item.registrationId || (item.stCode
+          ? normalizeName(item.normalizedFullName) + "_" + clean(item.stCode)
+          : "")).toUpperCase()))
     );
     const candidates = registrationCandidates.length
       ? registrationCandidates
