@@ -6,6 +6,9 @@ import Student from "@/models/Student";
 import StudentMaster from "@/models/StudentMaster";
 import StudentEnrollment from "@/models/StudentEnrollment";
 import StudentFeePayment from "@/models/StudentFeePayment";
+import Course from "@/models/Course";
+import { resolveCourseFeeConfig } from "@/lib/student-import/course-fee-rules";
+import { buildInstallments } from "@/lib/student-import/fee-allocation";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -122,6 +125,7 @@ async function syncStudentGroups(groups = []) {
   const masterOps = [];
   const enrollmentOps = [];
   const outputMap = [];
+  const feeRuleCache = new Map();
   let matchedProfiles = 0, newProfiles = 0, registrationsLinked = 0, registrationsSeen = 0;
 
   for (const group of groups) {
@@ -131,7 +135,7 @@ async function syncStudentGroups(groups = []) {
       stCode: clean(item.stCode),
       cleanName: normalizeName(item.cleanName || group.cleanName),
       course: clean(item.course) || "Previous Course (Legacy)",
-      dateOfAdmission: asDate(item.dateOfAdmission),
+      dateOfAdmission: asDate(item.dateOfAdmission || item.earliestPaymentDate),
       formNo: clean(item.formNo)
     })).filter(item => item.registrationId && item.stCode);
     if (!registrations.length) continue;
@@ -212,7 +216,7 @@ async function syncStudentGroups(groups = []) {
     const current = mergedRegistrations[0] || newest;
     mergedRegistrations.forEach((item, index) => { item.isCurrent = index === 0; });
     const existingCurrentDate = asDate(master?.currentAdmissionDate || master?.dateOfAdmission);
-    const shouldPromote = !master || !existingCurrentDate || !current.dateOfAdmission || current.dateOfAdmission >= existingCurrentDate;
+    const shouldPromote = !master || !existingCurrentDate || Boolean(current.dateOfAdmission && current.dateOfAdmission >= existingCurrentDate);
     const masterSet = {
       fullName: master?.fullName || normalizeName(group.cleanName),
       normalizedFullName: normalizeName(group.cleanName),
@@ -248,6 +252,9 @@ async function syncStudentGroups(groups = []) {
       const existingEnrollment = enrollmentByRegistration.get(registration.registrationId);
       const courseCode = registration.course === "Previous Course (Legacy)" ? "PREVIOUS-LEGACY" : registration.course.toUpperCase();
       const enrollmentId = existingEnrollment?._id || new mongoose.Types.ObjectId();
+      const courseRuleKey = courseCode;
+      if (!feeRuleCache.has(courseRuleKey)) feeRuleCache.set(courseRuleKey, resolveCourseFeeConfig(courseCode, Course));
+      const courseRule = await feeRuleCache.get(courseRuleKey);
       const enrollmentSet = {
         studentId: masterId,
         legacyStudentId: canonicalStudent?._id || null,
@@ -259,7 +266,23 @@ async function syncStudentGroups(groups = []) {
         courseName: registration.course,
         semesterLabel: registration.course,
         admissionDate: registration.dateOfAdmission,
-        status: registration.registrationId === current.registrationId ? "ACTIVE" : (courseCode === "PREVIOUS-LEGACY" ? "LEGACY" : "PROMOTED")
+        status: registration.registrationId === current.registrationId ? "ACTIVE" : (courseCode === "PREVIOUS-LEGACY" ? "LEGACY" : "PROMOTED"),
+        courseCategory: courseRule.courseCategory || "OTHER",
+        semesterLabel: courseRule.semesterLabel || registration.course,
+        feeConfig: courseRule.feeConfig,
+        installments: courseRule.feeConfig?.configured ? buildInstallments({
+          courseCode,
+          admissionDate: registration.dateOfAdmission || new Date(),
+          feeConfig: courseRule.feeConfig,
+          semesterLabel: courseRule.semesterLabel || registration.course
+        }) : [],
+        summary: {
+          totalFee: Number(courseRule.feeConfig?.grossFee || 0),
+          totalDue: Number(courseRule.feeConfig?.netPayableFee || 0),
+          totalPaid: 0,
+          balanceDue: Number(courseRule.feeConfig?.netPayableFee || 0),
+          feeStatus: "Unpaid"
+        }
       };
       if (!existingEnrollment) {
         enrollmentOps.push({ updateOne: { filter: { _id: enrollmentId }, update: { $setOnInsert: enrollmentSet }, upsert: true } });
@@ -289,10 +312,11 @@ async function syncFeeRows(rows = []) {
   const ids = [...new Set(rows.map(item => clean(item.registrationId)).filter(Boolean))];
   const enrollments = await StudentEnrollment.find({ registrationId: { $in: ids } }).lean();
   const enrollmentById = new Map(enrollments.map(item => [String(item.registrationId), item]));
-  const existing = await StudentFeePayment.find({ registrationId: { $in: ids } })
+  const codes = [...new Set(rows.map(item => clean(item.stCode)).filter(Boolean))];
+  const existing = await StudentFeePayment.find({ $or: [{ registrationId: { $in: ids } }, { stCode: { $in: codes } }] })
     .select("registrationId mrNo paymentDate amountPaid studentId enrollmentId courseCode").lean();
   const existingKeys = new Set(existing.map(item => [
-    item.registrationId, item.mrNo, asDate(item.paymentDate)?.toISOString().slice(0, 10) || "",
+    (item.registrationId || item.stNameKey || "").toUpperCase(), item.mrNo, asDate(item.paymentDate)?.toISOString().slice(0, 10) || "",
     Number(item.amountPaid).toFixed(2)
   ].join("|")));
   const operations = [];
@@ -319,7 +343,7 @@ async function syncFeeRows(rows = []) {
     operations.push({ updateOne: {
       filter: { registrationId, mrNo, paymentDate, amountPaid },
       update: {
-        $set: { studentId: enrollment.studentId, enrollmentId: enrollment._id, stCode: enrollment.stCode, courseCode },
+        $set: { studentId: enrollment.studentId, enrollmentId: enrollment._id, stCode: enrollment.stCode, registrationId, courseCode },
         $setOnInsert: { registrationId, mrNo, paymentDate, amountPaid, rawPaymentDate: paymentDate, sourceSheet: clean(row.sourceSheet), sourceRowNo: Number(row.rowNo || 0), importBatchKey: "UNIFIED_WORKBOOK_IMPORT", allocations: [], importWarnings: [] }
       },
       upsert: true
