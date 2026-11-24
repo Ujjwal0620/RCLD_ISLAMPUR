@@ -69,8 +69,8 @@ function findSheet(workbook, kind) {
     });
     if (index >= 0) matches.push({ name, grid, headerIndex: index });
   }
-  if (kind === "student") return matches.find(item => /^student\\s*data$/i.test(item.name)) || matches[0] || null;
-  return matches.find(item => !/^student\\s*data$/i.test(item.name)) || matches[0] || null;
+  if (kind === "student") return matches.find(item => /^student\s*data$/i.test(item.name)) || matches[0] || null;
+  return matches.find(item => !/^student\s*data$/i.test(item.name)) || matches[0] || null;
 }
 
 function buildWorkbookPayload(workbook) {
