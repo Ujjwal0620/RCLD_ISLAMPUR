@@ -76,9 +76,9 @@ function hasIdentityAnchor(group, candidate) {
   const incomingPhones = new Set((group.phones || []).map(value => clean(value).replace(/\D/g, "")).filter(value => value.length === 10));
   const existingPhones = (candidate.phoneNumbers || []).map(value => clean(value).replace(/\D/g, "")).filter(value => value.length === 10);
   const samePhone = existingPhones.some(value => incomingPhones.has(value));
-  const sameDob = sameDate(group.dob, candidate.dob);
-  const sameFather = Boolean(normalizeFather(group.fatherName)
-    && normalizeFather(group.fatherName) === normalizeFather(candidate.fatherName));
+  const sameDob = [group.dob, ...(group.dobs || [])].some(value => sameDate(value, candidate.dob));
+  const fatherNames = [...new Set([group.fatherName, ...(group.fatherNames || [])].map(normalizeFather).filter(Boolean))];
+  const sameFather = fatherNames.includes(normalizeFather(candidate.fatherName));
   return samePhone || sameDob || sameFather;
 }
 
@@ -100,8 +100,8 @@ async function syncStudentGroups(groups = []) {
   const registrationIds = [...new Set(allRegistrations.map(item => item.registrationId))];
   const names = [...new Set(groups.map(group => normalizeName(group.cleanName)).filter(Boolean))];
   const phones = [...new Set(groups.flatMap(group => group.phones || []).map(value => clean(value).replace(/\D/g, "")).filter(value => value.length === 10))];
-  const dobs = [...new Set(groups.map(group => asDate(group.dob)?.toISOString().slice(0, 10)).filter(Boolean))];
-  const fathers = [...new Set(groups.map(group => normalizeFather(group.fatherName)).filter(Boolean))];
+  const dobs = [...new Set(groups.flatMap(group => [group.dob, ...(group.dobs || [])]).map(value => asDate(value)?.toISOString().slice(0, 10)).filter(Boolean))];
+  const fathers = [...new Set(groups.flatMap(group => [group.fatherName, ...(group.fatherNames || [])]).map(normalizeFather).filter(Boolean))];
   const courseCodes = [...new Set(allRegistrations.map(item => normalizeCourseCode(item.course)).filter(Boolean))];
   const courseLookupCodes = [...new Set(courseCodes.flatMap(code => [code, code.replace(/[-_].*$/, "")]))];
 
