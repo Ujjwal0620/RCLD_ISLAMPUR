@@ -111,9 +111,16 @@ async function syncStudentGroups(groups = []) {
     Course.find({ code: { $in: courseLookupCodes } }).lean()
   ]);
   const existingStudentIds = existingStudents.map(item => item._id);
+  const existingEnrollmentMasterIds = [...new Set(existingEnrollments.map(item => String(item.studentId)).filter(validObjectId))]
+    .map(id => new mongoose.Types.ObjectId(id));
   const existingMasters = await StudentMaster.find({
     $or: [
       { normalizedFullName: { $in: names } },
+      ...(registrationIds.length ? [
+        { "registrations.registrationId": { $in: registrationIds } },
+        { "enrollments.registrationId": { $in: registrationIds } }
+      ] : []),
+      ...(existingEnrollmentMasterIds.length ? [{ _id: { $in: existingEnrollmentMasterIds } }] : []),
       ...(phones.length ? [{ phoneNumbers: { $in: phones } }] : []),
       ...(dobs.length ? [{ dob: { $in: dobs.map(value => new Date(value + "T00:00:00.000Z")) } }] : []),
       ...(fathers.length ? [{ normalizedFatherName: { $in: fathers } }] : []),
@@ -178,8 +185,17 @@ async function syncStudentGroups(groups = []) {
       });
     });
     const linkedMasterIds = new Set(existingLegacy.map(item => masterByStudentId.get(String(item._id))).filter(Boolean).map(item => String(item._id)));
+    const groupRegistrationIds = new Set(registrations.map(item => item.registrationId.toUpperCase()));
+    const registrationCandidates = existingMasters.filter(candidate =>
+      [...(candidate.registrations || []), ...(candidate.enrollments || [])]
+        .some(item => groupRegistrationIds.has(String(item.registrationId || "").toUpperCase()))
+      || existingEnrollments.some(item => String(item.studentId) === String(candidate._id)
+        && groupRegistrationIds.has(String(item.registrationId || "").toUpperCase()))
+    );
+    const candidates = registrationCandidates.length
+      ? registrationCandidates
+      : existingMasters.filter(candidate => hasIdentityAnchor(group, candidate));
     const byLinked = linkedMasterIds.size === 1 ? existingMasters.find(item => String(item._id) === [...linkedMasterIds][0]) : null;
-    const candidates = existingMasters.filter(candidate => hasIdentityAnchor(group, candidate));
     let master = linkedMasterIds.size > 1 ? null : (byLinked || (candidates.length === 1 ? candidates[0] : null));
     const ambiguous = linkedMasterIds.size > 1 || (!master && candidates.length > 1);
     if (ambiguous) flaggedRows.push({ row: registrations[0]?.rowNo || "", studentId: registrations.map(item => item.registrationId).join(", "), reason: "Multiple existing student profiles matched this name; created a separate profile rather than merging uncertain identities." });
