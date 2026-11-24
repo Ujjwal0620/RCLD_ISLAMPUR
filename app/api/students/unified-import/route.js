@@ -243,7 +243,9 @@ async function syncStudentGroups(groups = []) {
     const mergedRegistrations = [...existingRegs.values()].sort(registrationSort);
     const current = mergedRegistrations[0] || newest;
     mergedRegistrations.forEach((item, index) => { item.isCurrent = index === 0; });
-    const existingCurrentDate = asDate(master?.currentAdmissionDate || master?.dateOfAdmission);
+    const existingCurrentDate = asDate(master?.currentAdmissionDate || master?.dateOfAdmission
+      || master?.registrations?.find(item => item.isCurrent)?.dateOfAdmission
+      || master?.enrollments?.find(item => item.isCurrent)?.dateOfAdmission);
     const shouldPromote = !master || !existingCurrentDate || Boolean(current.dateOfAdmission && current.dateOfAdmission >= existingCurrentDate);
     const incomingPhones = [...new Set([...(shouldPromote ? (newest.phones || []) : []), ...(master?.phoneNumbers || []), ...(group.phones || [])])];
     const masterSet = {
