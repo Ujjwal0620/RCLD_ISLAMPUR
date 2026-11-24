@@ -171,7 +171,7 @@ function buildWorkbookPayload(workbook) {
     const feeName = feeGet(row, "stname") || feeGet(row, "stnamecr");
     const identity = parseIdentity(feeName, feeGet(row, "stcode"));
     if (!identity.cleanName || !identity.stCode) {
-      feeWarnings.push({ sheet: feeSheet.name, row: index + 1, studentId: clean(feeGet(row,"stcode")), reason: "Fee row has no valid name/code identity." });
+      feeWarnings.push({ sheet: feeSheet.name, row: index + 1, studentId: clean(feeGet(row,"stcode")), name: feeName, mrNo: clean(feeGet(row,"mrno")), paymentDate: parseDate(feeGet(row,"dop")), amountPaid: feeGet(row,"amtpaid"), reason: "Fee row has no valid name/code identity." });
       continue;
     }
     let registrationId = identity.registrationId;
@@ -194,7 +194,7 @@ function buildWorkbookPayload(workbook) {
         registrationId = legacy.registrationId;
         registrationById.set(registrationId, registration);
       } else {
-        feeWarnings.push({ sheet: feeSheet.name, row: index + 1, studentId: identity.registrationId, reason: nameMatches.length > 1 ? "Legacy registration name is ambiguous across multiple student profiles." : "Fee registration does not match Student Data." });
+        feeWarnings.push({ sheet: feeSheet.name, row: index + 1, studentId: identity.registrationId, name: identity.cleanName, stCode: identity.stCode, mrNo: clean(feeGet(row,"mrno")), paymentDate: parseDate(feeGet(row,"dop")), amountPaid: feeGet(row,"amtpaid"), reason: nameMatches.length > 1 ? "Legacy registration name is ambiguous across multiple student profiles." : "Fee registration does not match Student Data." });
         continue;
       }
     }
@@ -202,7 +202,7 @@ function buildWorkbookPayload(workbook) {
     const amountPaid = Number(clean(feeGet(row, "amtpaid")).replace(/[₹,\s]/g, ""));
     const mrNo = clean(feeGet(row, "mrno")).replace(/\.0+$/, "");
     if (!paymentDate || !mrNo || !Number.isFinite(amountPaid) || amountPaid < 0) {
-      feeWarnings.push({ sheet: feeSheet.name, row: index + 1, studentId: registrationId, reason: "Receipt number, date, or amount is invalid." });
+      feeWarnings.push({ sheet: feeSheet.name, row: index + 1, studentId: registrationId, name: identity.cleanName, stCode: identity.stCode, mrNo, paymentDate, amountPaid: feeGet(row,"amtpaid"), reason: "Receipt number, date, or amount is invalid." });
       continue;
     }
     if (!registration.course || registration.course === "Previous Course (Legacy)") registration.course = "Previous Course (Legacy)";
