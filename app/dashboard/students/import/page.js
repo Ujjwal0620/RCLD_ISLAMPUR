@@ -9,8 +9,8 @@ import { useErpCache, useErpToast } from "@/components/providers/ERPUIProvider";
 
 const clean = value => String(value ?? "").trim();
 const headerKey = value => clean(value).toLowerCase().replace(/[^a-z0-9]/g, "");
-const normalizeName = value => clean(value).normalize("NFKC").toUpperCase().replace(/\\s+/g, " ").trim();
-const normalizeFather = value => normalizeName(value).replace(/[^A-Z0-9 ]/g, " ").replace(/\\bKR\\b/g, "KUMAR").replace(/\\bMD\\b|\\bMOHD\\b/g, "MOHAMMAD").replace(/\\bSK\\b/g, "SHEIKH").replace(/\\s+/g, " ").trim();
+const normalizeName = value => clean(value).normalize("NFKC").toUpperCase().replace(/\s+/g, " ").trim();
+const normalizeFather = value => normalizeName(value).replace(/[^A-Z0-9 ]/g, " ").replace(/\bKR\b/g, "KUMAR").replace(/\bMD\b|\bMOHD\b/g, "MOHAMMAD").replace(/\bSK\b/g, "SHEIKH").replace(/\s+/g, " ").trim();
 
 function parseDate(value) {
   if (value === null || value === undefined || value === "") return null;
@@ -22,16 +22,16 @@ function parseDate(value) {
     if (!parsed) return null;
     ({ y: year, m: month, d: day } = parsed);
   } else {
-    const raw = clean(value).split(/\\r?\\n/)[0];
-    let match = raw.match(/^(\\d{4})[-/.](\\d{1,2})[-/.](\\d{1,2})$/);
+    const raw = clean(value).split(/\r?\n/)[0];
+    let match = raw.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
     if (match) { year = Number(match[1]); month = Number(match[2]); day = Number(match[3]); }
     else {
-      match = raw.match(/^(\\d{1,2})[- ]([A-Za-z]{3})[- ](\\d{2,4})$/);
+      match = raw.match(/^(\d{1,2})[- ]([A-Za-z]{3})[- ](\d{2,4})$/);
       if (match) {
         const months = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
         day = Number(match[1]); month = months.indexOf(match[2].toUpperCase()) + 1; year = Number(match[3]);
       } else {
-        match = raw.match(/^(\\d{1,2})[-/.](\\d{1,2})[-/.](\\d{2,4})$/);
+        match = raw.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})$/);
         if (!match) return null;
         day = Number(match[1]); month = Number(match[2]); year = Number(match[3]);
       }
@@ -44,17 +44,17 @@ function parseDate(value) {
 }
 
 function parseIdentity(rawName, fallbackCode) {
-  const firstLine = clean(rawName).split(/\\r?\\n/)[0].replace(/\\s+/g, " ").trim().toUpperCase();
+  const firstLine = clean(rawName).split(/\r?\n/)[0].replace(/\s+/g, " ").trim().toUpperCase();
   const splitAt = firstLine.lastIndexOf("_");
-  let name = splitAt > 0 ? firstLine.slice(0, splitAt).replace(/\\s+/g, " ").trim() : firstLine;
+  let name = splitAt > 0 ? firstLine.slice(0, splitAt).replace(/\s+/g, " ").trim() : firstLine;
   let code = splitAt > 0 ? firstLine.slice(splitAt + 1).trim() : "";
-  if (!code) code = clean(fallbackCode).split(/\\r?\\n/)[0].replace(/[^A-Za-z0-9-]/g, "").replace(/\\.0+$/, "").trim().toUpperCase();
+  if (!code) code = clean(fallbackCode).split(/\r?\n/)[0].replace(/[^A-Za-z0-9-]/g, "").replace(/\.0+$/, "").trim().toUpperCase();
   if (!name || !code) return { cleanName: name, stCode: code, registrationId: "" };
   return { cleanName: name, stCode: code, registrationId: name + "_" + code };
 }
 
 function phonesFrom(value) {
-  return [...new Set(clean(value).split(/[,/;|\\s]+/).map(part => part.replace(/\\D/g, "")).filter(part => part.length === 10))];
+  return [...new Set(clean(value).split(/[,/;|\s]+/).map(part => part.replace(/\D/g, "")).filter(part => part.length === 10))];
 }
 
 function findSheet(workbook, kind) {
@@ -93,7 +93,7 @@ function buildWorkbookPayload(workbook) {
       ...identity,
       course: clean(studentGet(row, "course")) || "Previous Course (Legacy)",
       dateOfAdmission: parseDate(studentGet(row, "doa")),
-      formNo: clean(studentGet(row, "formno")).replace(/\\.0+$/, ""),
+      formNo: clean(studentGet(row, "formno")).replace(/\.0+$/, ""),
       dob: parseDate(studentGet(row, "dob")),
       sex: clean(studentGet(row, "sex")).toUpperCase(),
       fatherName: clean(studentGet(row, "stfather")),
@@ -187,8 +187,8 @@ function buildWorkbookPayload(workbook) {
       }
     }
     const paymentDate = parseDate(feeGet(row, "dop"));
-    const amountPaid = Number(clean(feeGet(row, "amtpaid")).replace(/[₹,\\s]/g, ""));
-    const mrNo = clean(feeGet(row, "mrno")).replace(/\\.0+$/, "");
+    const amountPaid = Number(clean(feeGet(row, "amtpaid")).replace(/[₹,\s]/g, ""));
+    const mrNo = clean(feeGet(row, "mrno")).replace(/\.0+$/, "");
     if (!paymentDate || !mrNo || !Number.isFinite(amountPaid) || amountPaid < 0) {
       feeWarnings.push({ sheet: feeSheet.name, row: index + 1, studentId: registrationId, reason: "Receipt number, date, or amount is invalid." });
       continue;
