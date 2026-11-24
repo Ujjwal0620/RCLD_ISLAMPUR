@@ -101,9 +101,9 @@ export default function StudentFeeWorkspace({
   const selectedTotalFee = selectedCode === "ALL"
     ? codeCards.reduce((sum, item) => {
         const enrollment = enrollmentOptions.find(entry => String(entry.registrationId || "") === String(item.registrationId));
-        return sum + (configuredFee(enrollment) ? Number(enrollment?.feeConfig?.netPayableFee ?? enrollment?.summary?.totalDue ?? 0) : 0);
+        return sum + (configuredFee(enrollment) ? Number(enrollment?.feeConfig?.grossFee ?? enrollment?.summary?.totalFee ?? 0) : 0);
       }, 0)
-    : configuredFee(selectedEnrollment) ? Number(selectedEnrollment?.feeConfig?.netPayableFee ?? selectedEnrollment?.summary?.totalDue ?? 0) : null;
+    : configuredFee(selectedEnrollment) ? Number(selectedEnrollment?.feeConfig?.grossFee ?? selectedEnrollment?.summary?.totalFee ?? 0) : null;
   const selectedBalance = selectedCode === "ALL"
     ? codeCards.reduce((sum, item) => {
         const enrollment = enrollmentOptions.find(entry => String(entry.registrationId || "") === String(item.registrationId));
@@ -140,7 +140,7 @@ export default function StudentFeeWorkspace({
       </div>
 
       <div className="student-fee-overview">
-        <div className="fee-overview-card"><span>Course Name</span><strong style={{ fontSize: 17 }}>{selectedCourse || "—"}</strong></div>
+        <div className="fee-overview-card"><span>Course(s)</span><strong style={{ fontSize: 17 }}>{selectedCourse || "—"}</strong></div>
         <div className="fee-overview-card"><span>Registration Code</span><strong>{selectedCode === "ALL" ? "All Registrations" : selectedCode}</strong></div>
         <div className="fee-overview-card fee-total"><span>Total Course Fee</span><strong>{selectedTotalFee === null ? "—" : money(selectedTotalFee)}</strong><small>{selectedDiscount ? "Discount: " + money(selectedDiscount) : "Course fee rule"}</small></div>
         <div className="fee-overview-card fee-paid"><span>Total Paid</span><strong>{money(selectedPaid)}</strong><small>{visibleRows.length} receipt(s)</small></div>
