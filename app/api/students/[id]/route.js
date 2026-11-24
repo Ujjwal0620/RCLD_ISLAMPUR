@@ -133,6 +133,8 @@ export async function GET(req,{params}){
       regnNo: masterProfile?.currentStCode || activeEnrollment?.stCode || canonicalStudent.regnNo,
       enrollmentNo: masterProfile?.currentStCode || activeEnrollment?.stCode || canonicalStudent.enrollmentNo,
       courseName: masterProfile?.currentCourse || activeEnrollment?.courseName || canonicalStudent.courseName,
+      currentRegistrationId: masterProfile?.currentRegistrationId || activeEnrollment?.registrationId || "",
+      registrationCount: masterProfile?.registrations?.length || masterProfile?.enrollments?.length || enrollments.length,
       courseCode: activeEnrollment?.courseCode || canonicalStudent.courseCode,
       dateOfAdmission: masterProfile ? (masterProfile.currentAdmissionDate || null) : (activeEnrollment?.admissionDate || canonicalStudent.dateOfAdmission),
       formNo: masterProfile?.formNo || activeEnrollment?.formNo || canonicalStudent.formNo,
