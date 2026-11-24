@@ -168,23 +168,24 @@ async function syncStudentGroups(groups = []) {
         phoneNumbers: studentPhones
       });
     });
-    const codeCollision = codeCandidates.length > existingLegacy.length || registrations.some(item => item.stCodeUnique === false);
-    if (codeCollision) flaggedRows.push({ row: registrations[0]?.rowNo || "", studentId: registrations.map(item => item.registrationId).join(", "), reason: "A registration code is reused or the existing record lacks a matching identity anchor. The code-only match was rejected; a separate profile was created." });
     const linkedMasterIds = new Set(existingLegacy.map(item => masterByStudentId.get(String(item._id))).filter(Boolean).map(item => String(item._id)));
     const byLinked = linkedMasterIds.size === 1 ? existingMasters.find(item => String(item._id) === [...linkedMasterIds][0]) : null;
     const candidates = existingMasters.filter(candidate => hasIdentityAnchor(group, candidate));
-    let master = byLinked || (candidates.length === 1 ? candidates[0] : null);
-    const ambiguous = !master && (linkedMasterIds.size > 1 || candidates.length > 1);
+    let master = linkedMasterIds.size > 1 ? null : (byLinked || (candidates.length === 1 ? candidates[0] : null));
+    const ambiguous = linkedMasterIds.size > 1 || (!master && candidates.length > 1);
     if (ambiguous) flaggedRows.push({ row: registrations[0]?.rowNo || "", studentId: registrations.map(item => item.registrationId).join(", "), reason: "Multiple existing student profiles matched this name; created a separate profile rather than merging uncertain identities." });
+    const safeExistingLegacy = linkedMasterIds.size > 1 ? [] : existingLegacy;
+    const codeCollision = codeCandidates.length > safeExistingLegacy.length || registrations.some(item => item.stCodeUnique === false) || linkedMasterIds.size > 1;
+    if (codeCollision) flaggedRows.push({ row: registrations[0]?.rowNo || "", studentId: registrations.map(item => item.registrationId).join(", "), reason: "A registration code is reused or the existing record lacks a matching identity anchor. The code-only match was rejected; a separate profile was created." });
     const masterId = master?._id || new mongoose.Types.ObjectId();
     if (master) matchedProfiles += 1;
     else newProfiles += 1;
 
     let legacyIds = [...new Set([
       ...(master?.legacyStudentIds || []).map(String),
-      ...existingLegacy.map(item => String(item._id))
+      ...safeExistingLegacy.map(item => String(item._id))
     ])];
-    let canonicalStudent = existingLegacy[0] || null;
+    let canonicalStudent = safeExistingLegacy[0] || null;
     if (!canonicalStudent) {
       const newStudentId = new mongoose.Types.ObjectId();
       canonicalStudent = {
