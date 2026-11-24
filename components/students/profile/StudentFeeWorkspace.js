@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowLeft, CreditCard, WalletCards, Printer, ReceiptText } from "lucide-react";
+import { ArrowLeft, CreditCard, WalletCards, Printer } from "lucide-react";
 import StudentFeePlanSection from "@/components/students/profile/fee-workspace/StudentFeePlanSection";
 import StudentPaymentEntrySection from "@/components/students/profile/fee-workspace/StudentPaymentEntrySection";
 import StudentPaymentHistorySection from "@/components/students/profile/fee-workspace/StudentPaymentHistorySection";
@@ -33,7 +33,7 @@ function printReceipt(payment, student) {
 }
 
 export default function StudentFeeWorkspace({
-  student, fee, value, feeWorkspaceOpen, setFeeWorkspaceOpen, feeForm, setFeeForm,
+  student, fee, feeWorkspaceOpen, setFeeWorkspaceOpen, feeForm, setFeeForm,
   paymentItems, setPaymentItems, saveFees, proofUploading, uploadPaymentProof, printBill,
 }) {
   const [selectedCodeState, setSelectedCodeState] = useState("");
@@ -79,9 +79,6 @@ export default function StudentFeeWorkspace({
   const currentPayable = Number(currentEnrollment?.feeConfig?.netPayableFee || currentEnrollment?.summary?.totalDue || fee?.payable || 0);
   const currentPaid = Number(currentEnrollment?.summary?.totalPaid || fee?.paid || 0);
   const currentBalanceDue = Number(currentEnrollment?.summary?.balanceDue ?? Math.max(0, currentPayable - currentPaid));
-  const semesterRoman = ["I", "II", "III", "IV", "V", "VI"][Number(student.currentSemester || 0) - 1] || "";
-  const semesterEnrollment = semesterRoman ? enrollmentOptions.find(item => String(item.semesterLabel || "").toUpperCase() === "SM-" + semesterRoman) : null;
-  const feeWorkspaceEnrollment = currentEnrollment || semesterEnrollment;
   return (
     <section className="detail-section student-fees-section">
       <div className="detail-section-title">
