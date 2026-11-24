@@ -80,6 +80,12 @@ const displayName = value => clean(value).normalize("NFKC").toUpperCase().replac
 const normalizeName = value => clean(value).normalize("NFKC").toUpperCase()
   .replace(/[^A-Z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
 const normalizeFather = value => normalizeName(value);
+const normalizePhone = value => {
+  let digits = clean(value).replace(/\\D/g, "");
+  if (digits.length === 12 && digits.startsWith("91")) digits = digits.slice(2);
+  if (digits.length === 11 && digits.startsWith("0")) digits = digits.slice(1);
+  return digits.length === 10 ? digits : "";
+};
 const validObjectId = value => mongoose.Types.ObjectId.isValid(String(value || ""));
 const sameDate = (a, b) => {
   if (!a || !b) return false;
