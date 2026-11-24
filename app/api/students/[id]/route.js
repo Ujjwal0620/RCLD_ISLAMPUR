@@ -94,16 +94,21 @@ export async function GET(req,{params}){
       const date = payment.paymentDate || payment.date;
       const dateKey = date && !Number.isNaN(new Date(date).getTime()) ? new Date(date).toISOString().slice(0, 10) : "";
       return [String(payment.mrNo || payment.receiptNo || payment.reference || ""),
-        String(payment.stCode || ""), dateKey, Number(payment.amountPaid ?? payment.amount ?? 0).toFixed(2)].join("|");
+        String(payment.registrationId || payment.stNameKey || payment.stCode || ""), dateKey,
+        Number(payment.amountPaid ?? payment.amount ?? 0).toFixed(2)].join("|");
     };
     const knownReceiptKeys = new Set(paymentHistory.map(receiptKey));
     const linkedStudentMap = new Map(linkedStudentDocs.map(item => [String(item._id), item]));
     for (const legacyFee of legacyFees) {
       const linkedStudent = linkedStudentMap.get(String(legacyFee.studentId)) || student;
       for (const payment of legacyFee.payments || []) {
+        const legacyStCode = String(linkedStudent.regnNo || linkedStudent.enrollmentNo || "").trim();
+        const legacyCleanName = String(linkedStudent.applicantName || linkedStudent.name || linkedStudent.sourceStudentName || "")
+          .replace(/_[A-Z0-9-]+$/i, "").trim().toUpperCase().replace(/\\s+/g, " ");
         const legacyReceipt = {
           _id: payment._id, paymentDate: payment.date || null, mrNo: payment.receiptNo || payment.reference || "—",
-          stCode: linkedStudent.regnNo || linkedStudent.enrollmentNo || "—", amountPaid: Number(payment.amount || 0),
+          stCode: legacyStCode || "—", registrationId: legacyCleanName && legacyStCode ? legacyCleanName + "_" + legacyStCode : "",
+          amountPaid: Number(payment.amount || 0),
           courseCode: linkedStudent.courseCode || "", courseName: linkedStudent.courseName || linkedStudent.courseCode || "—",
           semesterLabel: payment.semester ? "SEM-" + payment.semester : "Current",
           installmentApplied: (payment.items || []).map(item => (item.purpose || item.type || "Fee") + ": ₹" + Number(item.amount || 0).toLocaleString("en-IN")).join(", ") || payment.paymentType || "Course fee",
