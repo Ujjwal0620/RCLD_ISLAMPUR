@@ -262,6 +262,7 @@ export default function BulkImportPage() {
         summary.studentsMatchedUpdated += Number(data.studentsMatchedUpdated || 0);
         summary.newStudentsCreated += Number(data.newStudentsCreated || 0);
         summary.registrationsLinked += Number(data.registrationsLinked || 0);
+        summary.unmatchedRows.push(...(data.flaggedRows || []));
         setProgress({ stage: "Syncing Students", percent: 10 + Math.round(((index + 1) / studentBatches.length) * 45), done: index + 1, total: studentBatches.length });
       }
       const feeBatches = [];
