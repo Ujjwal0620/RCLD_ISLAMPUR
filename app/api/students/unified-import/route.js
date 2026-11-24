@@ -81,7 +81,7 @@ const normalizeName = value => clean(value).normalize("NFKC").toUpperCase()
   .replace(/[^A-Z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
 const normalizeFather = value => normalizeName(value);
 const normalizePhone = value => {
-  let digits = clean(value).replace(/\\D/g, "");
+  let digits = clean(value).replace(/\D/g, "");
   if (digits.length === 12 && digits.startsWith("91")) digits = digits.slice(2);
   if (digits.length === 11 && digits.startsWith("0")) digits = digits.slice(1);
   return digits.length === 10 ? digits : "";
@@ -103,8 +103,8 @@ const registrationIdentity = item => clean(item.registrationId)
 
 function hasIdentityAnchor(group, candidate) {
   if (normalizeName(candidate.normalizedFullName || candidate.fullName) !== normalizeName(group.cleanName)) return false;
-  const incomingPhones = new Set((group.phones || []).map(value => clean(value).replace(/\D/g, "")).filter(value => value.length === 10));
-  const existingPhones = (candidate.phoneNumbers || []).map(value => clean(value).replace(/\D/g, "")).filter(value => value.length === 10);
+  const incomingPhones = new Set((group.phones || []).map(normalizePhone).filter(Boolean));
+  const existingPhones = (candidate.phoneNumbers || []).map(normalizePhone).filter(Boolean);
   const samePhone = existingPhones.some(value => incomingPhones.has(value));
   const sameDob = [group.dob, ...(group.dobs || [])].some(value => sameDate(value, candidate.dob));
   const fatherNames = [...new Set([group.fatherName, ...(group.fatherNames || [])].map(normalizeFather).filter(Boolean))];
