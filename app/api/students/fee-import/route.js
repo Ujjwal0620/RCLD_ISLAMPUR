@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import { connectMongoDB } from "@/lib/mongodb";
 import { getSession } from "@/lib/auth";
 import StudentMaster from "@/models/StudentMaster";
+import Student from "@/models/Student";
 import Course from "@/models/Course";
 import StudentEnrollment from "@/models/StudentEnrollment";
 import StudentFeePayment from "@/models/StudentFeePayment";
@@ -164,12 +165,41 @@ export async function POST(request) {
         continue;
       }
       studentRowsProcessed += 1;
+      let legacyStudent = await Student.findOne({ $or: [{ regnNo: row.stCode }, { enrollmentNo: row.stCode }] });
       const resolved = await findOrCreateMaster(row);
       if (!resolved.master) {
         unmatchedRows.push({ row: row.rowNo, studentId: row.stCode, course: row.course, reason: resolved.reason });
         continue;
       }
       const master = resolved.master;
+      if (!legacyStudent && master.legacyStudentIds?.length) {
+        legacyStudent = await Student.findById(master.legacyStudentIds[master.legacyStudentIds.length - 1]);
+      }
+      if (!legacyStudent && !(master.legacyStudentIds || []).length) {
+        const courseForStudent = await findCourse(row.course, courses);
+        legacyStudent = await Student.create({
+          regnNo: row.stCode, enrollmentNo: row.stCode, formNo: row.formNo,
+          applicantName: row.cleanName, name: row.cleanName, sourceStudentName: row.cleanName,
+          dateOfBirth: row.dob ? row.dob.toISOString().slice(0, 10) : "",
+          dob: row.dob ? row.dob.toISOString().slice(0, 10) : "",
+          sex: row.gender, gender: row.gender,
+          fatherOrHusbandName: row.fatherName, fatherName: row.fatherName,
+          address: row.address, presentAddress: row.address,
+          mobileNumber: row.phones[0] || "", whatsappNumber: row.phones[1] || "",
+          sourcePhone: row.phones.join(", "), qualification: row.qualification,
+          sourceQualification: row.qualification,
+          admissionDate: row.dateOfAdmission ? row.dateOfAdmission.toISOString().slice(0, 10) : "",
+          dateOfAdmission: row.dateOfAdmission ? row.dateOfAdmission.toISOString().slice(0, 10) : "",
+          courseName: courseForStudent?.name || row.course,
+          courseCode: courseForStudent?.code || normCourse(row.course).replace(/\\s/g, "-"),
+          course: row.course, sourceCourseLabel: row.course,
+          sourceSex: row.gender, sourceAddressRaw: row.address,
+          status: "Active", hasPhoto: false
+        });
+      }
+      if (legacyStudent && !(master.legacyStudentIds || []).some(id => String(id) === String(legacyStudent._id))) {
+        master.legacyStudentIds.push(legacyStudent._id);
+      }
       const incomingDate = row.dateOfAdmission;
       const existingDate = master.currentAdmissionDate || master.dateOfAdmission || null;
       const isNewerOrEqual = Boolean(incomingDate && (!existingDate || incomingDate.getTime() >= new Date(existingDate).getTime()));
@@ -236,7 +266,8 @@ export async function POST(request) {
       if (!enrollment) {
         const fee = courseDoc ? Number(courseDoc.fee || 0) : 0;
         enrollment = await StudentEnrollment.create({
-          studentId: master._id, stCode: row.stCode, normalizedFullName: row.cleanNameKey,
+          studentId: master._id, legacyStudentId: legacyStudent?._id || master.legacyStudentIds?.[master.legacyStudentIds.length - 1] || null,
+          stCode: row.stCode, normalizedFullName: row.cleanNameKey,
           formNo: row.formNo, courseId: courseDoc?._id || null, courseCode: enrollmentCode,
           courseName: row.course || "Previous Course (Legacy)", semesterLabel: row.course || "Previous Course (Legacy)",
           admissionDate: row.dateOfAdmission, status: "ACTIVE",
@@ -254,6 +285,7 @@ export async function POST(request) {
         });
         newEnrollmentsLinked += 1;
       } else {
+        if (!enrollment.legacyStudentId && legacyStudent?._id) enrollment.legacyStudentId = legacyStudent._id;
         if (!enrollment.admissionDate && row.dateOfAdmission) enrollment.admissionDate = row.dateOfAdmission;
         if (!enrollment.formNo && row.formNo) enrollment.formNo = row.formNo;
         if (!enrollment.courseName && row.course) enrollment.courseName = row.course;
@@ -306,10 +338,16 @@ export async function POST(request) {
       }
       await master.save();
       touchedMasters.set(String(master._id), master);
+      const legacyStudent = await Student.findOne({ $or: [{ regnNo: row.stCode }, { enrollmentNo: row.stCode }] });
+      if (legacyStudent && !(master.legacyStudentIds || []).some(id => String(id) === String(legacyStudent._id))) {
+        master.legacyStudentIds.push(legacyStudent._id);
+        await master.save();
+      }
       const codeEnrollment = await StudentEnrollment.findOne({ studentId: master._id, stCode: row.stCode });
       if (!codeEnrollment) {
         await StudentEnrollment.create({
-          studentId: master._id, stCode: row.stCode, normalizedFullName: sourceStudent.cleanNameKey,
+          studentId: master._id, legacyStudentId: legacyStudent?._id || null,
+          stCode: row.stCode, normalizedFullName: sourceStudent.cleanNameKey,
           courseCode: "PREVIOUS-LEGACY", courseName: "Previous Course (Legacy)", semesterLabel: "Previous Course (Legacy)",
           admissionDate: legacyDate, status: "LEGACY",
           feeConfig: { grossFee: 0, discountAmount: 0, netPayableFee: 0, feeRuleSource: "NO_FEE_RULE", configured: false },
