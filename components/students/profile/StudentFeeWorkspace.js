@@ -133,7 +133,7 @@ export default function StudentFeeWorkspace({
           return <button key={id} type="button" onClick={() => setSelectedCodeState(id)}
             className={active ? "primary-btn" : "ghost-btn"} aria-pressed={active}
             style={{ minWidth: 190, textAlign: "left", display: "grid", gap: 4, padding: "9px 12px" }}>
-            <span style={{ fontWeight: 800 }}>#{item.stCode} <small style={{ marginLeft: 5 }}>{current ? "Current" : "Previous"}</small></span>
+            <span style={{ fontWeight: 800 }}>#{item.stCode} <small style={{ marginLeft: 5, padding: "3px 7px", borderRadius: 999, background: current ? "#dcfce7" : "#eef2f7", color: current ? "#166534" : "#596579", fontSize: 10 }}>{current ? "Current" : "Previous"}</small></span>
             <span style={{ fontSize: 11, overflowWrap: "anywhere" }}>{id}</span>
             <span style={{ fontSize: 12 }}>{item.course || item.courseCode || "Previous Course (Legacy)"}</span>
             <span style={{ fontSize: 11, opacity: .8 }}>Admission: {dateLabel(item.dateOfAdmission || item.admissionDate)} · {money(item.paidTotal)} paid</span>
