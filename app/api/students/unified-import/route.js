@@ -127,7 +127,9 @@ async function syncStudentGroups(groups = []) {
   }
   const studentOps = [];
   const masterOps = [];
+  const activeMasterOps = [];
   const enrollmentOps = [];
+  const enrollmentStatusOps = [];
   const outputMap = [];
   const flaggedRows = [];
   const feeRuleCache = new Map();
@@ -272,7 +274,6 @@ async function syncStudentGroups(groups = []) {
         formNo: registration.formNo || "",
         courseCode,
         courseName: registration.course,
-        semesterLabel: registration.course,
         admissionDate: registration.dateOfAdmission,
         status: registration.registrationId === current.registrationId ? "ACTIVE" : (courseCode === "PREVIOUS-LEGACY" ? "LEGACY" : "PROMOTED"),
         courseCategory: courseRule.courseCategory || "OTHER",
@@ -308,12 +309,12 @@ async function syncStudentGroups(groups = []) {
       outputMap.push({ registrationId: registration.registrationId, stCode: registration.stCode, studentId: masterId.toString(), enrollmentId: enrollmentId.toString(), course: registration.course });
     }
     if (currentEnrollmentId) {
-      masterOps.push({ updateOne: { filter: { _id: masterId }, update: { $set: { activeEnrollmentId: currentEnrollmentId } } } });
-      enrollmentOps.push({ updateMany: {
+      activeMasterOps.push({ updateOne: { filter: { _id: masterId }, update: { $set: { activeEnrollmentId: currentEnrollmentId } } } });
+      enrollmentStatusOps.push({ updateMany: {
         filter: { studentId: masterId, status: "ACTIVE", _id: { $ne: currentEnrollmentId } },
         update: { $set: { status: "PROMOTED" } }
       }});
-      enrollmentOps.push({ updateOne: {
+      enrollmentStatusOps.push({ updateOne: {
         filter: { _id: currentEnrollmentId },
         update: { $set: { status: "ACTIVE" } }
       }});
@@ -322,9 +323,11 @@ async function syncStudentGroups(groups = []) {
 
   if (studentOps.length) await Student.bulkWrite(studentOps, { ordered: false });
   if (masterOps.length) await StudentMaster.bulkWrite(masterOps, { ordered: false });
+  if (activeMasterOps.length) await StudentMaster.bulkWrite(activeMasterOps, { ordered: false });
   for (let index = 0; index < enrollmentOps.length; index += 500) {
     await StudentEnrollment.bulkWrite(enrollmentOps.slice(index, index + 500), { ordered: false });
   }
+  if (enrollmentStatusOps.length) await StudentEnrollment.bulkWrite(enrollmentStatusOps, { ordered: false });
   return { studentsMatchedUpdated: matchedProfiles, newStudentsCreated: newProfiles, registrationsLinked, registrationsSeen, registrationMap: outputMap, flaggedRows };
 }
 
@@ -336,7 +339,7 @@ async function syncFeeRows(rows = []) {
   const enrollmentById = new Map(enrollments.map(item => [String(item.registrationId), item]));
   const codes = [...new Set(rows.map(item => clean(item.stCode)).filter(Boolean))];
   const existing = await StudentFeePayment.find({ $or: [{ registrationId: { $in: ids } }, { stCode: { $in: codes } }] })
-    .select("registrationId mrNo paymentDate amountPaid studentId enrollmentId courseCode").lean();
+    .select("registrationId stNameKey stCode mrNo paymentDate amountPaid studentId enrollmentId courseCode").lean();
   const existingKeys = new Set(existing.map(item => [
     (item.registrationId || item.stNameKey || "").toUpperCase(), item.mrNo, asDate(item.paymentDate)?.toISOString().slice(0, 10) || "",
     Number(item.amountPaid).toFixed(2)
@@ -366,7 +369,7 @@ async function syncFeeRows(rows = []) {
       filter: { registrationId, mrNo, paymentDate, amountPaid },
       update: {
         $set: { studentId: enrollment.studentId, enrollmentId: enrollment._id, stCode: enrollment.stCode, registrationId, courseCode },
-        $setOnInsert: { registrationId, mrNo, paymentDate, amountPaid, rawPaymentDate: paymentDate, sourceSheet: clean(row.sourceSheet), sourceRowNo: Number(row.rowNo || 0), importBatchKey: "UNIFIED_WORKBOOK_IMPORT", stNameKey: registrationId, allocations: [], importWarnings: [] }
+        $setOnInsert: { mrNo, paymentDate, amountPaid, rawPaymentDate: paymentDate, sourceSheet: clean(row.sourceSheet), sourceRowNo: Number(row.rowNo || 0), importBatchKey: "UNIFIED_WORKBOOK_IMPORT", stNameKey: registrationId, allocations: [], importWarnings: [] }
       },
       upsert: true
     }});
