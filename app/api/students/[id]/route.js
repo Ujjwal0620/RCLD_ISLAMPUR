@@ -104,7 +104,7 @@ export async function GET(req,{params}){
       for (const payment of legacyFee.payments || []) {
         const legacyStCode = String(linkedStudent.regnNo || linkedStudent.enrollmentNo || "").trim();
         const legacyCleanName = String(linkedStudent.applicantName || linkedStudent.name || linkedStudent.sourceStudentName || "")
-          .replace(/_[A-Z0-9-]+$/i, "").trim().toUpperCase().replace(/\\s+/g, " ");
+          .replace(/_[A-Z0-9-]+$/i, "").trim().toUpperCase().replace(/\s+/g, " ");
         const legacyReceipt = {
           _id: payment._id, paymentDate: payment.date || null, mrNo: payment.receiptNo || payment.reference || "—",
           stCode: legacyStCode || "—", registrationId: legacyCleanName && legacyStCode ? legacyCleanName + "_" + legacyStCode : "",
