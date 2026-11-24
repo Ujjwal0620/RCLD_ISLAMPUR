@@ -211,7 +211,7 @@ async function syncStudentGroups(groups = []) {
       const sourceRegistrationId = sourceCode ? normalizeName(rawSourceName.replace(/_[A-Z0-9-]+$/i, "")) + "_" + sourceCode : "";
       if (sourceRegistrationId && groupRegistrationIds.has(sourceRegistrationId.toUpperCase())) return true;
       const studentPhones = [student.mobileNumber, student.phone, student.whatsappNumber, student.guardianContactNumber, student.sourcePhone]
-        .join(",").split(/[,;/|]/).map(value => clean(value).replace(/\D/g, "")).filter(value => value.length === 10);
+        .join(",").split(/[,;/|]/).map(normalizePhone).filter(Boolean);
       return hasIdentityAnchor(group, {
         fullName: sourceName,
         dob: student.dateOfBirth || student.dob,
