@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Users, UserRoundCog, Menu, X, ShieldCheck, Layers3, BookOpen, BrainCircuit,
   BarChart3, UserRoundX, Clock3, ClipboardList, LogOut, GraduationCap, BookMarked,
   ChevronDown, Search, Bell, Settings2, Sparkles, PanelLeftClose, Megaphone, ContactRound,
-  Sun, Moon, Maximize2, Minimize2, IdCard, ClipboardCheck, WalletCards
+  Sun, Moon, Maximize2, Minimize2, IdCard, ClipboardCheck
 } from "lucide-react";
 
 const navGroups = [
@@ -32,12 +32,6 @@ const navGroups = [
       { href: "/dashboard/course-content", label: "Course Content", icon: BookMarked },
       { href: "/dashboard/subjects", label: "Subjects", icon: GraduationCap },
       { href: "/dashboard/attendance", label: "Attendance", icon: Clock3 },
-    ],
-  },
-  {
-    label: "FINANCE & FEES",
-    items: [
-      { href: "/dashboard/students/fee-import", label: "Fee Mapping", icon: WalletCards },
     ],
   },
   {
