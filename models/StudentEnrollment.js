@@ -26,6 +26,7 @@ const StudentEnrollmentSchema = new mongoose.Schema({
   normalizedFullName: { type: String, required: true, index: true },
   formNo: { type: String, default: "" },
   courseCode: { type: String, required: true, trim: true, uppercase: true, index: true },
+  courseName: { type: String, default: "" },
   courseCategory: { type: String, enum: ["ROBOTICS", "CODING_FOR_KIDS", "DOM", "OTHER"], default: "OTHER" },
   semesterLabel: { type: String, default: "LEGACY" },
   admissionDate: { type: Date, default: null },
