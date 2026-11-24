@@ -129,6 +129,7 @@ async function syncStudentGroups(groups = []) {
   const masterOps = [];
   const enrollmentOps = [];
   const outputMap = [];
+  const flaggedRows = [];
   const feeRuleCache = new Map();
   let matchedProfiles = 0, newProfiles = 0, registrationsLinked = 0, registrationsSeen = 0;
 
@@ -152,6 +153,7 @@ async function syncStudentGroups(groups = []) {
     const candidates = existingMasters.filter(candidate => hasIdentityAnchor(group, candidate));
     let master = byLinked || (candidates.length === 1 ? candidates[0] : null);
     const ambiguous = !master && (linkedMasterIds.size > 1 || candidates.length > 1);
+    if (ambiguous) flaggedRows.push({ row: registrations[0]?.rowNo || "", studentId: registrations.map(item => item.registrationId).join(", "), reason: "Multiple existing student profiles matched this name; created a separate profile rather than merging uncertain identities." });
     const masterId = master?._id || new mongoose.Types.ObjectId();
     if (master) matchedProfiles += 1;
     else newProfiles += 1;
@@ -243,8 +245,8 @@ async function syncStudentGroups(groups = []) {
       masterSet.currentAdmissionDate = current.dateOfAdmission || null;
       masterSet.dateOfAdmission = current.dateOfAdmission || null;
       masterSet.formNo = current.formNo || master?.formNo || "";
-      masterSet.address = newest.address || master?.address || "";
-      masterSet.qualification = newest.qualification || master?.qualification || "";
+      masterSet.address = master?.address || newest.address || "";
+      masterSet.qualification = master?.qualification || newest.qualification || "";
     } else {
       for (const [key, value] of [["address", newest.address], ["qualification", newest.qualification]]) {
         if (!master?.[key] && value) masterSet[key] = value;
@@ -306,6 +308,7 @@ async function syncStudentGroups(groups = []) {
       outputMap.push({ registrationId: registration.registrationId, stCode: registration.stCode, studentId: masterId.toString(), enrollmentId: enrollmentId.toString(), course: registration.course });
     }
     if (currentEnrollmentId) {
+      masterOps.push({ updateOne: { filter: { _id: masterId }, update: { $set: { activeEnrollmentId: currentEnrollmentId } } } });
       enrollmentOps.push({ updateMany: {
         filter: { studentId: masterId, status: "ACTIVE", _id: { $ne: currentEnrollmentId } },
         update: { $set: { status: "PROMOTED" } }
@@ -322,7 +325,7 @@ async function syncStudentGroups(groups = []) {
   for (let index = 0; index < enrollmentOps.length; index += 500) {
     await StudentEnrollment.bulkWrite(enrollmentOps.slice(index, index + 500), { ordered: false });
   }
-  return { studentsMatchedUpdated: matchedProfiles, newStudentsCreated: newProfiles, registrationsLinked, registrationsSeen, registrationMap: outputMap };
+  return { studentsMatchedUpdated: matchedProfiles, newStudentsCreated: newProfiles, registrationsLinked, registrationsSeen, registrationMap: outputMap, flaggedRows };
 }
 
 async function syncFeeRows(rows = []) {
