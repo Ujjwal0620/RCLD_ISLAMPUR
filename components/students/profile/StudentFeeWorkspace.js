@@ -100,17 +100,20 @@ export default function StudentFeeWorkspace({
     && enrollment.feeConfig?.feeRuleSource !== "NO_FEE_RULE"
     && String(enrollment.courseCode || "").toUpperCase() !== "PREVIOUS-LEGACY"
     && String(enrollment.courseName || enrollment.semesterLabel || "").toLowerCase() !== "previous course (legacy)";
+  const enrollmentForRegistration = item => enrollmentOptions.find(entry => String(entry.registrationId || "") === String(item.registrationId))
+    || (codeCount.get(String(item.stCode)) === 1 ? enrollmentOptions.find(entry => String(entry.stCode || "") === String(item.stCode)) : null);
+  const configuredRegistrationCount = codeCards.filter(item => configuredFee(enrollmentForRegistration(item))).length;
   const selectedTotalFee = selectedCode === "ALL"
-    ? codeCards.reduce((sum, item) => {
-        const enrollment = enrollmentOptions.find(entry => String(entry.registrationId || "") === String(item.registrationId));
+    ? (configuredRegistrationCount ? codeCards.reduce((sum, item) => {
+        const enrollment = enrollmentForRegistration(item);
         return sum + (configuredFee(enrollment) ? Number(enrollment?.feeConfig?.grossFee ?? enrollment?.summary?.totalFee ?? 0) : 0);
-      }, 0)
+      }, 0) : null)
     : configuredFee(selectedEnrollment) ? Number(selectedEnrollment?.feeConfig?.grossFee ?? selectedEnrollment?.summary?.totalFee ?? 0) : null;
   const selectedPayable = selectedCode === "ALL"
-    ? codeCards.reduce((sum, item) => {
-        const enrollment = enrollmentOptions.find(entry => String(entry.registrationId || "") === String(item.registrationId));
+    ? (configuredRegistrationCount ? codeCards.reduce((sum, item) => {
+        const enrollment = enrollmentForRegistration(item);
         return sum + (configuredFee(enrollment) ? Number(enrollment?.feeConfig?.netPayableFee ?? enrollment?.summary?.totalDue ?? 0) : 0);
-      }, 0)
+      }, 0) : null)
     : configuredFee(selectedEnrollment) ? Number(selectedEnrollment?.feeConfig?.netPayableFee ?? selectedEnrollment?.summary?.totalDue ?? 0) : null;
   const selectedBalance = selectedPayable === null ? null : Math.max(0, selectedPayable - selectedPaid);
   const selectedDiscount = selectedCode === "ALL"
