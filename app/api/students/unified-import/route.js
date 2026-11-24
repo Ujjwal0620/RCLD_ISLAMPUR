@@ -422,6 +422,66 @@ async function syncFeeRows(rows = []) {
   return { newReceiptsAdded, existingReceiptsUpdatedOrSkipped, unmatchedRows, feeRowsProcessed: rows.length };
 }
 
+async function finalizeFeeSummaries(rawStudentIds = []) {
+  const studentIds = [...new Set(rawStudentIds.filter(validObjectId).map(id => String(id)))];
+  if (!studentIds.length || studentIds.length > 500) throw new Error("Finalize batch must contain between 1 and 500 student IDs.");
+  const objectIds = studentIds.map(id => new mongoose.Types.ObjectId(id));
+  const enrollments = await StudentEnrollment.find({ studentId: { $in: objectIds } }).lean();
+  if (!enrollments.length) return { studentsFinalized: 0, enrollmentsFinalized: 0 };
+  const enrollmentIds = enrollments.map(item => item._id);
+  const paymentTotals = await StudentFeePayment.aggregate([
+    { $match: { enrollmentId: { $in: enrollmentIds } } },
+    { $group: { _id: "$enrollmentId", totalPaid: { $sum: "$amountPaid" } } }
+  ]);
+  const paidByEnrollment = new Map(paymentTotals.map(item => [String(item._id), Number(item.totalPaid || 0)]));
+  const enrollmentOps = [];
+  const masterTotals = new Map();
+  for (const enrollment of enrollments) {
+    const totalFee = Number(enrollment.feeConfig?.grossFee || enrollment.summary?.totalFee || 0);
+    const totalDue = Number(enrollment.feeConfig?.netPayableFee ?? enrollment.summary?.totalDue ?? 0);
+    const totalPaid = paidByEnrollment.get(String(enrollment._id)) || 0;
+    const balanceDue = Math.max(0, totalDue - totalPaid);
+    const feeStatus = totalDue > 0 && balanceDue === 0 ? "Paid" : totalPaid > 0 ? "Partial" : "Unpaid";
+    enrollmentOps.push({ updateOne: {
+      filter: { _id: enrollment._id },
+      update: { $set: { summary: {
+        ...(enrollment.summary || {}),
+        totalFee, totalDue, totalPaid, balanceDue,
+        nextDueDate: enrollment.summary?.nextDueDate || null,
+        feeStatus
+      } } }
+    }});
+    const key = String(enrollment.studentId);
+    const total = masterTotals.get(key) || { totalFee: 0, discount: 0, totalPaid: 0, balanceDue: 0, courseCount: 0, hasConfiguredFee: false };
+    total.totalFee += totalFee;
+    total.discount += Number(enrollment.feeConfig?.discountAmount || 0);
+    total.totalPaid += totalPaid;
+    total.balanceDue += balanceDue;
+    total.courseCount += 1;
+    total.hasConfiguredFee ||= enrollment.feeConfig?.configured !== false;
+    masterTotals.set(key, total);
+  }
+  for (let index = 0; index < enrollmentOps.length; index += 500) {
+    await StudentEnrollment.bulkWrite(enrollmentOps.slice(index, index + 500), { ordered: false });
+  }
+  const masterOps = [...masterTotals.entries()].map(([id, total]) => ({
+    updateOne: {
+      filter: { _id: new mongoose.Types.ObjectId(id) },
+      update: { $set: { feeSummary: {
+        totalFee: total.totalFee,
+        discount: total.discount,
+        totalPaid: total.totalPaid,
+        balanceDue: total.balanceDue,
+        feeStatus: total.hasConfiguredFee && total.balanceDue === 0 ? "Paid" : total.totalPaid > 0 ? "Partial" : "Unpaid",
+        courseCount: total.courseCount,
+        updatedAt: new Date()
+      } } }
+    }
+  }));
+  if (masterOps.length) await StudentMaster.bulkWrite(masterOps, { ordered: false });
+  return { studentsFinalized: masterOps.length, enrollmentsFinalized: enrollmentOps.length };
+}
+
 export async function POST(request) {
   try {
     const session = await getSession();
@@ -437,6 +497,10 @@ export async function POST(request) {
     }
     if (body.action === "fees") {
       const result = await syncFeeRows(body.rows || []);
+      return NextResponse.json(result);
+    }
+    if (body.action === "finalize") {
+      const result = await finalizeFeeSummaries(body.studentIds || []);
       return NextResponse.json(result);
     }
     return NextResponse.json({ error: "Unsupported import batch action." }, { status: 400 });
