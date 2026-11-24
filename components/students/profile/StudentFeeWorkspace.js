@@ -47,7 +47,7 @@ export default function StudentFeeWorkspace({
     || enrollmentOptions.find(item => item.status === "ACTIVE")
     || enrollmentOptions[0];
   const currentStCode = String(student.masterProfile?.currentStCode || currentEnrollment?.stCode || student.regnNo || student.enrollmentNo || "");
-  const currentRegistrationId = String(student.masterProfile?.currentRegistrationId || currentEnrollment?.registrationId || "");
+  const currentRegistrationId = String(student.masterProfile?.currentRegistrationId || currentEnrollment?.registrationId || (currentStCode && (student.masterProfile?.fullName || student.applicantName) ? String(student.masterProfile?.fullName || student.applicantName).trim().toUpperCase().replace(/\s+/g, " ") + "_" + currentStCode : ""));
   const [selectedCodeState, setSelectedCodeState] = useState("ALL");
   const selectedCode = selectedCodeState || "ALL";
   useEffect(() => { setSelectedCodeState("ALL"); }, [student._id]);
@@ -133,7 +133,7 @@ export default function StudentFeeWorkspace({
         <button type="button" className={selectedCode === "ALL" ? "primary-btn" : "ghost-btn"} onClick={() => setSelectedCodeState("ALL")} aria-pressed={selectedCode === "ALL"}>All Registrations</button>
         {codeCards.map(item => {
           const id = String(item.registrationId);
-          const current = id === currentRegistrationId || Boolean(item.isCurrent);
+          const current = id === currentRegistrationId || Boolean(item.isCurrent) || String(item.stCode) === currentStCode;
           const active = selectedCode === id;
           return <button key={id} type="button" onClick={() => setSelectedCodeState(id)}
             className={active ? "primary-btn" : "ghost-btn"} aria-pressed={active}
