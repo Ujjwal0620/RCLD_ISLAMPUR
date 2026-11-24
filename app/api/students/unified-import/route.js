@@ -155,7 +155,7 @@ async function syncStudentGroups(groups = []) {
         .replace(/_[A-Z0-9-]+$/i, "");
       return normalizeName(sourceName) === normalizeName(group.cleanName);
     });
-    const codeCollision = codeCandidates.length > existingLegacy.length;
+    const codeCollision = codeCandidates.length > existingLegacy.length || registrations.some(item => item.stCodeUnique === false);
     if (codeCollision) flaggedRows.push({ row: registrations[0]?.rowNo || "", studentId: registrations.map(item => item.registrationId).join(", "), reason: "A registration code is already used by a different student name. The existing record was not linked; a separate profile was created." });
     const linkedMasterIds = new Set(existingLegacy.map(item => masterByStudentId.get(String(item._id))).filter(Boolean).map(item => String(item._id)));
     const byLinked = linkedMasterIds.size === 1 ? existingMasters.find(item => String(item._id) === [...linkedMasterIds][0]) : null;
