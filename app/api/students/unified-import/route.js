@@ -362,12 +362,19 @@ async function syncFeeRows(rows = []) {
   const enrollments = await StudentEnrollment.find({ registrationId: { $in: ids } }).lean();
   const enrollmentById = new Map(enrollments.map(item => [String(item.registrationId), item]));
   const codes = [...new Set(rows.map(item => clean(item.stCode)).filter(Boolean))];
+  const registrationsByCode = new Map();
+  for (const row of rows) {
+    const code = clean(row.stCode);
+    const id = clean(row.registrationId);
+    if (code && id) registrationsByCode.set(code, new Set([...(registrationsByCode.get(code) || []), id]));
+  }
   const existing = await StudentFeePayment.find({ $or: [{ registrationId: { $in: ids } }, { stCode: { $in: codes } }] })
     .select("registrationId stNameKey stCode mrNo paymentDate amountPaid studentId enrollmentId courseCode").lean();
-  const existingByKey = new Map(existing.map(item => [[
-    (item.registrationId || item.stNameKey || "").toUpperCase(), item.mrNo, asDate(item.paymentDate)?.toISOString().slice(0, 10) || "",
-    Number(item.amountPaid).toFixed(2)
-  ].join("|"), item]));
+  const existingByKey = new Map(existing.map(item => {
+    const codeRegistrations = registrationsByCode.get(String(item.stCode || ""));
+    const identity = item.registrationId || item.stNameKey || (codeRegistrations?.size === 1 ? [...codeRegistrations][0] : "");
+    return [[identity, item.mrNo, asDate(item.paymentDate)?.toISOString().slice(0, 10) || "", Number(item.amountPaid).toFixed(2)].join("|"), item];
+  }));
   const operations = [];
   const unmatchedRows = [];
   let newReceiptsAdded = 0, existingReceiptsUpdatedOrSkipped = 0;
