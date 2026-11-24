@@ -99,18 +99,20 @@ async function syncStudentGroups(groups = []) {
   const dobs = [...new Set(groups.map(group => asDate(group.dob)?.toISOString().slice(0, 10)).filter(Boolean))];
   const fathers = [...new Set(groups.map(group => normalizeFather(group.fatherName)).filter(Boolean))];
 
-  const [existingStudents, existingMasters, existingEnrollments] = await Promise.all([
+  const [existingStudents, existingEnrollments] = await Promise.all([
     Student.find({ $or: [{ regnNo: { $in: codes } }, { enrollmentNo: { $in: codes } }] }).lean(),
-    StudentMaster.find({
-      $or: [
-        { normalizedFullName: { $in: names } },
-        ...(phones.length ? [{ phoneNumbers: { $in: phones } }] : []),
-        ...(dobs.length ? [{ dob: { $in: dobs.map(value => new Date(value + "T00:00:00.000Z")) } }] : []),
-        ...(fathers.length ? [{ normalizedFatherName: { $in: fathers } }] : [])
-      ]
-    }).lean(),
     StudentEnrollment.find({ $or: [{ registrationId: { $in: registrationIds } }, { stCode: { $in: codes } }] }).lean()
   ]);
+  const existingStudentIds = existingStudents.map(item => item._id);
+  const existingMasters = await StudentMaster.find({
+    $or: [
+      { normalizedFullName: { $in: names } },
+      ...(phones.length ? [{ phoneNumbers: { $in: phones } }] : []),
+      ...(dobs.length ? [{ dob: { $in: dobs.map(value => new Date(value + "T00:00:00.000Z")) } }] : []),
+      ...(fathers.length ? [{ normalizedFatherName: { $in: fathers } }] : []),
+      ...(existingStudentIds.length ? [{ legacyStudentIds: { $in: existingStudentIds } }] : [])
+    ]
+  }).lean();
 
   const studentByCode = new Map();
   for (const student of existingStudents) {
