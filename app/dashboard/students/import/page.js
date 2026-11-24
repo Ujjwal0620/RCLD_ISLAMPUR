@@ -202,12 +202,17 @@ function buildWorkbookPayload(workbook) {
     feeRows.push({ registrationId, stCode: identity.stCode, cleanName: identity.cleanName, course: registration.course, paymentDate, amountPaid, mrNo, sourceSheet: feeSheet.name, rowNo: index + 1 });
     if (registration.course === "Previous Course (Legacy)" && !registration.earliestPaymentDate) registration.earliestPaymentDate = paymentDate;
   }
+  const allRegistrationCodeCounts = new Map();
+  for (const profile of profiles) for (const item of profile.registrations) {
+    allRegistrationCodeCounts.set(item.stCode, (allRegistrationCodeCounts.get(item.stCode) || 0) + 1);
+  }
   for (const profile of profiles) {
     const seen = new Set();
     profile.registrations = profile.registrations.filter(item => {
       if (seen.has(item.registrationId)) return false;
       seen.add(item.registrationId); return true;
     }).sort((a,b) => new Date(b.dateOfAdmission || b.earliestPaymentDate || 0) - new Date(a.dateOfAdmission || a.earliestPaymentDate || 0));
+    profile.registrations.forEach(item => { item.stCodeUnique = allRegistrationCodeCounts.get(item.stCode) === 1; });
     profile.registrations.forEach((item,index) => { item.isCurrent = index === 0; });
   }
   return { studentSheetName: studentSheet.name, feeSheetName: feeSheet.name, studentRows: registrations.size, profiles, feeRows, warnings: [...studentWarnings, ...feeWarnings] };
