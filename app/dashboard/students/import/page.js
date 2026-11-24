@@ -205,7 +205,10 @@ function buildWorkbookPayload(workbook) {
     }
     if (!registration.course || registration.course === "Previous Course (Legacy)") registration.course = "Previous Course (Legacy)";
     feeRows.push({ registrationId, stCode: identity.stCode, cleanName: identity.cleanName, course: registration.course, paymentDate, amountPaid, mrNo, sourceSheet: feeSheet.name, rowNo: index + 1 });
-    if (registration.course === "Previous Course (Legacy)") {\n      const priorDate = parseDate(registration.earliestPaymentDate);\n      if (!priorDate || new Date(paymentDate) < new Date(priorDate)) registration.earliestPaymentDate = paymentDate;\n    }
+    if (registration.course === "Previous Course (Legacy)") {
+      const priorDate = parseDate(registration.earliestPaymentDate);
+      if (!priorDate || new Date(paymentDate) < new Date(priorDate)) registration.earliestPaymentDate = paymentDate;
+    }
   }
   const allRegistrationCodeCounts = new Map();
   for (const profile of profiles) for (const item of profile.registrations) {
