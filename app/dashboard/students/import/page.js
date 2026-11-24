@@ -59,6 +59,7 @@ function phonesFrom(value) {
 }
 
 function findSheet(workbook, kind) {
+  const matches = [];
   for (const name of workbook.SheetNames) {
     const grid = XLSX.utils.sheet_to_json(workbook.Sheets[name], { header: 1, defval: "", raw: true });
     const index = grid.findIndex(row => {
@@ -66,9 +67,10 @@ function findSheet(workbook, kind) {
       if (kind === "student") return ["stcode","stname","doa","course"].every(key => keys.includes(key));
       return ["amtpaid","mrno","dop","stname"].every(key => keys.includes(key));
     });
-    if (index >= 0) return { name, grid, headerIndex: index };
+    if (index >= 0) matches.push({ name, grid, headerIndex: index });
   }
-  return null;
+  if (kind === "student") return matches.find(item => /^student\\s*data$/i.test(item.name)) || matches[0] || null;
+  return matches.find(item => !/^student\\s*data$/i.test(item.name)) || matches[0] || null;
 }
 
 function buildWorkbookPayload(workbook) {
