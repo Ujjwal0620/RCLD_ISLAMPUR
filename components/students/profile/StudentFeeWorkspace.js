@@ -36,7 +36,6 @@ export default function StudentFeeWorkspace({
   student, fee, feeWorkspaceOpen, setFeeWorkspaceOpen, feeForm, setFeeForm,
   paymentItems, setPaymentItems, saveFees, proofUploading, uploadPaymentProof, printBill,
 }) {
-  const [selectedCodeState, setSelectedCodeState] = useState("");
   const paymentHistory = Array.isArray(student.paymentHistory) ? student.paymentHistory : [];
   const enrollmentOptions = Array.isArray(student.enrollments) ? student.enrollments : [];
   const historyMetadata = Array.isArray(student.masterProfile?.registrations) && student.masterProfile.registrations.length
