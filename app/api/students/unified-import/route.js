@@ -155,7 +155,7 @@ async function syncStudentGroups(groups = []) {
         .replace(/_[A-Z0-9-]+$/i, "");
       if (normalizeName(sourceName) !== normalizeName(group.cleanName)) return false;
       const studentPhones = [student.mobileNumber, student.phone, student.whatsappNumber, student.guardianContactNumber, student.sourcePhone]
-        .join(",").split(/[,;/|]/).map(value => clean(value).replace(/\\D/g, "")).filter(value => value.length === 10);
+        .join(",").split(/[,;/|]/).map(value => clean(value).replace(/\D/g, "")).filter(value => value.length === 10);
       return hasIdentityAnchor(group, {
         fullName: sourceName,
         dob: student.dateOfBirth || student.dob,
