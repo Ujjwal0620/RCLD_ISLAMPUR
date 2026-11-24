@@ -21,11 +21,12 @@ export async function GET(req,{params}){
 
     const masterProfile = await StudentMaster.findOne({ legacyStudentIds: student._id }).lean();
     const enrollmentQuery = masterProfile ? { studentId: masterProfile._id } : { legacyStudentId: student._id };
-    const enrollments = await StudentEnrollment.find(enrollmentQuery).sort({ admissionDate: 1, createdAt: 1 }).lean();
+    const enrollments = await StudentEnrollment.find(enrollmentQuery).sort({ admissionDate: -1, createdAt: -1 }).lean();
     const activeEnrollment = masterProfile
-      ? (enrollments.find(item => String(item._id) === String(masterProfile.activeEnrollmentId))
+      ? (enrollments.find(item => String(item.stCode || "") === String(masterProfile.currentStCode || ""))
+        || enrollments.find(item => String(item._id) === String(masterProfile.activeEnrollmentId))
         || enrollments.find(item => item.status === "ACTIVE")
-        || enrollments[enrollments.length - 1]
+        || enrollments[0]
         || null)
       : null;
     const canonicalStudentId = activeEnrollment?.legacyStudentId || student._id;
@@ -110,12 +111,16 @@ export async function GET(req,{params}){
     };
     paymentHistory.sort((a, b) => receiptTime(a) - receiptTime(b)
       || String(a.mrNo || "").localeCompare(String(b.mrNo || "")));
+    const enrichedEnrollments = enrollments.map(item => ({
+      ...item,
+      courseName: item.courseName || courseNameMap.get(String(item.courseCode || "").toUpperCase()) || item.courseCode || "Previous Course (Legacy)"
+    }));
     const enrichedStudent = {
       ...canonicalStudent,
       photoUrl: masterProfile?.photoUrl || canonicalStudent.photoUrl || ((canonicalStudent.regnNo || activeEnrollment?.stCode || masterProfile?.stCodes?.[0]) ? `/api/students/photo/${encodeURIComponent(String(canonicalStudent.regnNo || activeEnrollment?.stCode || masterProfile?.stCodes?.[0]).trim())}` : ""),
       masterProfile,
-      enrollments,
-      activeEnrollment,
+      enrollments: enrichedEnrollments,
+      activeEnrollment: enrichedEnrollments.find(item => String(item._id) === String(activeEnrollment?._id)) || activeEnrollment,
       paymentHistory,
     };
     return NextResponse.json({ student: enrichedStudent, masterProfile, enrollments, paymentHistory });
