@@ -23,7 +23,7 @@ async function ensureReceiptIndex() {
       });
       const legacyIndexes = indexes.filter(index => index.unique
         && !index.key?.registrationId
-        && ["stCode", "mrNo", "paymentDate", "amountPaid"].every(key => index.key?.[key] === 1));
+        && ["mrNo", "paymentDate", "amountPaid"].every(key => index.key?.[key] === 1));
       const oldRegistrationIndex = indexes.find(index => index.name === "registration_receipt_date_amount_unique"
         && index.partialFilterExpression?.importBatchKey !== "UNIFIED_WORKBOOK_IMPORT");
       for (const legacy of [...legacyIndexes, ...(oldRegistrationIndex ? [oldRegistrationIndex] : [])]) {
