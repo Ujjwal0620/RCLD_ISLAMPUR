@@ -55,8 +55,7 @@ const clean = value => String(value ?? "").trim();
 const displayName = value => clean(value).normalize("NFKC").toUpperCase().replace(/\s+/g, " ").trim();
 const normalizeName = value => clean(value).normalize("NFKC").toUpperCase()
   .replace(/[^A-Z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
-const normalizeFather = value => normalizeName(value).replace(/\bKR\b/g, "KUMAR")
-  .replace(/\bMD\b|\bMOHD\b/g, "MOHAMMAD").replace(/\bSK\b/g, "SHEIKH");
+const normalizeFather = value => normalizeName(value);
 const validObjectId = value => mongoose.Types.ObjectId.isValid(String(value || ""));
 const sameDate = (a, b) => {
   if (!a || !b) return false;
