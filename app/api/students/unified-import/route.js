@@ -424,7 +424,7 @@ async function syncFeeRows(rows = []) {
     const amountPaid = Number(row.amountPaid);
     const mrNo = clean(row.mrNo);
     if (!registrationId || !enrollment || !paymentDate || !mrNo || !Number.isFinite(amountPaid) || amountPaid < 0) {
-      unmatchedRows.push({ row: row.rowNo, studentId: registrationId || row.stCode || "", course: row.course || "", reason: !enrollment ? "No matching registration/enrollment was found." : "Missing or invalid receipt number, date, or amount." });
+      unmatchedRows.push({ row: row.rowNo, sheet: row.sourceSheet || "", studentId: registrationId || row.stCode || "", stCode: row.stCode || "", name: row.cleanName || "", course: row.course || "", mrNo, paymentDate: row.paymentDate || "", amountPaid: row.amountPaid ?? "", reason: !enrollment ? "No matching registration/enrollment was found." : "Missing or invalid receipt number, date, or amount." });
       continue;
     }
     const key = [registrationId, mrNo, paymentDate.toISOString().slice(0, 10), amountPaid.toFixed(2)].join("|");
@@ -444,7 +444,7 @@ async function syncFeeRows(rows = []) {
     }
     const looseKey = [clean(row.stCode), mrNo, paymentDate.toISOString().slice(0, 10), amountPaid.toFixed(2)].join("|");
     if (existingByLooseKey.has(looseKey) && (registrationsByCode.get(clean(row.stCode))?.size || 0) > 1) {
-      unmatchedRows.push({ row: row.rowNo, studentId: registrationId, reason: "An existing receipt has this reused St_Code but no registration identity; it was not reassigned to avoid cross-student payment mixing." });
+      unmatchedRows.push({ row: row.rowNo, sheet: row.sourceSheet || "", studentId: registrationId, stCode: row.stCode || "", name: row.cleanName || "", course: row.course || "", mrNo, paymentDate, amountPaid, reason: "An existing receipt has this reused St_Code but no registration identity; it was not reassigned to avoid cross-student payment mixing." });
       continue;
     }
     if (seenInBatch.has(key)) {
