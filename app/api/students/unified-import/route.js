@@ -206,7 +206,8 @@ async function syncStudentGroups(groups = []) {
     let master = linkedMasterIds.size > 1 ? null : (byLinked || (candidates.length === 1 ? candidates[0] : null));
     const ambiguous = linkedMasterIds.size > 1 || (!master && candidates.length > 1);
     if (ambiguous) flaggedRows.push({ row: registrations[0]?.rowNo || "", studentId: registrations.map(item => item.registrationId).join(", "), reason: "Multiple existing student profiles matched this name; created a separate profile rather than merging uncertain identities." });
-    const safeExistingLegacy = ambiguous ? [] : existingLegacy;
+    const masterLinkedLegacy = master ? codeCandidates.filter(student => (master.legacyStudentIds || []).some(id => String(id) === String(student._id))) : [];
+    const safeExistingLegacy = ambiguous ? [] : [...new Map([...existingLegacy, ...masterLinkedLegacy].map(item => [String(item._id), item])).values()];
     const codeCollision = codeCandidates.length > safeExistingLegacy.length || registrations.some(item => item.stCodeUnique === false) || linkedMasterIds.size > 1;
     if (codeCollision) flaggedRows.push({ row: registrations[0]?.rowNo || "", studentId: registrations.map(item => item.registrationId).join(", "), reason: "A registration code is reused or the existing record lacks a matching identity anchor. The code-only match was rejected; a separate profile was created." });
     const masterId = master?._id || new mongoose.Types.ObjectId();
