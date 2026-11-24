@@ -109,8 +109,10 @@ export default function StudentFeeWorkspace({
   const selectedCourse = selectedCode === "ALL"
     ? [...new Set(codeCards.map(item => item.course || item.courseName || item.courseCode).filter(Boolean))].join(", ") || "All Registrations"
     : selectedEnrollment?.courseName || selectedEnrollment?.courseCode || selectedRegistration?.course || selectedRegistration?.courseCode || "Previous Course (Legacy)";
-  const configuredFee = enrollment => enrollment && enrollment.feeConfig?.configured !== false
-    && enrollment.feeConfig?.feeRuleSource !== "NO_FEE_RULE"
+  const configuredFee = enrollment => Boolean(enrollment?.feeConfig)
+    && enrollment.feeConfig.configured !== false
+    && enrollment.feeConfig.feeRuleSource !== "NO_FEE_RULE"
+    && enrollment.feeConfig.feeRuleSource !== "UNCONFIGURED"
     && String(enrollment.courseCode || "").toUpperCase() !== "PREVIOUS-LEGACY"
     && String(enrollment.courseName || enrollment.semesterLabel || "").toLowerCase() !== "previous course (legacy)";
   const enrollmentForRegistration = item => enrollmentOptions.find(entry => String(entry.registrationId || "") === String(item.registrationId))
