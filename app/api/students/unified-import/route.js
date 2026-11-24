@@ -340,10 +340,10 @@ async function syncFeeRows(rows = []) {
   const codes = [...new Set(rows.map(item => clean(item.stCode)).filter(Boolean))];
   const existing = await StudentFeePayment.find({ $or: [{ registrationId: { $in: ids } }, { stCode: { $in: codes } }] })
     .select("registrationId stNameKey stCode mrNo paymentDate amountPaid studentId enrollmentId courseCode").lean();
-  const existingKeys = new Set(existing.map(item => [
+  const existingByKey = new Map(existing.map(item => [[
     (item.registrationId || item.stNameKey || "").toUpperCase(), item.mrNo, asDate(item.paymentDate)?.toISOString().slice(0, 10) || "",
     Number(item.amountPaid).toFixed(2)
-  ].join("|")));
+  ].join("|"), item]));
   const operations = [];
   const unmatchedRows = [];
   let newReceiptsAdded = 0, existingReceiptsUpdatedOrSkipped = 0;
@@ -359,7 +359,21 @@ async function syncFeeRows(rows = []) {
       continue;
     }
     const key = [registrationId, mrNo, paymentDate.toISOString().slice(0, 10), amountPaid.toFixed(2)].join("|");
-    if (existingKeys.has(key) || seenInBatch.has(key)) {
+    const priorReceipt = existingByKey.get(key);
+    if (priorReceipt) {
+      const courseCode = clean(enrollment.courseCode || row.course).toUpperCase();
+      const repair = {};
+      if (!priorReceipt.registrationId) repair.registrationId = registrationId;
+      if (!priorReceipt.stNameKey) repair.stNameKey = registrationId;
+      if (!priorReceipt.studentId || String(priorReceipt.studentId) !== String(enrollment.studentId)) repair.studentId = enrollment.studentId;
+      if (!priorReceipt.enrollmentId || String(priorReceipt.enrollmentId) !== String(enrollment._id)) repair.enrollmentId = enrollment._id;
+      if (!priorReceipt.courseCode) repair.courseCode = courseCode;
+      if (!priorReceipt.stCode) repair.stCode = enrollment.stCode;
+      if (Object.keys(repair).length) operations.push({ updateOne: { filter: { _id: priorReceipt._id }, update: { $set: repair } } });
+      existingReceiptsUpdatedOrSkipped += 1;
+      continue;
+    }
+    if (seenInBatch.has(key)) {
       existingReceiptsUpdatedOrSkipped += 1;
       continue;
     }
