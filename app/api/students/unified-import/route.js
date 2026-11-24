@@ -24,9 +24,11 @@ async function ensureReceiptIndex() {
       const legacyIndexes = indexes.filter(index => index.unique
         && !index.key?.registrationId
         && ["mrNo", "paymentDate", "amountPaid"].every(key => index.key?.[key] === 1));
-      const oldRegistrationIndex = indexes.find(index => index.name === "registration_receipt_date_amount_unique"
+      const oldRegistrationIndexes = indexes.filter(index => index.unique
+        && index.key?.registrationId === 1
+        && ["mrNo", "paymentDate", "amountPaid"].every(key => index.key?.[key] === 1)
         && index.partialFilterExpression?.importBatchKey !== "UNIFIED_WORKBOOK_IMPORT");
-      for (const legacy of [...legacyIndexes, ...(oldRegistrationIndex ? [oldRegistrationIndex] : [])]) {
+      for (const legacy of [...legacyIndexes, ...oldRegistrationIndexes]) {
         await StudentFeePayment.collection.dropIndex(legacy.name);
       }
       await StudentFeePayment.collection.createIndex(
