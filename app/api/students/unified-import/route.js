@@ -520,17 +520,18 @@ async function syncFeeRows(rows = []) {
       },
       upsert: true
     }});
-    newReceiptsAdded += 1;
   }
   for (let index = 0; index < operations.length; index += 1000) {
     try {
-      await StudentFeePayment.bulkWrite(operations.slice(index, index + 1000), { ordered: false });
+      const result = await StudentFeePayment.bulkWrite(operations.slice(index, index + 1000), { ordered: false });
+      newReceiptsAdded += Number(result.upsertedCount || 0);
     } catch (error) {
-      if (!error.writeErrors?.length && error.code !== 11000) throw error;
-      const writeErrors = error.writeErrors || [];
+      const writeErrors = error.writeErrors || error.result?.writeErrors || [];
+      const partialResult = error.result || error;
+      newReceiptsAdded += Number(partialResult.upsertedCount || partialResult.nUpserted || partialResult.result?.nUpserted || 0);
+      if (!writeErrors.length && error.code !== 11000) throw error;
       if (writeErrors.some(item => item.code !== 11000)) throw error;
-      existingReceiptsUpdatedOrSkipped += writeErrors.length;
-      newReceiptsAdded = Math.max(0, newReceiptsAdded - writeErrors.length);
+      existingReceiptsUpdatedOrSkipped += writeErrors.length || (error.code === 11000 ? 1 : 0);
     }
   }
   return { newReceiptsAdded, existingReceiptsUpdatedOrSkipped, unmatchedRows, feeRowsProcessed: rows.length };
