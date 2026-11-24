@@ -109,7 +109,7 @@ export async function GET(req,{params}){
           _id: payment._id, paymentDate: payment.date || null, mrNo: payment.receiptNo || payment.reference || "—",
           stCode: legacyStCode || "—", registrationId: legacyCleanName && legacyStCode ? legacyCleanName + "_" + legacyStCode : "",
           amountPaid: Number(payment.amount || 0),
-          courseCode: linkedStudent.courseCode || "", courseName: linkedStudent.courseName || linkedStudent.courseCode || "—",
+          courseCode: linkedStudent.courseCode || "", courseName: linkedStudent.courseName || linkedStudent.courseCode || "Previous Course (Legacy)",
           semesterLabel: payment.semester ? "SEM-" + payment.semester : "Current",
           installmentApplied: (payment.items || []).map(item => (item.purpose || item.type || "Fee") + ": ₹" + Number(item.amount || 0).toLocaleString("en-IN")).join(", ") || payment.paymentType || "Course fee",
           sourceSheet: "ERP Fee Ledger",
