@@ -1,68 +1,24 @@
 import { NextResponse } from "next/server";
-import { createHash } from "node:crypto";
 import * as XLSX from "xlsx";
 import { connectMongoDB } from "@/lib/mongodb";
 import { getSession } from "@/lib/auth";
-import Student from "@/models/Student";
 import StudentMaster from "@/models/StudentMaster";
 import Course from "@/models/Course";
-import Batch from "@/models/Batch";
 import StudentEnrollment from "@/models/StudentEnrollment";
 import StudentFeePayment from "@/models/StudentFeePayment";
-import { normalizeHeader, normalizeStCode, normalizeName, parseExcelDate } from "@/lib/student-import/normalization";
+import { normalizeHeader, normalizeName, normalizeFatherName, normalizeStCode, parsePhones, parseExcelDate } from "@/lib/student-import/normalization";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-let indexesReady;
-async function ensureFeeImportIndexes() {
-  if (!indexesReady) indexesReady = (async () => {
-    const enrollmentIndexes = await StudentEnrollment.collection.indexes();
-    const oldEnrollmentIndex = enrollmentIndexes.find(index =>
-      index.unique && Object.keys(index.key || {}).join(",") === "studentId,stCode,normalizedFullName"
-    );
-    if (oldEnrollmentIndex) await StudentEnrollment.collection.dropIndex(oldEnrollmentIndex.name);
-    await StudentEnrollment.collection.createIndex(
-      { studentId: 1, stCode: 1, normalizedFullName: 1, courseCode: 1 },
-      { unique: true, name: "student_course_enrollment_unique" }
-    );
-
-    const paymentIndexes = await StudentFeePayment.collection.indexes();
-    const oldPaymentIndex = paymentIndexes.find(index =>
-      index.unique && Object.keys(index.key || {}).join(",") === "mrNo,stCode,paymentDate,amountPaid"
-    );
-    if (oldPaymentIndex) await StudentFeePayment.collection.dropIndex(oldPaymentIndex.name);
-    await StudentFeePayment.collection.createIndex(
-      { studentId: 1, enrollmentId: 1, mrNo: 1, paymentDate: 1, amountPaid: 1 },
-      { name: "student_course_receipt_lookup" }
-    );
-  })().catch(error => { indexesReady = null; throw error; });
-  await indexesReady;
-}
-
-const HEADER_ALIASES = {
-  studentId: ["studentid", "studentcode", "registrationcode", "registrationno", "regnno", "regno", "stcode", "enrollmentno", "admissionno"],
-  studentName: ["studentname", "name", "stname", "applicantname"],
-  phone: ["phone", "mobile", "mobileno", "mobilenumber", "contact", "contactno", "whatsappnumber", "phno", "phoneno"],
-  course: ["course", "coursename", "coursecode", "program", "programname", "courselabel"],
-  totalFee: ["totalfee", "coursefee", "grossfee", "feeamount", "fee"],
-  discount: ["discount", "discountamount", "concession"],
-  paidAmount: ["paidamount", "amountpaid", "amtpaid", "paymentamount", "paid", "amount"],
-  dueAmount: ["dueamount", "balancedue", "balance", "remainingfee"],
-  receiptNo: ["receiptno", "receipt", "mrno", "receipt number", "referenceno", "transactionid"],
-  paymentDate: ["paymentdate", "dop", "dateofpayment", "date"],
-  paymentMode: ["paymentmode", "mode", "paymentmethod", "method"],
-  courseStatus: ["coursestatus", "enrollmentstatus", "status"]
-};
-
 const clean = value => String(value ?? "").trim();
-const normCourse = value => clean(value).normalize("NFKC").toUpperCase().replace(/[^A-Z0-9]+/g, " ").replace(/\s+/g, " ").trim();
-const numberValue = value => {
-  if (value === "" || value === null || value === undefined) return null;
-  const parsed = Number(String(value).replace(/[₹,\s]/g, ""));
+const normCourse = value => clean(value).normalize("NFKC").toUpperCase().replace(/[^A-Z0-9]+/g, " ").replace(/\\s+/g, " ").trim();
+const amount = value => {
+  if (value === null || value === undefined || clean(value) === "") return null;
+  const parsed = Number(String(value).replace(/[₹,\\s]/g, ""));
   return Number.isFinite(parsed) ? parsed : null;
 };
-const normalizePhone = value => clean(value).replace(/\D/g, "").slice(-10);
+const dateSort = (a, b) => (b ? new Date(b).getTime() : 0) - (a ? new Date(a).getTime() : 0);
 const feeStatus = (payable, paid) => payable <= 0 || paid >= payable ? "Paid" : paid > 0 ? "Partial" : "Unpaid";
 const financialYear = date => {
   if (!date) return "";
@@ -70,388 +26,383 @@ const financialYear = date => {
   const start = date.getUTCMonth() >= 3 ? year : year - 1;
   return start + "-" + String(start + 1).slice(-2);
 };
-function findWorksheet(workbook) {
-  for (const sheetName of workbook.SheetNames || []) {
-    const grid = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: "", raw: true });
-    const headerIndex = grid.slice(0, 30).findIndex(row => {
-      const keys = row.map(normalizeHeader);
-      const hasCourse = HEADER_ALIASES.course.some(alias => keys.includes(normalizeHeader(alias)));
-      const hasIdentity = HEADER_ALIASES.studentId.some(alias => keys.includes(normalizeHeader(alias)))
-        || (HEADER_ALIASES.studentName.some(alias => keys.includes(normalizeHeader(alias))) && HEADER_ALIASES.phone.some(alias => keys.includes(normalizeHeader(alias))));
-      const hasFee = ["totalFee", "discount", "paidAmount", "dueAmount", "receiptNo"].some(field =>
-        HEADER_ALIASES[field].some(alias => keys.includes(normalizeHeader(alias)))
-      );
-      return hasCourse && hasIdentity && hasFee;
-    });
-    if (headerIndex < 0) continue;
-    const headers = grid[headerIndex].map(normalizeHeader);
-    const indexes = {};
-    for (const [field, aliases] of Object.entries(HEADER_ALIASES)) {
-      indexes[field] = headers.findIndex(header => aliases.some(alias => normalizeHeader(alias) === header));
-    }
-    const rows = [];
-    for (let index = headerIndex + 1; index < grid.length; index += 1) {
-      const values = grid[index];
-      if (!values.some(value => clean(value))) continue;
-      const get = field => indexes[field] >= 0 ? values[indexes[field]] : "";
-      rows.push({
-        rowNo: index + 1,
-        studentId: normalizeStCode(get("studentId")),
-        studentName: clean(get("studentName")),
-        phone: normalizePhone(get("phone")),
-        courseRaw: clean(get("course")),
-        totalFee: numberValue(get("totalFee")),
-        discount: numberValue(get("discount")),
-        paidAmount: numberValue(get("paidAmount")),
-        dueAmount: numberValue(get("dueAmount")),
-        receiptNo: clean(get("receiptNo")).replace(/\.0+$/, ""),
-        paymentDate: parseExcelDate(get("paymentDate")),
-        paymentMode: clean(get("paymentMode")),
-        courseStatus: clean(get("courseStatus")),
-        raw: values
-      });
-    }
-    return { sheetName, rows };
-  }
-  return null;
+const cleanStudentName = (name, code) => {
+  const raw = clean(name);
+  const suffix = code ? new RegExp("_" + String(code).replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&") + "$", "i") : /_\\d+$/;
+  return raw.replace(suffix, "").trim();
+};
+function readRows(sheet) {
+  const grid = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: true });
+  const headerIndex = grid.slice(0, 30).findIndex(row => row.map(normalizeHeader).includes("stcode"));
+  if (headerIndex < 0) return [];
+  const headers = grid[headerIndex].map(normalizeHeader);
+  return grid.slice(headerIndex + 1).map((values, index) => {
+    const get = name => {
+      const column = headers.indexOf(normalizeHeader(name));
+      return column < 0 ? "" : values[column];
+    };
+    return { rowNo: headerIndex + index + 2, get, values };
+  }).filter(row => row.values.some(value => clean(value)));
 }
-function courseStatusFromRow(value, existing) {
-  const status = clean(value).toLowerCase();
-  if (/complete|passed|alumni|finished/.test(status)) return "COMPLETED";
-  if (/enroll|active|ongoing|running/.test(status)) return "ACTIVE";
-  return existing === "COMPLETED" ? "COMPLETED" : "ACTIVE";
+function sameIdentity(master, row) {
+  if (normalizeName(master.fullName || master.normalizedFullName) !== row.cleanNameKey) return false;
+  const oldPhones = new Set((master.phoneNumbers || []).map(value => clean(value).replace(/\\D/g, "").slice(-10)).filter(value => value.length === 10));
+  const phoneMatch = row.phones.some(phone => oldPhones.has(phone));
+  const dobMatch = Boolean(row.dob && master.dob && new Date(row.dob).toISOString().slice(0, 10) === new Date(master.dob).toISOString().slice(0, 10));
+  const fatherMatch = Boolean(row.fatherKey && row.fatherKey === normalizeFatherName(master.fatherName || ""));
+  return phoneMatch || (dobMatch && fatherMatch);
 }
-function stableReceipt(row, studentId, courseCode) {
-  const signature = [studentId, courseCode, row.paymentDate?.toISOString().slice(0, 10) || "", Number(row.paidAmount || 0).toFixed(2)].join("|");
-  return "XLS-" + createHash("sha256").update(signature).digest("hex").slice(0, 20).toUpperCase();
+async function findOrCreateMaster(row) {
+  const candidates = await StudentMaster.find({ normalizedFullName: row.cleanNameKey }).limit(50);
+  const matches = candidates.filter(master => sameIdentity(master, row));
+  if (matches.length > 1) return { reason: "Name and identity details match multiple student profiles; manual merge is required." };
+  if (matches.length === 1) return { master: matches[0], created: false };
+  const master = await StudentMaster.create({
+    fullName: row.cleanName,
+    normalizedFullName: row.cleanNameKey,
+    dob: row.dob,
+    gender: row.gender,
+    fatherName: row.fatherName,
+    normalizedFatherName: row.fatherKey,
+    address: row.address,
+    phoneNumbers: row.phones,
+    qualification: row.qualification,
+    formNo: row.formNo,
+    identityMatchMethod: "WORKBOOK_NAME_PHONE_OR_DOB_FATHER"
+  });
+  return { master, created: true };
 }
-
-async function findStudent(row) {
-  if (row.studentId) {
-    const masters = await StudentMaster.find({ stCodes: row.studentId }).limit(3).lean();
-    if (masters.length === 1) return { master: masters[0], reason: "" };
-    if (masters.length > 1) return { reason: "Student ID matches multiple permanent profiles." };
-
-    const numeric = /^\d+$/.test(row.studentId) ? Number(row.studentId) : null;
-    const legacy = await Student.find({
-      $or: [
-        { regnNo: row.studentId }, { enrollmentNo: row.studentId },
-        ...(numeric === null ? [] : [{ regnNo: numeric }, { enrollmentNo: numeric }])
-      ]
-    }).limit(3).lean();
-    if (legacy.length !== 1) return { reason: legacy.length ? "Student ID matches multiple legacy records." : "Student ID was not found." };
-    let master = await StudentMaster.findOne({ legacyStudentIds: legacy[0]._id }).lean();
-    if (!master) {
-      master = await StudentMaster.create({
-        fullName: legacy[0].applicantName || legacy[0].name || row.studentName || "Student",
-        normalizedFullName: normalizeName(legacy[0].applicantName || legacy[0].name || row.studentName || "Student"),
-        dob: legacy[0].dateOfBirth || legacy[0].dob || null,
-        fatherName: legacy[0].fatherOrHusbandName || legacy[0].fatherName || "",
-        address: legacy[0].address || legacy[0].presentAddress || "",
-        photoUrl: legacy[0].photoUrl || "",
-        phoneNumbers: [legacy[0].mobileNumber, legacy[0].phone, legacy[0].whatsappNumber].map(normalizePhone).filter(Boolean),
-        stCodes: [row.studentId],
-        legacyStudentIds: [legacy[0]._id],
-        identityMatchMethod: "FEE_IMPORT_REGISTRATION_CODE"
-      });
-      master = master.toObject();
-    }
-    return { master, legacy: legacy[0], reason: "" };
-  }
-
-  if (!row.studentName || !row.phone) return { reason: "Student ID is blank; normalized student name and phone are both required for fallback matching." };
-  const name = normalizeName(row.studentName);
-  const phoneMasters = await StudentMaster.find({ phoneNumbers: row.phone }).limit(25).lean();
-  const masters = phoneMasters.filter(master => normalizeName(master.fullName || master.normalizedFullName) === name);
-  if (masters.length === 1) return { master: masters[0], reason: "" };
-  if (masters.length > 1) return { reason: "Name and phone match multiple permanent profiles." };
-
-  const phonePattern = new RegExp(row.phone);
-  const legacyCandidates = await Student.find({
-    $or: [
-      { mobileNumber: phonePattern }, { phone: phonePattern },
-      { whatsappNumber: phonePattern }, { guardianContactNumber: phonePattern }
-    ]
-  }).limit(25).lean();
-  const legacyMatches = legacyCandidates.filter(student =>
-    [student.mobileNumber, student.phone, student.whatsappNumber, student.guardianContactNumber].some(value => normalizePhone(value) === row.phone)
-    && normalizeName(student.applicantName || student.sourceStudentName || student.name) === name
-  );
-  if (legacyMatches.length !== 1) {
-    return { reason: legacyMatches.length ? "Name and phone match multiple legacy student records." : "No student matched the supplied name and phone." };
-  }
-  const legacy = legacyMatches[0];
-  let master = await StudentMaster.findOne({ legacyStudentIds: legacy._id }).lean();
-  if (!master) {
-    master = await StudentMaster.create({
-      fullName: legacy.applicantName || legacy.sourceStudentName || legacy.name || row.studentName,
-      normalizedFullName: normalizeName(legacy.applicantName || legacy.sourceStudentName || legacy.name || row.studentName),
-      dob: legacy.dateOfBirth || legacy.dob || null,
-      fatherName: legacy.fatherOrHusbandName || legacy.fatherName || "",
-      address: legacy.address || legacy.presentAddress || "",
-      photoUrl: legacy.photoUrl || "",
-      hasPhoto: Boolean(legacy.photoUrl),
-      phoneNumbers: [row.phone],
-      stCodes: [normalizeStCode(legacy.regnNo || legacy.enrollmentNo)].filter(Boolean),
-      legacyStudentIds: [legacy._id],
-      identityMatchMethod: "FEE_IMPORT_NAME_PHONE"
-    });
-    master = master.toObject();
-  }
-  return { master, legacy, reason: "" };
-}
-
-async function findCourse(raw, courses, aliasMap) {
+async function findCourse(raw, courses) {
   const key = normCourse(raw);
-  const ids = aliasMap.get(key) || [];
-  if (ids.length === 1) return ids[0];
-  if (ids.length > 1) return null;
-  const compact = key.replace(/\s/g, "");
-  const compactMatches = courses.filter(course =>
+  if (!key) return null;
+  const matches = courses.filter(course =>
     [course.code, course.name, ...(course.aliases || []), ...(course.courseAliases || [])]
-      .some(alias => normCourse(alias).replace(/\s/g, "") === compact)
+      .some(alias => normCourse(alias) === key || normCourse(alias).replace(/\\s/g, "") === key.replace(/\\s/g, ""))
   );
-  return compactMatches.length === 1 ? compactMatches[0] : null;
+  return matches.length === 1 ? matches[0] : null;
+}
+async function ensureReceiptIndex() {
+  const indexes = await StudentFeePayment.collection.indexes();
+  const existing = indexes.find(index => index.unique
+    && Object.keys(index.key || {}).length === 4
+    && ["stCode", "mrNo", "paymentDate", "amountPaid"].every(key => Object.prototype.hasOwnProperty.call(index.key, key)));
+  if (!existing) {
+    await StudentFeePayment.collection.createIndex(
+      { stCode: 1, mrNo: 1, paymentDate: 1, amountPaid: 1 },
+      { unique: true, name: "stcode_receipt_date_amount_unique", partialFilterExpression: { stCode: { $type: "string", $gt: "" }, mrNo: { $type: "string", $gt: "" }, paymentDate: { $type: "date" }, amountPaid: { $type: "number" } } }
+    );
+  }
+}
+function parseStudentRow(source) {
+  const code = normalizeStCode(source.get("St_Code"));
+  const cleanName = cleanStudentName(source.get("St_Name"), code);
+  return {
+    rowNo: source.rowNo,
+    stCode: code,
+    cleanName,
+    cleanNameKey: normalizeName(cleanName),
+    dob: parseExcelDate(source.get("D_O_B")),
+    gender: clean(source.get("Sex")),
+    fatherName: clean(source.get("St_Father")),
+    fatherKey: normalizeFatherName(source.get("St_Father")),
+    address: clean(source.get("Address")),
+    phones: parsePhones(source.get("Ph_no")),
+    qualification: clean(source.get("Qualification")),
+    formNo: clean(source.get("Form_no")).replace(/\\.0+$/, ""),
+    dateOfAdmission: parseExcelDate(source.get("D_O_A")),
+    course: clean(source.get("Course"))
+  };
 }
 
 export async function POST(request) {
   try {
     const session = await getSession();
-    if (!session?.sub) return NextResponse.json({ error: "Please sign in to upload fee records." }, { status: 401 });
+    if (!session?.sub) return NextResponse.json({ error: "Please sign in to upload student and fee records." }, { status: 401 });
     if (!["superadmin", "admin", "office-admin"].includes(String(session.role || "").toLowerCase())) {
-      return NextResponse.json({ error: "You do not have permission to import student fees." }, { status: 403 });
+      return NextResponse.json({ error: "You do not have permission to import student and fee records." }, { status: 403 });
     }
     const form = await request.formData();
     const file = form.get("file");
-    if (!file || typeof file.arrayBuffer !== "function") return NextResponse.json({ error: "Choose an Excel or CSV file." }, { status: 400 });
-    if (!/\.(xlsx|xls|csv)$/i.test(String(file.name || ""))) return NextResponse.json({ error: "Only .xlsx, .xls and .csv files are supported." }, { status: 400 });
+    if (!file || typeof file.arrayBuffer !== "function") return NextResponse.json({ error: "Choose an Excel workbook." }, { status: 400 });
+    if (!/\\.(xlsx|xls)$/i.test(String(file.name || ""))) return NextResponse.json({ error: "Upload an .xlsx or .xls workbook containing Student Data and a fee sheet." }, { status: 400 });
     if (Number(file.size || 0) > 15 * 1024 * 1024) return NextResponse.json({ error: "The file must be smaller than 15 MB." }, { status: 413 });
 
     await connectMongoDB();
-    await ensureFeeImportIndexes();
+    await ensureReceiptIndex();
     const workbook = XLSX.read(Buffer.from(await file.arrayBuffer()), { type: "buffer", cellDates: true });
-    const worksheet = findWorksheet(workbook);
-    if (!worksheet) return NextResponse.json({ error: "No fee worksheet found. Include Student ID (or Student Name + Phone), Course, and at least one fee column." }, { status: 400 });
+    const studentSheetName = (workbook.SheetNames || []).find(name => normalizeHeader(name) === "studentdata");
+    const feeSheetName = (workbook.SheetNames || []).find(name => name !== studentSheetName);
+    if (!studentSheetName || !feeSheetName) return NextResponse.json({ error: "Workbook must contain Student Data and one fee sheet." }, { status: 400 });
+
+    const studentSourceRows = readRows(workbook.Sheets[studentSheetName]);
+    const feeSourceRows = readRows(workbook.Sheets[feeSheetName]);
+    const requiredStudentHeaders = ["stcode", "stname", "dob", "sex", "stfather", "address", "phno", "qualification", "formno", "doa", "course"];
+    const studentGrid = XLSX.utils.sheet_to_json(workbook.Sheets[studentSheetName], { header: 1, defval: "", raw: true });
+    const studentHeaders = studentGrid.slice(0, 30).flat().map(normalizeHeader);
+    if (!requiredStudentHeaders.every(header => studentHeaders.includes(header))) {
+      return NextResponse.json({ error: "Student Data is missing one or more required columns: St_Code, St_Name, D_O_B, Sex, St_Father, Address, Ph_no, Qualification, Form_no, D_O_A, Course." }, { status: 400 });
+    }
+    if (!feeSourceRows.length) return NextResponse.json({ error: "The fee sheet has no data rows." }, { status: 400 });
 
     const courses = await Course.find({}).lean();
-    const aliasMap = new Map();
-    for (const course of courses) {
-      for (const alias of [course.code, course.name, ...(course.aliases || []), ...(course.courseAliases || [])]) {
-        const key = normCourse(alias);
-        if (!key) continue;
-        const list = aliasMap.get(key) || [];
-        if (!list.some(item => String(item._id) === String(course._id))) list.push(course);
-        aliasMap.set(key, list);
-      }
-    }
-
+    const courseByCode = new Map();
+    const touchedMasters = new Map();
+    const codeMap = new Map();
+    const studentDataByName = new Map();
     const unmatchedRows = [];
-    const studentCourseCounts = new Map();
-    let createdPayments = 0, updatedPayments = 0, processed = 0;
-    const dueChecks = [];
-    for (const row of worksheet.rows) {
-      processed += 1;
-      try {
-      if ([row.totalFee, row.discount, row.paidAmount, row.dueAmount].some(value => value !== null && value < 0)) {
-        unmatchedRows.push({ row: row.rowNo, studentId: row.studentId, course: row.courseRaw, reason: "Fee, discount and payment amounts cannot be negative." });
+    let studentsUpdated = 0;
+    let newEnrollmentsLinked = 0;
+    let newReceiptsAdded = 0;
+    let duplicateReceiptsSkipped = 0;
+    let studentRowsProcessed = 0;
+
+    // First pass: resolve every current registration from Student Data.
+    for (const source of studentSourceRows) {
+      const row = parseStudentRow(source);
+      if (!row.stCode || !row.cleanNameKey) {
+        unmatchedRows.push({ row: row.rowNo, studentId: row.stCode, course: row.course, reason: "Student Data row has no St_Code or student name." });
         continue;
       }
-      if (!row.courseRaw) { unmatchedRows.push({ row: row.rowNo, studentId: row.studentId, course: "", reason: "Course name/code is blank." }); continue; }
-      const match = await findStudent(row);
-      if (!match.master) { unmatchedRows.push({ row: row.rowNo, studentId: row.studentId, course: row.courseRaw, reason: match.reason }); continue; }
-      const course = await findCourse(row.courseRaw, courses, aliasMap);
-      if (!course) { unmatchedRows.push({ row: row.rowNo, studentId: row.studentId, course: row.courseRaw, reason: "Course name/code is unknown or maps to more than one course." }); continue; }
-
-      const master = match.master;
-      const stCode = row.studentId || normalizeStCode(master.stCodes?.[0]) || ("MASTER-" + String(master._id).slice(-8));
-      let inferredBatchStatus = "";
-      const legacyForBatch = match.legacy || (master.legacyStudentIds?.length
-        ? await Student.findById(master.legacyStudentIds[0]).select("courseCode courseName batchId").lean()
-        : null);
-      if (legacyForBatch?.batchId) {
-        const legacyCourseMatches = [legacyForBatch.courseCode, legacyForBatch.courseName]
-          .some(value => normCourse(value) === normCourse(course.code) || normCourse(value) === normCourse(course.name));
-        if (legacyCourseMatches) {
-          const linkedBatch = await Batch.findById(legacyForBatch.batchId).select("courseCode status").lean();
-          if (linkedBatch && String(linkedBatch.courseCode || "").toUpperCase() === String(course.code).toUpperCase()) {
-            inferredBatchStatus = linkedBatch.status === "Completed" ? "COMPLETED" : "ACTIVE";
-          }
+      studentRowsProcessed += 1;
+      const resolved = await findOrCreateMaster(row);
+      if (!resolved.master) {
+        unmatchedRows.push({ row: row.rowNo, studentId: row.stCode, course: row.course, reason: resolved.reason });
+        continue;
+      }
+      const master = resolved.master;
+      const incomingDate = row.dateOfAdmission;
+      const existingDate = master.currentAdmissionDate || master.dateOfAdmission || null;
+      const isNewerOrEqual = Boolean(incomingDate && (!existingDate || incomingDate.getTime() >= new Date(existingDate).getTime()));
+      const isNewCode = !(master.enrollments || []).some(item => String(item.stCode) === row.stCode);
+      if (isNewCode) {
+        master.enrollments.push({
+          stCode: row.stCode, course: row.course || "Previous Course (Legacy)",
+          dateOfAdmission: incomingDate, formNo: row.formNo, isCurrent: false, identitySource: "STUDENT_DATA"
+        });
+        newEnrollmentsLinked += 1;
+      } else {
+        const entry = master.enrollments.find(item => String(item.stCode) === row.stCode);
+        if (entry) {
+          if (!entry.course && row.course) entry.course = row.course;
+          if (!entry.dateOfAdmission && incomingDate) entry.dateOfAdmission = incomingDate;
+          if (!entry.formNo && row.formNo) entry.formNo = row.formNo;
         }
       }
-      const normalizedFullName = normalizeName(master.fullName || row.studentName);
-      let enrollment = await StudentEnrollment.findOne({
-        studentId: master._id, stCode, normalizedFullName, courseCode: course.code
-      });
+      if (!(master.stCodes || []).includes(row.stCode)) master.stCodes.push(row.stCode);
+
+      // Fill blank identity fields only; do not touch photo, ID card, or populated manual fields.
+      if (!master.fullName) master.fullName = row.cleanName;
+      if (!master.normalizedFullName) master.normalizedFullName = row.cleanNameKey;
+      if (!master.dob && row.dob) master.dob = row.dob;
+      if (!master.gender && row.gender) master.gender = row.gender;
+      if (!master.fatherName && row.fatherName) master.fatherName = row.fatherName;
+      if (!master.normalizedFatherName && row.fatherKey) master.normalizedFatherName = row.fatherKey;
+      if (!master.address && row.address) master.address = row.address;
+      if (!master.qualification && row.qualification) master.qualification = row.qualification;
+      if (!master.formNo && row.formNo) master.formNo = row.formNo;
+      if (isNewerOrEqual) {
+        master.currentStCode = row.stCode;
+        master.currentCourse = row.course;
+        master.currentAdmissionDate = incomingDate;
+        master.dateOfAdmission = incomingDate;
+        master.formNo = row.formNo || master.formNo;
+        if (row.address) master.address = row.address;
+        if (row.phones.length) master.phoneNumbers = row.phones;
+        if (row.qualification) master.qualification = row.qualification;
+        if (row.dob && !master.dob) master.dob = row.dob;
+        if (row.gender && !master.gender) master.gender = row.gender;
+      } else if (row.phones.length) {
+        master.phoneNumbers = [...new Set([...(master.phoneNumbers || []), ...row.phones])];
+      }
+      master.enrollments.sort((a, b) => dateSort(a.dateOfAdmission, b.dateOfAdmission));
+      master.enrollments.forEach((item, index) => { item.isCurrent = index === 0; });
+      if (master.enrollments[0]) {
+        master.currentStCode = master.enrollments[0].stCode;
+        master.currentCourse = master.enrollments[0].course;
+        master.currentAdmissionDate = master.enrollments[0].dateOfAdmission || master.currentAdmissionDate;
+        master.dateOfAdmission = master.currentAdmissionDate;
+      }
+      await master.save();
+      touchedMasters.set(String(master._id), master);
+      codeMap.set(row.stCode, { master, row, course: row.course, dateOfAdmission: row.dateOfAdmission, formNo: row.formNo, isLegacy: false });
+      const sameName = studentDataByName.get(row.cleanNameKey) || [];
+      if (!sameName.some(item => String(item.master._id) === String(master._id))) sameName.push({ master, row });
+      studentDataByName.set(row.cleanNameKey, sameName);
+
+      const courseDoc = await findCourse(row.course, courses);
+      if (courseDoc) courseByCode.set(row.stCode, courseDoc);
+      const enrollmentCode = courseDoc?.code || (row.course ? normCourse(row.course).replace(/\\s/g, "-") : "UNKNOWN");
+      let enrollment = await StudentEnrollment.findOne({ studentId: master._id, stCode: row.stCode, normalizedFullName: row.cleanNameKey, courseCode: enrollmentCode });
       if (!enrollment) {
+        const fee = courseDoc ? Number(courseDoc.fee || 0) : 0;
         enrollment = await StudentEnrollment.create({
-          studentId: master._id,
-          courseId: course._id,
-          legacyStudentId: match.legacy?._id || master.legacyStudentIds?.[0] || null,
-          stCode, normalizedFullName,
-          courseCode: course.code,
-          courseCategory: /ROBOTICS/.test(String(course.category || "").toUpperCase()) ? "ROBOTICS"
-            : /CODING/.test(String(course.category || "").toUpperCase()) ? "CODING_FOR_KIDS"
-            : /DOM/.test(String(course.category || "").toUpperCase()) ? "DOM" : "OTHER",
-          semesterLabel: course.code,
-          admissionDate: null,
-          status: courseStatusFromRow(row.courseStatus, inferredBatchStatus),
+          studentId: master._id, stCode: row.stCode, normalizedFullName: row.cleanNameKey,
+          formNo: row.formNo, courseId: courseDoc?._id || null, courseCode: enrollmentCode,
+          courseName: row.course || "Previous Course (Legacy)", semesterLabel: row.course || "Previous Course (Legacy)",
+          admissionDate: row.dateOfAdmission, status: "ACTIVE",
           feeConfig: {
-            admissionFee: Number(course.admissionFee || 0),
-            monthlyInstallment: Number(course.monthlyInstallment || course.monthlyFee || 0),
-            durationMonths: Number(course.durationMonths || 0),
-            admissionIncluded: Boolean(course.admissionIncludedInTotal),
-            grossFee: Number(course.fee || 0),
-            discountAmount: 0,
-            netPayableFee: Number(course.fee || 0),
-            registrationFee: Number(course.registrationFee || 0),
-            labCharges: Number(course.labCharges || 0),
-            otherCharges: Number(course.otherCharges || 0),
-            feeRuleSource: "FEE_EXCEL_IMPORT",
-            configured: true
+            admissionFee: Number(courseDoc?.admissionFee || 0),
+            monthlyInstallment: Number(courseDoc?.monthlyInstallment || courseDoc?.monthlyFee || 0),
+            durationMonths: Number(courseDoc?.durationMonths || 0),
+            admissionIncluded: Boolean(courseDoc?.admissionIncludedInTotal),
+            grossFee: fee, discountAmount: 0, netPayableFee: fee,
+            registrationFee: Number(courseDoc?.registrationFee || 0),
+            labCharges: Number(courseDoc?.labCharges || 0), otherCharges: Number(courseDoc?.otherCharges || 0),
+            feeRuleSource: courseDoc ? "COURSE_MASTER" : "NO_FEE_RULE", configured: Boolean(courseDoc)
           },
-          installments: [],
-          summary: { totalFee: Number(course.fee || 0), totalDue: Number(course.fee || 0), totalPaid: 0, balanceDue: Number(course.fee || 0), feeStatus: "Unpaid" }
+          summary: { totalFee: fee, totalDue: fee, totalPaid: 0, balanceDue: fee, feeStatus: feeStatus(fee, 0) }
         });
+        newEnrollmentsLinked += 1;
+      } else {
+        if (!enrollment.admissionDate && row.dateOfAdmission) enrollment.admissionDate = row.dateOfAdmission;
+        if (!enrollment.formNo && row.formNo) enrollment.formNo = row.formNo;
+        if (!enrollment.courseName && row.course) enrollment.courseName = row.course;
+        await enrollment.save();
       }
+    }
 
-      const grossFee = row.totalFee !== null ? row.totalFee : Number(enrollment.feeConfig?.grossFee ?? course.fee ?? 0);
-      const discount = row.discount !== null ? row.discount : Number(enrollment.feeConfig?.discountAmount || 0);
-      const netPayable = Math.max(0, grossFee - Math.max(0, discount));
-      const nextStatus = courseStatusFromRow(row.courseStatus, inferredBatchStatus === "COMPLETED" ? "COMPLETED" : (enrollment.status || inferredBatchStatus));
-      enrollment.courseId = course._id;
-      enrollment.courseCode = course.code;
-      enrollment.status = nextStatus;
-      enrollment.feeConfig = {
-        ...(enrollment.feeConfig?.toObject?.() || enrollment.feeConfig || {}),
-        grossFee,
-        discountAmount: Math.max(0, discount),
-        netPayableFee: netPayable,
-        feeRuleSource: "FEE_EXCEL_IMPORT",
-        configured: true
+    // Legacy codes: only link when the exact cleaned name identifies one unique Student Data profile.
+    const feeRows = feeSourceRows.map(source => {
+      const code = normalizeStCode(source.get("St_Code"));
+      const cleanName = cleanStudentName(source.get("St_Name_cr") || source.get("St_Name"), code);
+      return {
+        rowNo: source.rowNo, stCode: code, cleanName, cleanNameKey: normalizeName(cleanName),
+        mrNo: clean(source.get("MR_No")).replace(/\\.0+$/, ""),
+        amountPaid: amount(source.get("Amt_Paid")),
+        paymentDate: parseExcelDate(source.get("D_O_P"))
       };
-      await enrollment.save();
-
-      if (row.receiptNo && row.paidAmount === null) {
-        unmatchedRows.push({ row: row.rowNo, studentId: stCode, course: course.code, reason: "Receipt number is present but Paid Amount is blank or invalid." });
-      } else if (row.paidAmount !== null && row.paidAmount >= 0 && (row.paidAmount > 0 || row.receiptNo)) {
-        if (row.paymentDate === null && !row.receiptNo) {
-          unmatchedRows.push({ row: row.rowNo, studentId: stCode, course: course.code, reason: "Paid amount has neither a receipt number nor a valid payment date." });
-        } else {
-          const mrNo = row.receiptNo || stableReceipt(row, master._id, course.code);
-          let existing = await StudentFeePayment.findOne({
-            studentId: master._id, enrollmentId: enrollment._id, mrNo
-          }).select("_id").lean();
-          if (!existing) {
-            existing = await StudentFeePayment.findOne({
-              studentId: master._id, enrollmentId: enrollment._id,
-              sourceSheet: worksheet.sheetName, sourceRowNo: row.rowNo
-            }).select("_id").lean();
-          }
-          if (!existing && row.paymentDate) {
-            existing = await StudentFeePayment.findOne({
-              studentId: master._id, enrollmentId: enrollment._id,
-              paymentDate: row.paymentDate, amountPaid: row.paidAmount
-            }).select("_id").lean();
-          }
-          const paymentValues = {
-            studentId: master._id, enrollmentId: enrollment._id, courseId: course._id,
-            stCode, financialYear: financialYear(row.paymentDate),
-            stNameKey: normalizedFullName + "_" + stCode,
-            courseCode: course.code, mrNo,
-            amountPaid: row.paidAmount, paymentDate: row.paymentDate,
-            rawPaymentDate: row.paymentDate, paymentMode: row.paymentMode,
-            importWarnings: [], allocations: [],
-            sourceSheet: worksheet.sheetName, sourceRowNo: row.rowNo
-          };
-          if (existing) {
-            await StudentFeePayment.updateOne({ _id: existing._id }, { $set: paymentValues });
-            updatedPayments += 1;
-          } else if (row.paidAmount > 0) {
-            await StudentFeePayment.create(paymentValues);
-            createdPayments += 1;
-          }
+    }).filter(row => row.stCode);
+    const earliestPaymentByCode = new Map();
+    for (const row of feeRows) if (row.paymentDate) {
+      const old = earliestPaymentByCode.get(row.stCode);
+      if (!old || row.paymentDate < old) earliestPaymentByCode.set(row.stCode, row.paymentDate);
+    }
+    for (const row of feeRows) {
+      if (codeMap.has(row.stCode)) continue;
+      const matches = studentDataByName.get(row.cleanNameKey) || [];
+      const uniqueMasters = [...new Map(matches.map(item => [String(item.master._id), item])).values()];
+      if (uniqueMasters.length !== 1) {
+        if (!unmatchedRows.some(item => item.studentId === row.stCode && /legacy/i.test(item.reason || ""))) {
+          unmatchedRows.push({ row: row.rowNo, studentId: row.stCode, course: "Previous Course (Legacy)", reason: uniqueMasters.length ? "Legacy St_Code has a non-unique exact name match in Student Data; left unlinked for manual merge." : "Legacy St_Code has no exact-name match in Student Data; left unlinked." });
         }
+        continue;
       }
-
-      const key = String(master._id);
-      const summary = studentCourseCounts.get(key) || { master, courses: new Set() };
-      summary.courses.add(String(course._id));
-      studentCourseCounts.set(key, summary);
-      if (row.dueAmount !== null) dueChecks.push({
-        row: row.rowNo, studentId: stCode, course: course.code,
-        enrollmentId: enrollment._id, excelDue: row.dueAmount
-      });
-      } catch (rowError) {
-        unmatchedRows.push({
-          row: row.rowNo, studentId: row.studentId, course: row.courseRaw,
-          reason: "Row could not be fully imported: " + String(rowError?.message || "Unknown row error")
+      const { master, row: sourceStudent } = uniqueMasters[0];
+      const legacyDate = earliestPaymentByCode.get(row.stCode) || null;
+      const legacy = { master, row: sourceStudent, course: "Previous Course (Legacy)", dateOfAdmission: legacyDate, formNo: "", isLegacy: true };
+      codeMap.set(row.stCode, legacy);
+      if (!(master.stCodes || []).includes(row.stCode)) master.stCodes.push(row.stCode);
+      if (!(master.enrollments || []).some(item => String(item.stCode) === row.stCode)) {
+        master.enrollments.push({ stCode: row.stCode, course: "Previous Course (Legacy)", dateOfAdmission: legacyDate, formNo: "", isCurrent: false, identitySource: "FEE_SHEET_NAME_MATCH" });
+        newEnrollmentsLinked += 1;
+      }
+      master.enrollments.sort((a, b) => dateSort(a.dateOfAdmission, b.dateOfAdmission));
+      master.enrollments.forEach((item, index) => { item.isCurrent = index === 0; });
+      if (master.enrollments[0]) {
+        master.currentStCode = master.enrollments[0].stCode;
+        master.currentCourse = master.enrollments[0].course;
+        master.currentAdmissionDate = master.enrollments[0].dateOfAdmission || master.currentAdmissionDate;
+        master.dateOfAdmission = master.currentAdmissionDate;
+      }
+      await master.save();
+      touchedMasters.set(String(master._id), master);
+      const codeEnrollment = await StudentEnrollment.findOne({ studentId: master._id, stCode: row.stCode });
+      if (!codeEnrollment) {
+        await StudentEnrollment.create({
+          studentId: master._id, stCode: row.stCode, normalizedFullName: sourceStudent.cleanNameKey,
+          courseCode: "PREVIOUS-LEGACY", courseName: "Previous Course (Legacy)", semesterLabel: "Previous Course (Legacy)",
+          admissionDate: legacyDate, status: "LEGACY",
+          feeConfig: { grossFee: 0, discountAmount: 0, netPayableFee: 0, feeRuleSource: "NO_FEE_RULE", configured: false },
+          summary: { totalFee: 0, totalDue: 0, totalPaid: 0, balanceDue: 0, feeStatus: "Unpaid" }
         });
       }
     }
 
-    // Recalculate every enrollment (including courses absent from this workbook)
-    // for each touched student, so a multi-course profile remains internally consistent.
-    for (const { master } of studentCourseCounts.values()) {
-      const allStudentEnrollments = await StudentEnrollment.find({ studentId: master._id }).lean();
-      for (const enrollment of allStudentEnrollments) {
+    const enrollmentCache = new Map();
+    for (const row of feeRows) {
+      const link = codeMap.get(row.stCode);
+      if (!link) continue;
+      if (row.amountPaid === null || row.amountPaid < 0 || !row.mrNo || !row.paymentDate) {
+        unmatchedRows.push({ row: row.rowNo, studentId: row.stCode, course: link.course, reason: "Fee row requires a valid non-negative Amt_Paid, MR_No and D_O_P." });
+        continue;
+      }
+      const master = link.master;
+      const courseDoc = link.isLegacy ? null : await findCourse(link.course, courses);
+      const courseCode = courseDoc?.code || (link.isLegacy ? "PREVIOUS-LEGACY" : normCourse(link.course).replace(/\\s/g, "-"));
+      const cacheKey = String(master._id) + "|" + row.stCode;
+      let enrollment = enrollmentCache.get(cacheKey);
+      if (!enrollment) {
+        enrollment = await StudentEnrollment.findOne({ studentId: master._id, stCode: row.stCode }).sort({ admissionDate: -1 });
+        if (!enrollment) {
+          enrollment = await StudentEnrollment.create({
+            studentId: master._id, stCode: row.stCode, normalizedFullName: normalizeName(master.fullName),
+            courseCode, courseName: link.course, semesterLabel: link.course,
+            admissionDate: link.dateOfAdmission || earliestPaymentByCode.get(row.stCode) || null,
+            status: link.isLegacy ? "LEGACY" : "ACTIVE",
+            feeConfig: { grossFee: Number(courseDoc?.fee || 0), discountAmount: 0, netPayableFee: Number(courseDoc?.fee || 0), feeRuleSource: courseDoc ? "COURSE_MASTER" : "NO_FEE_RULE", configured: Boolean(courseDoc) },
+            summary: { totalFee: Number(courseDoc?.fee || 0), totalDue: Number(courseDoc?.fee || 0), totalPaid: 0, balanceDue: Number(courseDoc?.fee || 0), feeStatus: "Unpaid" }
+          });
+        }
+        enrollmentCache.set(cacheKey, enrollment);
+      }
+      const filter = { stCode: row.stCode, mrNo: row.mrNo, paymentDate: row.paymentDate, amountPaid: row.amountPaid };
+      const paymentValues = {
+        studentId: master._id, enrollmentId: enrollment._id, courseId: courseDoc?._id || null,
+        stCode: row.stCode, financialYear: financialYear(row.paymentDate),
+        stNameKey: normalizeName(master.fullName) + "_" + row.stCode,
+        courseCode, mrNo: row.mrNo, amountPaid: row.amountPaid, paymentDate: row.paymentDate,
+        rawPaymentDate: row.paymentDate, sourceSheet: feeSheetName, sourceRowNo: row.rowNo,
+        importWarnings: link.isLegacy ? ["Legacy course; no current course fee rule was mapped."] : [],
+        allocations: []
+      };
+      try {
+        const result = await StudentFeePayment.updateOne(filter, { $setOnInsert: paymentValues }, { upsert: true, runValidators: true });
+        if (result.upsertedCount) newReceiptsAdded += 1;
+        else duplicateReceiptsSkipped += 1;
+      } catch (error) {
+        if (error?.code === 11000) duplicateReceiptsSkipped += 1;
+        else throw error;
+      }
+    }
+
+    // Recalculate only touched profiles, retaining all old enrollments and receipts.
+    for (const master of touchedMasters.values()) {
+      const enrollments = await StudentEnrollment.find({ studentId: master._id });
+      for (const enrollment of enrollments) {
         const payments = await StudentFeePayment.find({ enrollmentId: enrollment._id }).select("amountPaid").lean();
-        const totalPaid = payments.reduce((sum, payment) => sum + Number(payment.amountPaid || 0), 0);
-        const grossFee = Number(enrollment.feeConfig?.grossFee || 0);
+        const paid = payments.reduce((sum, item) => sum + Number(item.amountPaid || 0), 0);
+        const gross = Number(enrollment.feeConfig?.grossFee || 0);
         const discount = Number(enrollment.feeConfig?.discountAmount || 0);
-        const payable = Math.max(0, grossFee - discount);
-        const balanceDue = Math.max(0, payable - totalPaid);
-        const status = feeStatus(payable, totalPaid);
-        await StudentEnrollment.updateOne({ _id: enrollment._id }, {
-          $set: {
-            "feeConfig.netPayableFee": payable,
-            "summary.totalFee": grossFee,
-            "summary.totalDue": payable,
-            "summary.totalPaid": totalPaid,
-            "summary.balanceDue": balanceDue,
-            "summary.feeStatus": status
-          }
-        });
+        const payable = Math.max(0, gross - discount);
+        enrollment.summary = { ...(enrollment.summary?.toObject?.() || enrollment.summary || {}), totalFee: gross, totalDue: payable, totalPaid: paid, balanceDue: Math.max(0, payable - paid), feeStatus: feeStatus(payable, paid) };
+        enrollment.feeConfig.netPayableFee = payable;
+        await enrollment.save();
       }
-    }
-
-    for (const check of dueChecks) {
-      const latestEnrollment = await StudentEnrollment.findById(check.enrollmentId).select("summary").lean();
-      const calculatedDue = Number(latestEnrollment?.summary?.balanceDue || 0);
-      if (Math.abs(check.excelDue - calculatedDue) > 1) {
-        unmatchedRows.push({
-          row: check.row, studentId: check.studentId, course: check.course,
-          reason: "Excel Due Amount differs from the recalculated course balance; the ledger uses Total Fee, Discount and matched receipts."
-        });
-      }
-    }
-
-    const updatedStudents = [];
-    for (const { master, courses: courseIds } of studentCourseCounts.values()) {
-      const allEnrollments = await StudentEnrollment.find({ studentId: master._id }).select("feeConfig summary status").lean();
-      const totalFee = allEnrollments.reduce((sum, item) => sum + Number(item.feeConfig?.grossFee || 0), 0);
-      const discount = allEnrollments.reduce((sum, item) => sum + Number(item.feeConfig?.discountAmount || 0), 0);
-      const totalPaid = allEnrollments.reduce((sum, item) => sum + Number(item.summary?.totalPaid || 0), 0);
-      const balanceDue = allEnrollments.reduce((sum, item) => sum + Number(item.summary?.balanceDue ?? Math.max(0, Number(item.feeConfig?.netPayableFee || 0) - Number(item.summary?.totalPaid || 0))), 0);
-      const payable = Math.max(0, totalFee - discount);
-      const status = feeStatus(payable, totalPaid);
-      const feeSummary = { totalFee, discount, totalPaid, balanceDue, feeStatus: status, courseCount: allEnrollments.length, updatedAt: new Date() };
-      await StudentMaster.updateOne({ _id: master._id }, { $set: { feeSummary } });
-      const legacyIds = master.legacyStudentIds || [];
-      if (legacyIds.length) await Student.updateMany({ _id: { $in: legacyIds } }, { $set: { dueAmount: balanceDue, paymentStatus: status } });
-      updatedStudents.push({ studentId: String(master._id), name: master.fullName, coursesMapped: courseIds.size, feeSummary });
+      const refreshed = await StudentEnrollment.find({ studentId: master._id }).select("feeConfig summary").lean();
+      const totalFee = refreshed.reduce((sum, item) => sum + Number(item.feeConfig?.grossFee || 0), 0);
+      const discount = refreshed.reduce((sum, item) => sum + Number(item.feeConfig?.discountAmount || 0), 0);
+      const totalPaid = refreshed.reduce((sum, item) => sum + Number(item.summary?.totalPaid || 0), 0);
+      const balanceDue = refreshed.reduce((sum, item) => sum + Number(item.summary?.balanceDue || 0), 0);
+      master.feeSummary = { totalFee, discount, totalPaid, balanceDue, feeStatus: feeStatus(Math.max(0, totalFee - discount), totalPaid), courseCount: refreshed.length, updatedAt: new Date() };
+      await master.save();
+      studentsUpdated += 1;
     }
 
     return NextResponse.json({
-      message: "Course-wise fee import completed. Fee totals were recalculated separately for each student and course.",
-      worksheet: worksheet.sheetName,
-      totalRowsProcessed: processed,
-      studentsUpdated: updatedStudents,
-      newFeeRecordsCreated: createdPayments,
-      existingFeeRecordsUpdated: updatedPayments,
+      message: "Student history and fee receipts imported without deleting existing records.",
+      studentSheet: studentSheetName, feeSheet: feeSheetName,
+      studentRowsProcessed, feeRowsProcessed: feeRows.length,
+      studentsUpdated, newEnrollmentsLinked, newReceiptsAdded, duplicateReceiptsSkipped,
       unmatchedRows
     });
   } catch (error) {
-    console.error("[student-fee-import] Import failed:", error?.message || "Unknown error");
-    return NextResponse.json({ error: "Unable to import course-wise fee records.", detail: error?.message || "Unknown error" }, { status: 500 });
+    const detail = String(error?.message || "Unknown error");
+    const indexConflict = error?.code === 11000 || /E11000|duplicate key/i.test(detail);
+    return NextResponse.json({
+      error: indexConflict
+        ? "A unique receipt index could not be created because duplicate receipt identities already exist. Existing data was not deleted; resolve the reported duplicate keys before importing."
+        : "Unable to import student history and fee receipts.",
+      detail
+    }, { status: indexConflict ? 409 : 500 });
   }
 }
