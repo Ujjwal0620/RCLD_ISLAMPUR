@@ -12,10 +12,10 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const clean = value => String(value ?? "").trim();
-const normCourse = value => clean(value).normalize("NFKC").toUpperCase().replace(/[^A-Z0-9]+/g, " ").replace(/\\s+/g, " ").trim();
+const normCourse = value => clean(value).normalize("NFKC").toUpperCase().replace(/[^A-Z0-9]+/g, " ").replace(/\s+/g, " ").trim();
 const amount = value => {
   if (value === null || value === undefined || clean(value) === "") return null;
-  const parsed = Number(String(value).replace(/[₹,\\s]/g, ""));
+  const parsed = Number(String(value).replace(/[₹,\s]/g, ""));
   return Number.isFinite(parsed) ? parsed : null;
 };
 const dateSort = (a, b) => (b ? new Date(b).getTime() : 0) - (a ? new Date(a).getTime() : 0);
@@ -28,8 +28,8 @@ const financialYear = date => {
 };
 const cleanStudentName = (name, code) => {
   const raw = clean(name);
-  const suffix = code ? new RegExp("_" + String(code).replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&") + "$", "i") : /_\\d+$/;
-  return raw.replace(suffix, "").trim();
+  const suffix = code ? "_" + String(code).trim() : "";
+  return (suffix && raw.toUpperCase().endsWith(suffix.toUpperCase()) ? raw.slice(0, -suffix.length) : raw).trim();
 };
 function readRows(sheet) {
   const grid = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: true });
@@ -46,7 +46,7 @@ function readRows(sheet) {
 }
 function sameIdentity(master, row) {
   if (normalizeName(master.fullName || master.normalizedFullName) !== row.cleanNameKey) return false;
-  const oldPhones = new Set((master.phoneNumbers || []).map(value => clean(value).replace(/\\D/g, "").slice(-10)).filter(value => value.length === 10));
+  const oldPhones = new Set((master.phoneNumbers || []).map(value => clean(value).replace(/\D/g, "").slice(-10)).filter(value => value.length === 10));
   const phoneMatch = row.phones.some(phone => oldPhones.has(phone));
   const dobMatch = Boolean(row.dob && master.dob && new Date(row.dob).toISOString().slice(0, 10) === new Date(master.dob).toISOString().slice(0, 10));
   const fatherMatch = Boolean(row.fatherKey && row.fatherKey === normalizeFatherName(master.fatherName || ""));
@@ -77,7 +77,7 @@ async function findCourse(raw, courses) {
   if (!key) return null;
   const matches = courses.filter(course =>
     [course.code, course.name, ...(course.aliases || []), ...(course.courseAliases || [])]
-      .some(alias => normCourse(alias) === key || normCourse(alias).replace(/\\s/g, "") === key.replace(/\\s/g, ""))
+      .some(alias => normCourse(alias) === key || normCourse(alias).replace(/\s/g, "") === key.replace(/\s/g, ""))
   );
   return matches.length === 1 ? matches[0] : null;
 }
@@ -108,7 +108,7 @@ function parseStudentRow(source) {
     address: clean(source.get("Address")),
     phones: parsePhones(source.get("Ph_no")),
     qualification: clean(source.get("Qualification")),
-    formNo: clean(source.get("Form_no")).replace(/\\.0+$/, ""),
+    formNo: clean(source.get("Form_no")).replace(/\.0+$/, ""),
     dateOfAdmission: parseExcelDate(source.get("D_O_A")),
     course: clean(source.get("Course"))
   };
@@ -124,7 +124,7 @@ export async function POST(request) {
     const form = await request.formData();
     const file = form.get("file");
     if (!file || typeof file.arrayBuffer !== "function") return NextResponse.json({ error: "Choose an Excel workbook." }, { status: 400 });
-    if (!/\\.(xlsx|xls)$/i.test(String(file.name || ""))) return NextResponse.json({ error: "Upload an .xlsx or .xls workbook containing Student Data and a fee sheet." }, { status: 400 });
+    if (!/\.(xlsx|xls)$/i.test(String(file.name || ""))) return NextResponse.json({ error: "Upload an .xlsx or .xls workbook containing Student Data and a fee sheet." }, { status: 400 });
     if (Number(file.size || 0) > 15 * 1024 * 1024) return NextResponse.json({ error: "The file must be smaller than 15 MB." }, { status: 413 });
 
     await connectMongoDB();
@@ -231,7 +231,7 @@ export async function POST(request) {
 
       const courseDoc = await findCourse(row.course, courses);
       if (courseDoc) courseByCode.set(row.stCode, courseDoc);
-      const enrollmentCode = courseDoc?.code || (row.course ? normCourse(row.course).replace(/\\s/g, "-") : "UNKNOWN");
+      const enrollmentCode = courseDoc?.code || (row.course ? normCourse(row.course).replace(/\s/g, "-") : "UNKNOWN");
       let enrollment = await StudentEnrollment.findOne({ studentId: master._id, stCode: row.stCode, normalizedFullName: row.cleanNameKey, courseCode: enrollmentCode });
       if (!enrollment) {
         const fee = courseDoc ? Number(courseDoc.fee || 0) : 0;
@@ -267,7 +267,7 @@ export async function POST(request) {
       const cleanName = cleanStudentName(source.get("St_Name_cr") || source.get("St_Name"), code);
       return {
         rowNo: source.rowNo, stCode: code, cleanName, cleanNameKey: normalizeName(cleanName),
-        mrNo: clean(source.get("MR_No")).replace(/\\.0+$/, ""),
+        mrNo: clean(source.get("MR_No")).replace(/\.0+$/, ""),
         amountPaid: amount(source.get("Amt_Paid")),
         paymentDate: parseExcelDate(source.get("D_O_P"))
       };
@@ -328,7 +328,7 @@ export async function POST(request) {
       }
       const master = link.master;
       const courseDoc = link.isLegacy ? null : await findCourse(link.course, courses);
-      const courseCode = courseDoc?.code || (link.isLegacy ? "PREVIOUS-LEGACY" : normCourse(link.course).replace(/\\s/g, "-"));
+      const courseCode = courseDoc?.code || (link.isLegacy ? "PREVIOUS-LEGACY" : normCourse(link.course).replace(/\s/g, "-"));
       const cacheKey = String(master._id) + "|" + row.stCode;
       let enrollment = enrollmentCache.get(cacheKey);
       if (!enrollment) {
