@@ -23,9 +23,9 @@ export default function StudentFeeImportPage() {
       form.append("file", file);
       const response = await fetch("/api/students/fee-import", { method: "POST", body: form });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || data.error || "Fee import failed.");
+      if (!response.ok) throw new Error(data.error || data.detail || "Fee import failed.");
       setReport(data);
-      notify("Fee workbook imported. Student and course fee summaries are ready.", "success");
+      notify("Student history and fee receipts imported successfully.", "success");
       invalidate(["lookup:", "students:", "student-detail:", "student-fees:", "dashboard-stats", "batches:"]);
     } catch (err) {
       setError(err.message || "Unable to upload fee workbook.");
