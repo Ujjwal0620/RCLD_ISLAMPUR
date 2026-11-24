@@ -72,7 +72,7 @@ const registrationIdentity = item => clean(item.registrationId)
   || (clean(item.cleanName) && clean(item.stCode) ? normalizeName(item.cleanName) + "_" + clean(item.stCode) : "");
 
 function hasIdentityAnchor(group, candidate) {
-  if (normalizeName(candidate.fullName || candidate.normalizedFullName) !== normalizeName(group.cleanName)) return false;
+  if (normalizeName(candidate.normalizedFullName || candidate.fullName) !== normalizeName(group.cleanName)) return false;
   const incomingPhones = new Set((group.phones || []).map(value => clean(value).replace(/\D/g, "")).filter(value => value.length === 10));
   const existingPhones = (candidate.phoneNumbers || []).map(value => clean(value).replace(/\D/g, "")).filter(value => value.length === 10);
   const samePhone = existingPhones.some(value => incomingPhones.has(value));
@@ -190,7 +190,7 @@ async function syncStudentGroups(groups = []) {
       [...(candidate.registrations || []), ...(candidate.enrollments || [])]
         .some(item => {
           const storedId = item.registrationId || (item.stCode
-            ? normalizeName(candidate.fullName || candidate.normalizedFullName) + "_" + clean(item.stCode)
+            ? normalizeName(candidate.normalizedFullName || candidate.fullName) + "_" + clean(item.stCode)
             : "");
           return groupRegistrationIds.has(String(storedId).toUpperCase());
         })
@@ -254,7 +254,7 @@ async function syncStudentGroups(groups = []) {
     }
     const existingRegs = new Map();
     for (const item of [...(master?.registrations || []), ...(master?.enrollments || [])]) {
-      const id = clean(item.registrationId) || (clean(item.stCode) ? displayName(master?.fullName || group.cleanName) + "_" + clean(item.stCode) : "");
+      const id = clean(item.registrationId) || (clean(item.stCode) ? normalizeName(master?.normalizedFullName || master?.fullName || group.cleanName) + "_" + clean(item.stCode) : "");
       if (id && !existingRegs.has(id)) existingRegs.set(id, {
         stCode: clean(item.stCode), registrationId: id, course: clean(item.course || item.courseCode) || "Previous Course (Legacy)",
         dateOfAdmission: asDate(item.dateOfAdmission || item.admissionDate),
