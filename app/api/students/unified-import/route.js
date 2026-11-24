@@ -252,10 +252,12 @@ async function syncStudentGroups(groups = []) {
     }
     masterOps.push({ updateOne: { filter: { _id: masterId }, update: { $set: masterSet, $setOnInsert: { photoUrl: "", hasPhoto: false } }, upsert: true } });
 
+    let currentEnrollmentId = null;
     for (const registration of registrations) {
       const existingEnrollment = enrollmentByRegistration.get(registration.registrationId.toUpperCase());
       const courseCode = registration.course === "Previous Course (Legacy)" ? "PREVIOUS-LEGACY" : registration.course.toUpperCase();
       const enrollmentId = existingEnrollment?._id || new mongoose.Types.ObjectId();
+      if (registration.registrationId === current.registrationId) currentEnrollmentId = enrollmentId;
       const courseRuleKey = courseCode;
       if (!feeRuleCache.has(courseRuleKey)) feeRuleCache.set(courseRuleKey, resolveCourseFeeConfig(courseCode, Course));
       const courseRule = await feeRuleCache.get(courseRuleKey);
@@ -302,6 +304,16 @@ async function syncStudentGroups(groups = []) {
         if (Object.keys(patch).length) enrollmentOps.push({ updateOne: { filter: { _id: existingEnrollment._id }, update: { $set: patch } } });
       }
       outputMap.push({ registrationId: registration.registrationId, stCode: registration.stCode, studentId: masterId.toString(), enrollmentId: enrollmentId.toString(), course: registration.course });
+    }
+    if (currentEnrollmentId) {
+      enrollmentOps.push({ updateMany: {
+        filter: { studentId: masterId, status: "ACTIVE", _id: { $ne: currentEnrollmentId } },
+        update: { $set: { status: "PROMOTED" } }
+      }});
+      enrollmentOps.push({ updateOne: {
+        filter: { _id: currentEnrollmentId },
+        update: { $set: { status: "ACTIVE" } }
+      }});
     }
   }
 
@@ -351,7 +363,7 @@ async function syncFeeRows(rows = []) {
       filter: { registrationId, mrNo, paymentDate, amountPaid },
       update: {
         $set: { studentId: enrollment.studentId, enrollmentId: enrollment._id, stCode: enrollment.stCode, registrationId, courseCode },
-        $setOnInsert: { registrationId, mrNo, paymentDate, amountPaid, rawPaymentDate: paymentDate, sourceSheet: clean(row.sourceSheet), sourceRowNo: Number(row.rowNo || 0), importBatchKey: "UNIFIED_WORKBOOK_IMPORT", allocations: [], importWarnings: [] }
+        $setOnInsert: { registrationId, mrNo, paymentDate, amountPaid, rawPaymentDate: paymentDate, sourceSheet: clean(row.sourceSheet), sourceRowNo: Number(row.rowNo || 0), importBatchKey: "UNIFIED_WORKBOOK_IMPORT", stNameKey: registrationId, allocations: [], importWarnings: [] }
       },
       upsert: true
     }});
