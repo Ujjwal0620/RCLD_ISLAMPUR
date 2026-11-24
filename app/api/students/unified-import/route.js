@@ -11,7 +11,7 @@ import { resolveCourseFeeConfig } from "@/lib/student-import/course-fee-rules";
 import { buildInstallments } from "@/lib/student-import/fee-allocation";
 
 export const runtime = "nodejs";
-export const maxDuration = 300;
+export const maxDuration = 60;
 
 let receiptIndexPromise;
 async function ensureReceiptIndex() {
