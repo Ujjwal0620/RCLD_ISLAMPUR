@@ -65,15 +65,26 @@ export async function GET(req,{params}){
     ]);
     const [legacyFees, linkedStudentDocs] = legacyData;
     const enrollmentMap = new Map(enrollments.map(item => [String(item._id), item]));
-    const enrollmentByCode = new Map(enrollments.map(item => [String(item.stCode || ""), item]));
+    const enrollmentByCode = new Map();
+    for (const item of enrollments) {
+      const code = String(item.stCode || "");
+      if (code) enrollmentByCode.set(code, [...(enrollmentByCode.get(code) || []), item]);
+    }
+    const enrollmentByRegistration = new Map(enrollments.filter(item => item.registrationId).map(item => [String(item.registrationId), item]));
+    const registrationByNameCode = new Map(enrollments.filter(item => item.registrationId).map(item => [String(item.registrationId).toUpperCase(), item]));
     const courseNameMap = new Map(courseDocuments.map(course => [String(course.code).toUpperCase(), course.name]));
     const paymentHistory = importedPayments.map(payment => {
+      const derivedRegistrationId = String(payment.registrationId || payment.stNameKey || "").toUpperCase();
+      const codeCandidates = enrollmentByCode.get(String(payment.stCode || "")) || [];
       const enrollment = enrollmentMap.get(String(payment.enrollmentId))
-        || enrollmentByCode.get(String(payment.stCode || "")) || {};
+        || enrollmentByRegistration.get(derivedRegistrationId)
+        || registrationByNameCode.get(derivedRegistrationId)
+        || (codeCandidates.length === 1 ? codeCandidates[0] : {});
       return {
         ...payment,
-        courseCode: enrollment.courseCode || "",
-        courseName: enrollment.courseName || courseNameMap.get(String(enrollment.courseCode || "").toUpperCase()) || enrollment.courseCode || "Legacy / Unknown Course",
+        registrationId: payment.registrationId || enrollment.registrationId || derivedRegistrationId,
+        courseCode: payment.courseCode || enrollment.courseCode || "",
+        courseName: enrollment.courseName || courseNameMap.get(String(payment.courseCode || enrollment.courseCode || "").toUpperCase()) || payment.courseCode || enrollment.courseCode || "Previous Course (Legacy)",
         semesterLabel: enrollment.semesterLabel || "LEGACY",
         installmentApplied: (payment.allocations || []).map(item => item.label + ": ₹" + Number(item.allocatedAmount || 0).toLocaleString("en-IN")).join(", ") || (payment.importWarnings?.length ? "Needs review: " + payment.importWarnings.join(" ") : "Legacy receipt / not allocated"),
       };
