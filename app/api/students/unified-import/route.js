@@ -473,7 +473,7 @@ async function syncFeeRows(rows = []) {
     const amountKey = Number(item.amountPaid).toFixed(2);
     const codeRegistrations = registrationsByCode.get(String(item.stCode || ""));
     const linkedEnrollment = enrollmentByMongoId.get(String(item.enrollmentId || ""));
-    const identity = String(item.registrationId || item.stNameKey || linkedEnrollment?.registrationId || (codeRegistrations?.size === 1 ? [...codeRegistrations][0] : "")).toUpperCase();
+    const identity = String(linkedEnrollment?.registrationId || item.registrationId || item.stNameKey || (codeRegistrations?.size === 1 ? [...codeRegistrations][0] : "")).toUpperCase();
     if (identity) existingByKey.set([identity, item.mrNo, dateKey, amountKey].join("|"), item);
     const looseKey = [String(item.stCode || ""), item.mrNo, dateKey, amountKey].join("|");
     if (!existingByLooseKey.has(looseKey)) existingByLooseKey.set(looseKey, item);
