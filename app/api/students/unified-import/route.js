@@ -31,6 +31,28 @@ async function ensureReceiptIndex() {
       for (const legacy of [...legacyIndexes, ...oldRegistrationIndexes]) {
         await StudentFeePayment.collection.dropIndex(legacy.name);
       }
+      const duplicateGroups = await StudentFeePayment.collection.aggregate([
+        { $match: {
+          importBatchKey: "UNIFIED_WORKBOOK_IMPORT",
+          registrationId: { $type: "string", $gt: "" },
+          mrNo: { $type: "string", $gt: "" },
+          paymentDate: { $type: "date" },
+          amountPaid: { $type: "number" }
+        } },
+        { $group: {
+          _id: { registrationId: "$registrationId", mrNo: "$mrNo", paymentDate: "$paymentDate", amountPaid: "$amountPaid" },
+          ids: { $push: "$_id" },
+          count: { $sum: 1 }
+        } },
+        { $match: { count: { $gt: 1 } } }
+      ]).toArray();
+      const duplicateArchiveIds = duplicateGroups.flatMap(group => group.ids.slice(1));
+      if (duplicateArchiveIds.length) {
+        await StudentFeePayment.collection.updateMany(
+          { _id: { $in: duplicateArchiveIds } },
+          { $set: { importBatchKey: "UNIFIED_WORKBOOK_IMPORT_DUPLICATE_ARCHIVE" } }
+        );
+      }
       await StudentFeePayment.collection.createIndex(
         { registrationId: 1, mrNo: 1, paymentDate: 1, amountPaid: 1 },
         {
