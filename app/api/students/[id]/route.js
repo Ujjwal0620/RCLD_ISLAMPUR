@@ -134,7 +134,7 @@ export async function GET(req,{params}){
       enrollmentNo: masterProfile?.currentStCode || activeEnrollment?.stCode || canonicalStudent.enrollmentNo,
       courseName: masterProfile?.currentCourse || activeEnrollment?.courseName || canonicalStudent.courseName,
       courseCode: activeEnrollment?.courseCode || canonicalStudent.courseCode,
-      dateOfAdmission: masterProfile?.currentAdmissionDate || activeEnrollment?.admissionDate || canonicalStudent.dateOfAdmission,
+      dateOfAdmission: masterProfile ? (masterProfile.currentAdmissionDate || null) : (activeEnrollment?.admissionDate || canonicalStudent.dateOfAdmission),
       formNo: masterProfile?.formNo || activeEnrollment?.formNo || canonicalStudent.formNo,
       dateOfBirth: masterProfile?.dob || canonicalStudent.dateOfBirth,
       address: masterProfile?.address || canonicalStudent.address,
