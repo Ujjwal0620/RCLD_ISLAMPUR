@@ -15,6 +15,7 @@ const EnrollmentHistorySchema = new mongoose.Schema({
   registrationId: { type: String, default: "", trim: true, uppercase: true },
   course: { type: String, default: "Previous Course (Legacy)", trim: true },
   dateOfAdmission: { type: Date, default: null },
+  earliestPaymentDate: { type: Date, default: null },
   formNo: { type: String, default: "", trim: true },
   isCurrent: { type: Boolean, default: false },
   identitySource: { type: String, default: "WORKBOOK" }
