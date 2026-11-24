@@ -1,0 +1,365 @@
+import { NextResponse } from "next/server";
+import mongoose from "mongoose";
+import { connectMongoDB } from "@/lib/mongodb";
+import { getSession } from "@/lib/auth";
+import Student from "@/models/Student";
+import StudentMaster from "@/models/StudentMaster";
+import StudentEnrollment from "@/models/StudentEnrollment";
+import StudentFeePayment from "@/models/StudentFeePayment";
+
+export const runtime = "nodejs";
+export const maxDuration = 300;
+
+let receiptIndexPromise;
+async function ensureReceiptIndex() {
+  if (!receiptIndexPromise) {
+    receiptIndexPromise = (async () => {
+      const indexes = await StudentFeePayment.collection.indexes().catch(error => {
+        if (error.code === 26 || error.codeName === "NamespaceNotFound") return [];
+        throw error;
+      });
+      const legacy = indexes.find(index => index.name === "stcode_receipt_date_amount_unique" && index.unique);
+      if (legacy) await StudentFeePayment.collection.dropIndex(legacy.name);
+      await StudentFeePayment.collection.createIndex(
+        { registrationId: 1, mrNo: 1, paymentDate: 1, amountPaid: 1 },
+        {
+          unique: true,
+          name: "registration_receipt_date_amount_unique",
+          partialFilterExpression: {
+            registrationId: { $type: "string", $gt: "" },
+            mrNo: { $type: "string", $gt: "" },
+            paymentDate: { $type: "date" },
+            amountPaid: { $type: "number" }
+          }
+        }
+      );
+    })().catch(error => {
+      receiptIndexPromise = null;
+      throw error;
+    });
+  }
+  return receiptIndexPromise;
+}
+
+const clean = value => String(value ?? "").trim();
+const normalizeName = value => clean(value).normalize("NFKC").toUpperCase()
+  .replace(/[^A-Z0-9 ]/g, " ").replace(/\\s+/g, " ").trim();
+const normalizeFather = value => normalizeName(value).replace(/\\bKR\\b/g, "KUMAR")
+  .replace(/\\bMD\\b|\\bMOHD\\b/g, "MOHAMMAD").replace(/\\bSK\\b/g, "SHEIKH");
+const validObjectId = value => mongoose.Types.ObjectId.isValid(String(value || ""));
+const sameDate = (a, b) => {
+  if (!a || !b) return false;
+  const left = new Date(a), right = new Date(b);
+  return !Number.isNaN(left.getTime()) && !Number.isNaN(right.getTime())
+    && left.toISOString().slice(0, 10) === right.toISOString().slice(0, 10);
+};
+const asDate = value => {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+const registrationIdentity = item => clean(item.registrationId)
+  || (clean(item.cleanName) && clean(item.stCode) ? normalizeName(item.cleanName) + "_" + clean(item.stCode) : "");
+
+function hasIdentityAnchor(group, candidate) {
+  if (normalizeName(candidate.fullName || candidate.normalizedFullName) !== normalizeName(group.cleanName)) return false;
+  const incomingPhones = new Set((group.phones || []).map(value => clean(value).replace(/\\D/g, "")).filter(value => value.length === 10));
+  const existingPhones = (candidate.phoneNumbers || []).map(value => clean(value).replace(/\\D/g, "")).filter(value => value.length === 10);
+  const samePhone = existingPhones.some(value => incomingPhones.has(value));
+  const sameDob = sameDate(group.dob, candidate.dob);
+  const sameFather = Boolean(normalizeFather(group.fatherName)
+    && normalizeFather(group.fatherName) === normalizeFather(candidate.fatherName));
+  return samePhone || sameDob || sameFather;
+}
+
+function registrationSort(a, b) {
+  const da = asDate(a.dateOfAdmission)?.getTime() ?? asDate(a.earliestPaymentDate)?.getTime() ?? 0;
+  const db = asDate(b.dateOfAdmission)?.getTime() ?? asDate(b.earliestPaymentDate)?.getTime() ?? 0;
+  return db - da || String(b.stCode).localeCompare(String(a.stCode));
+}
+
+async function syncStudentGroups(groups = []) {
+  if (!Array.isArray(groups) || groups.length > 500) throw new Error("Student batch must contain between 1 and 500 profile groups.");
+  const allRegistrations = groups.flatMap(group => (group.registrations || []).map(item => ({
+    ...item,
+    registrationId: registrationIdentity(item),
+    cleanName: normalizeName(item.cleanName || group.cleanName),
+    stCode: clean(item.stCode)
+  }))).filter(item => item.registrationId && item.stCode && item.cleanName);
+  const codes = [...new Set(allRegistrations.map(item => item.stCode))];
+  const registrationIds = [...new Set(allRegistrations.map(item => item.registrationId))];
+  const names = [...new Set(groups.map(group => normalizeName(group.cleanName)).filter(Boolean))];
+  const phones = [...new Set(groups.flatMap(group => group.phones || []).map(value => clean(value).replace(/\\D/g, "")).filter(value => value.length === 10))];
+  const dobs = [...new Set(groups.map(group => asDate(group.dob)?.toISOString().slice(0, 10)).filter(Boolean))];
+  const fathers = [...new Set(groups.map(group => normalizeFather(group.fatherName)).filter(Boolean))];
+
+  const [existingStudents, existingMasters, existingEnrollments] = await Promise.all([
+    Student.find({ $or: [{ regnNo: { $in: codes } }, { enrollmentNo: { $in: codes } }] }).lean(),
+    StudentMaster.find({
+      $or: [
+        { normalizedFullName: { $in: names } },
+        ...(phones.length ? [{ phoneNumbers: { $in: phones } }] : []),
+        ...(dobs.length ? [{ dob: { $in: dobs.map(value => new Date(value + "T00:00:00.000Z")) } }] : []),
+        ...(fathers.length ? [{ normalizedFatherName: { $in: fathers } }] : [])
+      ]
+    }).lean(),
+    StudentEnrollment.find({ registrationId: { $in: registrationIds } }).lean()
+  ]);
+
+  const studentByCode = new Map();
+  for (const student of existingStudents) {
+    for (const code of [student.regnNo, student.enrollmentNo]) {
+      const key = clean(code).replace(/\\.0+$/, "");
+      if (key) studentByCode.set(key, [...(studentByCode.get(key) || []), student]);
+    }
+  }
+  const masterByStudentId = new Map();
+  for (const master of existingMasters) {
+    for (const id of master.legacyStudentIds || []) masterByStudentId.set(String(id), master);
+  }
+  const enrollmentByRegistration = new Map(existingEnrollments.map(item => [String(item.registrationId), item]));
+  const studentOps = [];
+  const masterOps = [];
+  const enrollmentOps = [];
+  const outputMap = [];
+  let matchedProfiles = 0, newProfiles = 0, registrationsLinked = 0, registrationsSeen = 0;
+
+  for (const group of groups) {
+    const registrations = (group.registrations || []).map(item => ({
+      ...item,
+      registrationId: registrationIdentity(item),
+      stCode: clean(item.stCode),
+      cleanName: normalizeName(item.cleanName || group.cleanName),
+      course: clean(item.course) || "Previous Course (Legacy)",
+      dateOfAdmission: asDate(item.dateOfAdmission),
+      formNo: clean(item.formNo)
+    })).filter(item => item.registrationId && item.stCode);
+    if (!registrations.length) continue;
+    registrations.sort(registrationSort);
+    const newest = registrations[0];
+    const existingLegacy = [...new Map(registrations.flatMap(item => studentByCode.get(item.stCode) || [])
+      .map(student => [String(student._id), student])).values()];
+    const linkedMasterIds = new Set(existingLegacy.map(item => masterByStudentId.get(String(item._id))).filter(Boolean).map(item => String(item._id)));
+    const byLinked = linkedMasterIds.size === 1 ? existingMasters.find(item => String(item._id) === [...linkedMasterIds][0]) : null;
+    const candidates = existingMasters.filter(candidate => hasIdentityAnchor(group, candidate));
+    let master = byLinked || (candidates.length === 1 ? candidates[0] : null);
+    const ambiguous = !master && (linkedMasterIds.size > 1 || candidates.length > 1);
+    const masterId = master?._id || new mongoose.Types.ObjectId();
+    if (master) matchedProfiles += 1;
+    else newProfiles += 1;
+
+    let legacyIds = [...new Set([
+      ...(master?.legacyStudentIds || []).map(String),
+      ...existingLegacy.map(item => String(item._id))
+    ])];
+    let canonicalStudent = existingLegacy[0] || null;
+    if (!canonicalStudent) {
+      const newStudentId = new mongoose.Types.ObjectId();
+      canonicalStudent = {
+        _id: newStudentId,
+        formNo: newest.formNo || "",
+        regnNo: newest.stCode,
+        enrollmentNo: newest.stCode,
+        admissionDate: newest.dateOfAdmission?.toISOString() || "",
+        dateOfAdmission: newest.dateOfAdmission?.toISOString() || "",
+        applicantName: normalizeName(group.cleanName),
+        name: normalizeName(group.cleanName),
+        sourceStudentName: normalizeName(group.cleanName) + "_" + newest.stCode,
+        sourceSex: newest.sex || "",
+        sex: newest.sex || "",
+        gender: newest.sex || "",
+        fatherOrHusbandName: group.fatherName || newest.fatherName || "",
+        fatherName: group.fatherName || newest.fatherName || "",
+        address: newest.address || "",
+        presentAddress: newest.address || "",
+        mobileNumber: (group.phones || [])[0] || "",
+        whatsappNumber: (group.phones || [])[1] || "",
+        sourcePhone: (group.phones || []).join(","),
+        qualification: newest.qualification || "",
+        sourceQualification: newest.qualification || "",
+        courseCode: newest.course || "",
+        courseName: newest.course || "",
+        course: newest.course || "",
+        status: "Registered",
+        importSource: "Unified Excel Workbook"
+      };
+      studentOps.push({ updateOne: { filter: { _id: newStudentId }, update: { $setOnInsert: canonicalStudent }, upsert: true } });
+      legacyIds.push(String(newStudentId));
+    }
+    const incomingPhones = [...new Set([...(master?.phoneNumbers || []), ...(group.phones || [])])];
+    const existingRegs = new Map();
+    for (const item of [...(master?.registrations || []), ...(master?.enrollments || [])]) {
+      const id = clean(item.registrationId) || (clean(item.stCode) && normalizeName(group.cleanName) ? normalizeName(group.cleanName) + "_" + clean(item.stCode) : "");
+      if (id && !existingRegs.has(id)) existingRegs.set(id, {
+        stCode: clean(item.stCode), registrationId: id, course: clean(item.course || item.courseCode) || "Previous Course (Legacy)",
+        dateOfAdmission: asDate(item.dateOfAdmission || item.admissionDate),
+        formNo: clean(item.formNo), isCurrent: false
+      });
+    }
+    for (const item of registrations) {
+      if (!existingRegs.has(item.registrationId)) registrationsLinked += 1;
+      const prior = existingRegs.get(item.registrationId) || {};
+      existingRegs.set(item.registrationId, {
+        ...prior, stCode: item.stCode, registrationId: item.registrationId,
+        course: item.course || prior.course,
+        dateOfAdmission: item.dateOfAdmission || prior.dateOfAdmission,
+        formNo: item.formNo || prior.formNo,
+        isCurrent: false
+      });
+      registrationsSeen += 1;
+    }
+    const mergedRegistrations = [...existingRegs.values()].sort(registrationSort);
+    const current = mergedRegistrations[0] || newest;
+    mergedRegistrations.forEach((item, index) => { item.isCurrent = index === 0; });
+    const existingCurrentDate = asDate(master?.currentAdmissionDate || master?.dateOfAdmission);
+    const shouldPromote = !master || !existingCurrentDate || !current.dateOfAdmission || current.dateOfAdmission >= existingCurrentDate;
+    const masterSet = {
+      fullName: master?.fullName || normalizeName(group.cleanName),
+      normalizedFullName: normalizeName(group.cleanName),
+      legacyStudentIds: legacyIds.map(id => validObjectId(id) ? new mongoose.Types.ObjectId(id) : id),
+      stCodes: [...new Set([...(master?.stCodes || []), ...mergedRegistrations.map(item => item.stCode)].filter(Boolean))],
+      registrations: mergedRegistrations,
+      enrollments: mergedRegistrations,
+      phoneNumbers: incomingPhones,
+      normalizedFatherName: master?.normalizedFatherName || normalizeFather(group.fatherName || newest.fatherName),
+      identityMatchMethod: master?.identityMatchMethod || (ambiguous ? "AMBIGUOUS_NEW_PROFILE" : "WORKBOOK_IDENTITY"),
+      ...(ambiguous ? { identityWarnings: [...new Set([...(master?.identityWarnings || []), "Multiple possible existing profiles; imported history was not merged automatically."])] } : {})
+    };
+    if (!master?.dob && asDate(group.dob)) masterSet.dob = asDate(group.dob);
+    if (!master?.fatherName && (group.fatherName || newest.fatherName)) masterSet.fatherName = group.fatherName || newest.fatherName;
+    if (!master?.gender && newest.sex) masterSet.gender = newest.sex;
+    if (shouldPromote) {
+      masterSet.currentStCode = current.stCode;
+      masterSet.currentRegistrationId = current.registrationId;
+      masterSet.currentCourse = current.course;
+      masterSet.currentAdmissionDate = current.dateOfAdmission || null;
+      masterSet.dateOfAdmission = current.dateOfAdmission || null;
+      masterSet.formNo = current.formNo || master?.formNo || "";
+      masterSet.address = newest.address || master?.address || "";
+      masterSet.qualification = newest.qualification || master?.qualification || "";
+    } else {
+      for (const [key, value] of [["address", newest.address], ["qualification", newest.qualification]]) {
+        if (!master?.[key] && value) masterSet[key] = value;
+      }
+    }
+    masterOps.push({ updateOne: { filter: { _id: masterId }, update: { $set: masterSet, $setOnInsert: { photoUrl: "", hasPhoto: false } }, upsert: true } });
+
+    for (const registration of registrations) {
+      const existingEnrollment = enrollmentByRegistration.get(registration.registrationId);
+      const courseCode = registration.course === "Previous Course (Legacy)" ? "PREVIOUS-LEGACY" : registration.course.toUpperCase();
+      const enrollmentId = existingEnrollment?._id || new mongoose.Types.ObjectId();
+      const enrollmentSet = {
+        studentId: masterId,
+        legacyStudentId: canonicalStudent?._id || null,
+        stCode: registration.stCode,
+        registrationId: registration.registrationId,
+        normalizedFullName: normalizeName(group.cleanName),
+        formNo: registration.formNo || "",
+        courseCode,
+        courseName: registration.course,
+        semesterLabel: registration.course,
+        admissionDate: registration.dateOfAdmission,
+        status: registration.registrationId === current.registrationId ? "ACTIVE" : (courseCode === "PREVIOUS-LEGACY" ? "LEGACY" : "PROMOTED")
+      };
+      if (!existingEnrollment) {
+        enrollmentOps.push({ updateOne: { filter: { _id: enrollmentId }, update: { $setOnInsert: enrollmentSet }, upsert: true } });
+      } else {
+        const patch = {};
+        if (!existingEnrollment.courseName || existingEnrollment.courseName === "LEGACY") patch.courseName = registration.course;
+        if (!existingEnrollment.registrationId) patch.registrationId = registration.registrationId;
+        if (!existingEnrollment.formNo && registration.formNo) patch.formNo = registration.formNo;
+        if (!existingEnrollment.admissionDate && registration.dateOfAdmission) patch.admissionDate = registration.dateOfAdmission;
+        if (Object.keys(patch).length) enrollmentOps.push({ updateOne: { filter: { _id: existingEnrollment._id }, update: { $set: patch } } });
+      }
+      outputMap.push({ registrationId: registration.registrationId, stCode: registration.stCode, studentId: masterId.toString(), enrollmentId: enrollmentId.toString(), course: registration.course });
+    }
+  }
+
+  if (studentOps.length) await Student.bulkWrite(studentOps, { ordered: false });
+  if (masterOps.length) await StudentMaster.bulkWrite(masterOps, { ordered: false });
+  for (let index = 0; index < enrollmentOps.length; index += 500) {
+    await StudentEnrollment.bulkWrite(enrollmentOps.slice(index, index + 500), { ordered: false });
+  }
+  return { studentsMatchedUpdated: matchedProfiles, newStudentsCreated: newProfiles, registrationsLinked, registrationsSeen, registrationMap: outputMap };
+}
+
+async function syncFeeRows(rows = []) {
+  if (!Array.isArray(rows) || rows.length > 1000) throw new Error("Fee batch must contain between 1 and 1,000 rows.");
+  await ensureReceiptIndex();
+  const ids = [...new Set(rows.map(item => clean(item.registrationId)).filter(Boolean))];
+  const enrollments = await StudentEnrollment.find({ registrationId: { $in: ids } }).lean();
+  const enrollmentById = new Map(enrollments.map(item => [String(item.registrationId), item]));
+  const existing = await StudentFeePayment.find({ registrationId: { $in: ids } })
+    .select("registrationId mrNo paymentDate amountPaid studentId enrollmentId courseCode").lean();
+  const existingKeys = new Set(existing.map(item => [
+    item.registrationId, item.mrNo, asDate(item.paymentDate)?.toISOString().slice(0, 10) || "",
+    Number(item.amountPaid).toFixed(2)
+  ].join("|")));
+  const operations = [];
+  const unmatchedRows = [];
+  let newReceiptsAdded = 0, existingReceiptsUpdatedOrSkipped = 0;
+  const seenInBatch = new Set();
+  for (const row of rows) {
+    const registrationId = clean(row.registrationId);
+    const enrollment = enrollmentById.get(registrationId);
+    const paymentDate = asDate(row.paymentDate);
+    const amountPaid = Number(row.amountPaid);
+    const mrNo = clean(row.mrNo);
+    if (!registrationId || !enrollment || !paymentDate || !mrNo || !Number.isFinite(amountPaid) || amountPaid < 0) {
+      unmatchedRows.push({ row: row.rowNo, studentId: registrationId || row.stCode || "", course: row.course || "", reason: !enrollment ? "No matching registration/enrollment was found." : "Missing or invalid receipt number, date, or amount." });
+      continue;
+    }
+    const key = [registrationId, mrNo, paymentDate.toISOString().slice(0, 10), amountPaid.toFixed(2)].join("|");
+    if (existingKeys.has(key) || seenInBatch.has(key)) {
+      existingReceiptsUpdatedOrSkipped += 1;
+      continue;
+    }
+    seenInBatch.add(key);
+    const courseCode = clean(enrollment.courseCode || row.course).toUpperCase();
+    operations.push({ updateOne: {
+      filter: { registrationId, mrNo, paymentDate, amountPaid },
+      update: {
+        $set: { studentId: enrollment.studentId, enrollmentId: enrollment._id, stCode: enrollment.stCode, courseCode },
+        $setOnInsert: { registrationId, mrNo, paymentDate, amountPaid, rawPaymentDate: paymentDate, sourceSheet: clean(row.sourceSheet), sourceRowNo: Number(row.rowNo || 0), importBatchKey: "UNIFIED_WORKBOOK_IMPORT", allocations: [], importWarnings: [] }
+      },
+      upsert: true
+    }});
+    newReceiptsAdded += 1;
+  }
+  for (let index = 0; index < operations.length; index += 1000) {
+    try {
+      await StudentFeePayment.bulkWrite(operations.slice(index, index + 1000), { ordered: false });
+    } catch (error) {
+      if (!error.writeErrors?.length && error.code !== 11000) throw error;
+      const writeErrors = error.writeErrors || [];
+      if (writeErrors.some(item => item.code !== 11000)) throw error;
+      existingReceiptsUpdatedOrSkipped += writeErrors.length;
+      newReceiptsAdded = Math.max(0, newReceiptsAdded - writeErrors.length);
+    }
+  }
+  return { newReceiptsAdded, existingReceiptsUpdatedOrSkipped, unmatchedRows, feeRowsProcessed: rows.length };
+}
+
+export async function POST(request) {
+  try {
+    const session = await getSession();
+    if (!session?.sub) return NextResponse.json({ error: "Please sign in to import workbook data." }, { status: 401 });
+    if (!["superadmin", "admin", "office-admin"].includes(String(session.role || "").toLowerCase())) {
+      return NextResponse.json({ error: "You do not have permission to import workbook data." }, { status: 403 });
+    }
+    await connectMongoDB();
+    const body = await request.json();
+    if (body.action === "students") {
+      const result = await syncStudentGroups(body.groups || []);
+      return NextResponse.json(result);
+    }
+    if (body.action === "fees") {
+      const result = await syncFeeRows(body.rows || []);
+      return NextResponse.json(result);
+    }
+    return NextResponse.json({ error: "Unsupported import batch action." }, { status: 400 });
+  } catch (error) {
+    console.error("[unified-student-import]", error);
+    return NextResponse.json({ error: "Unified workbook batch failed.", detail: error.message }, { status: 500 });
+  }
+}
