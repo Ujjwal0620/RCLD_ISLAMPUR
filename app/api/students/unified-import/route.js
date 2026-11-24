@@ -219,7 +219,6 @@ async function syncStudentGroups(groups = []) {
       studentOps.push({ updateOne: { filter: { _id: newStudentId }, update: { $setOnInsert: canonicalStudent }, upsert: true } });
       legacyIds.push(String(newStudentId));
     }
-    const incomingPhones = [...new Set([...(master?.phoneNumbers || []), ...(group.phones || [])])];
     const existingRegs = new Map();
     for (const item of [...(master?.registrations || []), ...(master?.enrollments || [])]) {
       const id = clean(item.registrationId) || (clean(item.stCode) ? displayName(master?.fullName || group.cleanName) + "_" + clean(item.stCode) : "");
@@ -246,6 +245,7 @@ async function syncStudentGroups(groups = []) {
     mergedRegistrations.forEach((item, index) => { item.isCurrent = index === 0; });
     const existingCurrentDate = asDate(master?.currentAdmissionDate || master?.dateOfAdmission);
     const shouldPromote = !master || !existingCurrentDate || Boolean(current.dateOfAdmission && current.dateOfAdmission >= existingCurrentDate);
+    const incomingPhones = [...new Set([...(shouldPromote ? (newest.phones || []) : []), ...(master?.phoneNumbers || []), ...(group.phones || [])])];
     const masterSet = {
       fullName: master?.fullName || displayName(group.cleanName),
       normalizedFullName: normalizeName(group.cleanName),
