@@ -1,5 +1,14 @@
 import mongoose from "mongoose";
 
+const EnrollmentHistorySchema = new mongoose.Schema({
+  stCode: { type: String, required: true, trim: true },
+  course: { type: String, default: "Previous Course (Legacy)", trim: true },
+  dateOfAdmission: { type: Date, default: null },
+  formNo: { type: String, default: "", trim: true },
+  isCurrent: { type: Boolean, default: false },
+  identitySource: { type: String, default: "WORKBOOK" }
+}, { _id: false });
+
 const StudentMasterSchema = new mongoose.Schema({
   fullName: { type: String, default: "", trim: true },
   normalizedFullName: { type: String, default: "", index: true },
@@ -11,6 +20,12 @@ const StudentMasterSchema = new mongoose.Schema({
   photoUrl: { type: String, default: "" },
   hasPhoto: { type: Boolean, default: false },
   stCodes: { type: [String], default: [] },
+  enrollments: { type: [EnrollmentHistorySchema], default: [] },
+  currentStCode: { type: String, default: "", trim: true },
+  currentCourse: { type: String, default: "", trim: true },
+  currentAdmissionDate: { type: Date, default: null },
+  dateOfAdmission: { type: Date, default: null },
+  formNo: { type: String, default: "", trim: true },
   phoneNumbers: { type: [String], default: [] },
   qualification: { type: String, default: "" },
   activeEnrollmentId: { type: mongoose.Schema.Types.ObjectId, ref: "StudentEnrollment", default: null },
