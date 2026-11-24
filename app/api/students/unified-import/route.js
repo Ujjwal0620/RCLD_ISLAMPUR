@@ -263,10 +263,12 @@ async function syncStudentGroups(groups = []) {
     const mergedRegistrations = [...existingRegs.values()].sort(registrationSort);
     const current = mergedRegistrations[0] || newest;
     mergedRegistrations.forEach((item, index) => { item.isCurrent = index === 0; });
+    const existingCurrent = master?.registrations?.find(item => item.isCurrent)
+      || master?.enrollments?.find(item => item.isCurrent);
     const existingCurrentDate = asDate(master?.currentAdmissionDate || master?.dateOfAdmission
-      || master?.registrations?.find(item => item.isCurrent)?.dateOfAdmission
-      || master?.enrollments?.find(item => item.isCurrent)?.dateOfAdmission);
-    const shouldPromote = !master || !existingCurrentDate || Boolean(current.dateOfAdmission && current.dateOfAdmission >= existingCurrentDate);
+      || existingCurrent?.dateOfAdmission || existingCurrent?.earliestPaymentDate);
+    const effectiveCurrentDate = asDate(current.dateOfAdmission || current.earliestPaymentDate);
+    const shouldPromote = !master || !existingCurrentDate || Boolean(effectiveCurrentDate && effectiveCurrentDate >= existingCurrentDate);
     const currentIncoming = registrations.find(item => item.registrationId === current.registrationId) || current;
     const incomingPhones = [...new Set([...(shouldPromote ? (currentIncoming.phones || []) : []), ...(master?.phoneNumbers || []), ...(group.phones || [])])];
     const masterSet = {
