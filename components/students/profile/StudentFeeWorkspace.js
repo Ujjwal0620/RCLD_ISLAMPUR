@@ -92,7 +92,20 @@ export default function StudentFeeWorkspace({
     })
     .sort((a, b) => new Date(a.paymentDate || a.rawPaymentDate || 0).getTime() - new Date(b.paymentDate || b.rawPaymentDate || 0).getTime()),
   [paymentHistory, selectedCode, codeCards]);
-  const selectedPaid = visibleRows.reduce((sum, item) => sum + Number(item.amountPaid ?? item.amount ?? 0), 0);
+  const paymentRows = useMemo(() => visibleRows.map(payment => {
+    const paymentId = String(payment.registrationId || payment.stNameKey || "").toUpperCase();
+    const matchedCard = codeCards.find(item => String(item.registrationId || "").toUpperCase() === paymentId)
+      || (payment.stCode && codeCount.get(String(payment.stCode)) === 1
+        ? codeCards.find(item => String(item.stCode) === String(payment.stCode))
+        : null);
+    return {
+      ...payment,
+      registrationId: payment.registrationId || payment.stNameKey || matchedCard?.registrationId || "",
+      stCode: payment.stCode || matchedCard?.stCode || "",
+      courseName: payment.courseName || payment.courseCode || matchedCard?.course || matchedCard?.courseName || "Previous Course (Legacy)"
+    };
+  }), [visibleRows, codeCards]);
+  const selectedPaid = paymentRows.reduce((sum, item) => sum + Number(item.amountPaid ?? item.amount ?? 0), 0);
   const selectedCourse = selectedCode === "ALL"
     ? [...new Set(codeCards.map(item => item.course || item.courseName || item.courseCode).filter(Boolean))].join(", ") || "All Registrations"
     : selectedEnrollment?.courseName || selectedEnrollment?.courseCode || selectedRegistration?.course || selectedRegistration?.courseCode || "Previous Course (Legacy)";
@@ -115,7 +128,14 @@ export default function StudentFeeWorkspace({
         return sum + (configuredFee(enrollment) ? Number(enrollment?.feeConfig?.netPayableFee ?? enrollment?.summary?.totalDue ?? 0) : 0);
       }, 0) : null)
     : configuredFee(selectedEnrollment) ? Number(selectedEnrollment?.feeConfig?.netPayableFee ?? selectedEnrollment?.summary?.totalDue ?? 0) : null;
-  const selectedBalance = selectedPayable === null ? null : Math.max(0, selectedPayable - selectedPaid);
+  const selectedBalance = selectedCode === "ALL"
+    ? (configuredRegistrationCount ? codeCards.reduce((sum, item) => {
+        const enrollment = enrollmentForRegistration(item);
+        if (!configuredFee(enrollment)) return sum;
+        const payable = Number(enrollment?.feeConfig?.netPayableFee ?? enrollment?.summary?.totalDue ?? 0);
+        return sum + Math.max(0, payable - Number(item.paidTotal || 0));
+      }, 0) : null)
+    : selectedPayable === null ? null : Math.max(0, selectedPayable - selectedPaid);
   const selectedDiscount = selectedCode === "ALL"
     ? enrollmentOptions.reduce((sum, item) => sum + (configuredFee(item) ? Number(item.feeConfig?.discountAmount || 0) : 0), 0)
     : Number(selectedEnrollment?.feeConfig?.discountAmount || 0);
@@ -150,7 +170,7 @@ export default function StudentFeeWorkspace({
         <div className="fee-overview-card"><span>Course(s)</span><strong style={{ fontSize: 17 }}>{selectedCourse || "—"}</strong></div>
         <div className="fee-overview-card"><span>Registration Code</span><strong>{selectedCode === "ALL" ? "All Registrations" : selectedCode}</strong></div>
         <div className="fee-overview-card fee-total"><span>Total Course Fee</span><strong>{selectedTotalFee === null ? "—" : money(selectedTotalFee)}</strong><small>{selectedDiscount ? "Discount: " + money(selectedDiscount) : "Course fee rule"}</small></div>
-        <div className="fee-overview-card fee-paid"><span>Total Paid</span><strong>{money(selectedPaid)}</strong><small>{visibleRows.length} receipt(s)</small></div>
+        <div className="fee-overview-card fee-paid"><span>Total Paid</span><strong>{money(selectedPaid)}</strong><small>{paymentRows.length} receipt(s)</small></div>
         <div className="fee-overview-card fee-due"><span>Balance Due</span><strong>{selectedBalance === null ? "—" : money(selectedBalance)}</strong></div>
       </div>
 
@@ -164,7 +184,7 @@ export default function StudentFeeWorkspace({
               <th key={label} style={{ textAlign: "left", padding: "10px 8px", borderBottom: "1px solid var(--border,#e3e7ef)", fontSize: 12 }}>{label}</th>
             )}</tr></thead>
             <tbody>
-              {visibleRows.map((payment, index) => (
+              {paymentRows.map((payment, index) => (
                 <tr key={String(payment._id || payment.mrNo) + "-" + index}>
                   <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{dateLabel(payment.paymentDate || payment.rawPaymentDate || payment.date)}</td>
                   <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{payment.mrNo || payment.receiptNo || "—"}</td>
