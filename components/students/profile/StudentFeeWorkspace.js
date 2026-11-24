@@ -54,7 +54,7 @@ export default function StudentFeeWorkspace({
   const codeCards = useMemo(() => {
     const map = new Map();
     for (const item of historyMetadata) {
-      const fallbackName = String(item.cleanName || student.masterProfile?.fullName || student.applicantName || "").trim().toUpperCase().replace(/\\s+/g, " ");
+      const fallbackName = String(item.cleanName || student.masterProfile?.fullName || student.applicantName || "").trim().toUpperCase().replace(/\s+/g, " ");
       const id = String(item.registrationId || (fallbackName && item.stCode ? fallbackName + "_" + item.stCode : "") || "");
       if (id) map.set(id, { ...item, registrationId: id });
     }
