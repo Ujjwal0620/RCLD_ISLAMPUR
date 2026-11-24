@@ -396,11 +396,17 @@ async function syncFeeRows(rows = []) {
   }
   const existing = await StudentFeePayment.find({ $or: [{ registrationId: { $in: ids } }, { stCode: { $in: codes } }] })
     .select("registrationId stNameKey stCode mrNo paymentDate amountPaid studentId enrollmentId courseCode").lean();
-  const existingByKey = new Map(existing.map(item => {
+  const existingByKey = new Map();
+  const existingByLooseKey = new Map();
+  for (const item of existing) {
+    const dateKey = asDate(item.paymentDate)?.toISOString().slice(0, 10) || "";
+    const amountKey = Number(item.amountPaid).toFixed(2);
     const codeRegistrations = registrationsByCode.get(String(item.stCode || ""));
     const identity = item.registrationId || item.stNameKey || (codeRegistrations?.size === 1 ? [...codeRegistrations][0] : "");
-    return [[identity, item.mrNo, asDate(item.paymentDate)?.toISOString().slice(0, 10) || "", Number(item.amountPaid).toFixed(2)].join("|"), item];
-  }));
+    if (identity) existingByKey.set([identity, item.mrNo, dateKey, amountKey].join("|"), item);
+    const looseKey = [String(item.stCode || ""), item.mrNo, dateKey, amountKey].join("|");
+    if (!existingByLooseKey.has(looseKey)) existingByLooseKey.set(looseKey, item);
+  }
   const operations = [];
   const unmatchedRows = [];
   let newReceiptsAdded = 0, existingReceiptsUpdatedOrSkipped = 0;
@@ -428,6 +434,11 @@ async function syncFeeRows(rows = []) {
       if (!priorReceipt.stCode) repair.stCode = enrollment.stCode;
       if (Object.keys(repair).length) operations.push({ updateOne: { filter: { _id: priorReceipt._id }, update: { $set: repair } } });
       existingReceiptsUpdatedOrSkipped += 1;
+      continue;
+    }
+    const looseKey = [clean(row.stCode), mrNo, paymentDate.toISOString().slice(0, 10), amountPaid.toFixed(2)].join("|");
+    if (existingByLooseKey.has(looseKey) && (registrationsByCode.get(clean(row.stCode))?.size || 0) > 1) {
+      unmatchedRows.push({ row: row.rowNo, studentId: registrationId, reason: "An existing receipt has this reused St_Code but no registration identity; it was not reassigned to avoid cross-student payment mixing." });
       continue;
     }
     if (seenInBatch.has(key)) {
