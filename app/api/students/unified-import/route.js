@@ -556,7 +556,10 @@ async function finalizeFeeSummaries(rawStudentIds = []) {
     const totalDue = Number(enrollment.feeConfig?.netPayableFee ?? enrollment.summary?.totalDue ?? 0);
     const totalPaid = paidByEnrollment.get(String(enrollment._id)) || 0;
     const balanceDue = Math.max(0, totalDue - totalPaid);
-    const feeStatus = totalDue > 0 && balanceDue === 0 ? "Paid" : totalPaid > 0 ? "Partial" : "Unpaid";
+    const hasConfiguredFee = Boolean(enrollment.feeConfig) && enrollment.feeConfig.configured !== false
+      && enrollment.feeConfig.feeRuleSource !== "UNCONFIGURED"
+      && String(enrollment.courseCode || "").toUpperCase() !== "PREVIOUS-LEGACY";
+    const feeStatus = hasConfiguredFee && balanceDue === 0 ? "Paid" : totalPaid > 0 ? "Partial" : "Unpaid";
     enrollmentOps.push({ updateOne: {
       filter: { _id: enrollment._id },
       update: { $set: { summary: {
@@ -573,7 +576,7 @@ async function finalizeFeeSummaries(rawStudentIds = []) {
     total.totalPaid += totalPaid;
     total.balanceDue += balanceDue;
     total.courseCount += 1;
-    total.hasConfiguredFee ||= Boolean(enrollment.feeConfig) && enrollment.feeConfig.configured !== false && enrollment.feeConfig.feeRuleSource !== "UNCONFIGURED" && String(enrollment.courseCode || "").toUpperCase() !== "PREVIOUS-LEGACY";
+    total.hasConfiguredFee ||= hasConfiguredFee;
     masterTotals.set(key, total);
   }
   for (let index = 0; index < enrollmentOps.length; index += 500) {
