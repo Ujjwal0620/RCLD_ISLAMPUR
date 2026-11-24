@@ -48,7 +48,7 @@ function parseIdentity(rawName, fallbackCode) {
   const splitAt = firstLine.lastIndexOf("_");
   let name = splitAt > 0 ? firstLine.slice(0, splitAt).replace(/\s+/g, " ").trim() : firstLine;
   let code = splitAt > 0 ? firstLine.slice(splitAt + 1).trim() : "";
-  if (!code) code = clean(fallbackCode).split(/\r?\n/)[0].replace(/\.0+$/, "").replace(/[^A-Za-z0-9-]/g, "").trim().toUpperCase();
+  if (!code) code = clean(fallbackCode).replace(/\s+/g, "").replace(/\.0+$/, "").replace(/[^A-Za-z0-9-]/g, "").trim().toUpperCase();
   code = code.replace(/\.0+$/, "");
   if (!name || !code) return { cleanName: name, stCode: code, registrationId: "" };
   return { cleanName: name, stCode: code, registrationId: name + "_" + code };
@@ -168,8 +168,9 @@ function buildWorkbookPayload(workbook) {
   for (let index = feeSheet.headerIndex + 1; index < feeSheet.grid.length; index += 1) {
     const row = feeSheet.grid[index];
     if (!row.some(value => clean(value))) continue;
+    const primaryIdentity = parseIdentity(feeGet(row, "stname"), feeGet(row, "stcode"));
+    const identity = primaryIdentity.cleanName ? primaryIdentity : parseIdentity(feeGet(row, "stnamecr"), feeGet(row, "stcode"));
     const feeName = feeGet(row, "stname") || feeGet(row, "stnamecr");
-    const identity = parseIdentity(feeName, feeGet(row, "stcode"));
     if (!identity.cleanName || !identity.stCode) {
       feeWarnings.push({ sheet: feeSheet.name, row: index + 1, studentId: clean(feeGet(row,"stcode")), name: feeName, mrNo: clean(feeGet(row,"mrno")), paymentDate: parseDate(feeGet(row,"dop")), amountPaid: feeGet(row,"amtpaid"), reason: "Fee row has no valid name/code identity." });
       continue;
