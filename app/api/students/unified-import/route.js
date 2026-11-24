@@ -43,9 +43,9 @@ async function ensureReceiptIndex() {
 
 const clean = value => String(value ?? "").trim();
 const normalizeName = value => clean(value).normalize("NFKC").toUpperCase()
-  .replace(/[^A-Z0-9 ]/g, " ").replace(/\\s+/g, " ").trim();
-const normalizeFather = value => normalizeName(value).replace(/\\bKR\\b/g, "KUMAR")
-  .replace(/\\bMD\\b|\\bMOHD\\b/g, "MOHAMMAD").replace(/\\bSK\\b/g, "SHEIKH");
+  .replace(/[^A-Z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+const normalizeFather = value => normalizeName(value).replace(/\bKR\b/g, "KUMAR")
+  .replace(/\bMD\b|\bMOHD\b/g, "MOHAMMAD").replace(/\bSK\b/g, "SHEIKH");
 const validObjectId = value => mongoose.Types.ObjectId.isValid(String(value || ""));
 const sameDate = (a, b) => {
   if (!a || !b) return false;
@@ -63,8 +63,8 @@ const registrationIdentity = item => clean(item.registrationId)
 
 function hasIdentityAnchor(group, candidate) {
   if (normalizeName(candidate.fullName || candidate.normalizedFullName) !== normalizeName(group.cleanName)) return false;
-  const incomingPhones = new Set((group.phones || []).map(value => clean(value).replace(/\\D/g, "")).filter(value => value.length === 10));
-  const existingPhones = (candidate.phoneNumbers || []).map(value => clean(value).replace(/\\D/g, "")).filter(value => value.length === 10);
+  const incomingPhones = new Set((group.phones || []).map(value => clean(value).replace(/\D/g, "")).filter(value => value.length === 10));
+  const existingPhones = (candidate.phoneNumbers || []).map(value => clean(value).replace(/\D/g, "")).filter(value => value.length === 10);
   const samePhone = existingPhones.some(value => incomingPhones.has(value));
   const sameDob = sameDate(group.dob, candidate.dob);
   const sameFather = Boolean(normalizeFather(group.fatherName)
@@ -89,7 +89,7 @@ async function syncStudentGroups(groups = []) {
   const codes = [...new Set(allRegistrations.map(item => item.stCode))];
   const registrationIds = [...new Set(allRegistrations.map(item => item.registrationId))];
   const names = [...new Set(groups.map(group => normalizeName(group.cleanName)).filter(Boolean))];
-  const phones = [...new Set(groups.flatMap(group => group.phones || []).map(value => clean(value).replace(/\\D/g, "")).filter(value => value.length === 10))];
+  const phones = [...new Set(groups.flatMap(group => group.phones || []).map(value => clean(value).replace(/\D/g, "")).filter(value => value.length === 10))];
   const dobs = [...new Set(groups.map(group => asDate(group.dob)?.toISOString().slice(0, 10)).filter(Boolean))];
   const fathers = [...new Set(groups.map(group => normalizeFather(group.fatherName)).filter(Boolean))];
 
@@ -109,7 +109,7 @@ async function syncStudentGroups(groups = []) {
   const studentByCode = new Map();
   for (const student of existingStudents) {
     for (const code of [student.regnNo, student.enrollmentNo]) {
-      const key = clean(code).replace(/\\.0+$/, "");
+      const key = clean(code).replace(/\.0+$/, "");
       if (key) studentByCode.set(key, [...(studentByCode.get(key) || []), student]);
     }
   }
