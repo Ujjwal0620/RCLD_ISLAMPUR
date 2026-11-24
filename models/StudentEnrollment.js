@@ -23,6 +23,7 @@ const StudentEnrollmentSchema = new mongoose.Schema({
   courseId: { type: mongoose.Schema.Types.ObjectId, ref: "Course", default: null, index: true },
   legacyStudentId: { type: mongoose.Schema.Types.ObjectId, ref: "Student", default: null, index: true },
   stCode: { type: String, required: true, trim: true },
+  registrationId: { type: String, default: "", trim: true, uppercase: true, index: true },
   normalizedFullName: { type: String, required: true, index: true },
   formNo: { type: String, default: "" },
   courseCode: { type: String, required: true, trim: true, uppercase: true, index: true },
@@ -58,6 +59,7 @@ const StudentEnrollmentSchema = new mongoose.Schema({
   importBatchKey: { type: String, default: "" }
 }, { timestamps: true, collection: "student_enrollments" });
 
+StudentEnrollmentSchema.index({ studentId: 1, registrationId: 1 }, { unique: true, name: "student_registration_identity_unique", partialFilterExpression: { registrationId: { $type: "string", $gt: "" } } });
 StudentEnrollmentSchema.index({ studentId: 1, stCode: 1, normalizedFullName: 1, courseCode: 1 }, { unique: true, name: "student_course_enrollment_unique" });
 StudentEnrollmentSchema.index({ stCode: 1 });
 StudentEnrollmentSchema.index({ studentId: 1, admissionDate: 1 });
