@@ -8,7 +8,6 @@ import CodingForKidsSemesterPanel from "@/components/students/profile/CodingForK
 import CodingForKidsIcardDialog from "@/components/students/profile/CodingForKidsIcardDialog";
 import StudentEditPanel from "@/components/students/profile/StudentEditPanel";
 import StudentFeeWorkspace from "@/components/students/profile/StudentFeeWorkspace";
-import StudentUnifiedFeeLedger from "@/components/students/profile/StudentUnifiedFeeLedger";
 import StudentAttendanceSection from "@/components/students/profile/StudentAttendanceSection";
 import StudentQualificationSection from "@/components/students/profile/StudentQualificationSection";
 import StudentTransitionPanel from "@/components/students/profile/StudentTransitionPanel";
@@ -138,7 +137,6 @@ export default function StudentDetailsPage({ params }) {
               uploadPaymentProof={uploadPaymentProof}
               printBill={printBill}
             />
-            <StudentUnifiedFeeLedger student={student} />
           </div>
           <div className="student-profile-tab-panel" hidden={activeTab !== "attendance"}>
             <StudentAttendanceSection attendance={attendance} attForm={attForm} setAttForm={setAttForm} saveAttendance={saveAttendance} />
