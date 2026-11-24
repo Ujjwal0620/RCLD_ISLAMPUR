@@ -11,7 +11,10 @@ export default function StudentProfileHero({ student, uploadStudentPhoto, photoU
     ? enrollments.find(item => String(item.semesterLabel || "").toUpperCase() === "SM-" + roman)
     : null;
   const activeEnrollment = student.activeEnrollment || semesterEnrollment || enrollments.find(item => item.status === "ACTIVE");
-  const currentStCode = activeEnrollment?.stCode || student.regnNo || student.enrollmentNo;
+  const currentStCode = student.masterProfile?.currentStCode || activeEnrollment?.stCode || student.regnNo || student.enrollmentNo;
+  const currentRegistrationId = student.masterProfile?.currentRegistrationId || student.currentRegistrationId || activeEnrollment?.registrationId || "";
+  const registrationItems = student.masterProfile?.registrations || student.masterProfile?.enrollments || [];
+  const registrationPreview = registrationItems.slice(0, 4).map(item => item.registrationId || (item.cleanName && item.stCode ? item.cleanName + "_" + item.stCode : item.stCode)).filter(Boolean);
   const activeCourseName = activeEnrollment?.courseName
     || (String(activeEnrollment?.courseCode || "").toUpperCase() === String(student.courseCode || "").toUpperCase()
       ? student.courseName : activeEnrollment?.courseCode)
@@ -69,6 +72,8 @@ export default function StudentProfileHero({ student, uploadStudentPhoto, photoU
         <p>
           St_Code {value(currentStCode)} · {value(activeCourseName)} · {value(student.mobileNumber)}
         </p>
+        {currentRegistrationId && <p><strong>{value(currentRegistrationId)}</strong> · {Number(student.registrationCount || registrationItems.length || 0)} linked registration(s)</p>}
+        {registrationPreview.length > 0 && <small style={{ display: "block", marginTop: 5, opacity: .78 }}>{registrationPreview.join(" · ")}{registrationItems.length > registrationPreview.length ? " · +" + (registrationItems.length - registrationPreview.length) + " more" : ""}</small>}
       </div>
       <span className="badge profile-status">{value(student.status)}</span>
     </section>
