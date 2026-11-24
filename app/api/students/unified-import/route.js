@@ -452,6 +452,7 @@ async function syncFeeRows(rows = []) {
   const ids = [...new Set(rows.map(item => clean(item.registrationId)).filter(Boolean))];
   const enrollments = await StudentEnrollment.find({ registrationId: { $in: ids } }).lean();
   const enrollmentById = new Map(enrollments.map(item => [String(item.registrationId), item]));
+  const enrollmentByMongoId = new Map(enrollments.map(item => [String(item._id), item]));
   const codes = [...new Set(rows.map(item => clean(item.stCode)).filter(Boolean))];
   const registrationsByCode = new Map();
   for (const row of rows) {
@@ -459,15 +460,20 @@ async function syncFeeRows(rows = []) {
     const id = clean(row.registrationId);
     if (code && id) registrationsByCode.set(code, new Set([...(registrationsByCode.get(code) || []), id]));
   }
-  const existing = await StudentFeePayment.find({ $or: [{ registrationId: { $in: ids } }, { stCode: { $in: codes } }] })
-    .select("registrationId stNameKey stCode mrNo paymentDate amountPaid studentId enrollmentId courseCode").lean();
+  const enrollmentObjectIds = enrollments.map(item => item._id);
+  const existing = await StudentFeePayment.find({ $or: [
+    { registrationId: { $in: ids } },
+    { stCode: { $in: codes } },
+    { enrollmentId: { $in: enrollmentObjectIds } }
+  ] }).select("registrationId stNameKey stCode mrNo paymentDate amountPaid studentId enrollmentId courseCode").lean();
   const existingByKey = new Map();
   const existingByLooseKey = new Map();
   for (const item of existing) {
     const dateKey = asDate(item.paymentDate)?.toISOString().slice(0, 10) || "";
     const amountKey = Number(item.amountPaid).toFixed(2);
     const codeRegistrations = registrationsByCode.get(String(item.stCode || ""));
-    const identity = String(item.registrationId || item.stNameKey || (codeRegistrations?.size === 1 ? [...codeRegistrations][0] : "")).toUpperCase();
+    const linkedEnrollment = enrollmentByMongoId.get(String(item.enrollmentId || ""));
+    const identity = String(item.registrationId || item.stNameKey || linkedEnrollment?.registrationId || (codeRegistrations?.size === 1 ? [...codeRegistrations][0] : "")).toUpperCase();
     if (identity) existingByKey.set([identity, item.mrNo, dateKey, amountKey].join("|"), item);
     const looseKey = [String(item.stCode || ""), item.mrNo, dateKey, amountKey].join("|");
     if (!existingByLooseKey.has(looseKey)) existingByLooseKey.set(looseKey, item);
@@ -491,12 +497,13 @@ async function syncFeeRows(rows = []) {
     if (priorReceipt) {
       const courseCode = clean(enrollment.courseCode || row.course).toUpperCase();
       const repair = {};
-      if (!priorReceipt.registrationId) repair.registrationId = registrationId;
-      if (!priorReceipt.stNameKey) repair.stNameKey = registrationId;
+      const linkedToThisEnrollment = String(priorReceipt.enrollmentId || "") === String(enrollment._id);
+      if (!priorReceipt.registrationId || (linkedToThisEnrollment && String(priorReceipt.registrationId).toUpperCase() !== registrationId.toUpperCase())) repair.registrationId = registrationId;
+      if (!priorReceipt.stNameKey || (linkedToThisEnrollment && String(priorReceipt.stNameKey).toUpperCase() !== registrationId.toUpperCase())) repair.stNameKey = registrationId;
       if (!priorReceipt.studentId || String(priorReceipt.studentId) !== String(enrollment.studentId)) repair.studentId = enrollment.studentId;
       if (!priorReceipt.enrollmentId || String(priorReceipt.enrollmentId) !== String(enrollment._id)) repair.enrollmentId = enrollment._id;
-      if (!priorReceipt.courseCode) repair.courseCode = courseCode;
-      if (!priorReceipt.stCode) repair.stCode = enrollment.stCode;
+      if (!priorReceipt.courseCode || (linkedToThisEnrollment && String(priorReceipt.courseCode).toUpperCase() !== courseCode)) repair.courseCode = courseCode;
+      if (!priorReceipt.stCode || (linkedToThisEnrollment && String(priorReceipt.stCode) !== String(enrollment.stCode))) repair.stCode = enrollment.stCode;
       if (Object.keys(repair).length) operations.push({ updateOne: { filter: { _id: priorReceipt._id }, update: { $set: repair } } });
       existingReceiptsUpdatedOrSkipped += 1;
       continue;
