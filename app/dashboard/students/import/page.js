@@ -65,7 +65,7 @@ function findSheet(workbook, kind) {
     const index = grid.findIndex(row => {
       const keys = row.map(headerKey);
       if (kind === "student") return ["stcode","stname","doa","course"].every(key => keys.includes(key));
-      return ["amtpaid","mrno","dop","stname"].every(key => keys.includes(key));
+      return ["amtpaid","mrno","dop"].every(key => keys.includes(key)) && (keys.includes("stname") || keys.includes("stnamecr"));
     });
     if (index >= 0) matches.push({ name, grid, headerIndex: index });
   }
@@ -84,9 +84,11 @@ function buildWorkbookPayload(workbook) {
   const studentGet = (row, key) => studentAt(key) >= 0 ? row[studentAt(key)] : "";
   const registrations = new Map();
   const studentWarnings = [];
+  let studentDataRows = 0;
   for (let index = studentSheet.headerIndex + 1; index < studentSheet.grid.length; index += 1) {
     const row = studentSheet.grid[index];
     if (!row.some(value => clean(value))) continue;
+    studentDataRows += 1;
     const identity = parseIdentity(studentGet(row, "stname"), studentGet(row, "stcode"));
     if (!identity.registrationId) {
       studentWarnings.push({ sheet: studentSheet.name, row: index + 1, studentId: studentGet(row, "stcode"), reason: "Student row has no usable registration code or name suffix." });
@@ -164,7 +166,8 @@ function buildWorkbookPayload(workbook) {
   for (let index = feeSheet.headerIndex + 1; index < feeSheet.grid.length; index += 1) {
     const row = feeSheet.grid[index];
     if (!row.some(value => clean(value))) continue;
-    const identity = parseIdentity(feeGet(row, "stname"), feeGet(row, "stcode"));
+    const feeName = feeGet(row, "stname") || feeGet(row, "stnamecr");
+    const identity = parseIdentity(feeName, feeGet(row, "stcode"));
     if (!identity.cleanName || !identity.stCode) {
       feeWarnings.push({ sheet: feeSheet.name, row: index + 1, studentId: clean(feeGet(row,"stcode")), reason: "Fee row has no valid name/code identity." });
       continue;
@@ -202,7 +205,7 @@ function buildWorkbookPayload(workbook) {
     }
     if (!registration.course || registration.course === "Previous Course (Legacy)") registration.course = "Previous Course (Legacy)";
     feeRows.push({ registrationId, stCode: identity.stCode, cleanName: identity.cleanName, course: registration.course, paymentDate, amountPaid, mrNo, sourceSheet: feeSheet.name, rowNo: index + 1 });
-    if (registration.course === "Previous Course (Legacy)" && !registration.earliestPaymentDate) registration.earliestPaymentDate = paymentDate;
+    if (registration.course === "Previous Course (Legacy)") {\n      const priorDate = parseDate(registration.earliestPaymentDate);\n      if (!priorDate || new Date(paymentDate) < new Date(priorDate)) registration.earliestPaymentDate = paymentDate;\n    }
   }
   const allRegistrationCodeCounts = new Map();
   for (const profile of profiles) for (const item of profile.registrations) {
@@ -217,7 +220,7 @@ function buildWorkbookPayload(workbook) {
     profile.registrations.forEach(item => { item.stCodeUnique = allRegistrationCodeCounts.get(item.stCode) === 1; });
     profile.registrations.forEach((item,index) => { item.isCurrent = index === 0; });
   }
-  return { studentSheetName: studentSheet.name, feeSheetName: feeSheet.name, studentRows: registrations.size, profiles, feeRows, warnings: [...studentWarnings, ...feeWarnings] };
+  return { studentSheetName: studentSheet.name, feeSheetName: feeSheet.name, studentRows: studentDataRows, registrationCount: registrations.size, profiles, feeRows, warnings: [...studentWarnings, ...feeWarnings] };
 }
 
 async function postBatch(body) {
@@ -339,7 +342,7 @@ export default function BulkImportPage() {
           {preview && <div className="student-summary-grid">
             <div className="summary-card"><span>Student Data rows</span><strong>{preview.studentRows.toLocaleString("en-IN")}</strong></div>
             <div className="summary-card"><span>Unified profiles</span><strong>{preview.profileCount.toLocaleString("en-IN")}</strong></div>
-            <div className="summary-card"><span>Registration codes</span><strong>{preview.profiles.reduce((sum, item) => sum + item.registrations.length, 0).toLocaleString("en-IN")}</strong></div>
+            <div className="summary-card"><span>Registration codes</span><strong>{preview.registrationCount.toLocaleString("en-IN")}</strong></div>
             <div className="summary-card"><span>Fee receipts</span><strong>{preview.feeRows.length.toLocaleString("en-IN")}</strong></div>
             <div className="summary-card"><span>Legacy registrations</span><strong>{preview.legacyRegistrations.toLocaleString("en-IN")}</strong></div>
             <div className="summary-card"><span>Rows flagged</span><strong>{preview.warnings.length.toLocaleString("en-IN")}</strong></div>
