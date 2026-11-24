@@ -514,7 +514,7 @@ async function finalizeFeeSummaries(rawStudentIds = []) {
     total.totalPaid += totalPaid;
     total.balanceDue += balanceDue;
     total.courseCount += 1;
-    total.hasConfiguredFee ||= enrollment.feeConfig?.configured !== false;
+    total.hasConfiguredFee ||= Boolean(enrollment.feeConfig) && enrollment.feeConfig.configured !== false && enrollment.feeConfig.feeRuleSource !== "UNCONFIGURED" && String(enrollment.courseCode || "").toUpperCase() !== "PREVIOUS-LEGACY";
     masterTotals.set(key, total);
   }
   for (let index = 0; index < enrollmentOps.length; index += 500) {
