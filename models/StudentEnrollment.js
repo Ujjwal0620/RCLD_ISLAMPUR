@@ -31,6 +31,7 @@ const StudentEnrollmentSchema = new mongoose.Schema({
   courseCategory: { type: String, enum: ["ROBOTICS", "CODING_FOR_KIDS", "DOM", "OTHER"], default: "OTHER" },
   semesterLabel: { type: String, default: "LEGACY" },
   admissionDate: { type: Date, default: null },
+  earliestPaymentDate: { type: Date, default: null },
   status: { type: String, enum: ["ACTIVE", "PROMOTED", "COMPLETED", "LEGACY"], default: "ACTIVE" },
   feeConfig: {
     admissionFee: { type: Number, default: 0 },
