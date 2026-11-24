@@ -45,6 +45,7 @@ async function ensureReceiptIndex() {
 }
 
 const clean = value => String(value ?? "").trim();
+const displayName = value => clean(value).normalize("NFKC").toUpperCase().replace(/\s+/g, " ").trim();
 const normalizeName = value => clean(value).normalize("NFKC").toUpperCase()
   .replace(/[^A-Z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
 const normalizeFather = value => normalizeName(value).replace(/\bKR\b/g, "KUMAR")
@@ -189,9 +190,9 @@ async function syncStudentGroups(groups = []) {
         enrollmentNo: codeCollision ? "" : newest.stCode,
         admissionDate: newest.dateOfAdmission?.toISOString() || "",
         dateOfAdmission: newest.dateOfAdmission?.toISOString() || "",
-        applicantName: normalizeName(group.cleanName),
-        name: normalizeName(group.cleanName),
-        sourceStudentName: normalizeName(group.cleanName) + "_" + newest.stCode,
+        applicantName: displayName(group.cleanName),
+        name: displayName(group.cleanName),
+        sourceStudentName: displayName(group.cleanName) + "_" + newest.stCode,
         sourceSex: newest.sex || "",
         sex: newest.sex || "",
         gender: newest.sex || "",
@@ -241,7 +242,7 @@ async function syncStudentGroups(groups = []) {
     const existingCurrentDate = asDate(master?.currentAdmissionDate || master?.dateOfAdmission);
     const shouldPromote = !master || !existingCurrentDate || Boolean(current.dateOfAdmission && current.dateOfAdmission >= existingCurrentDate);
     const masterSet = {
-      fullName: master?.fullName || normalizeName(group.cleanName),
+      fullName: master?.fullName || displayName(group.cleanName),
       normalizedFullName: normalizeName(group.cleanName),
       legacyStudentIds: legacyIds.map(id => validObjectId(id) ? new mongoose.Types.ObjectId(id) : id),
       stCodes: [...new Set([...(master?.stCodes || []), ...mergedRegistrations.map(item => item.stCode)].filter(Boolean))],
