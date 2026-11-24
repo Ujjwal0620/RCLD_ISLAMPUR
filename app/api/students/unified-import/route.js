@@ -155,7 +155,8 @@ async function syncStudentGroups(groups = []) {
       stCode: clean(item.stCode),
       cleanName: normalizeName(item.cleanName || group.cleanName),
       course: clean(item.course) || "Previous Course (Legacy)",
-      dateOfAdmission: asDate(item.dateOfAdmission || item.earliestPaymentDate),
+      dateOfAdmission: asDate(item.dateOfAdmission),
+      earliestPaymentDate: asDate(item.earliestPaymentDate),
       formNo: clean(item.formNo)
     })).filter(item => item.registrationId && item.stCode);
     if (!registrations.length) continue;
@@ -233,6 +234,7 @@ async function syncStudentGroups(groups = []) {
       if (id && !existingRegs.has(id)) existingRegs.set(id, {
         stCode: clean(item.stCode), registrationId: id, course: clean(item.course || item.courseCode) || "Previous Course (Legacy)",
         dateOfAdmission: asDate(item.dateOfAdmission || item.admissionDate),
+        earliestPaymentDate: asDate(item.earliestPaymentDate),
         formNo: clean(item.formNo), isCurrent: false
       });
     }
@@ -242,7 +244,7 @@ async function syncStudentGroups(groups = []) {
       if (id && !existingRegs.has(id)) existingRegs.set(id, {
         stCode: clean(item.stCode), registrationId: id,
         course: clean(item.courseName || item.courseCode) || "Previous Course (Legacy)",
-        dateOfAdmission: asDate(item.admissionDate), formNo: clean(item.formNo), isCurrent: false
+        dateOfAdmission: asDate(item.admissionDate), earliestPaymentDate: asDate(item.earliestPaymentDate), formNo: clean(item.formNo), isCurrent: false
       });
     }
     for (const item of registrations) {
@@ -252,6 +254,7 @@ async function syncStudentGroups(groups = []) {
         ...prior, stCode: item.stCode, registrationId: item.registrationId,
         course: item.course || prior.course,
         dateOfAdmission: item.dateOfAdmission || prior.dateOfAdmission,
+        earliestPaymentDate: item.earliestPaymentDate || prior.earliestPaymentDate,
         formNo: item.formNo || prior.formNo,
         isCurrent: false
       });
@@ -324,6 +327,7 @@ async function syncStudentGroups(groups = []) {
         courseCode,
         courseName: registration.course,
         admissionDate: registration.dateOfAdmission,
+        earliestPaymentDate: registration.earliestPaymentDate || null,
         status: registration.registrationId === current.registrationId ? "ACTIVE" : (courseCode === "PREVIOUS-LEGACY" ? "LEGACY" : "PROMOTED"),
         courseCategory: courseRule.courseCategory || "OTHER",
         semesterLabel: courseRule.semesterLabel || registration.course,
@@ -353,6 +357,7 @@ async function syncStudentGroups(groups = []) {
         if (!existingEnrollment.semesterLabel && registration.course) patch.semesterLabel = registration.course;
         if (!existingEnrollment.formNo && registration.formNo) patch.formNo = registration.formNo;
         if (!existingEnrollment.admissionDate && registration.dateOfAdmission) patch.admissionDate = registration.dateOfAdmission;
+        if (!existingEnrollment.earliestPaymentDate && registration.earliestPaymentDate) patch.earliestPaymentDate = registration.earliestPaymentDate;
         if (Object.keys(patch).length) enrollmentOps.push({ updateOne: { filter: { _id: existingEnrollment._id }, update: { $set: patch } } });
       }
       outputMap.push({ registrationId: registration.registrationId, stCode: registration.stCode, studentId: masterId.toString(), enrollmentId: enrollmentId.toString(), course: registration.course });
