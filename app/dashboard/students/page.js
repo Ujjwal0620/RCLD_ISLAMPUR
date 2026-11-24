@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Search, UserPlus, ChevronLeft, ChevronRight, SlidersHorizontal, X, RotateCcw, Filter, Pencil, Trash2, Send, Upload, ShieldCheck, Users, UserRoundCheck, GraduationCap, Download, Printer, ImagePlus, FileSpreadsheet } from "lucide-react";
+import { Search, UserPlus, ChevronLeft, ChevronRight, SlidersHorizontal, X, RotateCcw, Filter, Pencil, Trash2, Send, Upload, ShieldCheck, Users, UserRoundCheck, GraduationCap, Download, Printer, ImagePlus } from "lucide-react";
 import CodingForKidsIcardDialog from "@/components/students/profile/CodingForKidsIcardDialog";
 import BulkStudentPhotoUploadDialog from "@/components/students/BulkStudentPhotoUploadDialog";
 import { exportStudentIcards } from "@/features/students/print/renderStudentIcardCanvas";
@@ -134,7 +134,7 @@ export default function StudentsPage(){
   }
 
   return <ERPLayout active="/dashboard/students">
-    <header className="topbar"><div><div className="crumb">Students / Registry</div><h1>Students</h1></div><div className="top-actions"><button className="ghost-btn" onClick={()=>setBulkPhotoDialogOpen(true)}><ImagePlus size={17}/> Bulk Upload Photos</button><a className="ghost-btn" href="/dashboard/students/fee-import"><FileSpreadsheet size={17}/> Fee Mapping</a><a className="ghost-btn" href="/dashboard/students/import"><Upload size={17}/> Bulk Import</a><a className="primary-btn" href="/dashboard/students/register"><UserPlus size={17}/> Register Student</a></div></header>
+    <header className="topbar"><div><div className="crumb">Students / Registry</div><h1>Students</h1></div><div className="top-actions"><button className="ghost-btn" onClick={()=>setBulkPhotoDialogOpen(true)}><ImagePlus size={17}/> Bulk Upload Photos</button><a className="ghost-btn" href="/dashboard/students/import"><Upload size={17}/> Bulk Import</a><a className="primary-btn" href="/dashboard/students/register"><UserPlus size={17}/> Register Student</a></div></header>
     <section className="directory-overview">
       <div>
         <span className="eyebrow">STUDENT OPERATIONS</span>
