@@ -148,8 +148,15 @@ async function syncStudentGroups(groups = []) {
     if (!registrations.length) continue;
     registrations.sort(registrationSort);
     const newest = registrations[0];
-    const existingLegacy = [...new Map(registrations.flatMap(item => studentByCode.get(item.stCode) || [])
+    const codeCandidates = [...new Map(registrations.flatMap(item => studentByCode.get(item.stCode) || [])
       .map(student => [String(student._id), student])).values()];
+    const existingLegacy = codeCandidates.filter(student => {
+      const sourceName = String(student.applicantName || student.name || student.sourceStudentName || "")
+        .replace(/_[A-Z0-9-]+$/i, "");
+      return normalizeName(sourceName) === normalizeName(group.cleanName);
+    });
+    const codeCollision = codeCandidates.length > existingLegacy.length;
+    if (codeCollision) flaggedRows.push({ row: registrations[0]?.rowNo || "", studentId: registrations.map(item => item.registrationId).join(", "), reason: "A registration code is already used by a different student name. The existing record was not linked; a separate profile was created." });
     const linkedMasterIds = new Set(existingLegacy.map(item => masterByStudentId.get(String(item._id))).filter(Boolean).map(item => String(item._id)));
     const byLinked = linkedMasterIds.size === 1 ? existingMasters.find(item => String(item._id) === [...linkedMasterIds][0]) : null;
     const candidates = existingMasters.filter(candidate => hasIdentityAnchor(group, candidate));
@@ -171,7 +178,7 @@ async function syncStudentGroups(groups = []) {
         _id: newStudentId,
         formNo: newest.formNo || "",
         regnNo: newest.stCode,
-        enrollmentNo: newest.stCode,
+        enrollmentNo: codeCollision ? "" : newest.stCode,
         admissionDate: newest.dateOfAdmission?.toISOString() || "",
         dateOfAdmission: newest.dateOfAdmission?.toISOString() || "",
         applicantName: normalizeName(group.cleanName),
