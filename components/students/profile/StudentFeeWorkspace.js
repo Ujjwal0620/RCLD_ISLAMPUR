@@ -1,279 +1,174 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowLeft, CreditCard, WalletCards } from "lucide-react";
+import { ArrowLeft, CreditCard, WalletCards, Printer, ReceiptText } from "lucide-react";
 import StudentFeePlanSection from "@/components/students/profile/fee-workspace/StudentFeePlanSection";
 import StudentPaymentEntrySection from "@/components/students/profile/fee-workspace/StudentPaymentEntrySection";
 import StudentPaymentHistorySection from "@/components/students/profile/fee-workspace/StudentPaymentHistorySection";
 
+const money = value => "₹" + Number(value || 0).toLocaleString("en-IN");
+const dateLabel = value => {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
+};
+const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
+
+function printReceipt(payment, student) {
+  const popup = window.open("", "_blank", "width=820,height=720");
+  if (!popup) return;
+  const amountPaid = Number(payment.amountPaid ?? payment.amount ?? 0);
+  const html = `<!doctype html><html><head><title>Money Receipt ${escapeHtml(payment.mrNo || "")}</title>
+    <style>body{font:14px Arial,sans-serif;color:#172033;padding:32px}.receipt{max-width:680px;margin:auto;border:1px solid #ccd3df;padding:28px;border-radius:10px}.head{text-align:center;border-bottom:2px solid #24324a;padding-bottom:16px;margin-bottom:18px}.head h1{margin:0 0 6px;font-size:23px}.muted{color:#65718a}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:20px 0}.field{border-bottom:1px solid #e2e6ee;padding:8px 0}.field b{display:block;font-size:11px;color:#65718a;text-transform:uppercase;margin-bottom:5px}.amount{font-size:26px;font-weight:700;background:#f3f6fb;padding:18px;border-radius:8px;text-align:right}@media print{body{padding:0}.receipt{border:0}}</style></head><body><main class="receipt">
+    <header class="head"><h1>RCLD — Islampur</h1><div class="muted">Official Money Receipt</div></header>
+    <div class="grid"><div class="field"><b>Receipt No.</b>${escapeHtml(payment.mrNo || "—")}</div><div class="field"><b>Payment Date</b>${escapeHtml(dateLabel(payment.paymentDate || payment.rawPaymentDate))}</div>
+    <div class="field"><b>Student Name</b>${escapeHtml(student.applicantName || student.name || student.masterProfile?.fullName || "Student")}</div><div class="field"><b>Registration Code</b>${escapeHtml(payment.stCode || "—")}</div>
+    <div class="field"><b>Course</b>${escapeHtml(payment.courseName || payment.courseCode || "—")}</div><div class="field"><b>Payment Mode</b>${escapeHtml(payment.paymentMode || "—")}</div></div>
+    <div class="amount">Amount Received: ₹${amountPaid.toLocaleString("en-IN")}</div><p class="muted" style="margin-top:32px">This receipt is generated from the RCLD student fee ledger.</p></main></body></html>`;
+  popup.document.open();
+  popup.document.write(html);
+  popup.document.close();
+  popup.focus();
+  popup.print();
+}
+
 export default function StudentFeeWorkspace({
-  student,
-  fee,
-  value,
-  feeWorkspaceOpen,
-  setFeeWorkspaceOpen,
-  feeForm,
-  setFeeForm,
-  paymentItems,
-  setPaymentItems,
-  saveFees,
-  proofUploading,
-  uploadPaymentProof,
-  printBill,
+  student, fee, value, feeWorkspaceOpen, setFeeWorkspaceOpen, feeForm, setFeeForm,
+  paymentItems, setPaymentItems, saveFees, proofUploading, uploadPaymentProof, printBill,
 }) {
-  const [historyScope, setHistoryScope] = useState("all");
-  const [selectedEnrollmentId, setSelectedEnrollmentId] = useState("");
+  const [selectedCodeState, setSelectedCodeState] = useState("");
   const paymentHistory = Array.isArray(student.paymentHistory) ? student.paymentHistory : [];
   const enrollmentOptions = Array.isArray(student.enrollments) ? student.enrollments : [];
-  const semesterRoman = ["I", "II", "III", "IV", "V", "VI"][Number(student.currentSemester || 0) - 1] || "";
-  const semesterEnrollment = semesterRoman
-    ? enrollmentOptions.find(item => String(item.semesterLabel || "").toUpperCase() === "SM-" + semesterRoman)
+  const historyMetadata = Array.isArray(student.masterProfile?.enrollments) ? student.masterProfile.enrollments : [];
+  const currentEnrollment = student.activeEnrollment
+    || enrollmentOptions.find(item => String(item.stCode) === String(student.masterProfile?.currentStCode || ""))
+    || enrollmentOptions.find(item => item.status === "ACTIVE")
+    || enrollmentOptions[0];
+  const currentStCode = String(student.masterProfile?.currentStCode || currentEnrollment?.stCode || student.regnNo || student.enrollmentNo || "");
+  const selectedCode = selectedCodeState || currentStCode || "ALL";
+  const codeCards = useMemo(() => {
+    const map = new Map();
+    for (const item of historyMetadata) map.set(String(item.stCode), { ...item });
+    for (const item of enrollmentOptions) {
+      const code = String(item.stCode || "");
+      if (!code) continue;
+      const old = map.get(code) || {};
+      map.set(code, { ...old, ...item, course: item.courseName || item.courseCode || old.course, dateOfAdmission: item.admissionDate || old.dateOfAdmission });
+    }
+    return [...map.values()].filter(item => item.stCode).sort((a, b) =>
+      new Date(b.dateOfAdmission || 0).getTime() - new Date(a.dateOfAdmission || 0).getTime()
+    );
+  }, [historyMetadata, enrollmentOptions]);
+  const selectedEnrollment = enrollmentOptions.find(item => String(item.stCode) === selectedCode) || null;
+  const selectedHistory = historyMetadata.find(item => String(item.stCode) === selectedCode) || {};
+  const visibleRows = useMemo(() => [...paymentHistory]
+    .filter(payment => selectedCode === "ALL" || String(payment.stCode || "") === selectedCode)
+    .sort((a, b) => new Date(a.paymentDate || a.rawPaymentDate || 0).getTime() - new Date(b.paymentDate || b.rawPaymentDate || 0).getTime()),
+  [paymentHistory, selectedCode]);
+  const selectedPaid = visibleRows.reduce((sum, item) => sum + Number(item.amountPaid ?? item.amount ?? 0), 0);
+  const selectedCourse = selectedEnrollment?.courseName || selectedEnrollment?.courseCode || selectedHistory.course || (selectedCode === "ALL" ? "All Courses" : "Previous Course (Legacy)");
+  const hasFeeRule = selectedCode !== "ALL" && selectedEnrollment
+    ? selectedEnrollment.feeConfig?.configured !== false && selectedEnrollment.feeConfig?.feeRuleSource !== "NO_FEE_RULE"
+    : false;
+  const selectedTotalFee = hasFeeRule
+    ? Number(selectedEnrollment?.feeConfig?.grossFee ?? selectedEnrollment?.summary?.totalFee ?? 0)
     : null;
-  const currentEnrollment = student.activeEnrollment || semesterEnrollment || enrollmentOptions.find(item => item.status === "ACTIVE");
-  const currentStCode = String(currentEnrollment?.stCode || student.regnNo || student.enrollmentNo || "");
-  const effectiveEnrollmentId = selectedEnrollmentId || String(currentEnrollment?._id || "");
-  const selectedEnrollment = enrollmentOptions.find(item => String(item._id) === effectiveEnrollmentId) || currentEnrollment;
-  const effectiveStCode = String(selectedEnrollment?.stCode || currentStCode);
-  const selectedInstallments = Array.isArray(selectedEnrollment?.installments) ? selectedEnrollment.installments : [];
-  const selectedSummary = selectedEnrollment?.summary || {};
-  const selectedDue = Number(selectedSummary.totalDue || selectedEnrollment?.feeConfig?.netPayableFee || 0);
-  const selectedPaid = Number(selectedSummary.totalPaid || 0);
-  const selectedBalance = Number(selectedSummary.totalDue || 0) > 0
-    ? Number(selectedSummary.balanceDue || 0) : Math.max(0, selectedDue - selectedPaid);
-  const historyRows = useMemo(() => paymentHistory.filter(payment =>
-    historyScope === "all" || (payment.enrollmentId ? String(payment.enrollmentId) === effectiveEnrollmentId : String(payment.stCode || "") === effectiveStCode)
-  ), [paymentHistory, historyScope, effectiveStCode, effectiveEnrollmentId]);
-  const totalAcrossSemesters = paymentHistory.reduce((sum, payment) => sum + Number(payment.amountPaid ?? payment.amount ?? 0), 0);
-  const currentSemesterPaid = paymentHistory.filter(payment => payment.enrollmentId
-    ? String(payment.enrollmentId) === String(currentEnrollment?._id || "")
-    : String(payment.stCode || "") === currentStCode)
-    .reduce((sum, payment) => sum + Number(payment.amountPaid ?? payment.amount ?? 0), 0);
-  const activeEnrollment = currentEnrollment;
-  const currentCourseName = activeEnrollment?.courseName
-    || (String(activeEnrollment?.courseCode || "").toUpperCase() === String(student.courseCode || "").toUpperCase()
-      ? student.courseName : activeEnrollment?.courseCode)
-    || student.courseName;
-  const activeSummary = activeEnrollment?.summary || {};
-  const currentPayable = Number(activeEnrollment?.feeConfig?.netPayableFee || activeSummary.totalDue || fee?.payable || 0);
-  const currentPaid = Number(activeSummary.totalPaid || currentSemesterPaid || fee?.paid || 0);
-  const currentBalanceDue = Number(activeSummary.totalDue || 0) > 0
-    ? Number(activeSummary.balanceDue || 0)
-    : currentPayable > 0 ? Math.max(0, currentPayable - currentPaid) : Number(fee?.due || 0);
-  const formatDate = value => {
-    if (!value) return "—";
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString("en-IN");
-  };
+  const selectedDiscount = hasFeeRule ? Number(selectedEnrollment?.feeConfig?.discountAmount || 0) : 0;
+  const selectedPayable = selectedTotalFee === null ? null : Math.max(0, selectedTotalFee - selectedDiscount);
+  const selectedBalance = selectedPayable === null ? null : Math.max(0, selectedPayable - selectedPaid);
+  const currentPayable = Number(currentEnrollment?.feeConfig?.netPayableFee || currentEnrollment?.summary?.totalDue || fee?.payable || 0);
+  const currentPaid = Number(currentEnrollment?.summary?.totalPaid || fee?.paid || 0);
+  const currentBalanceDue = Number(currentEnrollment?.summary?.balanceDue ?? Math.max(0, currentPayable - currentPaid));
+  const semesterRoman = ["I", "II", "III", "IV", "V", "VI"][Number(student.currentSemester || 0) - 1] || "";
+  const semesterEnrollment = semesterRoman ? enrollmentOptions.find(item => String(item.semesterLabel || "").toUpperCase() === "SM-" + semesterRoman) : null;
+  const feeWorkspaceEnrollment = currentEnrollment || semesterEnrollment;
   return (
     <section className="detail-section student-fees-section">
-                <div className="detail-section-title">
-                  <CreditCard size={17} />
-                  <div>
-                    <h3>Fees & Payments</h3>
-                    <span>Live fee position · lifetime payment ledger · receipt workspace</span>
-                  </div>
-                </div>
-                <div className="student-fee-overview">
-                  <div className="fee-overview-card fee-total">
-                    <span>Total Payable</span>
-                    <strong>₹{currentPayable.toLocaleString("en-IN")}</strong>
-                    <small>Admission fee and installments are included</small>
-                  </div>
-                  <div className="fee-overview-card fee-paid">
-                    <span>Course Fee Paid (incl. discount)</span>
-                    <strong>₹{currentPaid.toLocaleString("en-IN")}</strong>
-                    <small>{(fee?.payments || []).length} payment entries recorded</small>
-                  </div>
-                  <div className="fee-overview-card fee-due">
-                    <span>Outstanding Due</span>
-                    <strong>₹{currentBalanceDue.toLocaleString("en-IN")}</strong>
-                    <small>Discount is counted as course-fee credit</small>
-                  </div>
-                </div>
-                <div className="fee-overview-meta">
-                  <span>
-                    <b>Course</b>
-                    {value(currentCourseName)}
-                  </span>
-                  <span>
-                    <b>Enrollment</b>
-                    {value(currentStCode)}
-                  </span>
-                  <span>
-                    <b>Fee status</b>
-                    <em className={currentBalanceDue <= 0 ? "fee-status-paid" : "fee-status-due"}>
-                      {currentBalanceDue <= 0 ? "Paid" : "Payment Due"}
-                    </em>
-                  </span>
-                </div>
-                <section className="student-payment-history-ledger" style={{ marginTop: 20, padding: 16, border: "1px solid var(--border,#e3e7ef)", borderRadius: 12 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                    <div>
-                      <h3 style={{ margin: 0 }}>Payment History / Money Receipt Ledger</h3>
-                      <small>Imported receipts and ERP payments across every registration code</small>
-                    </div>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                      <select aria-label="Select course enrollment" value={effectiveEnrollmentId}
-                        onChange={event => { setSelectedEnrollmentId(event.target.value); setHistoryScope("selected"); }}
-                        style={{ minHeight: 36, borderRadius: 8, padding: "6px 10px", border: "1px solid var(--border,#d9deea)", background: "var(--surface,#fff)", color: "inherit" }}>
-                        {enrollmentOptions.length ? enrollmentOptions.map(enrollment =>
-                          <option key={String(enrollment._id)} value={String(enrollment._id)}>
-                            {enrollment.courseCode || enrollment.semesterLabel || "Course"} ({enrollment.stCode})
-                          </option>
-                        ) : <option value={currentStCode}>{currentStCode || "Current registration"}</option>}
-                      </select>
-                      <button type="button" className={historyScope === "all" ? "primary-btn" : "ghost-btn"} onClick={() => setHistoryScope("all")}>All Semesters / Full History</button>
-                      <button type="button" className={historyScope === "current" ? "primary-btn" : "ghost-btn"} onClick={() => { setSelectedEnrollmentId(String(currentEnrollment?._id || "")); setHistoryScope("current"); }}>Current ({currentStCode || "Code"})</button>
-                    </div>
-                  </div>
-                  <div className="student-fee-overview" style={{ marginTop: 12 }}>
-                    <div className="fee-overview-card fee-paid"><span>Total Paid Across All Semesters</span><strong>₹{totalAcrossSemesters.toLocaleString("en-IN")}</strong></div>
-                    <div className="fee-overview-card fee-paid"><span>Current Semester Paid</span><strong>₹{currentSemesterPaid.toLocaleString("en-IN")}</strong></div>
-                    <div className="fee-overview-card fee-due"><span>Current Balance Due</span><strong>₹{currentBalanceDue.toLocaleString("en-IN")}</strong></div>
-                  </div>
-                  <div style={{ overflowX: "auto", marginTop: 12 }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 760 }}>
-                      <thead><tr>
-                        {["Date (D.O.P.)", "MR No", "St_Code", "Course / Semester", "Payment Mode", "Amount Paid", "Installment / Fee Applied"].map(label =>
-                          <th key={label} style={{ textAlign: "left", padding: "10px 8px", borderBottom: "1px solid var(--border,#e3e7ef)", fontSize: 12 }}>{label}</th>
-                        )}
-                      </tr></thead>
-                      <tbody>
-                        {historyRows.length ? historyRows.map((payment, index) => (
-                          <tr key={String(payment._id || payment.mrNo) + "-" + index}>
-                            <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{formatDate(payment.paymentDate || payment.rawPaymentDate || payment.date)}</td>
-                            <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{payment.mrNo || payment.receiptNo || "—"}</td>
-                            <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{payment.stCode || currentStCode || "—"}</td>
-                            <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{payment.courseName || payment.courseCode || "—"}{payment.semesterLabel ? " / " + payment.semesterLabel : ""}</td>
-                            <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{payment.paymentMode || "—"}</td>
-                            <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)", fontWeight: 700 }}>₹{Number(payment.amountPaid ?? payment.amount ?? 0).toLocaleString("en-IN")}</td>
-                            <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{payment.installmentApplied || payment.paymentType || "Legacy receipt / not allocated"}</td>
-                          </tr>
-                        )) : <tr><td colSpan={7} style={{ padding: 16, textAlign: "center", color: "var(--muted,#7b8494)" }}>No payment receipts are linked to this student profile yet.</td></tr>}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div style={{ marginTop: 18 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                      <h4 style={{ margin: 0 }}>Installment Breakdown — {selectedEnrollment?.semesterLabel || selectedEnrollment?.courseCode || "Selected Semester"} ({effectiveStCode || "—"})</h4>
-                      <small>Due ₹{selectedDue.toLocaleString("en-IN")} · Paid ₹{selectedPaid.toLocaleString("en-IN")} · Balance ₹{selectedBalance.toLocaleString("en-IN")}</small>
-                    </div>
-                    <div style={{ overflowX: "auto", marginTop: 8 }}>
-                      <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 620 }}>
-                        <thead><tr>
-                          {["Installment", "Due Date", "Amount Due", "Amount Paid", "Balance", "Status"].map(label =>
-                            <th key={label} style={{ textAlign: "left", padding: "9px 8px", borderBottom: "1px solid var(--border,#e3e7ef)", fontSize: 12 }}>{label}</th>
-                          )}
-                        </tr></thead>
-                        <tbody>
-                          {selectedInstallments.length ? selectedInstallments.map((installment, index) => (
-                            <tr key={String(installment.index ?? index) + "-" + installment.label}>
-                              <td style={{ padding: "8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{installment.label}</td>
-                              <td style={{ padding: "8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{formatDate(installment.dueDate)}</td>
-                              <td style={{ padding: "8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>₹{Number(installment.amountDue || 0).toLocaleString("en-IN")}</td>
-                              <td style={{ padding: "8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>₹{Number(installment.amountPaid || 0).toLocaleString("en-IN")}</td>
-                              <td style={{ padding: "8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>₹{Math.max(0, Number(installment.amountDue || 0) - Number(installment.amountPaid || 0)).toLocaleString("en-IN")}</td>
-                              <td style={{ padding: "8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{installment.status || "PENDING"}</td>
-                            </tr>
-                          )) : <tr><td colSpan={6} style={{ padding: 14, textAlign: "center", color: "var(--muted,#7b8494)" }}>No installment plan is available for this registration. Legacy receipts remain listed above.</td></tr>}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </section>
-                <button
-                  type="button"
-                  className="fee-workspace-launch"
-                  onClick={() => setFeeWorkspaceOpen(true)}
-                >
-                  <span className="fee-workspace-icon">
-                    <WalletCards size={22} />
-                  </span>
-                  <span>
-                    <strong>Open Fee & Receipt Workspace</strong>
-                    <small>
-                      Manage fee plan, record payments and review the complete payment history
-                    </small>
-                  </span>
-                  <span className="fee-workspace-action">
-                    Open workspace <ArrowLeft size={15} />
-                  </span>
-                </button>
-                {feeWorkspaceOpen && (
-                  <div
-                    className="fee-modal-backdrop"
-                    role="presentation"
-                    onMouseDown={(e) => {
-                      if (e.target === e.currentTarget) setFeeWorkspaceOpen(false);
-                    }}
-                  >
-                    <section
-                      className="fee-workspace-modal"
-                      role="dialog"
-                      aria-modal="true"
-                      aria-labelledby="fee-workspace-title"
-                    >
-                      <header className="fee-modal-header">
-                        <div>
-                          <div className="eyebrow">STUDENT FINANCE</div>
-                          <h2 id="fee-workspace-title">Fee & Receipt Workspace</h2>
-                          <p>
-                            {student.applicantName} · {currentStCode || student.formNo}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          className="fee-modal-close"
-                          onClick={() => setFeeWorkspaceOpen(false)}
-                          aria-label="Close fee workspace"
-                        >
-                          ×
-                        </button>
-                      </header>
-                      <div className="fee-modal-body">
-                        <div className="fee-modal-stats">
-                          <div>
-                            <small>Total payable</small>
-                            <strong>₹{currentPayable.toLocaleString("en-IN")}</strong>
-                          </div>
-                          <div>
-                            <small>Paid till date</small>
-                            <strong className="fee-green">
-                              ₹{currentPaid.toLocaleString("en-IN")}
-                            </strong>
-                          </div>
-                          <div>
-                            <small>Balance due</small>
-                            <strong className="fee-red">
-                              ₹{currentBalanceDue.toLocaleString("en-IN")}
-                            </strong>
-                          </div>
-                        </div>
-                        <StudentFeePlanSection fee={fee} feeForm={feeForm} setFeeForm={setFeeForm} saveFees={saveFees} />
-                        <StudentPaymentEntrySection
-                          feeForm={feeForm}
-                          setFeeForm={setFeeForm}
-                          paymentItems={paymentItems}
-                          setPaymentItems={setPaymentItems}
-                          saveFees={saveFees}
-                          proofUploading={proofUploading}
-                          uploadPaymentProof={uploadPaymentProof}
-                        />
-                        <StudentPaymentHistorySection fee={fee} printBill={printBill} />
-                      </div>
-                      <footer className="fee-modal-footer">
-                        <span>Print format remains a compact half-page receipt.</span>
-                        <button
-                          type="button"
-                          className="ghost-btn"
-                          onClick={() => setFeeWorkspaceOpen(false)}
-                        >
-                          Close workspace
-                        </button>
-                      </footer>
-                    </section>
-                  </div>
-                )}
-              </section>
+      <div className="detail-section-title">
+        <CreditCard size={17} />
+        <div><h3>Fees & Payments</h3><span>Registration-wise fee summaries and date-wise receipt ledger</span></div>
+      </div>
+
+      <div className="student-code-switcher" style={{ display: "flex", flexWrap: "wrap", gap: 10, margin: "16px 0" }}>
+        <button type="button" className={selectedCode === "ALL" ? "primary-btn" : "ghost-btn"} onClick={() => setSelectedCodeState("ALL")}>All Codes</button>
+        {codeCards.map(item => {
+          const code = String(item.stCode);
+          const current = code === currentStCode || Boolean(item.isCurrent);
+          const active = selectedCode === code;
+          return <button key={code} type="button" onClick={() => setSelectedCodeState(code)}
+            className={active ? "primary-btn" : "ghost-btn"}
+            aria-pressed={active}
+            style={{ minWidth: 170, textAlign: "left", display: "grid", gap: 4, padding: "9px 12px" }}>
+            <span style={{ fontWeight: 800 }}>#{code} <small style={{ marginLeft: 6, opacity: .85 }}>{current ? "Current" : "Previous"}</small></span>
+            <span style={{ fontSize: 12 }}>{item.course || item.courseCode || "Previous Course (Legacy)"}</span>
+            <span style={{ fontSize: 11, opacity: .8 }}>Admission: {dateLabel(item.dateOfAdmission || item.admissionDate)}</span>
+          </button>;
+        })}
+      </div>
+
+      <div className="student-fee-overview">
+        <div className="fee-overview-card"><span>Course Name</span><strong style={{ fontSize: 17 }}>{selectedCourse || "—"}</strong></div>
+        <div className="fee-overview-card"><span>Registration Code</span><strong>{selectedCode === "ALL" ? "All Codes" : "#" + selectedCode}</strong></div>
+        <div className="fee-overview-card fee-total"><span>Total Course Fee</span><strong>{selectedTotalFee === null ? "—" : money(selectedTotalFee)}</strong><small>{selectedDiscount ? "Discount: " + money(selectedDiscount) : "Course fee rule"}</small></div>
+        <div className="fee-overview-card fee-paid"><span>Total Paid</span><strong>{money(selectedPaid)}</strong><small>{visibleRows.length} receipt(s)</small></div>
+        <div className="fee-overview-card fee-due"><span>Balance Due</span><strong>{selectedBalance === null ? "—" : money(selectedBalance)}</strong></div>
+      </div>
+
+      <section className="student-payment-history-ledger" style={{ marginTop: 20, padding: 16, border: "1px solid var(--border,#e3e7ef)", borderRadius: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <div><h3 style={{ margin: 0 }}>Date-wise Payment Ledger</h3><small>Sorted chronologically by D_O_P · {selectedCode === "ALL" ? "all registration codes" : "registration #" + selectedCode}</small></div>
+        </div>
+        <div style={{ overflowX: "auto", marginTop: 12 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 820 }}>
+            <thead><tr>{["Payment Date (D_O_P)", "MR No", "Course", "St_Code", "Amount Paid (₹)", "View / Print Receipt"].map(label =>
+              <th key={label} style={{ textAlign: "left", padding: "10px 8px", borderBottom: "1px solid var(--border,#e3e7ef)", fontSize: 12 }}>{label}</th>
+            )}</tr></thead>
+            <tbody>
+              {visibleRows.map((payment, index) => (
+                <tr key={String(payment._id || payment.mrNo) + "-" + index}>
+                  <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{dateLabel(payment.paymentDate || payment.rawPaymentDate || payment.date)}</td>
+                  <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{payment.mrNo || payment.receiptNo || "—"}</td>
+                  <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>{payment.courseName || payment.courseCode || "Previous Course (Legacy)"}</td>
+                  <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>#{payment.stCode || "—"}</td>
+                  <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)", fontWeight: 700 }}>{money(payment.amountPaid ?? payment.amount)}</td>
+                  <td style={{ padding: "9px 8px", borderBottom: "1px solid var(--border,#eef0f4)" }}>
+                    <button type="button" className="ghost-btn" onClick={() => printReceipt(payment, student)}><Printer size={14} /> View / Print</button>
+                  </td>
+                </tr>
+              ))}
+              {!visibleRows.length && <tr><td colSpan={6} style={{ padding: 16, textAlign: "center", color: "var(--muted,#7b8494)" }}>No receipts are linked to this registration code yet.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <button type="button" className="fee-workspace-launch" onClick={() => setFeeWorkspaceOpen(true)}>
+        <span className="fee-workspace-icon"><WalletCards size={22} /></span>
+        <span><strong>Open Fee & Receipt Workspace</strong><small>Manage fee plan, record a payment and review receipt history</small></span>
+        <span className="fee-workspace-action">Open workspace <ArrowLeft size={15} /></span>
+      </button>
+
+      {feeWorkspaceOpen && (
+        <div className="fee-modal-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setFeeWorkspaceOpen(false); }}>
+          <section className="fee-workspace-modal" role="dialog" aria-modal="true" aria-labelledby="fee-workspace-title">
+            <header className="fee-modal-header">
+              <div><div className="eyebrow">STUDENT FINANCE</div><h2 id="fee-workspace-title">Fee & Receipt Workspace</h2><p>{student.applicantName} · {currentStCode || student.formNo}</p></div>
+              <button type="button" className="fee-modal-close" onClick={() => setFeeWorkspaceOpen(false)} aria-label="Close fee workspace">×</button>
+            </header>
+            <div className="fee-modal-body">
+              <div className="fee-modal-stats">
+                <div><small>Total payable</small><strong>{money(currentPayable)}</strong></div>
+                <div><small>Paid till date</small><strong className="fee-green">{money(currentPaid)}</strong></div>
+                <div><small>Balance due</small><strong className="fee-red">{money(currentBalanceDue)}</strong></div>
+              </div>
+              <StudentFeePlanSection fee={fee} feeForm={feeForm} setFeeForm={setFeeForm} saveFees={saveFees} />
+              <StudentPaymentEntrySection feeForm={feeForm} setFeeForm={setFeeForm} paymentItems={paymentItems} setPaymentItems={setPaymentItems} saveFees={saveFees} proofUploading={proofUploading} uploadPaymentProof={uploadPaymentProof} />
+              <StudentPaymentHistorySection fee={fee} printBill={printBill} />
+            </div>
+            <footer className="fee-modal-footer"><span>Print format remains a compact half-page receipt.</span><button type="button" className="ghost-btn" onClick={() => setFeeWorkspaceOpen(false)}>Close workspace</button></footer>
+          </section>
+        </div>
+      )}
+    </section>
   );
 }
