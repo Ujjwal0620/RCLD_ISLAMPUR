@@ -146,7 +146,6 @@ export async function POST(request) {
     if (!feeSourceRows.length) return NextResponse.json({ error: "The fee sheet has no data rows." }, { status: 400 });
 
     const courses = await Course.find({}).lean();
-    const courseByCode = new Map();
     const touchedMasters = new Map();
     const codeMap = new Map();
     const studentDataByName = new Map();
@@ -260,7 +259,6 @@ export async function POST(request) {
       studentDataByName.set(row.cleanNameKey, sameName);
 
       const courseDoc = await findCourse(row.course, courses);
-      if (courseDoc) courseByCode.set(row.stCode, courseDoc);
       const enrollmentCode = courseDoc?.code || (row.course ? normCourse(row.course).replace(/\s/g, "-") : "UNKNOWN");
       let enrollment = await StudentEnrollment.findOne({ studentId: master._id, stCode: row.stCode, normalizedFullName: row.cleanNameKey, courseCode: enrollmentCode });
       if (!enrollment) {
@@ -283,7 +281,6 @@ export async function POST(request) {
           },
           summary: { totalFee: fee, totalDue: fee, totalPaid: 0, balanceDue: fee, feeStatus: feeStatus(fee, 0) }
         });
-        newEnrollmentsLinked += 1;
       } else {
         if (!enrollment.legacyStudentId && legacyStudent?._id) enrollment.legacyStudentId = legacyStudent._id;
         if (!enrollment.admissionDate && row.dateOfAdmission) enrollment.admissionDate = row.dateOfAdmission;
