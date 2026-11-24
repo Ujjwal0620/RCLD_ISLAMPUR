@@ -55,7 +55,12 @@ function parseIdentity(rawName, fallbackCode) {
 }
 
 function phonesFrom(value) {
-  return [...new Set(clean(value).split(/[,/;|\s]+/).map(part => part.replace(/\D/g, "")).filter(part => part.length === 10))];
+  return [...new Set(clean(value).split(/[,/;|\s]+/).map(part => {
+    let digits = part.replace(/\D/g, "");
+    if (digits.length === 12 && digits.startsWith("91")) digits = digits.slice(2);
+    if (digits.length === 11 && digits.startsWith("0")) digits = digits.slice(1);
+    return digits;
+  }).filter(part => part.length === 10))];
 }
 
 function findSheet(workbook, kind) {
