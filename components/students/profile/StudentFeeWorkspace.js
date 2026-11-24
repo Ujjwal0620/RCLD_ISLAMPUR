@@ -62,7 +62,7 @@ export default function StudentFeeWorkspace({
       const id = String(item.registrationId || "");
       if (!id) continue;
       const old = map.get(id) || {};
-      map.set(id, { ...old, ...item, registrationId: id, course: item.courseName || item.courseCode || old.course, dateOfAdmission: item.admissionDate || old.dateOfAdmission });
+      map.set(id, { ...old, ...item, registrationId: id, course: item.courseName || item.courseCode || old.course, dateOfAdmission: item.admissionDate || old.dateOfAdmission, earliestPaymentDate: item.earliestPaymentDate || old.earliestPaymentDate });
     }
     const codeCounts = new Map();
     for (const item of map.values()) codeCounts.set(String(item.stCode), (codeCounts.get(String(item.stCode)) || 0) + 1);
