@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ArrowLeft, Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, Download, ImagePlus } from "lucide-react";
 import * as XLSX from "xlsx";
 import ERPLayout from "@/components/ERPLayout";
@@ -236,6 +236,7 @@ export default function BulkImportPage() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
+  const runningRef = useRef(false);
   const [progress, setProgress] = useState({ stage: "Idle", percent: 0, done: 0, total: 0 });
   const notify = useErpToast();
   const { invalidate } = useErpCache();
@@ -260,8 +261,9 @@ export default function BulkImportPage() {
   }
 
   async function runImport() {
-    if (!preview || busy) return;
+    if (!preview || busy || runningRef.current) return;
     if (!window.confirm("Import " + preview.profileCount.toLocaleString("en-IN") + " unified student profiles and " + preview.feeRows.length.toLocaleString("en-IN") + " fee receipts? Existing photos, ID cards and populated profile fields will be preserved.")) return;
+    runningRef.current = true;
     setBusy(true); setError(""); setResult(null);
     const summary = { studentsMatchedUpdated: 0, newStudentsCreated: 0, registrationsLinked: 0, newReceiptsAdded: 0, existingReceiptsUpdatedOrSkipped: 0, unmatchedRows: [...preview.warnings] };
     try {
@@ -295,6 +297,7 @@ export default function BulkImportPage() {
       setError(err.message || "The import stopped before completion. Re-upload is safe; already written batches will be skipped on retry.");
       notify(err.message || "Unified import failed.", "error");
     } finally {
+      runningRef.current = false;
       setBusy(false);
     }
   }
