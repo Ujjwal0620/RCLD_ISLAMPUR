@@ -11,6 +11,7 @@ const StudentFeePaymentSchema = new mongoose.Schema({
   enrollmentId: { type: mongoose.Schema.Types.ObjectId, ref: "StudentEnrollment", required: true, index: true },
   courseId: { type: mongoose.Schema.Types.ObjectId, ref: "Course", default: null, index: true },
   stCode: { type: String, required: true, trim: true },
+  registrationId: { type: String, default: "", trim: true, uppercase: true, index: true },
   financialYear: { type: String, default: "" },
   stNameKey: { type: String, default: "", index: true },
   courseCode: { type: String, default: "" },
@@ -26,10 +27,9 @@ const StudentFeePaymentSchema = new mongoose.Schema({
   importBatchKey: { type: String, default: "" }
 }, { timestamps: true, collection: "student_fee_payments" });
 
-// Exact receipt identity required by workbook re-imports. Existing rows are never deleted.
 StudentFeePaymentSchema.index(
-  { stCode: 1, mrNo: 1, paymentDate: 1, amountPaid: 1 },
-  { unique: true, name: "stcode_receipt_date_amount_unique", partialFilterExpression: { stCode: { $type: "string", $gt: "" }, mrNo: { $type: "string", $gt: "" }, paymentDate: { $type: "date" }, amountPaid: { $type: "number" } } }
+  { registrationId: 1, mrNo: 1, paymentDate: 1, amountPaid: 1 },
+  { unique: true, name: "registration_receipt_date_amount_unique", partialFilterExpression: { registrationId: { $type: "string", $gt: "" }, mrNo: { $type: "string", $gt: "" }, paymentDate: { $type: "date" }, amountPaid: { $type: "number" } } }
 );
 StudentFeePaymentSchema.index({ studentId: 1, enrollmentId: 1, mrNo: 1, paymentDate: 1, amountPaid: 1 }, { name: "student_course_receipt_lookup" });
 
