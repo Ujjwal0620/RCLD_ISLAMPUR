@@ -45,7 +45,7 @@ function parseDate(value) {
 
 function parseIdentity(rawName, fallbackCode) {
   const firstLine = clean(rawName).split(/\r?\n/)[0].replace(/\s+/g, " ").trim().toUpperCase();
-  const suffix = firstLine.match(/_(\d+)[\s\S]*$/);
+  const suffix = firstLine.match(/_(\d+)(?![\s\S]*_\d+)/);
   const name = normalizeStudentName(firstLine);
   let code = suffix?.[1] || "";
   if (!code) code = clean(fallbackCode).replace(/\.0+$/, "").replace(/\D/g, "");
