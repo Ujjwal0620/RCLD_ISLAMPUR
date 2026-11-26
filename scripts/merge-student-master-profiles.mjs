@@ -174,6 +174,8 @@ async function main() {
   ]).toArray();
   const importedFeeDuplicateDocs = importedFeeDuplicateGroups.reduce((sum, item) => sum + item.count - 1, 0);
 
+  const allLegacyIdsToRelink = [...new Set(activeMasters.flatMap(master => master.legacyStudentIds || []).map(id => String(id)).filter(id => mongoose.Types.ObjectId.isValid(id)))]
+    .map(id => new mongoose.Types.ObjectId(id));
   const report = {
     mode: apply ? "APPLY" : "DRY RUN",
     masterProfilesScanned: allMasters.length,
@@ -183,17 +185,15 @@ async function main() {
     studentEnrollmentRecordsToInspect: enrollmentDocs.length,
     duplicateEnrollmentKeysToRetainAndMark: projectedDuplicateEnrollmentKeys,
     duplicateImportedFeeReceiptsToArchiveWithoutDeleting: importedFeeDuplicateDocs,
-    feeRecordsToRelink: duplicateMasterIds.length ? await paymentsCollection.countDocuments({
+    feeRecordsToRelink: await paymentsCollection.countDocuments({
       $or: [
         { studentId: { $in: duplicateMasterIds } },
         { masterStudentId: { $in: duplicateMasterIds } },
         { enrollmentId: { $in: enrollmentIds } },
-        { studentId: { $in: [...legacyIdsByCanonical.values()].flat().map(id => new mongoose.Types.ObjectId(id)) } }
+        { studentId: { $in: allLegacyIdsToRelink } }
       ]
-    }) : 0,
-    idCardLogsToLink: duplicateMasterIds.length ? await idCardsCollection.countDocuments({
-      studentId: { $in: [...legacyIdsByCanonical.values()].flat().map(id => new mongoose.Types.ObjectId(id)) }
-    }) : 0,
+    }),
+    idCardLogsToLink: await idCardsCollection.countDocuments({ studentId: { $in: allLegacyIdsToRelink } }),
     groups: groupReports.slice(0, 50),
     destructiveDeletes: 0,
   };
