@@ -22,6 +22,8 @@ async function ensureReceiptIndex() {
         if (error.code === 26 || error.codeName === "NamespaceNotFound") return [];
         throw error;
       });
+      const oldCodeOnlyReceiptIndex = indexes.find(index => index.name === "stcode_receipt_date_amount_unique");
+      if (oldCodeOnlyReceiptIndex) await StudentFeePayment.collection.dropIndex(oldCodeOnlyReceiptIndex.name);
       const legacyIndexes = indexes.filter(index => index.unique
         && !index.key?.registrationId
         && !index.key?.stCode
