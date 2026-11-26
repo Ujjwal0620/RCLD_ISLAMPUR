@@ -39,6 +39,11 @@ const enrollmentDateKey = item => {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
 };
+const safeDateKey = value => {
+  if (!value) return "";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
+};
 const enrollmentFilterKey = item => [String(item?.stCode || ""), enrollmentCourseKey(item), enrollmentDateKey(item)].join("|");
 function resolvePaymentCard(payment, cards) {
   if (payment?.enrollmentId) {
