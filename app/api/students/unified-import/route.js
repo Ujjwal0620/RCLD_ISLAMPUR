@@ -740,7 +740,7 @@ export async function POST(request) {
     }
     if (body.action === "fees") {
       if(!Array.isArray(body.rows)||body.rows.length>500)return NextResponse.json({error:"Fee chunks are limited to 500 receipts."},{status:400});
-      const t=Date.now(),r=await syncFeeRows(body.rows);
+      const t=Date.now(),r=await syncFeeRows(body.rows, () => {}, body.registrationMap || []);
       console.log("[unified-import]","fees",Number(body.chunkIndex||0)+1,Date.now()-t,{rows:body.rows.length,inserted:r.newReceiptsAdded,updated:r.existingReceiptsUpdated,skipped:r.duplicateReceiptsSkipped});
       return NextResponse.json(r);
     }
