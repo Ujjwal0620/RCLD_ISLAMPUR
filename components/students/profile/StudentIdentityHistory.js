@@ -16,15 +16,19 @@ export default function StudentIdentityHistory({ student }) {
     return all.sort((a, b) => a === current ? -1 : b === current ? 1 : b.localeCompare(a, undefined, { numeric: true }));
   }, [profile.studentCodes, profile.stCodes, profile.primaryStCode, profile.currentStCode, student.studentCodes, student.primaryStCode, student.regnNo]);
   const history = useMemo(() => {
-    const source = Array.isArray(student.enrollments) && student.enrollments.length
-      ? student.enrollments
-      : (profile.registrations || profile.enrollments || []);
+    const source = [
+      ...(Array.isArray(student.enrollments) ? student.enrollments : []),
+      ...(Array.isArray(profile.registrations) ? profile.registrations : []),
+      ...(Array.isArray(profile.enrollments) ? profile.enrollments : []),
+    ];
     const byKey = new Map();
     for (const item of source) {
       const code = String(item.stCode || "");
       const course = String(item.courseName || item.courseCode || item.course || "Previous Course (Legacy)");
       const admissionDate = item.admissionDate || item.dateOfAdmission || null;
-      const key = [code, course, admissionDate ? new Date(admissionDate).toISOString().slice(0, 10) : ""].join("|");
+      const parsedAdmissionDate = admissionDate ? new Date(admissionDate) : null;
+      const dateKey = parsedAdmissionDate && !Number.isNaN(parsedAdmissionDate.getTime()) ? parsedAdmissionDate.toISOString().slice(0, 10) : "";
+      const key = [code, course, dateKey].join("|");
       const old = byKey.get(key) || {};
       byKey.set(key, { ...old, ...item, stCode: code, course, admissionDate });
     }
