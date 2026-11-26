@@ -138,6 +138,9 @@ async function syncStudentGroups(groups = []) {
     $or: [
       { normalizedFullName: { $in: names } },
       { alternateNames: { $in: names } },
+      ...(codes.length ? [
+        { studentCodes: { $in: codes } }, { stCodes: { $in: codes } }, { primaryStCode: { $in: codes } }, { currentStCode: { $in: codes } }
+      ] : []),
       ...(registrationIds.length ? [
         { "registrations.registrationId": { $in: registrationIds } },
         { "enrollments.registrationId": { $in: registrationIds } }
@@ -229,13 +232,18 @@ async function syncStudentGroups(groups = []) {
         && resolveStudentIdentity(group, candidate).matched)
     );
     const candidates = existingMasters.filter(candidate => hasIdentityAnchor(group, candidate));
+    const incomingCodes = new Set(registrations.map(item => item.stCode));
+    const conflictingMasterCodes = existingMasters.filter(candidate => {
+      const existingCodes = new Set([...(candidate.studentCodes || []), ...(candidate.stCodes || []), candidate.primaryStCode, candidate.currentStCode].map(clean).filter(Boolean));
+      return [...incomingCodes].some(code => existingCodes.has(code)) && !resolveStudentIdentity(group, candidate).matched;
+    });
     const byLinked = linkedMasterIds.size === 1 ? existingMasters.find(item => String(item._id) === [...linkedMasterIds][0]) : null;
     let master = linkedMasterIds.size > 1 ? null : (byLinked || (candidates.length === 1 ? candidates[0] : null));
     const ambiguous = linkedMasterIds.size > 1 || (!master && candidates.length > 1);
     if (ambiguous) flaggedRows.push({ row: registrations[0]?.rowNo || "", studentId: registrations.map(item => item.registrationId).join(", "), reason: "Multiple existing student profiles matched this name; created a separate profile rather than merging uncertain identities." });
     const masterLinkedLegacy = master ? codeCandidates.filter(student => (master.legacyStudentIds || []).some(id => String(id) === String(student._id))) : [];
     const safeExistingLegacy = ambiguous ? [] : [...new Map([...existingLegacy, ...masterLinkedLegacy].map(item => [String(item._id), item])).values()];
-    const codeCollision = codeCandidates.length > safeExistingLegacy.length || registrations.some(item => item.stCodeUnique === false) || linkedMasterIds.size > 1;
+    const codeCollision = codeCandidates.length > safeExistingLegacy.length || conflictingMasterCodes.length > 0 || registrations.some(item => item.stCodeUnique === false) || linkedMasterIds.size > 1;
     if (codeCollision) flaggedRows.push({ row: registrations[0]?.rowNo || "", studentId: registrations.map(item => item.registrationId).join(", "), reason: "A registration code is reused or the existing record lacks a matching identity anchor. The code-only match was rejected; a separate profile was created." });
     const masterId = master?._id || new mongoose.Types.ObjectId();
     if (master) matchedProfiles += 1;
