@@ -9,7 +9,7 @@ import StudentFeePayment from "@/models/StudentFeePayment";
 import Course from "@/models/Course";
 import { normalizeCourseCode, resolveCourseFeeConfigFromDocument } from "@/lib/student-import/course-fee-rules";
 import { buildInstallments } from "@/lib/student-import/fee-allocation";
-import { resolveStudentIdentity, normalizeIndianPhones } from "@/lib/student-import/identity-resolution";
+import { resolveStudentIdentity } from "@/lib/student-import/identity-resolution";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -89,12 +89,6 @@ const normalizePhone = value => {
   return digits.length === 10 ? digits : "";
 };
 const validObjectId = value => mongoose.Types.ObjectId.isValid(String(value || ""));
-const sameDate = (a, b) => {
-  if (!a || !b) return false;
-  const left = new Date(a), right = new Date(b);
-  return !Number.isNaN(left.getTime()) && !Number.isNaN(right.getTime())
-    && left.toISOString().slice(0, 10) === right.toISOString().slice(0, 10);
-};
 const asDate = value => {
   if (!value) return null;
   const date = new Date(value);
@@ -388,6 +382,7 @@ async function syncStudentGroups(groups = []) {
       const courseRule = feeRuleCache.get(courseRuleKey);
       const enrollmentSet = {
         studentId: masterId,
+        masterStudentId: masterId,
         legacyStudentId: canonicalStudent?._id || null,
         stCode: registration.stCode,
         registrationId: registration.registrationId,
@@ -485,7 +480,6 @@ async function syncFeeRows(rows = []) {
   for (const item of existing) {
     const dateKey = asDate(item.paymentDate)?.toISOString().slice(0, 10) || "";
     const amountKey = Number(item.amountPaid).toFixed(2);
-    const codeRegistrations = registrationsByCode.get(String(item.stCode || ""));
     const linkedEnrollment = enrollmentByMongoId.get(String(item.enrollmentId || ""));
     const identity = String(linkedEnrollment?.stCode || item.stCode || "").toUpperCase();
     if (identity) existingByKey.set([identity, item.mrNo, dateKey, amountKey].join("|"), item);
