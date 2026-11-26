@@ -165,11 +165,6 @@ async function syncStudentGroups(groups = []) {
     for (const id of master.legacyStudentIds || []) masterByStudentId.set(String(id), master);
   }
   const courseByCode = new Map(courseDocuments.map(item => [normalizeCourseCode(item.code), item]));
-  const enrollmentByRegistration = new Map();
-  for (const item of existingEnrollments) {
-    const key = String(item.registrationId || (item.stCode ? normalizeName(item.normalizedFullName) + "_" + clean(item.stCode) : ""));
-    if (key) enrollmentByRegistration.set(key.toUpperCase(), item);
-  }
   const studentOps = [];
   const masterOps = [];
   const activeMasterOps = [];
@@ -375,11 +370,18 @@ async function syncStudentGroups(groups = []) {
     let currentEnrollmentId = null;
     for (const registration of registrations) {
       const courseCode = registration.course === "Previous Course (Legacy)" ? "PREVIOUS-LEGACY" : registration.course.toUpperCase();
-      const existingEnrollment = enrollmentByRegistration.get(registration.registrationId.toUpperCase())
-        || existingEnrollments.find(item => String(item.studentId) === String(masterId)
+      const registrationDateKey = asDate(registration.dateOfAdmission)?.toISOString().slice(0, 10) || "";
+      const existingEnrollment = existingEnrollments.find(item => {
+        const existingDateKey = asDate(item.admissionDate)?.toISOString().slice(0, 10) || "";
+        const existingCourseCode = normalizeCourseCode(item.courseCode || "LEGACY");
+        const incomingCourseCode = normalizeCourseCode(courseCode);
+        const sameCourse = existingCourseCode === incomingCourseCode
+          || (incomingCourseCode === "PREVIOUS-LEGACY" && (!item.courseCode || existingCourseCode === "LEGACY"));
+        return String(item.studentId) === String(masterId)
           && String(item.stCode || "") === registration.stCode
-          && normalizeName(item.normalizedFullName) === normalizeName(group.cleanName)
-          && (String(item.courseCode || "").toUpperCase() === courseCode || !item.courseCode || String(item.courseCode).toUpperCase() === "LEGACY"));
+          && sameCourse
+          && existingDateKey === registrationDateKey;
+      });
       const enrollmentId = existingEnrollment?._id || new mongoose.Types.ObjectId();
       if (registration.registrationId === current.registrationId) currentEnrollmentId = enrollmentId;
       const courseRuleKey = normalizeCourseCode(courseCode);
