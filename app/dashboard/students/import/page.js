@@ -12,9 +12,6 @@ const clean = value => String(value ?? "").trim();
 const headerKey = value => clean(value).toLowerCase().replace(/[^a-z0-9]/g, "");
 const normalizeName = value => normalizeStudentName(value);
 
-// Keep each request small enough to finish within the API execution window.
-const STUDENT_IMPORT_BATCH_SIZE = 50;
-const FEE_IMPORT_BATCH_SIZE = 250;
 
 function parseDate(value) {
   if (value === null || value === undefined || value === "") return null;
@@ -298,65 +295,68 @@ export default function BulkImportPage() {
 
   async function runImport() {
     if (!preview || busy || runningRef.current) return;
-    if (!window.confirm("Import " + preview.profileCount.toLocaleString("en-IN") + " unified student profiles and " + preview.feeRows.length.toLocaleString("en-IN") + " fee receipts? Existing photos, ID cards and populated profile fields will be preserved.")) return;
+    if (!window.confirm(
+      "Import the COMPLETE workbook in one operation?\n\n" +
+      preview.profileCount.toLocaleString("en-IN") + " unified student profiles\n" +
+      preview.registrationCount.toLocaleString("en-IN") + " registration codes\n" +
+      preview.feeRows.length.toLocaleString("en-IN") + " fee receipts\n\n" +
+      "The server will process internal database chunks automatically. You will not need to start separate batches."
+    )) return;
+
     runningRef.current = true;
-    setBusy(true); setError(""); setResult(null);
-    const summary = { studentsMatchedUpdated: 0, newStudentsCreated: 0, registrationsLinked: 0, newReceiptsAdded: 0, existingReceiptsUpdatedOrSkipped: 0, duplicateReceiptsSkipped: 0, existingReceiptsUpdated: 0, unmatchedRows: [...preview.warnings] };
-    const touchedStudentIds = new Set();
+    setBusy(true);
+    setError("");
+    setResult(null);
+    setProgress({
+      stage: "Sending complete workbook to server",
+      percent: 12,
+      done: 0,
+      total: preview.profileCount + preview.feeRows.length
+    });
+
     try {
-      const studentBatches = [];
-      for (let i = 0; i < preview.profiles.length; i += STUDENT_IMPORT_BATCH_SIZE) studentBatches.push(preview.profiles.slice(i, i + STUDENT_IMPORT_BATCH_SIZE));
-      let studentsSynced = 0;
-      setProgress({ stage: `Syncing Students · batch 0/${studentBatches.length}`, percent: 10, done: 0, total: preview.profiles.length });
-      for (let index = 0; index < studentBatches.length; index += 1) {
-        setProgress({ stage: `Syncing Students · batch ${index + 1}/${studentBatches.length}`, percent: 10 + Math.round((studentsSynced / Math.max(1, preview.profiles.length)) * 45), done: studentsSynced, total: preview.profiles.length });
-        const data = await postBatch({ action: "students", groups: studentBatches[index] });
-        summary.studentsMatchedUpdated += Number(data.studentsMatchedUpdated || 0);
-        summary.newStudentsCreated += Number(data.newStudentsCreated || 0);
-        summary.registrationsLinked += Number(data.registrationsLinked || 0);
-        (data.registrationMap || []).forEach(item => { if (item.studentId) touchedStudentIds.add(item.studentId); });
-        summary.unmatchedRows.push(...(data.flaggedRows || []));
-        studentsSynced += studentBatches[index].length;
-        setProgress({ stage: `Syncing Students · batch ${index + 1}/${studentBatches.length}`, percent: 10 + Math.round((studentsSynced / Math.max(1, preview.profiles.length)) * 45), done: studentsSynced, total: preview.profiles.length });
-      }
-      const feeBatches = [];
-      for (let i = 0; i < preview.feeRows.length; i += FEE_IMPORT_BATCH_SIZE) feeBatches.push(preview.feeRows.slice(i, i + FEE_IMPORT_BATCH_SIZE));
-      let feesSynced = 0;
-      setProgress({ stage: `Syncing Fees · batch 0/${feeBatches.length}`, percent: 55, done: 0, total: preview.feeRows.length });
-      for (let index = 0; index < feeBatches.length; index += 1) {
-        setProgress({ stage: `Syncing Fees · batch ${index + 1}/${feeBatches.length}`, percent: 55 + Math.round((feesSynced / Math.max(1, preview.feeRows.length)) * 40), done: feesSynced, total: preview.feeRows.length });
-        const data = await postBatch({ action: "fees", rows: feeBatches[index] });
-        summary.newReceiptsAdded += Number(data.newReceiptsAdded || 0);
-        summary.existingReceiptsUpdatedOrSkipped += Number(data.existingReceiptsUpdatedOrSkipped || 0);
-        summary.duplicateReceiptsSkipped += Number(data.duplicateReceiptsSkipped || 0);
-        summary.existingReceiptsUpdated += Number(data.existingReceiptsUpdated || 0);
-        summary.unmatchedRows.push(...(data.unmatchedRows || []));
-        feesSynced += feeBatches[index].length;
-        setProgress({ stage: `Syncing Fees · batch ${index + 1}/${feeBatches.length}`, percent: 55 + Math.round((feesSynced / Math.max(1, preview.feeRows.length)) * 40), done: feesSynced, total: preview.feeRows.length });
-      }
-      const finalizeBatches = [...touchedStudentIds].reduce((batches, id, index) => {
-        const batchIndex = Math.floor(index / 500);
-        batches[batchIndex] = batches[batchIndex] || [];
-        batches[batchIndex].push(id);
-        return batches;
-      }, []);
-      if (finalizeBatches.length) {
-        let studentsFinalized = 0;
-        setProgress({ stage: "Finalizing Fee Summaries", percent: 95, done: 0, total: touchedStudentIds.size });
-        for (let index = 0; index < finalizeBatches.length; index += 1) {
-          await postBatch({ action: "finalize", studentIds: finalizeBatches[index] });
-          studentsFinalized += finalizeBatches[index].length;
-          setProgress({ stage: "Finalizing Fee Summaries", percent: 95 + Math.round((studentsFinalized / Math.max(1, touchedStudentIds.size)) * 4), done: studentsFinalized, total: touchedStudentIds.size });
-        }
-      }
-      setProgress({ stage: "Complete", percent: 100, done: 1, total: 1 });
+      // One browser request for the entire workbook. Database writes remain
+      // internally chunked on the server to avoid oversized MongoDB operations.
+      const data = await postBatch({
+        action: "complete",
+        groups: preview.profiles,
+        rows: preview.feeRows
+      });
+
+      if (!data.complete) throw new Error("The server did not confirm that the complete import finished.");
+
+      const summary = {
+        studentsMatchedUpdated: Number(data.studentsMatchedUpdated || 0),
+        newStudentsCreated: Number(data.newStudentsCreated || 0),
+        registrationsLinked: Number(data.registrationsLinked || 0),
+        newReceiptsAdded: Number(data.newReceiptsAdded || 0),
+        existingReceiptsUpdatedOrSkipped: Number(data.existingReceiptsUpdatedOrSkipped || 0),
+        duplicateReceiptsSkipped: Number(data.duplicateReceiptsSkipped || 0),
+        existingReceiptsUpdated: Number(data.existingReceiptsUpdated || 0),
+        unmatchedRows: [...preview.warnings, ...(data.unmatchedRows || [])],
+        studentProfilesProcessed: Number(data.studentProfilesProcessed || 0),
+        feeRowsProcessed: Number(data.feeRowsProcessed || 0),
+        studentsFinalized: Number(data.studentsFinalized || 0),
+        enrollmentsFinalized: Number(data.enrollmentsFinalized || 0)
+      };
+
+      setProgress({
+        stage: "Complete",
+        percent: 100,
+        done: summary.studentProfilesProcessed + summary.feeRowsProcessed,
+        total: summary.studentProfilesProcessed + summary.feeRowsProcessed
+      });
       setResult(summary);
       setSummaryOpen(true);
       setPreview(null);
-      notify("Unified student and fee import completed.", "success");
+      notify("Complete workbook import finished successfully.", "success");
       invalidate(["lookup:", "students:", "student-detail:", "student-fees:", "dashboard-stats", "batches:"]);
     } catch (err) {
-      setError(err.message || "The import stopped before completion. Re-upload is safe; already written batches will be skipped on retry.");
+      setError(
+        (err.message || "The complete workbook import failed.") +
+        " You can retry the same workbook; the import is designed to skip or repair records already written."
+      );
+      setProgress({ stage: "Import failed", percent: 12, done: 0, total: 0 });
       notify(err.message || "Unified import failed.", "error");
     } finally {
       runningRef.current = false;
