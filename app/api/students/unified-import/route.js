@@ -35,13 +35,13 @@ async function ensureReceiptIndex() {
       const duplicateGroups = await StudentFeePayment.collection.aggregate([
         { $match: {
           importBatchKey: "UNIFIED_WORKBOOK_IMPORT",
-          registrationId: { $type: "string", $gt: "" },
+          stCode: { $type: "string", $gt: "" },
           mrNo: { $type: "string", $gt: "" },
           paymentDate: { $type: "date" },
           amountPaid: { $type: "number" }
         } },
         { $group: {
-          _id: { registrationId: "$registrationId", mrNo: "$mrNo", paymentDate: "$paymentDate", amountPaid: "$amountPaid" },
+          _id: { stCode: "$stCode", mrNo: "$mrNo", paymentDate: "$paymentDate", amountPaid: "$amountPaid" },
           ids: { $push: "$_id" },
           count: { $sum: 1 }
         } },
@@ -55,13 +55,13 @@ async function ensureReceiptIndex() {
         );
       }
       await StudentFeePayment.collection.createIndex(
-        { registrationId: 1, mrNo: 1, paymentDate: 1, amountPaid: 1 },
+        { stCode: 1, mrNo: 1, paymentDate: 1, amountPaid: 1 },
         {
           unique: true,
-          name: "registration_receipt_date_amount_unique",
+          name: "stcode_receipt_date_amount_unique",
           partialFilterExpression: {
             importBatchKey: "UNIFIED_WORKBOOK_IMPORT",
-            registrationId: { $type: "string", $gt: "" },
+            stCode: { $type: "string", $gt: "" },
             mrNo: { $type: "string", $gt: "" },
             paymentDate: { $type: "date" },
             amountPaid: { $type: "number" }
@@ -473,7 +473,7 @@ async function syncFeeRows(rows = []) {
     const amountKey = Number(item.amountPaid).toFixed(2);
     const codeRegistrations = registrationsByCode.get(String(item.stCode || ""));
     const linkedEnrollment = enrollmentByMongoId.get(String(item.enrollmentId || ""));
-    const identity = String(linkedEnrollment?.registrationId || item.registrationId || item.stNameKey || (codeRegistrations?.size === 1 ? [...codeRegistrations][0] : "")).toUpperCase();
+    const identity = String(linkedEnrollment?.stCode || item.stCode || "").toUpperCase();
     if (identity) existingByKey.set([identity, item.mrNo, dateKey, amountKey].join("|"), item);
     const looseKey = [String(item.stCode || ""), item.mrNo, dateKey, amountKey].join("|");
     if (!existingByLooseKey.has(looseKey)) existingByLooseKey.set(looseKey, item);
@@ -492,7 +492,7 @@ async function syncFeeRows(rows = []) {
       unmatchedRows.push({ row: row.rowNo, sheet: row.sourceSheet || "", studentId: registrationId || row.stCode || "", stCode: row.stCode || "", name: row.cleanName || "", course: row.course || "", mrNo, paymentDate: row.paymentDate || "", amountPaid: row.amountPaid ?? "", reason: !enrollment ? "No matching registration/enrollment was found." : "Missing or invalid receipt number, date, or amount." });
       continue;
     }
-    const key = [registrationId, mrNo, paymentDate.toISOString().slice(0, 10), amountPaid.toFixed(2)].join("|");
+    const key = [clean(enrollment.stCode), mrNo, paymentDate.toISOString().slice(0, 10), amountPaid.toFixed(2)].join("|");
     const priorReceipt = existingByKey.get(key);
     if (priorReceipt) {
       const courseCode = clean(enrollment.courseCode || row.course).toUpperCase();
@@ -501,6 +501,7 @@ async function syncFeeRows(rows = []) {
       if (!priorReceipt.registrationId || (linkedToThisEnrollment && String(priorReceipt.registrationId).toUpperCase() !== registrationId.toUpperCase())) repair.registrationId = registrationId;
       if (!priorReceipt.stNameKey || (linkedToThisEnrollment && String(priorReceipt.stNameKey).toUpperCase() !== registrationId.toUpperCase())) repair.stNameKey = registrationId;
       if (!priorReceipt.studentId || String(priorReceipt.studentId) !== String(enrollment.studentId)) repair.studentId = enrollment.studentId;
+      if (!priorReceipt.masterStudentId || String(priorReceipt.masterStudentId) !== String(enrollment.studentId)) repair.masterStudentId = enrollment.studentId;
       if (!priorReceipt.enrollmentId || String(priorReceipt.enrollmentId) !== String(enrollment._id)) repair.enrollmentId = enrollment._id;
       if (!priorReceipt.courseCode || (linkedToThisEnrollment && String(priorReceipt.courseCode).toUpperCase() !== courseCode)) repair.courseCode = courseCode;
       if (!priorReceipt.stCode || (linkedToThisEnrollment && String(priorReceipt.stCode) !== String(enrollment.stCode))) repair.stCode = enrollment.stCode;
@@ -522,7 +523,7 @@ async function syncFeeRows(rows = []) {
     operations.push({ updateOne: {
       filter: { registrationId, mrNo, paymentDate, amountPaid },
       update: {
-        $set: { studentId: enrollment.studentId, enrollmentId: enrollment._id, stCode: enrollment.stCode, registrationId, courseCode },
+        $set: { studentId: enrollment.studentId, masterStudentId: enrollment.studentId, enrollmentId: enrollment._id, stCode: enrollment.stCode, registrationId, courseCode },
         $setOnInsert: { mrNo, paymentDate, amountPaid, rawPaymentDate: paymentDate, sourceSheet: clean(row.sourceSheet), sourceRowNo: Number(row.rowNo || 0), importBatchKey: "UNIFIED_WORKBOOK_IMPORT", stNameKey: registrationId, allocations: [], importWarnings: [] }
       },
       upsert: true
