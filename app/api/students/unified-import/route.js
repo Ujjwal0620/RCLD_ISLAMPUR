@@ -33,10 +33,6 @@ async function ensureReceiptIndex() {
       for (const legacy of [...legacyIndexes, ...oldRegistrationIndexes]) {
         await StudentFeePayment.collection.dropIndex(legacy.name);
       }
-      await StudentFeePayment.collection.updateMany(
-        { importBatchKey: "UNIFIED_WORKBOOK_IMPORT", masterStudentId: { $exists: false }, studentId: { $type: "objectId" } },
-        [{ $set: { masterStudentId: "$studentId" } }]
-      );
       const duplicateGroups = await StudentFeePayment.collection.aggregate([
         { $match: {
           importBatchKey: "UNIFIED_WORKBOOK_IMPORT",
