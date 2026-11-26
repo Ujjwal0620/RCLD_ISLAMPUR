@@ -510,12 +510,25 @@ async function syncFeeRows(rows = []) {
   for (const row of rows) {
     const registrationId = clean(row.registrationId);
     const enrollmentCandidates = enrollmentById.get(registrationId) || [];
-    const enrollment = enrollmentCandidates.length === 1 ? enrollmentCandidates[0] : null;
     const paymentDate = asDate(row.paymentDate);
+    let enrollment = enrollmentCandidates.length === 1 ? enrollmentCandidates[0] : null;
+    if (!enrollment && enrollmentCandidates.length > 1) {
+      const masterIds = new Set(enrollmentCandidates.map(item => String(item.studentId)));
+      if (masterIds.size === 1 && paymentDate) {
+        const eligible = enrollmentCandidates
+          .filter(item => asDate(item.admissionDate) && asDate(item.admissionDate) <= paymentDate)
+          .sort((a, b) => asDate(b.admissionDate).getTime() - asDate(a.admissionDate).getTime());
+        if (eligible.length) {
+          const latestDate = asDate(eligible[0].admissionDate).toISOString().slice(0, 10);
+          const sameAdmissionDate = eligible.filter(item => asDate(item.admissionDate).toISOString().slice(0, 10) === latestDate);
+          if (sameAdmissionDate.length === 1) enrollment = sameAdmissionDate[0];
+        }
+      }
+    }
     const amountPaid = Number(row.amountPaid);
     const mrNo = clean(row.mrNo);
     if (!registrationId || !enrollment || !paymentDate || !mrNo || !Number.isFinite(amountPaid) || amountPaid < 0) {
-      unmatchedRows.push({ row: row.rowNo, sheet: row.sourceSheet || "", studentId: registrationId || row.stCode || "", stCode: row.stCode || "", name: row.cleanName || "", course: row.course || "", mrNo, paymentDate: row.paymentDate || "", amountPaid: row.amountPaid ?? "", reason: enrollmentCandidates.length > 1 ? "Registration identity is shared by multiple Master Students; fee row was not linked automatically." : !enrollment ? "No matching registration/enrollment was found." : "Missing or invalid receipt number, date, or amount." });
+      unmatchedRows.push({ row: row.rowNo, sheet: row.sourceSheet || "", studentId: registrationId || row.stCode || "", stCode: row.stCode || "", name: row.cleanName || "", course: row.course || "", mrNo, paymentDate: row.paymentDate || "", amountPaid: row.amountPaid ?? "", reason: enrollmentCandidates.length > 1 ? "Registration identity maps to multiple Master Students or ambiguous admission/course periods; fee row was not linked automatically." : !enrollment ? "No matching registration/enrollment was found." : "Missing or invalid receipt number, date, or amount." });
       continue;
     }
     const key = [clean(enrollment.stCode), mrNo, paymentDate.toISOString().slice(0, 10), amountPaid.toFixed(2)].join("|");
