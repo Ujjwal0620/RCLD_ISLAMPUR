@@ -566,7 +566,7 @@ async function syncFeeRows(rows = []) {
       if (!priorReceipt.masterStudentId || String(priorReceipt.masterStudentId) !== String(enrollment.studentId)) repair.masterStudentId = enrollment.studentId;
       if (!priorReceipt.enrollmentId || String(priorReceipt.enrollmentId) !== String(enrollment._id)) repair.enrollmentId = enrollment._id;
       if (!priorReceipt.courseCode || (linkedToThisEnrollment && String(priorReceipt.courseCode).toUpperCase() !== courseCode)) repair.courseCode = courseCode;
-      if (!priorReceipt.course || (linkedToThisEnrollment && String(priorReceipt.course) !== String(enrollment.courseName || row.course || ""))) repair.course = enrollment.courseName || row.course || "";
+      if (!priorReceipt.course || (linkedToThisEnrollment && String(priorReceipt.course) !== String(enrollment.course || enrollment.courseName || row.course || ""))) repair.course = enrollment.course || enrollment.courseName || row.course || "";
       if (!priorReceipt.stCode || (linkedToThisEnrollment && String(priorReceipt.stCode) !== String(enrollment.stCode))) repair.stCode = enrollment.stCode;
       if (Object.keys(repair).length) {
         operations.push({ updateOne: { filter: { _id: priorReceipt._id }, update: { $set: repair } } });
@@ -590,7 +590,7 @@ async function syncFeeRows(rows = []) {
     operations.push({ updateOne: {
       filter: { registrationId, mrNo, paymentDate, amountPaid },
       update: {
-        $set: { studentId: enrollment.studentId, masterStudentId: enrollment.studentId, enrollmentId: enrollment._id, stCode: enrollment.stCode, registrationId, courseCode, course: enrollment.courseName || row.course || "" },
+        $set: { studentId: enrollment.studentId, masterStudentId: enrollment.studentId, enrollmentId: enrollment._id, stCode: enrollment.stCode, registrationId, courseCode, course: enrollment.course || enrollment.courseName || row.course || "" },
         $setOnInsert: { mrNo, paymentDate, amountPaid, rawPaymentDate: paymentDate, sourceSheet: clean(row.sourceSheet), sourceRowNo: Number(row.rowNo || 0), importBatchKey: "UNIFIED_WORKBOOK_IMPORT", stNameKey: registrationId, allocations: [], importWarnings: [] }
       },
       upsert: true
