@@ -92,6 +92,14 @@ export default function StudentFeeWorkspace({
     })
     .sort((a, b) => new Date(a.paymentDate || a.rawPaymentDate || 0).getTime() - new Date(b.paymentDate || b.rawPaymentDate || 0).getTime()),
   [paymentHistory, selectedCode, codeCards]);
+  const courseSubtotals = useMemo(() => {
+    const totals = new Map();
+    for (const payment of paymentHistory) {
+      const course = String(payment.courseName || payment.course || payment.courseCode || "Previous Course (Legacy)");
+      totals.set(course, (totals.get(course) || 0) + Number(payment.amountPaid ?? payment.amount ?? 0));
+    }
+    return [...totals.entries()].sort((a, b) => b[1] - a[1]);
+  }, [paymentHistory]);
   const paymentRows = useMemo(() => visibleRows.map(payment => {
     const paymentId = String(payment.registrationId || payment.stNameKey || "").toUpperCase();
     const matchedCard = codeCards.find(item => String(item.registrationId || "").toUpperCase() === paymentId)
@@ -152,6 +160,12 @@ export default function StudentFeeWorkspace({
       </div>
 
       <div className="student-code-switcher" style={{ display: "flex", flexWrap: "wrap", gap: 10, margin: "16px 0" }}>
+        <label style={{ display: "grid", gap: 5, minWidth: 230, fontSize: 12, fontWeight: 700 }}>Filter fee ledger by code
+          <select value={selectedCode} onChange={event => setSelectedCodeState(event.target.value)} style={{ minHeight: 40, padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border,#dbe1ea)", background: "var(--surface,#fff)", color: "inherit" }}>
+            <option value="ALL">All Codes</option>
+            {codeCards.map(item => <option key={item.registrationId} value={item.registrationId}>#{item.stCode} · {item.course || item.courseCode || "Previous Course"}</option>)}
+          </select>
+        </label>
         <button type="button" className={selectedCode === "ALL" ? "primary-btn" : "ghost-btn"} onClick={() => setSelectedCodeState("ALL")} aria-pressed={selectedCode === "ALL"}>All Codes</button>
         {codeCards.map(item => {
           const id = String(item.registrationId);
@@ -176,6 +190,11 @@ export default function StudentFeeWorkspace({
         <div className="fee-overview-card fee-due"><span>Balance Due</span><strong>{selectedBalance === null ? "—" : money(selectedBalance)}</strong></div>
       </div>
 
+      {selectedCode === "ALL" && courseSubtotals.length > 0 && <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 14 }}>
+        {courseSubtotals.map(([course, total]) => <div key={course} style={{ border: "1px solid var(--border,#e3e7ef)", borderRadius: 10, padding: "9px 12px", minWidth: 170 }}>
+          <small style={{ display: "block", color: "var(--text-muted,#748094)" }}>{course} · total paid</small><strong>{money(total)}</strong>
+        </div>)}
+      </div>}
       <section className="student-payment-history-ledger" style={{ marginTop: 20, padding: 16, border: "1px solid var(--border,#e3e7ef)", borderRadius: 12 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
           <div><h3 style={{ margin: 0 }}>Date-wise Payment Ledger</h3><small>Sorted chronologically by D_O_P · {selectedCode === "ALL" ? "all linked student codes" : selectedCode}</small></div>
