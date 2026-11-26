@@ -28,10 +28,6 @@ const StudentFeePaymentSchema = new mongoose.Schema({
   importBatchKey: { type: String, default: "" }
 }, { timestamps: true, collection: "student_fee_payments" });
 
-StudentFeePaymentSchema.index(
-  { registrationId: 1, mrNo: 1, paymentDate: 1, amountPaid: 1 },
-  { unique: true, name: "registration_receipt_date_amount_unique", partialFilterExpression: { importBatchKey: "UNIFIED_WORKBOOK_IMPORT", registrationId: { $type: "string", $gt: "" }, mrNo: { $type: "string", $gt: "" }, paymentDate: { $type: "date" }, amountPaid: { $type: "number" } } }
-);
 StudentFeePaymentSchema.index({ studentId: 1, enrollmentId: 1, mrNo: 1, paymentDate: 1, amountPaid: 1 }, { name: "student_course_receipt_lookup" });
 StudentFeePaymentSchema.index(
   { stCode: 1, mrNo: 1, paymentDate: 1, amountPaid: 1 },
