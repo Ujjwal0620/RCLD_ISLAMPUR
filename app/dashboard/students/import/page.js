@@ -12,6 +12,10 @@ const clean = value => String(value ?? "").trim();
 const headerKey = value => clean(value).toLowerCase().replace(/[^a-z0-9]/g, "");
 const normalizeName = value => normalizeStudentName(value);
 
+// Keep each request small enough to finish within the API execution window.
+const STUDENT_IMPORT_BATCH_SIZE = 50;
+const FEE_IMPORT_BATCH_SIZE = 250;
+
 function parseDate(value) {
   if (value === null || value === undefined || value === "") return null;
   let year, month, day;
@@ -301,10 +305,11 @@ export default function BulkImportPage() {
     const touchedStudentIds = new Set();
     try {
       const studentBatches = [];
-      for (let i = 0; i < preview.profiles.length; i += 500) studentBatches.push(preview.profiles.slice(i, i + 500));
+      for (let i = 0; i < preview.profiles.length; i += STUDENT_IMPORT_BATCH_SIZE) studentBatches.push(preview.profiles.slice(i, i + STUDENT_IMPORT_BATCH_SIZE));
       let studentsSynced = 0;
-      setProgress({ stage: "Syncing Students", percent: 10, done: 0, total: preview.profiles.length });
+      setProgress({ stage: `Syncing Students · batch 0/${studentBatches.length}`, percent: 10, done: 0, total: preview.profiles.length });
       for (let index = 0; index < studentBatches.length; index += 1) {
+        setProgress({ stage: `Syncing Students · batch ${index + 1}/${studentBatches.length}`, percent: 10 + Math.round((studentsSynced / Math.max(1, preview.profiles.length)) * 45), done: studentsSynced, total: preview.profiles.length });
         const data = await postBatch({ action: "students", groups: studentBatches[index] });
         summary.studentsMatchedUpdated += Number(data.studentsMatchedUpdated || 0);
         summary.newStudentsCreated += Number(data.newStudentsCreated || 0);
@@ -312,13 +317,14 @@ export default function BulkImportPage() {
         (data.registrationMap || []).forEach(item => { if (item.studentId) touchedStudentIds.add(item.studentId); });
         summary.unmatchedRows.push(...(data.flaggedRows || []));
         studentsSynced += studentBatches[index].length;
-        setProgress({ stage: "Syncing Students", percent: 10 + Math.round((studentsSynced / Math.max(1, preview.profiles.length)) * 45), done: studentsSynced, total: preview.profiles.length });
+        setProgress({ stage: `Syncing Students · batch ${index + 1}/${studentBatches.length}`, percent: 10 + Math.round((studentsSynced / Math.max(1, preview.profiles.length)) * 45), done: studentsSynced, total: preview.profiles.length });
       }
       const feeBatches = [];
-      for (let i = 0; i < preview.feeRows.length; i += 1000) feeBatches.push(preview.feeRows.slice(i, i + 1000));
+      for (let i = 0; i < preview.feeRows.length; i += FEE_IMPORT_BATCH_SIZE) feeBatches.push(preview.feeRows.slice(i, i + FEE_IMPORT_BATCH_SIZE));
       let feesSynced = 0;
-      setProgress({ stage: "Syncing Fees", percent: 55, done: 0, total: preview.feeRows.length });
+      setProgress({ stage: `Syncing Fees · batch 0/${feeBatches.length}`, percent: 55, done: 0, total: preview.feeRows.length });
       for (let index = 0; index < feeBatches.length; index += 1) {
+        setProgress({ stage: `Syncing Fees · batch ${index + 1}/${feeBatches.length}`, percent: 55 + Math.round((feesSynced / Math.max(1, preview.feeRows.length)) * 40), done: feesSynced, total: preview.feeRows.length });
         const data = await postBatch({ action: "fees", rows: feeBatches[index] });
         summary.newReceiptsAdded += Number(data.newReceiptsAdded || 0);
         summary.existingReceiptsUpdatedOrSkipped += Number(data.existingReceiptsUpdatedOrSkipped || 0);
@@ -326,7 +332,7 @@ export default function BulkImportPage() {
         summary.existingReceiptsUpdated += Number(data.existingReceiptsUpdated || 0);
         summary.unmatchedRows.push(...(data.unmatchedRows || []));
         feesSynced += feeBatches[index].length;
-        setProgress({ stage: "Syncing Fees", percent: 55 + Math.round((feesSynced / Math.max(1, preview.feeRows.length)) * 40), done: feesSynced, total: preview.feeRows.length });
+        setProgress({ stage: `Syncing Fees · batch ${index + 1}/${feeBatches.length}`, percent: 55 + Math.round((feesSynced / Math.max(1, preview.feeRows.length)) * 40), done: feesSynced, total: preview.feeRows.length });
       }
       const finalizeBatches = [...touchedStudentIds].reduce((batches, id, index) => {
         const batchIndex = Math.floor(index / 500);
