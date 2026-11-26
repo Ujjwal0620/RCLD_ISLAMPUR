@@ -276,7 +276,7 @@ export default function BulkImportPage() {
     if (!window.confirm("Import " + preview.profileCount.toLocaleString("en-IN") + " unified student profiles and " + preview.feeRows.length.toLocaleString("en-IN") + " fee receipts? Existing photos, ID cards and populated profile fields will be preserved.")) return;
     runningRef.current = true;
     setBusy(true); setError(""); setResult(null);
-    const summary = { studentsMatchedUpdated: 0, newStudentsCreated: 0, registrationsLinked: 0, newReceiptsAdded: 0, existingReceiptsUpdatedOrSkipped: 0, unmatchedRows: [...preview.warnings] };
+    const summary = { studentsMatchedUpdated: 0, newStudentsCreated: 0, registrationsLinked: 0, newReceiptsAdded: 0, existingReceiptsUpdatedOrSkipped: 0, duplicateReceiptsSkipped: 0, existingReceiptsUpdated: 0, unmatchedRows: [...preview.warnings] };
     const touchedStudentIds = new Set();
     try {
       const studentBatches = [];
@@ -301,6 +301,8 @@ export default function BulkImportPage() {
         const data = await postBatch({ action: "fees", rows: feeBatches[index] });
         summary.newReceiptsAdded += Number(data.newReceiptsAdded || 0);
         summary.existingReceiptsUpdatedOrSkipped += Number(data.existingReceiptsUpdatedOrSkipped || 0);
+        summary.duplicateReceiptsSkipped += Number(data.duplicateReceiptsSkipped || 0);
+        summary.existingReceiptsUpdated += Number(data.existingReceiptsUpdated || 0);
         summary.unmatchedRows.push(...(data.unmatchedRows || []));
         feesSynced += feeBatches[index].length;
         setProgress({ stage: "Syncing Fees", percent: 55 + Math.round((feesSynced / Math.max(1, preview.feeRows.length)) * 40), done: feesSynced, total: preview.feeRows.length });
@@ -334,11 +336,17 @@ export default function BulkImportPage() {
     }
   }
 
-  function downloadWarnings() {
+  function downloadWarnings(format = "csv") {
     if (!result?.unmatchedRows?.length) return;
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(result.unmatchedRows), "Review Rows");
-    XLSX.writeFile(workbook, "RCLD_Unmapped_Import_Rows.xlsx");
+    const isJson = format === "json";
+    const content = isJson ? JSON.stringify(result.unmatchedRows, null, 2) : XLSX.utils.sheet_to_csv(XLSX.utils.json_to_sheet(result.unmatchedRows));
+    const blob = new Blob([content], { type: isJson ? "application/json;charset=utf-8" : "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = isJson ? "RCLD_Student_Import_Review.json" : "RCLD_Student_Import_Review.csv";
+    anchor.click();
+    URL.revokeObjectURL(url);
   }
 
   return (
