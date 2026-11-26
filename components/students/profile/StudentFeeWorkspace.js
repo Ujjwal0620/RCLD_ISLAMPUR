@@ -208,7 +208,7 @@ export default function StudentFeeWorkspace({
         <button type="button" className={selectedCode === "ALL" ? "primary-btn" : "ghost-btn"} onClick={() => setSelectedCodeState("ALL")} aria-pressed={selectedCode === "ALL"}>All Codes</button>
         {codeCards.map(item => {
           const id = item.filterKey;
-          const current = id === enrollmentFilterKey(currentEnrollment || {}) || Boolean(item.isCurrent) || String(item.stCode) === currentStCode;
+          const current = id === enrollmentFilterKey(currentEnrollment || {}) || Boolean(item.isCurrent && String(item.stCode) === currentStCode);
           const active = selectedCode === id;
           return <button key={id} type="button" onClick={() => setSelectedCodeState(id)}
             className={active ? "primary-btn" : "ghost-btn"} aria-pressed={active}
