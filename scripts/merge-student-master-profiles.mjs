@@ -203,6 +203,16 @@ async function main() {
     return;
   }
 
+  // Remove the previous unique indexes before re-linking records; they encoded the old identity rules.
+  const oldEnrollmentIndexes = await enrollmentCollection.indexes();
+  for (const oldName of ["student_registration_identity_unique", "student_course_enrollment_unique"]) {
+    const oldIndex = oldEnrollmentIndexes.find(index => index.name === oldName && index.unique);
+    if (oldIndex) await enrollmentCollection.dropIndex(oldIndex.name);
+  }
+  const oldPaymentIndexes = await paymentsCollection.indexes();
+  const oldCodeOnlyReceiptIndex = oldPaymentIndexes.find(index => index.name === "stcode_receipt_date_amount_unique");
+  if (oldCodeOnlyReceiptIndex) await paymentsCollection.dropIndex(oldCodeOnlyReceiptIndex.name);
+
   for (const group of mergeGroups) {
     const canonical = group.canonical;
     const canonicalId = canonical._id;
@@ -494,11 +504,6 @@ async function main() {
     })), { ordered: false });
   }
 
-  const enrollmentIndexes = await enrollmentCollection.indexes();
-  for (const oldName of ["student_registration_identity_unique", "student_course_enrollment_unique"]) {
-    const oldIndex = enrollmentIndexes.find(index => index.name === oldName && index.unique);
-    if (oldIndex) await enrollmentCollection.dropIndex(oldIndex.name);
-  }
   await enrollmentCollection.createIndex(
     { studentId: 1, stCode: 1, courseCode: 1, admissionDate: 1 },
     {
