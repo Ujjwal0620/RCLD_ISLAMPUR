@@ -155,7 +155,12 @@ async function main() {
     duplicateMasterProfilesToMarkMerged: duplicateMasterIds.length,
     studentEnrollmentRecordsToInspect: enrollmentDocs.length,
     feeRecordsToRelink: duplicateMasterIds.length ? await paymentsCollection.countDocuments({
-      $or: [{ studentId: { $in: duplicateMasterIds } }, { masterStudentId: { $in: duplicateMasterIds } }, { enrollmentId: { $in: enrollmentIds } }]
+      $or: [
+        { studentId: { $in: duplicateMasterIds } },
+        { masterStudentId: { $in: duplicateMasterIds } },
+        { enrollmentId: { $in: enrollmentIds } },
+        { studentId: { $in: [...legacyIdsByCanonical.values()].flat().map(id => new mongoose.Types.ObjectId(id)) } }
+      ]
     }) : 0,
     idCardLogsToLink: duplicateMasterIds.length ? await idCardsCollection.countDocuments({
       studentId: { $in: [...legacyIdsByCanonical.values()].flat().map(id => new mongoose.Types.ObjectId(id)) }
@@ -263,6 +268,10 @@ async function main() {
 
     const legacyIds = (update.$set.legacyStudentIds || []).map(id => id instanceof mongoose.Types.ObjectId ? id : new mongoose.Types.ObjectId(id));
     if (legacyIds.length) {
+      // Some older payment imports still stored a legacy Student ObjectId in studentId.
+      await paymentsCollection.updateMany({ studentId: { $in: legacyIds } }, {
+        $set: { studentId: canonicalId, masterStudentId: canonicalId }
+      });
       // Keep each ID-card log's legacy Student reference; add the durable master link.
       await idCardsCollection.updateMany({ studentId: { $in: legacyIds } }, { $set: { masterStudentId: canonicalId } });
     }
