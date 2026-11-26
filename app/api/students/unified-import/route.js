@@ -9,7 +9,7 @@ import StudentFeePayment from "@/models/StudentFeePayment";
 import Course from "@/models/Course";
 import { normalizeCourseCode, resolveCourseFeeConfigFromDocument } from "@/lib/student-import/course-fee-rules";
 import { buildInstallments } from "@/lib/student-import/fee-allocation";
-import { resolveStudentIdentity } from "@/lib/student-import/identity-resolution.mjs";
+import { resolveStudentIdentity, normalizeStudentName, normalizeIndianPhones } from "@/lib/student-import/identity-resolution.mjs";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -336,15 +336,15 @@ async function syncStudentGroups(groups = []) {
     const effectiveCurrentDate = asDate(current.dateOfAdmission || current.earliestPaymentDate);
     const shouldPromote = !master || !existingCurrentDate || Boolean(effectiveCurrentDate && effectiveCurrentDate >= existingCurrentDate);
     const currentIncoming = registrations.find(item => item.registrationId === current.registrationId) || current;
-    const incomingPhones = [...new Set([...(shouldPromote ? (currentIncoming.phones || []) : []), ...(master?.phoneNumbers || []), ...(group.phones || [])])];
+    const incomingPhones = normalizeIndianPhones([...(shouldPromote ? (currentIncoming.phones || []) : []), ...(master?.phoneNumbers || []), ...(master?.phones || []), ...(group.phones || [])]);
     const masterSet = {
       fullName: master?.fullName || displayName(group.cleanName),
       normalizedFullName: normalizeName(group.cleanName),
       legacyStudentIds: legacyIds.map(id => validObjectId(id) ? new mongoose.Types.ObjectId(id) : id),
       primaryStCode: current.stCode || master?.primaryStCode || "",
       studentCodes: [...new Set([...(master?.studentCodes || []), ...(master?.stCodes || []), ...mergedRegistrations.map(item => item.stCode)].filter(Boolean))],
-      alternateNames: [...new Set([...(master?.alternateNames || []), master?.fullName || "", group.cleanName || "", ...(group.alternateNames || [])].map(displayName).filter(Boolean))],
-      phones: [...new Set([...(master?.phones || []), ...(master?.phoneNumbers || []), ...incomingPhones, ...(group.phones || [])])],
+      alternateNames: [...new Set([...(master?.alternateNames || []), master?.fullName || "", group.cleanName || "", ...(group.alternateNames || [])].map(normalizeStudentName).filter(Boolean))],
+      phones: incomingPhones,
       stCodes: [...new Set([...(master?.stCodes || []), ...mergedRegistrations.map(item => item.stCode)].filter(Boolean))],
       registrations: mergedRegistrations,
       enrollments: mergedRegistrations,
