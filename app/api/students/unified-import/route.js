@@ -9,7 +9,7 @@ import StudentFeePayment from "@/models/StudentFeePayment";
 import Course from "@/models/Course";
 import { normalizeCourseCode, resolveCourseFeeConfigFromDocument } from "@/lib/student-import/course-fee-rules";
 import { buildInstallments } from "@/lib/student-import/fee-allocation";
-import { resolveStudentIdentity } from "@/lib/student-import/identity-resolution";
+import { resolveStudentIdentity } from "@/lib/student-import/identity-resolution.mjs";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
