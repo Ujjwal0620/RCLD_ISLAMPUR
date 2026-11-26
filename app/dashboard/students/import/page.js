@@ -268,7 +268,7 @@ async function postBatch(body, onProgress = () => {}) {
     if (!line.trim()) return;
     const event = JSON.parse(line);
     if (event.type === "progress") onProgress(event);
-    else if (event.type === "error") throw new Error(event.message || "Import failed during " + (event.phase || "processing"));
+    else if (event.type === "error") throw new Error((event.message || "Import failed") + " (phase: " + (event.phase || "processing") + ")");
     else if (event.type === "complete") completed = event;
   };
   try {
