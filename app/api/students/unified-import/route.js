@@ -154,7 +154,7 @@ async function bulkWriteChunked(model, operations, warnings, label, chunkSize = 
   }
 }
 
-async function syncStudentGroups(groups = []) {
+async function syncStudentGroups(groups = [], onPhase = () => {}) {
   if (!Array.isArray(groups) || groups.length > 500) throw new Error("Student batch must contain between 1 and 500 profile groups.");
   const allRegistrations = groups.flatMap(group => (group.registrations || []).map(item => ({
     ...item,
@@ -552,8 +552,10 @@ async function syncStudentGroups(groups = []) {
   await bulkWriteChunked(Student, studentOps, writeWarnings, "students", 500);
   await bulkWriteChunked(StudentMaster, masterOps, writeWarnings, "master-profiles", 500);
   await bulkWriteChunked(StudentMaster, activeMasterOps, writeWarnings, "active-master-links", 500);
+  onPhase("profiles");
   await bulkWriteChunked(StudentEnrollment, [...enrollmentOpsByKey.values()], writeWarnings, "enrollments", 500);
   await bulkWriteChunked(StudentEnrollment, enrollmentStatusOps, writeWarnings, "enrollment-status", 500);
+  onPhase("enrollments");
   return { studentsMatchedUpdated: matchedProfiles, newStudentsCreated: newProfiles, registrationsLinked, registrationsSeen, registrationMap: outputMap, flaggedRows, warnings: writeWarnings };
 }
 
@@ -801,9 +803,26 @@ async function runCompleteImport(groups = [], rows = [], onProgress = () => {}) 
 
   // syncStudentGroups deliberately has a bounded per-call limit. Keep those
   // implementation batches entirely on the server, hidden from the user.
-  const studentChunkSize = 250;
+  const studentChunkSize = 500;
   for (let offset = 0; offset < groups.length; offset += studentChunkSize) {
-    const result = await syncStudentGroups(groups.slice(offset, offset + studentChunkSize));
+    const chunkGroups = groups.slice(offset, offset + studentChunkSize);
+    const processedProfiles = Math.min(offset + chunkGroups.length, groups.length);
+    const processedRegistrations = groups.slice(0, processedProfiles).reduce((sum, item) => sum + (item.registrations || []).length, 0);
+    const totalRegistrations = groups.reduce((sum, item) => sum + (item.registrations || []).length, 0);
+    const result = await syncStudentGroups(chunkGroups, phase => {
+      if (phase === "profiles") onProgress({
+        percent: 10 + Math.round(processedProfiles / groups.length * 35),
+        stage: "Syncing Master Student Profiles",
+        message: "Master profiles: " + processedProfiles.toLocaleString("en-IN") + " / " + groups.length.toLocaleString("en-IN"),
+        processed: processedProfiles, total: groups.length
+      });
+      if (phase === "enrollments") onProgress({
+        percent: 45 + Math.round(processedProfiles / groups.length * 20),
+        stage: "Syncing Student Enrollments & Registration Codes",
+        message: "Enrollments: " + processedRegistrations.toLocaleString("en-IN") + " / " + totalRegistrations.toLocaleString("en-IN"),
+        processed: processedRegistrations, total: totalRegistrations
+      });
+    });
     summary.studentsMatchedUpdated += Number(result.studentsMatchedUpdated || 0);
     summary.newStudentsCreated += Number(result.newStudentsCreated || 0);
     summary.registrationsLinked += Number(result.registrationsLinked || 0);
@@ -812,21 +831,7 @@ async function runCompleteImport(groups = [], rows = [], onProgress = () => {}) 
       if (item.studentId) touchedStudentIds.add(String(item.studentId));
     }
     summary.unmatchedRows.push(...(result.flaggedRows || []), ...(result.warnings || []));
-    const processedProfiles = Math.min(offset + studentChunkSize, groups.length);
-    onProgress({
-      percent: 10 + Math.round(processedProfiles / groups.length * 35),
-      stage: "Syncing Master Student Profiles",
-      message: "Master student profile chunk committed",
-      processed: processedProfiles, total: groups.length
-    });
-    const processedRegistrations = groups.slice(0, processedProfiles).reduce((sum, item) => sum + (item.registrations || []).length, 0);
-    const totalRegistrations = groups.reduce((sum, item) => sum + (item.registrations || []).length, 0);
-    onProgress({
-      percent: 45 + Math.round(processedProfiles / groups.length * 20),
-      stage: "Syncing Student Enrollments & Registration Codes",
-      message: "Enrollments: " + processedRegistrations.toLocaleString("en-IN") + " / " + totalRegistrations.toLocaleString("en-IN"),
-      processed: processedRegistrations, total: totalRegistrations
-    });
+
   }
 
   const feeResult = await syncFeeRows(rows, onProgress);
