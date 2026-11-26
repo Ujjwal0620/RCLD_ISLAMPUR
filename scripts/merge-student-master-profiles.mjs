@@ -214,11 +214,6 @@ async function main() {
     if ((!canonical.qualification || (latestDate && existingDate && latestDate >= existingDate)) && latest?.qualification) update.$set.qualification = latest.qualification;
     await mastersCollection.updateOne({ _id: canonicalId }, update);
 
-    // Keep every duplicate Master document for audit/history; only add a merge pointer.
-    await mastersCollection.updateMany({ _id: { $in: duplicateIds } }, {
-      $set: { mergedIntoMasterId: canonicalId, isMerged: true, mergedAt: new Date(), mergeMethod: "FOUR_TIER_IDENTITY_RESOLUTION" }
-    });
-
     const allEnrollmentRows = await enrollmentCollection.find({ studentId: { $in: [canonicalId, ...duplicateIds] } }).toArray();
     const canonicalRows = allEnrollmentRows.filter(item => String(item.studentId) === String(canonicalId));
     const canonicalByKey = new Map(canonicalRows.map(item => [registrationKey(item), item]));
@@ -271,6 +266,10 @@ async function main() {
       // Keep each ID-card log's legacy Student reference; add the durable master link.
       await idCardsCollection.updateMany({ studentId: { $in: legacyIds } }, { $set: { masterStudentId: canonicalId } });
     }
+    // Mark duplicate master records only after all dependent references have been re-linked.
+    await mastersCollection.updateMany({ _id: { $in: duplicateIds } }, {
+      $set: { mergedIntoMasterId: canonicalId, isMerged: true, mergedAt: new Date(), mergeMethod: "FOUR_TIER_IDENTITY_RESOLUTION" }
+    });
   }
 
   console.log("Non-destructive merge completed. Duplicate master/enrollment records and all legacy Student/fee/ID-card documents were retained.");
