@@ -111,6 +111,38 @@ function registrationSort(a, b) {
   return db - da || String(b.stCode).localeCompare(String(a.stCode));
 }
 
+const enrollmentUniqueKey = item => [
+  String(item.studentId || ""), clean(item.stCode),
+  normalizeName(item.normalizedFullName), normalizeCourseCode(item.courseCode)
+].join("|");
+
+async function bulkWriteChunked(model, operations, warnings, label, chunkSize = 500) {
+  for (let offset = 0; offset < operations.length; offset += chunkSize) {
+    const chunk = operations.slice(offset, offset + chunkSize);
+    try {
+      await model.bulkWrite(chunk, { ordered: false });
+    } catch (error) {
+      const writeErrors = error.writeErrors || error.result?.writeErrors || error.result?.getWriteErrors?.() || [];
+      const duplicateOnly = error.code === 11000 || (writeErrors.length > 0 && writeErrors.every(item => item.code === 11000));
+      if (!duplicateOnly) throw error;
+      const indexes = [...new Set(writeErrors.map(item => Number(item.index)).filter(Number.isInteger))];
+      for (const index of (indexes.length ? indexes : chunk.map((_, i) => i))) {
+        const operation = chunk[index];
+        if (!operation) continue;
+        try {
+          await model.bulkWrite([operation], { ordered: false });
+        } catch (retryError) {
+          warnings.push({
+            phase: label, index: offset + index,
+            code: retryError.code || retryError.writeErrors?.[0]?.code || null,
+            reason: retryError.message || "Duplicate-key write could not be reconciled."
+          });
+        }
+      }
+    }
+  }
+}
+
 async function syncStudentGroups(groups = []) {
   if (!Array.isArray(groups) || groups.length > 500) throw new Error("Student batch must contain between 1 and 500 profile groups.");
   const allRegistrations = groups.flatMap(group => (group.registrations || []).map(item => ({
@@ -156,6 +188,11 @@ async function syncStudentGroups(groups = []) {
       ...(existingStudentIds.length ? [{ legacyStudentIds: { $in: existingStudentIds } }] : [])
     ]
   }).lean();
+
+  const enrollmentByUniqueKey = new Map();
+  for (const enrollment of existingEnrollments) {
+    enrollmentByUniqueKey.set(enrollmentUniqueKey(enrollment), enrollment);
+  }
 
   const studentByCode = new Map();
   for (const student of existingStudents) {
@@ -385,18 +422,20 @@ async function syncStudentGroups(groups = []) {
     for (const registration of registrations) {
       const courseCode = registration.course === "Previous Course (Legacy)" ? "PREVIOUS-LEGACY" : registration.course.toUpperCase();
       const registrationDateKey = asDate(registration.dateOfAdmission)?.toISOString().slice(0, 10) || "";
-      const existingEnrollment = existingEnrollments.find(item => {
-        const existingDateKey = asDate(item.admissionDate)?.toISOString().slice(0, 10) || "";
-        const existingCourseCode = normalizeCourseCode(item.courseCode || "LEGACY");
-        const incomingCourseCode = normalizeCourseCode(courseCode);
-        const sameCourse = existingCourseCode === incomingCourseCode
-          || (incomingCourseCode === "PREVIOUS-LEGACY" && (!item.courseCode || existingCourseCode === "LEGACY"));
-        return String(item.studentId) === String(masterId)
-          && String(item.stCode || "") === registration.stCode
-          && sameCourse
-          && existingDateKey === registrationDateKey;
+      const normalizedEnrollmentName = normalizeName(group.cleanName);
+      const targetEnrollmentKey = enrollmentUniqueKey({
+        studentId: masterId, stCode: registration.stCode,
+        normalizedFullName: normalizedEnrollmentName, courseCode
       });
+      const existingEnrollment = enrollmentByUniqueKey.get(targetEnrollmentKey) || null;
       const enrollmentId = existingEnrollment?._id || new mongoose.Types.ObjectId();
+      if (!existingEnrollment) {
+        // Make later duplicate workbook rows resolve to this same pending enrollment.
+        enrollmentByUniqueKey.set(targetEnrollmentKey, { _id: enrollmentId, ...{
+          studentId: masterId, stCode: registration.stCode,
+          normalizedFullName: normalizedEnrollmentName, courseCode
+        } });
+      }
       if (registration.registrationId === current.registrationId) currentEnrollmentId = enrollmentId;
       const courseRuleKey = normalizeCourseCode(courseCode);
       if (!feeRuleCache.has(courseRuleKey)) {
@@ -407,6 +446,7 @@ async function syncStudentGroups(groups = []) {
       }
       const courseRule = feeRuleCache.get(courseRuleKey);
       const enrollmentSet = {
+        _id: enrollmentId,
         studentId: masterId,
         masterStudentId: masterId,
         legacyStudentId: canonicalStudent?._id || null,
@@ -441,7 +481,10 @@ async function syncStudentGroups(groups = []) {
         }
       };
       if (!existingEnrollment) {
-        enrollmentOps.push({ updateOne: { filter: { _id: enrollmentId }, update: { $setOnInsert: enrollmentSet }, upsert: true } });
+        enrollmentOps.push({ updateOne: {
+          filter: { studentId: masterId, stCode: registration.stCode, normalizedFullName: normalizedEnrollmentName, courseCode },
+          update: { $setOnInsert: enrollmentSet }, upsert: true
+        } });
       } else {
         const patch = {};
         if (existingEnrollment.courseName !== registration.course) patch.courseName = registration.course;
@@ -456,7 +499,10 @@ async function syncStudentGroups(groups = []) {
         if (!existingEnrollment.rawStName && registration.rawStName) patch.rawStName = registration.rawStName;
         if (!existingEnrollment.admissionDate && registration.dateOfAdmission) patch.admissionDate = registration.dateOfAdmission;
         if (!existingEnrollment.earliestPaymentDate && registration.earliestPaymentDate) patch.earliestPaymentDate = registration.earliestPaymentDate;
-        if (Object.keys(patch).length) enrollmentOps.push({ updateOne: { filter: { _id: existingEnrollment._id }, update: { $set: patch } } });
+        if (Object.keys(patch).length) enrollmentOps.push({ updateOne: {
+          filter: { studentId: masterId, stCode: registration.stCode, normalizedFullName: normalizedEnrollmentName, courseCode },
+          update: { $set: patch }
+        } });
       }
       outputMap.push({ registrationId: registration.registrationId, stCode: registration.stCode, studentId: masterId.toString(), enrollmentId: enrollmentId.toString(), course: registration.course });
     }
@@ -473,18 +519,35 @@ async function syncStudentGroups(groups = []) {
     }
   }
 
-  if (studentOps.length) await Student.bulkWrite(studentOps, { ordered: false });
-  if (masterOps.length) await StudentMaster.bulkWrite(masterOps, { ordered: false });
-  if (activeMasterOps.length) await StudentMaster.bulkWrite(activeMasterOps, { ordered: false });
-  for (let index = 0; index < enrollmentOps.length; index += 500) {
-    await StudentEnrollment.bulkWrite(enrollmentOps.slice(index, index + 500), { ordered: false });
+  const enrollmentOpsByKey = new Map();
+  for (const operation of enrollmentOps) {
+    const filter = operation.updateOne?.filter || {};
+    const key = enrollmentUniqueKey(filter);
+    if (!filter.studentId || !filter.stCode || !filter.normalizedFullName || !filter.courseCode) {
+      flaggedRows.push({ phase: "enrollment", reason: "Skipped an enrollment operation without the complete unique key." });
+      continue;
+    }
+    const previous = enrollmentOpsByKey.get(key);
+    if (!previous) enrollmentOpsByKey.set(key, operation);
+    else {
+      const a = previous.updateOne.update || {}, b = operation.updateOne.update || {};
+      previous.updateOne.update = {
+        ...(a.$setOnInsert || b.$setOnInsert ? { $setOnInsert: { ...(a.$setOnInsert || {}), ...(b.$setOnInsert || {}) } } : {}),
+        ...(a.$set || b.$set ? { $set: { ...(a.$set || {}), ...(b.$set || {}) } } : {})
+      };
+    }
   }
-  if (enrollmentStatusOps.length) await StudentEnrollment.bulkWrite(enrollmentStatusOps, { ordered: false });
-  return { studentsMatchedUpdated: matchedProfiles, newStudentsCreated: newProfiles, registrationsLinked, registrationsSeen, registrationMap: outputMap, flaggedRows };
+  const writeWarnings = [];
+  await bulkWriteChunked(Student, studentOps, writeWarnings, "students", 500);
+  await bulkWriteChunked(StudentMaster, masterOps, writeWarnings, "master-profiles", 500);
+  await bulkWriteChunked(StudentMaster, activeMasterOps, writeWarnings, "active-master-links", 500);
+  await bulkWriteChunked(StudentEnrollment, [...enrollmentOpsByKey.values()], writeWarnings, "enrollments", 500);
+  await bulkWriteChunked(StudentEnrollment, enrollmentStatusOps, writeWarnings, "enrollment-status", 500);
+  return { studentsMatchedUpdated: matchedProfiles, newStudentsCreated: newProfiles, registrationsLinked, registrationsSeen, registrationMap: outputMap, flaggedRows, warnings: writeWarnings };
 }
 
-async function syncFeeRows(rows = []) {
-  if (!Array.isArray(rows) || rows.length > 1000) throw new Error("Fee batch must contain between 1 and 1,000 rows.");
+async function syncFeeRows(rows = [], onProgress = () => {}) {
+  if (!Array.isArray(rows) || rows.length > 20000) throw new Error("Fee import must contain between 1 and 20,000 rows.");
   await ensureReceiptIndex();
   const ids = [...new Set(rows.map(item => clean(item.registrationId)).filter(Boolean))];
   const enrollments = await StudentEnrollment.find({ registrationId: { $in: ids }, mergedIntoEnrollmentId: null }).lean();
@@ -596,27 +659,47 @@ async function syncFeeRows(rows = []) {
       upsert: true
     }});
   }
-  for (let index = 0; index < operations.length; index += 1000) {
+  for (let index = 0; index < operations.length; index += 500) {
+    const chunk = operations.slice(index, index + 500);
     try {
-      const result = await StudentFeePayment.bulkWrite(operations.slice(index, index + 1000), { ordered: false });
+      const result = await StudentFeePayment.bulkWrite(chunk, { ordered: false });
       newReceiptsAdded += Number(result.upsertedCount || 0);
     } catch (error) {
       const writeErrors = error.writeErrors || error.result?.writeErrors || [];
       const partialResult = error.result || error;
       newReceiptsAdded += Number(partialResult.upsertedCount || partialResult.nUpserted || partialResult.result?.nUpserted || 0);
-      if (!writeErrors.length && error.code !== 11000) throw error;
-      if (writeErrors.some(item => item.code !== 11000)) throw error;
-      const duplicateCount = writeErrors.length || (error.code === 11000 ? 1 : 0);
-      existingReceiptsUpdatedOrSkipped += duplicateCount;
-      duplicateReceiptsSkipped += duplicateCount;
+      const duplicateOnly = error.code === 11000 || (writeErrors.length > 0 && writeErrors.every(item => item.code === 11000));
+      if (!duplicateOnly) throw error;
+      const indexes = [...new Set(writeErrors.map(item => Number(item.index)).filter(Number.isInteger))];
+      for (const itemIndex of (indexes.length ? indexes : chunk.map((_, i) => i))) {
+        const operation = chunk[itemIndex];
+        if (!operation) continue;
+        try {
+          await StudentFeePayment.bulkWrite([operation], { ordered: false });
+        } catch (retryError) {
+          if (retryError.code === 11000 || (retryError.writeErrors || []).some(item => item.code === 11000)) {
+            duplicateReceiptsSkipped += 1;
+            existingReceiptsUpdatedOrSkipped += 1;
+          } else {
+            unmatchedRows.push({ phase: "fee-write", row: index + itemIndex, reason: retryError.message || "Fee receipt write failed." });
+          }
+        }
+      }
     }
+    onProgress({
+      percent: 65 + Math.round((Math.min(index + chunk.length, operations.length) / Math.max(operations.length, 1)) * 27),
+      stage: "Importing Fee Receipts",
+      message: "Fee receipt operations saved",
+      processed: Math.min(index + chunk.length, operations.length),
+      total: operations.length
+    });
   }
   return { newReceiptsAdded, existingReceiptsUpdatedOrSkipped, duplicateReceiptsSkipped, existingReceiptsUpdated, unmatchedRows, feeRowsProcessed: rows.length };
 }
 
 async function finalizeFeeSummaries(rawStudentIds = []) {
   const studentIds = [...new Set(rawStudentIds.filter(validObjectId).map(id => String(id)))];
-  if (!studentIds.length || studentIds.length > 500) throw new Error("Finalize batch must contain between 1 and 500 student IDs.");
+  if (!studentIds.length) return { studentsFinalized: 0, enrollmentsFinalized: 0 };
   const objectIds = studentIds.map(id => new mongoose.Types.ObjectId(id));
   const enrollments = await StudentEnrollment.find({ studentId: { $in: objectIds }, mergedIntoEnrollmentId: null }).lean();
   if (!enrollments.length) return { studentsFinalized: 0, enrollmentsFinalized: 0 };
@@ -656,9 +739,7 @@ async function finalizeFeeSummaries(rawStudentIds = []) {
     total.hasConfiguredFee ||= hasConfiguredFee;
     masterTotals.set(key, total);
   }
-  for (let index = 0; index < enrollmentOps.length; index += 500) {
-    await StudentEnrollment.bulkWrite(enrollmentOps.slice(index, index + 500), { ordered: false });
-  }
+  await bulkWriteChunked(StudentEnrollment, enrollmentOps, [], "fee-summary-enrollments", 500);
   const masterOps = [...masterTotals.entries()].map(([id, total]) => ({
     updateOne: {
       filter: { _id: new mongoose.Types.ObjectId(id) },
@@ -673,7 +754,7 @@ async function finalizeFeeSummaries(rawStudentIds = []) {
       } } }
     }
   }));
-  if (masterOps.length) await StudentMaster.bulkWrite(masterOps, { ordered: false });
+  await bulkWriteChunked(StudentMaster, masterOps, [], "fee-summary-masters", 500);
   return { studentsFinalized: masterOps.length, enrollmentsFinalized: enrollmentOps.length };
 }
 
@@ -681,7 +762,7 @@ async function finalizeFeeSummaries(rawStudentIds = []) {
 // One-click workbook import. The browser submits the workbook once; the server
 // performs bounded MongoDB writes internally so large imports do not require
 // repeated browser requests or manual batch actions.
-async function runCompleteImport(groups = [], rows = []) {
+async function runCompleteImport(groups = [], rows = [], onProgress = () => {}) {
   if (!Array.isArray(groups) || !groups.length) throw new Error("No student profiles were supplied.");
   if (!Array.isArray(rows)) throw new Error("Fee rows must be an array.");
 
@@ -713,27 +794,37 @@ async function runCompleteImport(groups = [], rows = []) {
     for (const item of result.registrationMap || []) {
       if (item.studentId) touchedStudentIds.add(String(item.studentId));
     }
-    summary.unmatchedRows.push(...(result.flaggedRows || []));
+    summary.unmatchedRows.push(...(result.flaggedRows || []), ...(result.warnings || []));
+    const processedProfiles = Math.min(offset + studentChunkSize, groups.length);
+    onProgress({
+      percent: 10 + Math.round(processedProfiles / groups.length * 35),
+      stage: "Syncing Master Student Profiles",
+      message: "Master student profile chunk committed",
+      processed: processedProfiles, total: groups.length
+    });
+    const processedRegistrations = groups.slice(0, processedProfiles).reduce((sum, item) => sum + (item.registrations || []).length, 0);
+    const totalRegistrations = groups.reduce((sum, item) => sum + (item.registrations || []).length, 0);
+    onProgress({
+      percent: 45 + Math.round(processedProfiles / groups.length * 20),
+      stage: "Syncing Student Enrollments & Registration Codes",
+      message: "Enrollments: " + processedRegistrations.toLocaleString("en-IN") + " / " + totalRegistrations.toLocaleString("en-IN"),
+      processed: processedRegistrations, total: totalRegistrations
+    });
   }
 
-  // All enrollments now exist, so receipt rows can be linked safely.
-  const feeChunkSize = 500;
-  for (let offset = 0; offset < rows.length; offset += feeChunkSize) {
-    const result = await syncFeeRows(rows.slice(offset, offset + feeChunkSize));
-    summary.newReceiptsAdded += Number(result.newReceiptsAdded || 0);
-    summary.existingReceiptsUpdatedOrSkipped += Number(result.existingReceiptsUpdatedOrSkipped || 0);
-    summary.duplicateReceiptsSkipped += Number(result.duplicateReceiptsSkipped || 0);
-    summary.existingReceiptsUpdated += Number(result.existingReceiptsUpdated || 0);
-    summary.feeRowsProcessed += Number(result.feeRowsProcessed || 0);
-    summary.unmatchedRows.push(...(result.unmatchedRows || []));
-  }
+  const feeResult = await syncFeeRows(rows, onProgress);
+  summary.newReceiptsAdded += Number(feeResult.newReceiptsAdded || 0);
+  summary.existingReceiptsUpdatedOrSkipped += Number(feeResult.existingReceiptsUpdatedOrSkipped || 0);
+  summary.duplicateReceiptsSkipped += Number(feeResult.duplicateReceiptsSkipped || 0);
+  summary.existingReceiptsUpdated += Number(feeResult.existingReceiptsUpdated || 0);
+  summary.feeRowsProcessed += Number(feeResult.feeRowsProcessed || 0);
+  summary.unmatchedRows.push(...(feeResult.unmatchedRows || []));
 
-  const studentIds = [...touchedStudentIds];
-  for (let offset = 0; offset < studentIds.length; offset += 500) {
-    const result = await finalizeFeeSummaries(studentIds.slice(offset, offset + 500));
-    summary.studentsFinalized += Number(result.studentsFinalized || 0);
-    summary.enrollmentsFinalized += Number(result.enrollmentsFinalized || 0);
-  }
+  onProgress({ percent: 92, stage: "Recalculating Student Fee Summaries", message: "Aggregating payment totals", processed: 0, total: touchedStudentIds.size });
+  const finalized = await finalizeFeeSummaries([...touchedStudentIds]);
+  summary.studentsFinalized = Number(finalized.studentsFinalized || 0);
+  summary.enrollmentsFinalized = Number(finalized.enrollmentsFinalized || 0);
+  onProgress({ percent: 99, stage: "Recalculating Student Fee Summaries", message: "Fee summaries saved", processed: summary.studentsFinalized, total: touchedStudentIds.size });
 
   return {
     ...summary,
@@ -754,8 +845,39 @@ export async function POST(request) {
     await connectMongoDB();
     const body = await request.json();
     if (body.action === "complete") {
-      const result = await runCompleteImport(body.groups || [], body.rows || []);
-      return NextResponse.json(result);
+      if (!Array.isArray(body.groups) || !Array.isArray(body.rows)) {
+        return NextResponse.json({ error: "Import payload must contain student groups and fee rows." }, { status: 400 });
+      }
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream({
+        async start(controller) {
+          const emit = event => controller.enqueue(encoder.encode(JSON.stringify(event) + "\n"));
+          const startedAt = Date.now();
+          try {
+            emit({ type: "progress", percent: 5, stage: "Validating & parsing payload", message: "Payload validated", processed: 0, total: body.groups.length + body.rows.length });
+            console.info("[unified-student-import] start", { profiles: body.groups.length, fees: body.rows.length });
+            const result = await runCompleteImport(body.groups, body.rows, event => {
+              console.info("[unified-student-import] progress", event);
+              emit({ type: "progress", ...event });
+            });
+            console.info("[unified-student-import] complete", { durationMs: Date.now() - startedAt, summary: result });
+            emit({ type: "complete", percent: 100, stage: "Complete", summary: result, durationMs: Date.now() - startedAt });
+          } catch (error) {
+            console.error("[unified-student-import] failed", { durationMs: Date.now() - startedAt, message: error.message, stack: error.stack });
+            emit({ type: "error", message: error.message || "Unified workbook import failed.", phase: error.phase || "processing" });
+          } finally {
+            controller.close();
+          }
+        }
+      });
+      return new Response(stream, {
+        status: 200,
+        headers: {
+          "Content-Type": "application/x-ndjson; charset=utf-8",
+          "Cache-Control": "no-cache, no-transform",
+          "X-Accel-Buffering": "no"
+        }
+      });
     }
     if (body.action === "students") {
       const result = await syncStudentGroups(body.groups || []);
