@@ -261,7 +261,7 @@ async function main() {
         primaryStCode: latestEnrollment.stCode || latest?.stCode || canonical.primaryStCode || "",
         currentStCode: latestEnrollment.stCode || latest?.stCode || canonical.currentStCode || "",
         currentRegistrationId: latestEnrollment.registrationId || latest?.registrationId || canonical.currentRegistrationId || "",
-        currentCourse: latestEnrollment.courseName || latestEnrollment.courseCode || latest?.course || canonical.currentCourse || "",
+        currentCourse: latestEnrollment.course || latestEnrollment.courseName || latestEnrollment.courseCode || latest?.course || canonical.currentCourse || "",
         currentAdmissionDate: latestEnrollment.admissionDate || latest?.dateOfAdmission || null,
       }});
     }
