@@ -24,7 +24,7 @@ export default function StudentIdentityHistory({ student }) {
     const byKey = new Map();
     for (const item of source) {
       const code = String(item.stCode || "");
-      const course = String(item.courseName || item.courseCode || item.course || "Previous Course (Legacy)");
+      const course = String(item.course || item.courseCode || item.courseName || "Previous Course (Legacy)");
       const admissionDate = item.admissionDate || item.dateOfAdmission || null;
       const parsedAdmissionDate = admissionDate ? new Date(admissionDate) : null;
       const dateKey = parsedAdmissionDate && !Number.isNaN(parsedAdmissionDate.getTime()) ? parsedAdmissionDate.toISOString().slice(0, 10) : "";
