@@ -32,6 +32,46 @@ function printReceipt(payment, student) {
   popup.print();
 }
 
+const enrollmentCourseKey = item => String(item?.courseCode || item?.courseName || item?.course || "").trim().toUpperCase();
+const enrollmentDateKey = item => {
+  const value = item?.admissionDate || item?.dateOfAdmission;
+  if (!value) return "";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
+};
+const enrollmentFilterKey = item => [String(item?.stCode || ""), enrollmentCourseKey(item), enrollmentDateKey(item)].join("|");
+function resolvePaymentCard(payment, cards) {
+  if (payment?.enrollmentId) {
+    const linked = cards.find(item => String(item._id || "") === String(payment.enrollmentId));
+    if (linked) return linked;
+  }
+  const paymentId = String(payment?.registrationId || payment?.stNameKey || "").toUpperCase();
+  let candidates = cards.filter(item => paymentId && String(item.registrationId || "").toUpperCase() === paymentId);
+  const paymentCode = String(payment?.stCode || "");
+  if (paymentCode) candidates = candidates.filter(item => String(item.stCode || "") === paymentCode);
+  if (!candidates.length && paymentCode) candidates = cards.filter(item => String(item.stCode || "") === paymentCode);
+  const paymentCourse = String(payment?.courseCode || payment?.courseName || payment?.course || "").trim().toUpperCase();
+  if (paymentCourse && candidates.length > 1) {
+    const courseMatches = candidates.filter(item => [item.courseCode, item.courseName, item.course].some(value => String(value || "").trim().toUpperCase() === paymentCourse));
+    if (courseMatches.length) candidates = courseMatches;
+  }
+  if (candidates.length === 1) return candidates[0];
+  const paymentDate = payment?.paymentDate || payment?.rawPaymentDate || payment?.date;
+  const date = paymentDate ? new Date(paymentDate) : null;
+  if (date && !Number.isNaN(date.getTime())) {
+    const eligible = candidates.filter(item => {
+      const effective = item.admissionDate || item.dateOfAdmission || item.earliestPaymentDate;
+      return effective && new Date(effective) <= date;
+    }).sort((a,b) => new Date(b.admissionDate || b.dateOfAdmission || b.earliestPaymentDate).getTime() - new Date(a.admissionDate || a.dateOfAdmission || a.earliestPaymentDate).getTime());
+    if (eligible.length) {
+      const latestKey = enrollmentDateKey(eligible[0]) || new Date(eligible[0].earliestPaymentDate).toISOString().slice(0, 10);
+      const latest = eligible.filter(item => (enrollmentDateKey(item) || (item.earliestPaymentDate ? new Date(item.earliestPaymentDate).toISOString().slice(0, 10) : "")) === latestKey);
+      if (latest.length === 1) return latest[0];
+    }
+  }
+  return null;
+}
+
 export default function StudentFeeWorkspace({
   student, fee, feeWorkspaceOpen, setFeeWorkspaceOpen, feeForm, setFeeForm,
   paymentItems, setPaymentItems, saveFees, proofUploading, uploadPaymentProof, printBill,
@@ -55,31 +95,38 @@ export default function StudentFeeWorkspace({
     const map = new Map();
     for (const item of historyMetadata) {
       const fallbackName = String(item.cleanName || student.masterProfile?.fullName || student.applicantName || "").trim().toUpperCase().replace(/\s+/g, " ");
-      const id = String(item.registrationId || (fallbackName && item.stCode ? fallbackName + "_" + item.stCode : "") || "");
-      if (id) map.set(id, { ...item, registrationId: id });
+      const registrationId = String(item.registrationId || (fallbackName && item.stCode ? fallbackName + "_" + item.stCode : "") || "");
+      const filterKey = enrollmentFilterKey(item);
+      if (item.stCode && filterKey !== "||") map.set(filterKey, { ...item, registrationId, filterKey });
     }
     for (const item of enrollmentOptions) {
-      const id = String(item.registrationId || "");
-      if (!id) continue;
-      const old = map.get(id) || {};
-      map.set(id, { ...old, ...item, registrationId: id, course: item.courseName || item.courseCode || old.course, dateOfAdmission: item.admissionDate || old.dateOfAdmission, earliestPaymentDate: item.earliestPaymentDate || old.earliestPaymentDate });
-    }
-    const codeCounts = new Map();
-    for (const item of map.values()) codeCounts.set(String(item.stCode), (codeCounts.get(String(item.stCode)) || 0) + 1);
-    return [...map.values()].filter(item => item.stCode).map(item => {
-      const code = String(item.stCode);
-      const id = String(item.registrationId);
-      const matchingRows = paymentHistory.filter(payment => {
-        const paymentId = String(payment.registrationId || payment.stNameKey || "").toUpperCase();
-        return paymentId === id.toUpperCase() || (!paymentId && codeCounts.get(code) === 1 && String(payment.stCode || "") === code);
+      const filterKey = enrollmentFilterKey(item);
+      if (!item.stCode || filterKey === "||") continue;
+      const old = map.get(filterKey) || {};
+      map.set(filterKey, {
+        ...old, ...item, filterKey,
+        registrationId: item.registrationId || old.registrationId || "",
+        course: item.courseName || item.courseCode || old.course,
+        dateOfAdmission: item.admissionDate || old.dateOfAdmission,
+        earliestPaymentDate: item.earliestPaymentDate || old.earliestPaymentDate,
       });
-      return { ...item, paidTotal: matchingRows.reduce((sum, payment) => sum + Number(payment.amountPaid ?? payment.amount ?? 0), 0) };
-    }).sort((a, b) => new Date(b.dateOfAdmission || b.admissionDate || b.earliestPaymentDate || 0).getTime() - new Date(a.dateOfAdmission || a.admissionDate || a.earliestPaymentDate || 0).getTime());
+    }
+    const cards = [...map.values()].sort((a, b) =>
+      new Date(b.dateOfAdmission || b.admissionDate || b.earliestPaymentDate || 0).getTime()
+      - new Date(a.dateOfAdmission || a.admissionDate || a.earliestPaymentDate || 0).getTime()
+    );
+    return cards.map(item => ({
+      ...item,
+      paidTotal: paymentHistory.filter(payment => resolvePaymentCard(payment, cards)?.filterKey === item.filterKey)
+        .reduce((sum, payment) => sum + Number(payment.amountPaid ?? payment.amount ?? 0), 0)
+    }));
   }, [historyMetadata, enrollmentOptions, paymentHistory]);
-  const selectedEnrollment = enrollmentOptions.find(item => String(item.registrationId || "") === selectedCode)
-    || (selectedCode !== "ALL" ? enrollmentOptions.find(item => String(item.stCode) === String(codeCards.find(item => item.registrationId === selectedCode)?.stCode || "")) : null);
-  const selectedHistory = historyMetadata.find(item => String(item.registrationId || "") === selectedCode) || {};
-  const selectedRegistration = codeCards.find(item => item.registrationId === selectedCode) || selectedHistory;
+  const selectedCard = codeCards.find(item => item.filterKey === selectedCode) || null;
+  const selectedEnrollment = selectedCard?._id
+    ? enrollmentOptions.find(item => String(item._id) === String(selectedCard._id))
+    : null;
+  const selectedHistory = historyMetadata.find(item => enrollmentFilterKey(item) === selectedCode) || {};
+  const selectedRegistration = selectedCard || selectedHistory;
   const codeCount = new Map();
   for (const item of codeCards) codeCount.set(String(item.stCode), (codeCount.get(String(item.stCode)) || 0) + 1);
   const visibleRows = useMemo(() => [...paymentHistory]
