@@ -331,7 +331,7 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
         status: "Registered",
         importSource: "Unified Excel Workbook"
       };
-      studentOps.push({ updateOne: { filter: { _id: newStudentId }, update: { $setOnInsert: canonicalStudent }, upsert: true } });
+      studentOps.push(canonicalStudent);
       legacyIds.push(String(newStudentId));
     }
     const existingRegs = new Map();
@@ -427,7 +427,7 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
         if (!master?.[key] && value) masterSet[key] = value;
       }
     }
-    masterOps.push({ updateOne: { filter: { _id: masterId }, update: { $set: masterSet, $setOnInsert: { photoUrl: "", hasPhoto: false } }, upsert: true } });
+    masterOps.push({ _id: masterId, isNew: !master, set: masterSet, insertDefaults: { photoUrl: "", hasPhoto: false } });
 
     let currentEnrollmentId = null;
     for (const registration of registrations) {
@@ -492,10 +492,7 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
         }
       };
       if (!existingEnrollment) {
-        enrollmentOps.push({ updateOne: {
-          filter: { studentId: masterId, stCode: registration.stCode, normalizedFullName: normalizedEnrollmentName, courseCode },
-          update: { $setOnInsert: enrollmentSet }, upsert: true
-        } });
+        enrollmentOps.push({ _id: enrollmentId, set: enrollmentSet, isNew: true });
       } else {
         const patch = {};
         if (existingEnrollment.courseName !== registration.course) patch.courseName = registration.course;
@@ -510,10 +507,7 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
         if (!existingEnrollment.rawStName && registration.rawStName) patch.rawStName = registration.rawStName;
         if (!existingEnrollment.admissionDate && registration.dateOfAdmission) patch.admissionDate = registration.dateOfAdmission;
         if (!existingEnrollment.earliestPaymentDate && registration.earliestPaymentDate) patch.earliestPaymentDate = registration.earliestPaymentDate;
-        if (Object.keys(patch).length) enrollmentOps.push({ updateOne: {
-          filter: { studentId: masterId, stCode: registration.stCode, normalizedFullName: normalizedEnrollmentName, courseCode },
-          update: { $set: patch }
-        } });
+        if (Object.keys(patch).length) enrollmentOps.push({ _id: existingEnrollment._id, set: patch, isNew: false });
       }
       outputMap.push({ registrationId: registration.registrationId, stCode: registration.stCode, studentId: masterId.toString(), enrollmentId: enrollmentId.toString(), course: registration.course });
     }
@@ -530,32 +524,18 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
     }
   }
 
-  const enrollmentOpsByKey = new Map();
-  for (const operation of enrollmentOps) {
-    const filter = operation.updateOne?.filter || {};
-    const key = enrollmentUniqueKey(filter);
-    if (!filter.studentId || !filter.stCode || !filter.normalizedFullName || !filter.courseCode) {
-      flaggedRows.push({ phase: "enrollment", reason: "Skipped an enrollment operation without the complete unique key." });
-      continue;
-    }
-    const previous = enrollmentOpsByKey.get(key);
-    if (!previous) enrollmentOpsByKey.set(key, operation);
-    else {
-      const a = previous.updateOne.update || {}, b = operation.updateOne.update || {};
-      previous.updateOne.update = {
-        ...(a.$setOnInsert || b.$setOnInsert ? { $setOnInsert: { ...(a.$setOnInsert || {}), ...(b.$setOnInsert || {}) } } : {}),
-        ...(a.$set || b.$set ? { $set: { ...(a.$set || {}), ...(b.$set || {}) } } : {})
-      };
-    }
-  }
-  const writeWarnings = [];
-  await bulkWriteChunked(Student, studentOps, writeWarnings, "students", 500);
-  await bulkWriteChunked(StudentMaster, masterOps, writeWarnings, "master-profiles", 500);
-  await bulkWriteChunked(StudentMaster, activeMasterOps, writeWarnings, "active-master-links", 500);
-  onPhase("profiles");
-  await bulkWriteChunked(StudentEnrollment, [...enrollmentOpsByKey.values()], writeWarnings, "enrollments", 500);
-  await bulkWriteChunked(StudentEnrollment, enrollmentStatusOps, writeWarnings, "enrollment-status", 500);
-  onPhase("enrollments");
+  const enrollmentOpsByKey=new Map();
+  for(const op of enrollmentOps){const d=op.set||{},k=enrollmentUniqueKey(d);if(!d.studentId||!d.stCode||!d.normalizedFullName||!d.courseCode){flaggedRows.push({phase:"enrollment",reason:"Incomplete enrollment key skipped."});continue;}const old=enrollmentOpsByKey.get(k);if(!old||(old.isNew&&!op.isNew))enrollmentOpsByKey.set(k,op);else if(!old.isNew&&!op.isNew)old.set={...old.set,...d};}
+  const writeWarnings=[];
+  async function insertChunks(Model,docs,phase,size=200){for(let off=0;off<docs.length;off+=size){const chunk=docs.slice(off,off+size),t=Date.now();try{await Model.insertMany(chunk,{ordered:false});}catch(e){if(e.code!==11000&&!(e.writeErrors||[]).some(x=>x.code===11000))throw e;const found=await Model.find({_id:{$in:chunk.map(x=>x._id)}}).select("_id").lean(),ids=new Set(found.map(x=>String(x._id))),missing=chunk.filter(x=>!ids.has(String(x._id)));if(missing.length)try{await Model.insertMany(missing,{ordered:false});}catch(re){if(re.code!==11000&&!(re.writeErrors||[]).some(x=>x.code===11000))throw re;writeWarnings.push({phase,code:11000,reason:"Duplicate insert safely skipped after _id recheck."});}writeWarnings.push({phase,code:11000,reason:"Existing duplicate records skipped."});}console.log("[unified-import]",phase,Math.floor(off/size)+1,Date.now()-t,{attempted:chunk.length});}}
+  async function updateChunks(Model,ops,phase,size=500){for(let off=0;off<ops.length;off+=size){const chunk=ops.slice(off,off+size),t=Date.now();if(chunk.length)await Model.bulkWrite(chunk,{ordered:false});console.log("[unified-import]",phase,Math.floor(off/size)+1,Date.now()-t,{updated:chunk.length});}}
+  await insertChunks(Student,studentOps,"students-insert");
+  const knownMasters=new Set(existingMasters.map(x=>String(x._id))),newMasters=[],masterUpdates=[];
+  for(const item of masterOps){if(item.isNew||!knownMasters.has(String(item._id))){newMasters.push({_id:item._id,...item.insertDefaults,...item.set});continue;}const prior=existingMasters.find(x=>String(x._id)===String(item._id)),patch={};for(const [k,v] of Object.entries(item.set||{})){const blank=v===""||v===null||v===undefined||(Array.isArray(v)&&!v.length);if(blank&&prior?.[k]!==undefined&&prior?.[k]!==null&&prior?.[k]!=="")continue;if(JSON.stringify(prior?.[k])!==JSON.stringify(v))patch[k]=v;}if(Object.keys(patch).length)masterUpdates.push({updateOne:{filter:{_id:item._id},update:{$set:patch}}});}
+  await insertChunks(StudentMaster,newMasters,"master-insert");await updateChunks(StudentMaster,masterUpdates,"master-update");await updateChunks(StudentMaster,activeMasterOps,"active-master");
+  const newEnrollments=[],enrollmentUpdates=[];for(const item of enrollmentOpsByKey.values())if(item.isNew)newEnrollments.push({_id:item._id,...item.set});else enrollmentUpdates.push({updateOne:{filter:{_id:item._id},update:{$set:item.set}}});
+  await insertChunks(StudentEnrollment,newEnrollments,"enrollment-insert");await updateChunks(StudentEnrollment,enrollmentUpdates,"enrollment-update");await updateChunks(StudentEnrollment,enrollmentStatusOps,"enrollment-status");
+  onPhase("profiles");onPhase("enrollments");
   return { studentsMatchedUpdated: matchedProfiles, newStudentsCreated: newProfiles, registrationsLinked, registrationsSeen, registrationMap: outputMap, flaggedRows, warnings: writeWarnings };
 }
 
@@ -623,7 +603,7 @@ async function syncFeeRows(rows = [], onProgress = () => {}) {
       unmatchedRows.push({ row: row.rowNo, sheet: row.sourceSheet || "", studentId: registrationId || row.stCode || "", stCode: row.stCode || "", name: row.cleanName || "", course: row.course || "", mrNo, paymentDate: row.paymentDate || "", amountPaid: row.amountPaid ?? "", reason: enrollmentCandidates.length > 1 ? "Registration identity maps to multiple Master Students or ambiguous admission/course periods; fee row was not linked automatically." : !enrollment ? "No matching registration/enrollment was found." : "Missing or invalid receipt number, date, or amount." });
       continue;
     }
-    const key = [String(enrollment.studentId), clean(enrollment.stCode), mrNo, paymentDate.toISOString().slice(0, 10), amountPaid.toFixed(2)].join("|");
+    const key = [clean(enrollment.stCode), mrNo, paymentDate.toISOString().slice(0,10), amountPaid.toFixed(2)].join("|");
     const priorReceipt = existingByKey.get(key);
     if (priorReceipt) {
       const priorEnrollment = enrollmentByMongoId.get(String(priorReceipt.enrollmentId || ""));
@@ -663,51 +643,11 @@ async function syncFeeRows(rows = [], onProgress = () => {}) {
     }
     seenInBatch.add(key);
     const courseCode = clean(enrollment.courseCode || row.course).toUpperCase();
-    operations.push({ updateOne: {
-      filter: { registrationId, mrNo, paymentDate, amountPaid },
-      update: {
-        $set: { studentId: enrollment.studentId, masterStudentId: enrollment.studentId, enrollmentId: enrollment._id, stCode: enrollment.stCode, registrationId, courseCode, course: enrollment.course || enrollment.courseName || row.course || "" },
-        $setOnInsert: { mrNo, paymentDate, amountPaid, rawPaymentDate: paymentDate, sourceSheet: clean(row.sourceSheet), sourceRowNo: Number(row.rowNo || 0), importBatchKey: "UNIFIED_WORKBOOK_IMPORT", stNameKey: registrationId, allocations: [], importWarnings: [] }
-      },
-      upsert: true
-    }});
+    operations.push({ insertDoc: { _id: new mongoose.Types.ObjectId(), studentId: enrollment.studentId, masterStudentId: enrollment.studentId, enrollmentId: enrollment._id, stCode: enrollment.stCode, registrationId, courseCode, course: enrollment.course || enrollment.courseName || row.course || "", mrNo, paymentDate, amountPaid, rawPaymentDate: paymentDate, sourceSheet: clean(row.sourceSheet), sourceRowNo: Number(row.rowNo || 0), importBatchKey: "UNIFIED_WORKBOOK_IMPORT", stNameKey: registrationId, allocations: [], importWarnings: [] } });
   }
-  for (let index = 0; index < operations.length; index += 500) {
-    const chunk = operations.slice(index, index + 500);
-    try {
-      const result = await StudentFeePayment.bulkWrite(chunk, { ordered: false });
-      newReceiptsAdded += Number(result.upsertedCount || 0);
-    } catch (error) {
-      const writeErrors = error.writeErrors || error.result?.writeErrors || [];
-      const partialResult = error.result || error;
-      newReceiptsAdded += Number(partialResult.upsertedCount || partialResult.nUpserted || partialResult.result?.nUpserted || 0);
-      const duplicateOnly = error.code === 11000 || (writeErrors.length > 0 && writeErrors.every(item => item.code === 11000));
-      if (!duplicateOnly) throw error;
-      const indexes = [...new Set(writeErrors.map(item => Number(item.index)).filter(Number.isInteger))];
-      for (const itemIndex of (indexes.length ? indexes : chunk.map((_, i) => i))) {
-        const operation = chunk[itemIndex];
-        if (!operation) continue;
-        try {
-          await StudentFeePayment.bulkWrite([operation], { ordered: false });
-        } catch (retryError) {
-          if (retryError.code === 11000 || (retryError.writeErrors || []).some(item => item.code === 11000)) {
-            duplicateReceiptsSkipped += 1;
-            existingReceiptsUpdatedOrSkipped += 1;
-          } else {
-            unmatchedRows.push({ phase: "fee-write", row: index + itemIndex, reason: retryError.message || "Fee receipt write failed." });
-          }
-        }
-      }
-    }
-    const processedOperations = Math.min(index + chunk.length, operations.length);
-    onProgress({
-      percent: 65 + Math.round((processedOperations / Math.max(operations.length, 1)) * 27),
-      stage: "Importing Fee Receipts",
-      message: "Fee receipt write chunk saved (" + processedOperations.toLocaleString("en-IN") + " / " + operations.length.toLocaleString("en-IN") + " write operations)",
-      processed: processedOperations,
-      total: operations.length
-    });
-  }
+  const newReceiptDocs=[],receiptUpdates=[];for(const op of operations){if(op.insertDoc)newReceiptDocs.push(op.insertDoc);else if(op.updateOne?.filter?._id)receiptUpdates.push(op);}
+  for(let off=0;off<newReceiptDocs.length;off+=500){const chunk=newReceiptDocs.slice(off,off+500),t=Date.now();try{newReceiptsAdded+=(await StudentFeePayment.insertMany(chunk,{ordered:false})).length;}catch(e){if(e.code!==11000&&!(e.writeErrors||[]).some(x=>x.code===11000))throw e;const found=await StudentFeePayment.find({_id:{$in:chunk.map(x=>x._id)}}).select("_id").lean(),ids=new Set(found.map(x=>String(x._id)));newReceiptsAdded+=found.length;const missing=chunk.filter(x=>!ids.has(String(x._id)));if(missing.length)try{newReceiptsAdded+=(await StudentFeePayment.insertMany(missing,{ordered:false})).length;}catch(re){if(re.code!==11000&&!(re.writeErrors||[]).some(x=>x.code===11000))throw re;duplicateReceiptsSkipped+=missing.length;existingReceiptsUpdatedOrSkipped+=missing.length;}duplicateReceiptsSkipped+=chunk.length-found.length-missing.length;existingReceiptsUpdatedOrSkipped+=chunk.length-found.length-missing.length;}console.log("[unified-import]","fee-insert",Math.floor(off/500)+1,Date.now()-t,{attempted:chunk.length});}
+  for(let off=0;off<receiptUpdates.length;off+=500){const chunk=receiptUpdates.slice(off,off+500),t=Date.now();if(chunk.length)await StudentFeePayment.bulkWrite(chunk,{ordered:false});console.log("[unified-import]","fee-update",Math.floor(off/500)+1,Date.now()-t,{updated:chunk.length});}
   onProgress({
     percent: 92, stage: "Importing Fee Receipts",
     message: "Fee Receipts: " + rows.length.toLocaleString("en-IN") + " / " + rows.length.toLocaleString("en-IN") + " processed",
@@ -778,92 +718,6 @@ async function finalizeFeeSummaries(rawStudentIds = []) {
 }
 
 
-// One-click workbook import. The browser submits the workbook once; the server
-// performs bounded MongoDB writes internally so large imports do not require
-// repeated browser requests or manual batch actions.
-async function runCompleteImport(groups = [], rows = [], onProgress = () => {}) {
-  if (!Array.isArray(groups) || !groups.length) throw new Error("No student profiles were supplied.");
-  if (!Array.isArray(rows)) throw new Error("Fee rows must be an array.");
-
-  const summary = {
-    studentsMatchedUpdated: 0,
-    newStudentsCreated: 0,
-    registrationsLinked: 0,
-    newReceiptsAdded: 0,
-    existingReceiptsUpdatedOrSkipped: 0,
-    duplicateReceiptsSkipped: 0,
-    existingReceiptsUpdated: 0,
-    studentProfilesProcessed: 0,
-    feeRowsProcessed: 0,
-    studentsFinalized: 0,
-    enrollmentsFinalized: 0,
-    unmatchedRows: []
-  };
-  const touchedStudentIds = new Set();
-
-  // syncStudentGroups deliberately has a bounded per-call limit. Keep those
-  // implementation batches entirely on the server, hidden from the user.
-  const studentChunkSize = 500;
-  for (let offset = 0; offset < groups.length; offset += studentChunkSize) {
-    const chunkGroups = groups.slice(offset, offset + studentChunkSize);
-    const processedProfiles = Math.min(offset + chunkGroups.length, groups.length);
-    const processedRegistrations = groups.slice(0, processedProfiles).reduce((sum, item) => sum + (item.registrations || []).length, 0);
-    const totalRegistrations = groups.reduce((sum, item) => sum + (item.registrations || []).length, 0);
-    onProgress({
-      percent: 10 + Math.round(offset / groups.length * 35),
-      stage: "Syncing Master Student Profiles",
-      message: "Loading matching records for profile chunk",
-      processed: offset, total: groups.length
-    });
-    const result = await syncStudentGroups(chunkGroups, phase => {
-      if (phase === "profiles") onProgress({
-        percent: 10 + Math.round(processedProfiles / groups.length * 35),
-        stage: "Syncing Master Student Profiles",
-        message: "Master profiles: " + processedProfiles.toLocaleString("en-IN") + " / " + groups.length.toLocaleString("en-IN"),
-        processed: processedProfiles, total: groups.length
-      });
-      if (phase === "enrollments") onProgress({
-        percent: 45 + Math.round(processedProfiles / groups.length * 20),
-        stage: "Syncing Student Enrollments & Registration Codes",
-        message: "Enrollments: " + processedRegistrations.toLocaleString("en-IN") + " / " + totalRegistrations.toLocaleString("en-IN"),
-        processed: processedRegistrations, total: totalRegistrations
-      });
-    });
-    summary.studentsMatchedUpdated += Number(result.studentsMatchedUpdated || 0);
-    summary.newStudentsCreated += Number(result.newStudentsCreated || 0);
-    summary.registrationsLinked += Number(result.registrationsLinked || 0);
-    summary.studentProfilesProcessed += Math.min(studentChunkSize, groups.length - offset);
-    for (const item of result.registrationMap || []) {
-      if (item.studentId) touchedStudentIds.add(String(item.studentId));
-    }
-    summary.unmatchedRows.push(...(result.flaggedRows || []), ...(result.warnings || []));
-
-  }
-
-  onProgress({ percent: 65, stage: "Importing Fee Receipts", message: "Matching fee receipts and loading existing receipt keys", processed: 0, total: rows.length });
-  const feeResult = await syncFeeRows(rows, onProgress);
-  summary.newReceiptsAdded += Number(feeResult.newReceiptsAdded || 0);
-  summary.existingReceiptsUpdatedOrSkipped += Number(feeResult.existingReceiptsUpdatedOrSkipped || 0);
-  summary.duplicateReceiptsSkipped += Number(feeResult.duplicateReceiptsSkipped || 0);
-  summary.existingReceiptsUpdated += Number(feeResult.existingReceiptsUpdated || 0);
-  summary.feeRowsProcessed += Number(feeResult.feeRowsProcessed || 0);
-  summary.unmatchedRows.push(...(feeResult.unmatchedRows || []));
-
-  onProgress({ percent: 92, stage: "Recalculating Student Fee Summaries", message: "Aggregating payment totals", processed: 0, total: touchedStudentIds.size });
-  const finalized = await finalizeFeeSummaries([...touchedStudentIds]);
-  summary.studentsFinalized = Number(finalized.studentsFinalized || 0);
-  summary.enrollmentsFinalized = Number(finalized.enrollmentsFinalized || 0);
-  onProgress({ percent: 99, stage: "Recalculating Student Fee Summaries", message: "Fee summaries saved", processed: summary.studentsFinalized, total: touchedStudentIds.size });
-
-  return {
-    ...summary,
-    registrationProfiles: groups.length,
-    feeRowsSubmitted: rows.length,
-    uniqueStudentsFinalized: touchedStudentIds.size,
-    complete: true
-  };
-}
-
 export async function POST(request) {
   try {
     const session = await getSession();
@@ -873,54 +727,23 @@ export async function POST(request) {
     }
     await connectMongoDB();
     const body = await request.json();
-    if (body.action === "complete") {
-      if (!Array.isArray(body.groups) || !Array.isArray(body.rows)) {
-        return NextResponse.json({ error: "Import payload must contain student groups and fee rows." }, { status: 400 });
-      }
-      const encoder = new TextEncoder();
-      const stream = new ReadableStream({
-        async start(controller) {
-          const emit = event => controller.enqueue(encoder.encode(JSON.stringify(event) + "\n"));
-          const startedAt = Date.now();
-          let currentPhase = "Validating & parsing payload";
-          try {
-            emit({ type: "progress", percent: 5, stage: currentPhase, message: "Payload validated", processed: 0, total: body.groups.length + body.rows.length });
-            console.info("[unified-student-import] start", { profiles: body.groups.length, fees: body.rows.length });
-            const result = await runCompleteImport(body.groups, body.rows, event => {
-              currentPhase = event.stage || currentPhase;
-              console.info("[unified-student-import] progress", event);
-              emit({ type: "progress", ...event });
-            });
-            console.info("[unified-student-import] complete", { durationMs: Date.now() - startedAt, summary: result });
-            emit({ type: "complete", percent: 100, stage: "Complete", summary: result, durationMs: Date.now() - startedAt });
-          } catch (error) {
-            console.error("[unified-student-import] failed", { durationMs: Date.now() - startedAt, message: error.message, stack: error.stack });
-            emit({ type: "error", message: error.message || "Unified workbook import failed.", phase: error.phase || currentPhase });
-          } finally {
-            controller.close();
-          }
-        }
-      });
-      return new Response(stream, {
-        status: 200,
-        headers: {
-          "Content-Type": "application/x-ndjson; charset=utf-8",
-          "Cache-Control": "no-cache, no-transform",
-          "X-Accel-Buffering": "no"
-        }
-      });
-    }
+    if (body.action === "complete") return NextResponse.json({ error: "Use sequential import phases." }, { status: 400 });
     if (body.action === "students") {
-      const result = await syncStudentGroups(body.groups || []);
-      return NextResponse.json(result);
+      if(!Array.isArray(body.groups)||body.groups.length>200)return NextResponse.json({error:"Student chunks are limited to 200 profiles."},{status:400});
+      const t=Date.now(),r=await syncStudentGroups(body.groups);
+      console.log("[unified-import]","students",Number(body.chunkIndex||0)+1,Date.now()-t,{profiles:body.groups.length,created:r.newStudentsCreated,updated:r.studentsMatchedUpdated,registrations:r.registrationsSeen});
+      return NextResponse.json({registrationMapChunk:r.registrationMap||[],created:r.newStudentsCreated||0,updated:r.studentsMatchedUpdated||0,enrollmentsLinked:r.registrationsLinked||0,warnings:[...(r.flaggedRows||[]),...(r.warnings||[])],studentIds:[...new Set((r.registrationMap||[]).map(x=>x.studentId).filter(Boolean))]});
     }
     if (body.action === "fees") {
-      const result = await syncFeeRows(body.rows || []);
-      return NextResponse.json(result);
+      if(!Array.isArray(body.rows)||body.rows.length>500)return NextResponse.json({error:"Fee chunks are limited to 500 receipts."},{status:400});
+      const t=Date.now(),r=await syncFeeRows(body.rows);
+      console.log("[unified-import]","fees",Number(body.chunkIndex||0)+1,Date.now()-t,{rows:body.rows.length,inserted:r.newReceiptsAdded,updated:r.existingReceiptsUpdated,skipped:r.duplicateReceiptsSkipped});
+      return NextResponse.json(r);
     }
     if (body.action === "finalize") {
-      const result = await finalizeFeeSummaries(body.studentIds || []);
-      return NextResponse.json(result);
+      const t=Date.now(),r=await finalizeFeeSummaries(body.studentIds||[]);
+      console.log("[unified-import]","finalize",1,Date.now()-t,{students:r.studentsFinalized,enrollments:r.enrollmentsFinalized});
+      return NextResponse.json(r);
     }
     return NextResponse.json({ error: "Unsupported import batch action." }, { status: 400 });
   } catch (error) {
