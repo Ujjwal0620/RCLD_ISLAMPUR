@@ -96,6 +96,7 @@ function buildWorkbookPayload(workbook) {
     }
     const record = {
       ...identity,
+      rawStName: clean(studentGet(row, "stname")),
       course: clean(studentGet(row, "course")) || "Previous Course (Legacy)",
       dateOfAdmission: parseDate(studentGet(row, "doa")),
       formNo: clean(studentGet(row, "formno")).replace(/\.0+$/, ""),
@@ -214,9 +215,9 @@ function buildWorkbookPayload(workbook) {
       if (!priorDate || new Date(paymentDate) < new Date(priorDate)) registration.earliestPaymentDate = paymentDate;
     }
   }
-  const allRegistrationCodeCounts = new Map();
-  for (const profile of profiles) for (const item of profile.registrations) {
-    allRegistrationCodeCounts.set(item.stCode, (allRegistrationCodeCounts.get(item.stCode) || 0) + 1);
+  const allRegistrationCodeProfiles = new Map();
+  for (const [profileIndex, profile] of profiles.entries()) for (const item of profile.registrations) {
+    allRegistrationCodeProfiles.set(item.stCode, new Set([...(allRegistrationCodeProfiles.get(item.stCode) || []), profileIndex]));
   }
   for (const profile of profiles) {
     const seen = new Set();
@@ -224,7 +225,7 @@ function buildWorkbookPayload(workbook) {
       if (seen.has(item.registrationId)) return false;
       seen.add(item.registrationId); return true;
     }).sort((a,b) => new Date(b.dateOfAdmission || b.earliestPaymentDate || 0) - new Date(a.dateOfAdmission || a.earliestPaymentDate || 0));
-    profile.registrations.forEach(item => { item.stCodeUnique = allRegistrationCodeCounts.get(item.stCode) === 1; });
+    profile.registrations.forEach(item => { item.stCodeUnique = allRegistrationCodeProfiles.get(item.stCode)?.size === 1; });
     profile.registrations.forEach((item,index) => { item.isCurrent = index === 0; });
   }
   return { studentSheetName: studentSheet.name, feeSheetName: feeSheet.name, studentRows: studentDataRows, registrationCount: registrations.size, profiles, feeRows, warnings: [...studentWarnings, ...feeWarnings] };
