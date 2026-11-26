@@ -509,6 +509,14 @@ async function syncFeeRows(rows = []) {
     const key = [clean(enrollment.stCode), mrNo, paymentDate.toISOString().slice(0, 10), amountPaid.toFixed(2)].join("|");
     const priorReceipt = existingByKey.get(key);
     if (priorReceipt) {
+      const priorEnrollment = enrollmentByMongoId.get(String(priorReceipt.enrollmentId || ""));
+      const priorMasterId = priorEnrollment?.studentId || priorReceipt.masterStudentId || null;
+      const sameMaster = priorMasterId && String(priorMasterId) === String(enrollment.studentId);
+      const sameRegistration = String(priorReceipt.registrationId || "").toUpperCase() === registrationId.toUpperCase();
+      if (!sameMaster && !sameRegistration) {
+        unmatchedRows.push({ row: row.rowNo, sheet: row.sourceSheet || "", studentId: registrationId, stCode: row.stCode || "", name: row.cleanName || "", mrNo, paymentDate, amountPaid, reason: "A receipt with the same St_Code/MR/date/amount is linked to a different or unknown master identity. It was preserved and flagged for manual review." });
+        continue;
+      }
       const courseCode = clean(enrollment.courseCode || row.course).toUpperCase();
       const repair = {};
       const linkedToThisEnrollment = String(priorReceipt.enrollmentId || "") === String(enrollment._id);
