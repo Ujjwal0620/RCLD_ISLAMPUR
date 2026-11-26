@@ -60,7 +60,10 @@ const StudentEnrollmentSchema = new mongoose.Schema({
     feeStatus: { type: String, enum: ["Paid", "Partial", "Unpaid"], default: "Unpaid" }
   },
   sourceRowNo: Number,
-  importBatchKey: { type: String, default: "" }
+  importBatchKey: { type: String, default: "" },
+  masterStudentId: { type: mongoose.Schema.Types.ObjectId, ref: "StudentMaster", default: null },
+  mergedIntoEnrollmentId: { type: mongoose.Schema.Types.ObjectId, ref: "StudentEnrollment", default: null },
+  mergeStatus: { type: String, default: "" }
 }, { timestamps: true, collection: "student_enrollments" });
 
 StudentEnrollmentSchema.index({ studentId: 1, registrationId: 1 }, { unique: true, name: "student_registration_identity_unique", partialFilterExpression: { registrationId: { $type: "string", $gt: "" } } });
