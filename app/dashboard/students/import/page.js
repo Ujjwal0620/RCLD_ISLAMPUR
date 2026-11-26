@@ -197,16 +197,25 @@ function buildWorkbookPayload(workbook) {
     if (!registration) {
       const nameMatches = profileByName.get(identity.cleanName) || [];
       if (nameMatches.length === 1) {
-        const legacy = {
-          ...identity, course: "Previous Course (Legacy)", dateOfAdmission: null,
-          earliestPaymentDate: parseDate(feeGet(row,"dop")), formNo: "", dob: null,
-          sex: "", fatherName: "", address: "", phones: [], qualification: ""
-        };
         const profile = nameMatches[0];
-        profile.registrations.push(legacy);
-        registration = legacy;
-        registrationId = legacy.registrationId;
-        registrationById.set(registrationId, registration);
+        const sameCodeAdmissions = profile.registrations.filter(item => String(item.stCode) === String(identity.stCode));
+        if (sameCodeAdmissions.length === 1) {
+          registration = sameCodeAdmissions[0];
+          registrationId = registration.registrationId;
+        } else if (sameCodeAdmissions.length === 0) {
+          const legacy = {
+            ...identity, course: "Previous Course (Legacy)", dateOfAdmission: null,
+            earliestPaymentDate: parseDate(feeGet(row,"dop")), formNo: "", dob: null,
+            sex: "", fatherName: "", address: "", phones: [], qualification: ""
+          };
+          profile.registrations.push(legacy);
+          registration = legacy;
+          registrationId = legacy.registrationId;
+          registrationById.set(registrationId, registration);
+        } else {
+          feeWarnings.push({ sheet: feeSheet.name, row: index + 1, studentId: identity.registrationId, name: identity.cleanName, stCode: identity.stCode, mrNo: clean(feeGet(row,"mrno")), paymentDate: parseDate(feeGet(row,"dop")), amountPaid: feeGet(row,"amtpaid"), reason: "This student has multiple admissions under the same St_Code; fee row could not be assigned to one course without a matching registration identity." });
+          continue;
+        }
       } else {
         feeWarnings.push({ sheet: feeSheet.name, row: index + 1, studentId: identity.registrationId, name: identity.cleanName, stCode: identity.stCode, mrNo: clean(feeGet(row,"mrno")), paymentDate: parseDate(feeGet(row,"dop")), amountPaid: feeGet(row,"amtpaid"), reason: nameMatches.length > 1 ? "Legacy registration name is ambiguous across multiple student profiles." : "Fee registration does not match Student Data." });
         continue;
