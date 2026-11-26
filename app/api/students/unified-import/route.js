@@ -488,7 +488,7 @@ async function syncFeeRows(rows = []) {
   }
   const operations = [];
   const unmatchedRows = [];
-  let newReceiptsAdded = 0, existingReceiptsUpdatedOrSkipped = 0;
+  let newReceiptsAdded = 0, existingReceiptsUpdatedOrSkipped = 0, duplicateReceiptsSkipped = 0, existingReceiptsUpdated = 0;
   const seenInBatch = new Set();
   for (const row of rows) {
     const registrationId = clean(row.registrationId);
@@ -521,7 +521,10 @@ async function syncFeeRows(rows = []) {
       if (!priorReceipt.enrollmentId || String(priorReceipt.enrollmentId) !== String(enrollment._id)) repair.enrollmentId = enrollment._id;
       if (!priorReceipt.courseCode || (linkedToThisEnrollment && String(priorReceipt.courseCode).toUpperCase() !== courseCode)) repair.courseCode = courseCode;
       if (!priorReceipt.stCode || (linkedToThisEnrollment && String(priorReceipt.stCode) !== String(enrollment.stCode))) repair.stCode = enrollment.stCode;
-      if (Object.keys(repair).length) operations.push({ updateOne: { filter: { _id: priorReceipt._id }, update: { $set: repair } } });
+      if (Object.keys(repair).length) {
+        operations.push({ updateOne: { filter: { _id: priorReceipt._id }, update: { $set: repair } } });
+        existingReceiptsUpdated += 1;
+      } else duplicateReceiptsSkipped += 1;
       existingReceiptsUpdatedOrSkipped += 1;
       continue;
     }
@@ -532,6 +535,7 @@ async function syncFeeRows(rows = []) {
     }
     if (seenInBatch.has(key)) {
       existingReceiptsUpdatedOrSkipped += 1;
+      duplicateReceiptsSkipped += 1;
       continue;
     }
     seenInBatch.add(key);
@@ -555,10 +559,12 @@ async function syncFeeRows(rows = []) {
       newReceiptsAdded += Number(partialResult.upsertedCount || partialResult.nUpserted || partialResult.result?.nUpserted || 0);
       if (!writeErrors.length && error.code !== 11000) throw error;
       if (writeErrors.some(item => item.code !== 11000)) throw error;
-      existingReceiptsUpdatedOrSkipped += writeErrors.length || (error.code === 11000 ? 1 : 0);
+      const duplicateCount = writeErrors.length || (error.code === 11000 ? 1 : 0);
+      existingReceiptsUpdatedOrSkipped += duplicateCount;
+      duplicateReceiptsSkipped += duplicateCount;
     }
   }
-  return { newReceiptsAdded, existingReceiptsUpdatedOrSkipped, unmatchedRows, feeRowsProcessed: rows.length };
+  return { newReceiptsAdded, existingReceiptsUpdatedOrSkipped, duplicateReceiptsSkipped, existingReceiptsUpdated, unmatchedRows, feeRowsProcessed: rows.length };
 }
 
 async function finalizeFeeSummaries(rawStudentIds = []) {
