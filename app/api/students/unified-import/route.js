@@ -133,6 +133,8 @@ async function syncStudentGroups(groups = []) {
   const existingEnrollmentMasterIds = [...new Set(existingEnrollments.map(item => String(item.studentId)).filter(validObjectId))]
     .map(id => new mongoose.Types.ObjectId(id));
   const existingMasters = await StudentMaster.find({
+    mergedIntoMasterId: null,
+    isMerged: { $ne: true },
     $or: [
       { normalizedFullName: { $in: names } },
       { alternateNames: { $in: names } },
