@@ -16,6 +16,7 @@ const StudentFeePaymentSchema = new mongoose.Schema({
   financialYear: { type: String, default: "" },
   stNameKey: { type: String, default: "", index: true },
   courseCode: { type: String, default: "" },
+  course: { type: String, default: "" },
   mrNo: { type: String, required: true, trim: true },
   paymentMode: { type: String, default: "" },
   amountPaid: { type: Number, required: true, min: 0 },
