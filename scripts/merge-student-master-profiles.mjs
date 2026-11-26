@@ -125,6 +125,14 @@ async function main() {
     ? await enrollmentCollection.find({ studentId: { $in: duplicateMasterIds } }).toArray()
     : [];
   const enrollmentIds = enrollmentDocs.map(item => item._id);
+  const allEnrollmentAuditRows = await enrollmentCollection.find({ mergedIntoEnrollmentId: null }).toArray();
+  const projectedEnrollmentCounts = new Map();
+  for (const item of allEnrollmentAuditRows) {
+    const projectedMasterId = mergeMap.get(String(item.studentId)) || String(item.studentId);
+    const key = projectedMasterId + "|" + registrationKey(item);
+    projectedEnrollmentCounts.set(key, (projectedEnrollmentCounts.get(key) || 0) + 1);
+  }
+  const projectedDuplicateEnrollmentKeys = [...projectedEnrollmentCounts.values()].filter(count => count > 1).length;
   for (const group of mergeGroups) {
     const canonicalId = group.canonical._id;
     const allGroupIds = [canonicalId, ...group.duplicates.map(item => item._id)];
@@ -154,6 +162,7 @@ async function main() {
     confidentDuplicateGroups: mergeGroups.length,
     duplicateMasterProfilesToMarkMerged: duplicateMasterIds.length,
     studentEnrollmentRecordsToInspect: enrollmentDocs.length,
+    duplicateEnrollmentKeysToRetainAndMark: projectedDuplicateEnrollmentKeys,
     feeRecordsToRelink: duplicateMasterIds.length ? await paymentsCollection.countDocuments({
       $or: [
         { studentId: { $in: duplicateMasterIds } },
