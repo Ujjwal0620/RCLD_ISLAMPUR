@@ -513,10 +513,16 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
     }
     if (currentEnrollmentId) {
       activeMasterOps.push({ updateOne: { filter: { _id: masterId }, update: { $set: { activeEnrollmentId: currentEnrollmentId } } } });
-      enrollmentStatusOps.push({ updateMany: {
-        filter: { studentId: masterId, status: "ACTIVE", _id: { $ne: currentEnrollmentId } },
-        update: { $set: { status: "PROMOTED" } }
-      }});
+      for (const priorEnrollment of existingEnrollments) {
+        if (String(priorEnrollment.studentId) === String(masterId)
+          && String(priorEnrollment._id) !== String(currentEnrollmentId)
+          && priorEnrollment.status === "ACTIVE") {
+          enrollmentStatusOps.push({ updateOne: {
+            filter: { _id: priorEnrollment._id },
+            update: { $set: { status: "PROMOTED" } }
+          } });
+        }
+      }
       enrollmentStatusOps.push({ updateOne: {
         filter: { _id: currentEnrollmentId },
         update: { $set: { status: "ACTIVE" } }
