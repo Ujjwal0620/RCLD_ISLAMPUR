@@ -11,7 +11,7 @@ const dateLabel = value => {
 export default function StudentIdentityHistory({ student }) {
   const profile = student?.masterProfile || {};
   const codes = useMemo(() => {
-    const all = [...new Set([...(profile.studentCodes || []), ...(profile.stCodes || []), ...(student.studentCodes || [])].map(String).filter(Boolean))];
+    const all = [...new Set([...(profile.studentCodes || []), ...(profile.stCodes || []), ...(student.studentCodes || []), profile.primaryStCode, profile.currentStCode, student.primaryStCode, student.regnNo].map(String).filter(Boolean))];
     const current = String(profile.primaryStCode || profile.currentStCode || student.primaryStCode || student.regnNo || "");
     return all.sort((a, b) => a === current ? -1 : b === current ? 1 : b.localeCompare(a, undefined, { numeric: true }));
   }, [profile.studentCodes, profile.stCodes, profile.primaryStCode, profile.currentStCode, student.studentCodes, student.primaryStCode, student.regnNo]);
