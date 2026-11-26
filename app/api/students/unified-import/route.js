@@ -33,16 +33,21 @@ async function ensureReceiptIndex() {
       for (const legacy of [...legacyIndexes, ...oldRegistrationIndexes]) {
         await StudentFeePayment.collection.dropIndex(legacy.name);
       }
+      await StudentFeePayment.collection.updateMany(
+        { importBatchKey: "UNIFIED_WORKBOOK_IMPORT", masterStudentId: { $exists: false }, studentId: { $type: "objectId" } },
+        [{ $set: { masterStudentId: "$studentId" } }]
+      );
       const duplicateGroups = await StudentFeePayment.collection.aggregate([
         { $match: {
           importBatchKey: "UNIFIED_WORKBOOK_IMPORT",
+          masterStudentId: { $type: "objectId" },
           stCode: { $type: "string", $gt: "" },
           mrNo: { $type: "string", $gt: "" },
           paymentDate: { $type: "date" },
           amountPaid: { $type: "number" }
         } },
         { $group: {
-          _id: { stCode: "$stCode", mrNo: "$mrNo", paymentDate: "$paymentDate", amountPaid: "$amountPaid" },
+          _id: { masterStudentId: "$masterStudentId", stCode: "$stCode", mrNo: "$mrNo", paymentDate: "$paymentDate", amountPaid: "$amountPaid" },
           ids: { $push: "$_id" },
           count: { $sum: 1 }
         } },
@@ -56,12 +61,13 @@ async function ensureReceiptIndex() {
         );
       }
       await StudentFeePayment.collection.createIndex(
-        { stCode: 1, mrNo: 1, paymentDate: 1, amountPaid: 1 },
+        { masterStudentId: 1, stCode: 1, mrNo: 1, paymentDate: 1, amountPaid: 1 },
         {
           unique: true,
-          name: "stcode_receipt_date_amount_unique",
+          name: "master_stcode_receipt_date_amount_unique",
           partialFilterExpression: {
             importBatchKey: "UNIFIED_WORKBOOK_IMPORT",
+            masterStudentId: { $type: "objectId" },
             stCode: { $type: "string", $gt: "" },
             mrNo: { $type: "string", $gt: "" },
             paymentDate: { $type: "date" },
