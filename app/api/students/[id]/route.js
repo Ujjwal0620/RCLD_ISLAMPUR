@@ -19,7 +19,7 @@ export async function GET(req,{params}){
     const student=await Student.findById(id).lean();
     if(!student)return NextResponse.json({error:"Student not found."},{status:404});
 
-    const masterProfile = await StudentMaster.findOne({ legacyStudentIds: student._id }).lean();
+    const masterProfile = await StudentMaster.findOne({ legacyStudentIds: student._id, mergedIntoMasterId: null, isMerged: { $ne: true } }).lean();
     const enrollmentQuery = masterProfile ? { studentId: masterProfile._id } : { legacyStudentId: student._id };
     const enrollments = await StudentEnrollment.find(enrollmentQuery).sort({ admissionDate: -1, createdAt: -1 }).lean();
     const activeEnrollment = masterProfile
