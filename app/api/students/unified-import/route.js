@@ -283,9 +283,15 @@ async function syncStudentGroups(groups = []) {
       legacyIds.push(String(newStudentId));
     }
     const existingRegs = new Map();
+    const historyKey = item => [
+      clean(item.stCode),
+      normalizeCourseCode(item.course || item.courseName || item.courseCode || "PREVIOUS-LEGACY"),
+      asDate(item.dateOfAdmission || item.admissionDate)?.toISOString().slice(0, 10) || ""
+    ].join("|");
     for (const item of [...(master?.registrations || []), ...(master?.enrollments || [])]) {
       const id = clean(item.registrationId) || (clean(item.stCode) ? normalizeName(master?.normalizedFullName || master?.fullName || group.cleanName) + "_" + clean(item.stCode) : "");
-      if (id && !existingRegs.has(id)) existingRegs.set(id, {
+      const key = historyKey(item);
+      if (id && !existingRegs.has(key)) existingRegs.set(key, {
         stCode: clean(item.stCode), registrationId: id, course: clean(item.course || item.courseCode) || "Previous Course (Legacy)",
         dateOfAdmission: asDate(item.dateOfAdmission || item.admissionDate),
         earliestPaymentDate: asDate(item.earliestPaymentDate),
@@ -297,7 +303,8 @@ async function syncStudentGroups(groups = []) {
     for (const item of existingEnrollments) {
       if (String(item.studentId) !== String(masterId)) continue;
       const id = clean(item.registrationId) || (clean(item.stCode) ? normalizeName(group.cleanName) + "_" + clean(item.stCode) : "");
-      if (id && !existingRegs.has(id)) existingRegs.set(id, {
+      const key = historyKey({ ...item, course: item.courseName || item.courseCode });
+      if (id && !existingRegs.has(key)) existingRegs.set(key, {
         stCode: clean(item.stCode), registrationId: id,
         course: clean(item.courseName || item.courseCode) || "Previous Course (Legacy)",
         dateOfAdmission: asDate(item.admissionDate), earliestPaymentDate: asDate(item.earliestPaymentDate),
@@ -306,9 +313,10 @@ async function syncStudentGroups(groups = []) {
       });
     }
     for (const item of registrations) {
-      if (!existingRegs.has(item.registrationId)) registrationsLinked += 1;
-      const prior = existingRegs.get(item.registrationId) || {};
-      existingRegs.set(item.registrationId, {
+      const key = historyKey(item);
+      if (!existingRegs.has(key)) registrationsLinked += 1;
+      const prior = existingRegs.get(key) || {};
+      existingRegs.set(key, {
         ...prior, stCode: item.stCode, registrationId: item.registrationId,
         course: item.course || prior.course,
         dateOfAdmission: item.dateOfAdmission || prior.dateOfAdmission,
