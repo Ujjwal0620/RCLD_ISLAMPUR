@@ -127,16 +127,8 @@ export default function StudentFeeWorkspace({
     : null;
   const selectedHistory = historyMetadata.find(item => enrollmentFilterKey(item) === selectedCode) || {};
   const selectedRegistration = selectedCard || selectedHistory;
-  const codeCount = new Map();
-  for (const item of codeCards) codeCount.set(String(item.stCode), (codeCount.get(String(item.stCode)) || 0) + 1);
   const visibleRows = useMemo(() => [...paymentHistory]
-    .filter(payment => {
-      if (selectedCode === "ALL") return true;
-      const id = String(payment.registrationId || payment.stNameKey || "").toUpperCase();
-      if (id) return id === selectedCode.toUpperCase();
-      const card = codeCards.find(item => item.registrationId === selectedCode);
-      return Boolean(card && codeCount.get(String(card.stCode)) === 1 && String(payment.stCode || "") === String(card.stCode));
-    })
+    .filter(payment => selectedCode === "ALL" || resolvePaymentCard(payment, codeCards)?.filterKey === selectedCode)
     .sort((a, b) => new Date(a.paymentDate || a.rawPaymentDate || 0).getTime() - new Date(b.paymentDate || b.rawPaymentDate || 0).getTime()),
   [paymentHistory, selectedCode, codeCards]);
   const courseSubtotals = useMemo(() => {
@@ -210,19 +202,19 @@ export default function StudentFeeWorkspace({
         <label style={{ display: "grid", gap: 5, minWidth: 230, fontSize: 12, fontWeight: 700 }}>Filter fee ledger by code
           <select value={selectedCode} onChange={event => setSelectedCodeState(event.target.value)} style={{ minHeight: 40, padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border,#dbe1ea)", background: "var(--surface,#fff)", color: "inherit" }}>
             <option value="ALL">All Codes</option>
-            {codeCards.map(item => <option key={item.registrationId} value={item.registrationId}>#{item.stCode} · {item.course || item.courseCode || "Previous Course"}</option>)}
+            {codeCards.map(item => <option key={item.filterKey} value={item.filterKey}>#{item.stCode} · {item.course || item.courseCode || "Previous Course"}</option>)}
           </select>
         </label>
         <button type="button" className={selectedCode === "ALL" ? "primary-btn" : "ghost-btn"} onClick={() => setSelectedCodeState("ALL")} aria-pressed={selectedCode === "ALL"}>All Codes</button>
         {codeCards.map(item => {
-          const id = String(item.registrationId);
-          const current = id === currentRegistrationId || Boolean(item.isCurrent) || String(item.stCode) === currentStCode;
+          const id = item.filterKey;
+          const current = id === enrollmentFilterKey(currentEnrollment || {}) || Boolean(item.isCurrent) || String(item.stCode) === currentStCode;
           const active = selectedCode === id;
           return <button key={id} type="button" onClick={() => setSelectedCodeState(id)}
             className={active ? "primary-btn" : "ghost-btn"} aria-pressed={active}
             style={{ minWidth: 190, textAlign: "left", display: "grid", gap: 4, padding: "9px 12px" }}>
             <span style={{ fontWeight: 800 }}>#{item.stCode} <small style={{ marginLeft: 5, padding: "3px 7px", borderRadius: 999, background: current ? "#dcfce7" : "#eef2f7", color: current ? "#166534" : "#596579", fontSize: 10 }}>{current ? "Current" : "Previous"}</small></span>
-            <span style={{ fontSize: 11, overflowWrap: "anywhere" }}>{id}</span>
+            <span style={{ fontSize: 11, overflowWrap: "anywhere" }}>{item.registrationId || id}</span>
             <span style={{ fontSize: 12 }}>{item.course || item.courseCode || "Previous Course (Legacy)"}</span>
             <span style={{ fontSize: 11, opacity: .8 }}>{item.dateOfAdmission || item.admissionDate ? "Admission: " + dateLabel(item.dateOfAdmission || item.admissionDate) : "First payment: " + dateLabel(item.earliestPaymentDate)} · {money(item.paidTotal)} paid</span>
           </button>;
