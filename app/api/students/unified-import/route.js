@@ -130,7 +130,18 @@ async function bulkWriteChunked(model, operations, warnings, label, chunkSize = 
         const operation = chunk[index];
         if (!operation) continue;
         try {
-          await model.bulkWrite([operation], { ordered: false });
+          if (model.modelName === "StudentEnrollment") {
+            const filter = operation.updateOne?.filter || {};
+            const update = operation.updateOne?.update || {};
+            const set = { ...(update.$setOnInsert || {}), ...(update.$set || {}) };
+            delete set._id;
+            const repaired = await model.updateOne(filter, { $set: set }, { upsert: false });
+            if (!repaired.matchedCount && !repaired.n) {
+              warnings.push({ phase: label, index: offset + index, code: 11000, reason: "Duplicate enrollment key was reported, but no existing document matched the exact four-field key." });
+            }
+          } else {
+            await model.bulkWrite([operation], { ordered: false });
+          }
         } catch (retryError) {
           warnings.push({
             phase: label, index: offset + index,
@@ -686,14 +697,20 @@ async function syncFeeRows(rows = [], onProgress = () => {}) {
         }
       }
     }
+    const processedOperations = Math.min(index + chunk.length, operations.length);
     onProgress({
-      percent: 65 + Math.round((Math.min(index + chunk.length, operations.length) / Math.max(operations.length, 1)) * 27),
+      percent: 65 + Math.round((processedOperations / Math.max(operations.length, 1)) * 27),
       stage: "Importing Fee Receipts",
-      message: "Fee receipt operations saved",
-      processed: Math.min(index + chunk.length, operations.length),
+      message: "Fee receipt write chunk saved (" + processedOperations.toLocaleString("en-IN") + " / " + operations.length.toLocaleString("en-IN") + " write operations)",
+      processed: processedOperations,
       total: operations.length
     });
   }
+  onProgress({
+    percent: 92, stage: "Importing Fee Receipts",
+    message: "Fee Receipts: " + rows.length.toLocaleString("en-IN") + " / " + rows.length.toLocaleString("en-IN") + " processed",
+    processed: rows.length, total: rows.length
+  });
   return { newReceiptsAdded, existingReceiptsUpdatedOrSkipped, duplicateReceiptsSkipped, existingReceiptsUpdated, unmatchedRows, feeRowsProcessed: rows.length };
 }
 
@@ -853,10 +870,12 @@ export async function POST(request) {
         async start(controller) {
           const emit = event => controller.enqueue(encoder.encode(JSON.stringify(event) + "\n"));
           const startedAt = Date.now();
+          let currentPhase = "Validating & parsing payload";
           try {
-            emit({ type: "progress", percent: 5, stage: "Validating & parsing payload", message: "Payload validated", processed: 0, total: body.groups.length + body.rows.length });
+            emit({ type: "progress", percent: 5, stage: currentPhase, message: "Payload validated", processed: 0, total: body.groups.length + body.rows.length });
             console.info("[unified-student-import] start", { profiles: body.groups.length, fees: body.rows.length });
             const result = await runCompleteImport(body.groups, body.rows, event => {
+              currentPhase = event.stage || currentPhase;
               console.info("[unified-student-import] progress", event);
               emit({ type: "progress", ...event });
             });
@@ -864,7 +883,7 @@ export async function POST(request) {
             emit({ type: "complete", percent: 100, stage: "Complete", summary: result, durationMs: Date.now() - startedAt });
           } catch (error) {
             console.error("[unified-student-import] failed", { durationMs: Date.now() - startedAt, message: error.message, stack: error.stack });
-            emit({ type: "error", message: error.message || "Unified workbook import failed.", phase: error.phase || "processing" });
+            emit({ type: "error", message: error.message || "Unified workbook import failed.", phase: error.phase || currentPhase });
           } finally {
             controller.close();
           }
