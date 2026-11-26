@@ -32,7 +32,7 @@ function printReceipt(payment, student) {
   popup.print();
 }
 
-const enrollmentCourseKey = item => String(item?.courseCode || item?.courseName || item?.course || "").trim().toUpperCase();
+const enrollmentCourseKey = item => String(item?.course || item?.courseCode || item?.courseName || "").trim().toUpperCase();
 const enrollmentDateKey = item => {
   const value = item?.admissionDate || item?.dateOfAdmission;
   if (!value) return "";
@@ -50,9 +50,9 @@ function resolvePaymentCard(payment, cards) {
   const paymentCode = String(payment?.stCode || "");
   if (paymentCode) candidates = candidates.filter(item => String(item.stCode || "") === paymentCode);
   if (!candidates.length && paymentCode) candidates = cards.filter(item => String(item.stCode || "") === paymentCode);
-  const paymentCourse = String(payment?.courseCode || payment?.courseName || payment?.course || "").trim().toUpperCase();
+  const paymentCourse = String(payment?.course || payment?.courseCode || payment?.courseName || "").trim().toUpperCase();
   if (paymentCourse && candidates.length > 1) {
-    const courseMatches = candidates.filter(item => [item.courseCode, item.courseName, item.course].some(value => String(value || "").trim().toUpperCase() === paymentCourse));
+    const courseMatches = candidates.filter(item => [item.course, item.courseCode, item.courseName].some(value => String(value || "").trim().toUpperCase() === paymentCourse));
     if (courseMatches.length) candidates = courseMatches;
   }
   if (candidates.length === 1) return candidates[0];
