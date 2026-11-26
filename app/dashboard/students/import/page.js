@@ -135,6 +135,7 @@ function buildWorkbookPayload(workbook) {
       fatherName: items.find(item => item.fatherName)?.fatherName || "",
       fatherNames: [...new Set(items.map(item => item.fatherName).filter(Boolean))],
       phones: [...new Set(items.flatMap(item => item.phones))],
+      studentCodes: [...new Set(items.map(item => item.stCode))],
       registrations: items.map(item => ({ ...item, alternateNames: names, isCurrent: item.registrationId === latest.registrationId }))
     };
   });
