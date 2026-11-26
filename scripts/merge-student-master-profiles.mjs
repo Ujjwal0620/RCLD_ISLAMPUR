@@ -405,10 +405,13 @@ async function main() {
     });
   }
 
-  await paymentsCollection.updateMany(
-    { importBatchKey: "UNIFIED_WORKBOOK_IMPORT", masterStudentId: { $exists: false }, studentId: { $type: "objectId" } },
-    [{ $set: { masterStudentId: "$studentId" } }]
-  );
+  const activeMasterIdsForReceiptBackfill = activeMasterRowsForLinks.map(master => master._id);
+  if (activeMasterIdsForReceiptBackfill.length) {
+    await paymentsCollection.updateMany(
+      { importBatchKey: "UNIFIED_WORKBOOK_IMPORT", masterStudentId: { $exists: false }, studentId: { $in: activeMasterIdsForReceiptBackfill } },
+      [{ $set: { masterStudentId: "$studentId" } }]
+    );
+  }
   const importedReceiptDuplicates = await paymentsCollection.aggregate([
     { $match: {
       importBatchKey: "UNIFIED_WORKBOOK_IMPORT",
