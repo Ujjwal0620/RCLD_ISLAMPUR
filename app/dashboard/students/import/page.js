@@ -351,7 +351,7 @@ export default function BulkImportPage() {
     if (!checkpoint) {
       checkpoint = {
         fingerprint, studentIndex: 0, feeIndex: 0, registrationMap: {}, studentIds: [],
-        summary: { created: 0, updated: 0, enrollmentsLinked: 0, newReceiptsAdded: 0, existingReceiptsUpdatedOrSkipped: 0, duplicateReceiptsSkipped: 0, existingReceiptsUpdated: 0, warnings: [] },
+        summary: { created: 0, updated: 0, enrollmentsLinked: 0, duplicatesSkipped: 0, newReceiptsAdded: 0, existingReceiptsUpdatedOrSkipped: 0, duplicateReceiptsSkipped: 0, existingReceiptsUpdated: 0, warnings: [] },
         percent: 0, telemetry: { studentsDone: 0, studentsTotal: preview.profiles.length, registrationsDone: 0, registrationsTotal: preview.registrationCount, feesDone: 0, feesTotal: preview.feeRows.length, elapsedSeconds: 0 }
       };
     }
@@ -384,6 +384,7 @@ export default function BulkImportPage() {
         checkpoint.summary.created += Number(data.created || 0);
         checkpoint.summary.updated += Number(data.updated || 0);
         checkpoint.summary.enrollmentsLinked += Number(data.enrollmentsLinked || 0);
+        checkpoint.summary.duplicatesSkipped = Number(checkpoint.summary.duplicatesSkipped || 0) + Number(data.duplicatesSkipped || 0);
         checkpoint.summary.warnings.push(...(data.warnings || []));
         checkpoint.studentIndex = Math.min(offset + groups.length, preview.profiles.length);
         checkpoint.telemetry.studentsDone = checkpoint.studentIndex;
@@ -423,6 +424,7 @@ export default function BulkImportPage() {
         studentsMatchedUpdated: checkpoint.summary.updated,
         newStudentsCreated: checkpoint.summary.created,
         registrationsLinked: checkpoint.summary.enrollmentsLinked,
+        studentEnrollmentDuplicatesSkipped: Number(checkpoint.summary.duplicatesSkipped || 0),
         newReceiptsAdded: checkpoint.summary.newReceiptsAdded,
         existingReceiptsUpdatedOrSkipped: checkpoint.summary.existingReceiptsUpdatedOrSkipped,
         duplicateReceiptsSkipped: checkpoint.summary.duplicateReceiptsSkipped,
@@ -527,6 +529,7 @@ export default function BulkImportPage() {
             <div className="summary-card"><span>New Profiles Created</span><strong>{result.newStudentsCreated}</strong></div>
             <div className="summary-card"><span>Existing Profiles Updated / Merged</span><strong>{result.studentsMatchedUpdated}</strong></div>
             <div className="summary-card"><span>New St_Codes Linked</span><strong>{result.registrationsLinked}</strong></div>
+            <div className="summary-card"><span>Duplicate Student / Enrollment Inserts Skipped</span><strong>{result.studentEnrollmentDuplicatesSkipped}</strong></div>
             <div className="summary-card"><span>Fee Receipts Added</span><strong>{result.newReceiptsAdded}</strong></div>
             <div className="summary-card"><span>Duplicate Receipts Skipped</span><strong>{result.duplicateReceiptsSkipped}</strong></div>
             <div className="summary-card"><span>Existing Receipts Repaired</span><strong>{result.existingReceiptsUpdated}</strong></div>
