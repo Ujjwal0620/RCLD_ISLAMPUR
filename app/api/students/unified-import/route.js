@@ -341,7 +341,7 @@ async function syncStudentGroups(groups = []) {
       fullName: master?.fullName || displayName(group.cleanName),
       normalizedFullName: normalizeName(group.cleanName),
       legacyStudentIds: legacyIds.map(id => validObjectId(id) ? new mongoose.Types.ObjectId(id) : id),
-      primaryStCode: current.stCode || master?.primaryStCode || "",
+      primaryStCode: shouldPromote ? (current.stCode || master?.primaryStCode || "") : (master?.primaryStCode || master?.currentStCode || current.stCode || ""),
       studentCodes: [...new Set([...(master?.studentCodes || []), ...(master?.stCodes || []), ...mergedRegistrations.map(item => item.stCode)].filter(Boolean))],
       alternateNames: [...new Set([...(master?.alternateNames || []), master?.fullName || "", group.cleanName || "", ...(group.alternateNames || [])].map(normalizeStudentName).filter(Boolean))],
       phones: incomingPhones,
