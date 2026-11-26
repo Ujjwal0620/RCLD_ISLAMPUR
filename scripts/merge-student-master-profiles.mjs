@@ -378,6 +378,74 @@ async function main() {
     });
   }
 
+  // Re-link legacy Student references for every active Master profile, not only merged groups.
+  // A legacy Student ID claimed by more than one active Master is deliberately left untouched for review.
+  const activeMasterRowsForLinks = await mastersCollection.find({ mergedIntoMasterId: null, isMerged: { $ne: true } }).toArray();
+  const legacyOwners = new Map();
+  for (const master of activeMasterRowsForLinks) {
+    for (const legacyId of master.legacyStudentIds || []) {
+      const key = String(legacyId);
+      legacyOwners.set(key, [...(legacyOwners.get(key) || []), master._id]);
+    }
+  }
+  for (const master of activeMasterRowsForLinks) {
+    const legacyIds = [...new Set((master.legacyStudentIds || [])
+      .map(id => String(id))
+      .filter(id => legacyOwners.get(id)?.length === 1 && mongoose.Types.ObjectId.isValid(id))
+      .map(id => new mongoose.Types.ObjectId(id)))];
+    if (!legacyIds.length) continue;
+    await enrollmentCollection.updateMany({ legacyStudentId: { $in: legacyIds }, studentId: { $ne: master._id } }, {
+      $set: { studentId: master._id, masterStudentId: master._id },
+    });
+    await paymentsCollection.updateMany({ studentId: { $in: legacyIds } }, {
+      $set: { studentId: master._id, masterStudentId: master._id },
+    });
+    await idCardsCollection.updateMany({ studentId: { $in: legacyIds } }, {
+      $set: { masterStudentId: master._id },
+    });
+  }
+
+  await paymentsCollection.updateMany(
+    { importBatchKey: "UNIFIED_WORKBOOK_IMPORT", masterStudentId: { $exists: false }, studentId: { $type: "objectId" } },
+    [{ $set: { masterStudentId: "$studentId" } }]
+  );
+  const importedReceiptDuplicates = await paymentsCollection.aggregate([
+    { $match: {
+      importBatchKey: "UNIFIED_WORKBOOK_IMPORT",
+      masterStudentId: { $type: "objectId" },
+      stCode: { $type: "string", $gt: "" },
+      mrNo: { $type: "string", $gt: "" },
+      paymentDate: { $type: "date" },
+      amountPaid: { $type: "number" },
+    } },
+    { $group: {
+      _id: { masterStudentId: "$masterStudentId", stCode: "$stCode", mrNo: "$mrNo", paymentDate: "$paymentDate", amountPaid: "$amountPaid" },
+      ids: { $push: "$_id" }, count: { $sum: 1 },
+    } },
+    { $match: { count: { $gt: 1 } } },
+  ]).toArray();
+  const receiptArchiveIds = importedReceiptDuplicates.flatMap(group => group.ids.slice(1));
+  if (receiptArchiveIds.length) {
+    await paymentsCollection.updateMany({ _id: { $in: receiptArchiveIds } }, {
+      $set: { importBatchKey: "UNIFIED_WORKBOOK_IMPORT_DUPLICATE_ARCHIVE" },
+    });
+  }
+  await paymentsCollection.createIndex(
+    { masterStudentId: 1, stCode: 1, mrNo: 1, paymentDate: 1, amountPaid: 1 },
+    {
+      unique: true,
+      name: "master_stcode_receipt_date_amount_unique",
+      partialFilterExpression: {
+        importBatchKey: "UNIFIED_WORKBOOK_IMPORT",
+        masterStudentId: { $type: "objectId" },
+        stCode: { $type: "string", $gt: "" },
+        mrNo: { $type: "string", $gt: "" },
+        paymentDate: { $type: "date" },
+        amountPaid: { $type: "number" },
+      },
+    }
+  );
+
   // Reconcile duplicate enrollment keys after Master IDs have been consolidated.
   // Duplicate enrollment documents are retained; dependent receipts point to the canonical enrollment.
   const activeEnrollmentRows = await enrollmentCollection.find({ mergedIntoEnrollmentId: null }).toArray();
