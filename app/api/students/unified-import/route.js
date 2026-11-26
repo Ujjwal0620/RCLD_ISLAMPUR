@@ -222,16 +222,16 @@ async function syncStudentGroups(groups = []) {
           const storedId = item.registrationId || (item.stCode
             ? normalizeName(candidate.normalizedFullName || candidate.fullName) + "_" + clean(item.stCode)
             : "");
-          return groupRegistrationIds.has(String(storedId).toUpperCase());
+          return groupRegistrationIds.has(String(storedId).toUpperCase())
+            && resolveStudentIdentity(group, candidate).matched;
         })
-      || existingEnrollments.some(item => String(item.studentId) === String(candidate._id)
+      || (existingEnrollments.some(item => String(item.studentId) === String(candidate._id)
         && groupRegistrationIds.has(String(item.registrationId || (item.stCode
           ? normalizeName(item.normalizedFullName) + "_" + clean(item.stCode)
           : "")).toUpperCase()))
+        && resolveStudentIdentity(group, candidate).matched)
     );
-    const candidates = registrationCandidates.length
-      ? registrationCandidates
-      : existingMasters.filter(candidate => hasIdentityAnchor(group, candidate));
+    const candidates = existingMasters.filter(candidate => hasIdentityAnchor(group, candidate));
     const byLinked = linkedMasterIds.size === 1 ? existingMasters.find(item => String(item._id) === [...linkedMasterIds][0]) : null;
     let master = linkedMasterIds.size > 1 ? null : (byLinked || (candidates.length === 1 ? candidates[0] : null));
     const ambiguous = linkedMasterIds.size > 1 || (!master && candidates.length > 1);
@@ -329,6 +329,10 @@ async function syncStudentGroups(groups = []) {
       fullName: master?.fullName || displayName(group.cleanName),
       normalizedFullName: normalizeName(group.cleanName),
       legacyStudentIds: legacyIds.map(id => validObjectId(id) ? new mongoose.Types.ObjectId(id) : id),
+      primaryStCode: current.stCode || master?.primaryStCode || "",
+      studentCodes: [...new Set([...(master?.studentCodes || []), ...(master?.stCodes || []), ...mergedRegistrations.map(item => item.stCode)].filter(Boolean))],
+      alternateNames: [...new Set([...(master?.alternateNames || []), master?.fullName || "", group.cleanName || "", ...(group.alternateNames || [])].map(displayName).filter(Boolean))],
+      phones: [...new Set([...(master?.phones || []), ...(master?.phoneNumbers || []), ...incomingPhones, ...(group.phones || [])])],
       stCodes: [...new Set([...(master?.stCodes || []), ...mergedRegistrations.map(item => item.stCode)].filter(Boolean))],
       registrations: mergedRegistrations,
       enrollments: mergedRegistrations,
