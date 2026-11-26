@@ -18,7 +18,6 @@ import {
   normalizeIdentityDate,
   normalizeIndianPhones,
   normalizeFatherName,
-  resolveStudentIdentity,
 } from "../lib/student-import/identity-resolution.js";
 
 function loadLocalEnvironment() {
@@ -126,7 +125,6 @@ async function main() {
     ? await enrollmentCollection.find({ studentId: { $in: duplicateMasterIds } }).toArray()
     : [];
   const enrollmentIds = enrollmentDocs.map(item => item._id);
-  const enrollmentMap = new Map();
   for (const group of mergeGroups) {
     const canonicalId = group.canonical._id;
     const allGroupIds = [canonicalId, ...group.duplicates.map(item => item._id)];
