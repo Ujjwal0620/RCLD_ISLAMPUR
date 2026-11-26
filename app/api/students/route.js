@@ -183,7 +183,7 @@ export async function GET(request) {
     const pageStudentIds = students.map(student => student._id);
     const masterPhotoProfiles = pageStudentIds.length
       ? await StudentMaster.find({ legacyStudentIds: { $in: pageStudentIds } })
-          .select("legacyStudentIds photoUrl stCodes feeSummary").lean()
+          .select("legacyStudentIds photoUrl stCodes studentCodes primaryStCode alternateNames phones phoneNumbers feeSummary").lean()
       : [];
     const masterPhotoByStudentId = new Map();
     for (const profile of masterPhotoProfiles) {
