@@ -97,8 +97,8 @@ export async function GET(req,{params}){
     const receiptKey = payment => {
       const date = payment.paymentDate || payment.date;
       const dateKey = date && !Number.isNaN(new Date(date).getTime()) ? new Date(date).toISOString().slice(0, 10) : "";
-      return [String(payment.mrNo || payment.receiptNo || payment.reference || ""),
-        String(payment.registrationId || payment.stNameKey || payment.stCode || ""), dateKey,
+      return [String(payment.stCode || payment.registrationId || payment.stNameKey || ""),
+        String(payment.mrNo || payment.receiptNo || payment.reference || ""), dateKey,
         Number(payment.amountPaid ?? payment.amount ?? 0).toFixed(2)].join("|");
     };
     const knownReceiptKeys = new Set(paymentHistory.map(receiptKey));
