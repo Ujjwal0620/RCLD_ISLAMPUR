@@ -62,7 +62,7 @@ export async function GET(request) {
       filter.$or = searchFields.map(field => ({ [field]: rx }));
       // Search every alias/code/contact field on the permanent master identity.
       const numericPhoneSearch = search.replace(/\D/g, "");
-      const masterMatches = await StudentMaster.find({ $or: [
+      const masterMatches = await StudentMaster.find({ mergedIntoMasterId: null, isMerged: { $ne: true }, $or: [
         { stCodes: rx }, { studentCodes: rx }, { primaryStCode: rx },
         { fullName: rx }, { normalizedFullName: rx }, { alternateNames: rx },
         { fatherName: rx }, { normalizedFatherName: rx },
@@ -149,7 +149,7 @@ export async function GET(request) {
 
     // Present one directory row per permanent master identity. Historical Student
     // documents remain stored because operational tables still reference their IDs.
-    const masterProfiles = await StudentMaster.find({ legacyStudentIds: { $exists: true, $ne: [] } })
+    const masterProfiles = await StudentMaster.find({ legacyStudentIds: { $exists: true, $ne: [] }, mergedIntoMasterId: null, isMerged: { $ne: true } })
       .select("_id legacyStudentIds activeEnrollmentId").lean();
     if (masterProfiles.length) {
       const activeIds = masterProfiles.map(master => master.activeEnrollmentId).filter(Boolean);
@@ -182,7 +182,7 @@ export async function GET(request) {
     // the local ID-card photograph using the student's exact registration number.
     const pageStudentIds = students.map(student => student._id);
     const masterPhotoProfiles = pageStudentIds.length
-      ? await StudentMaster.find({ legacyStudentIds: { $in: pageStudentIds } })
+      ? await StudentMaster.find({ legacyStudentIds: { $in: pageStudentIds }, mergedIntoMasterId: null, isMerged: { $ne: true } })
           .select("legacyStudentIds photoUrl stCodes studentCodes primaryStCode alternateNames phones phoneNumbers feeSummary").lean()
       : [];
     const masterPhotoByStudentId = new Map();
