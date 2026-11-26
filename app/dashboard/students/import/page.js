@@ -252,41 +252,30 @@ function buildWorkbookPayload(workbook) {
   return { studentSheetName: studentSheet.name, feeSheetName: feeSheet.name, studentRows: studentDataRows, registrationCount: registrations.size, profiles, feeRows, warnings: [...studentWarnings, ...feeWarnings] };
 }
 
-async function postBatch(body, onProgress = () => {}) {
-  const response = await fetch("/api/students/unified-import", {
-    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
-  });
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error(data.detail || data.error || "Import request failed.");
-  }
-  if (!response.body) throw new Error("This browser does not support streaming import progress.");
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "", completed = null;
-  const consumeLine = line => {
-    if (!line.trim()) return;
-    const event = JSON.parse(line);
-    if (event.type === "progress") onProgress(event);
-    else if (event.type === "error") throw new Error((event.message || "Import failed") + " (phase: " + (event.phase || "processing") + ")");
-    else if (event.type === "complete") completed = event;
-  };
-  try {
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() || "";
-      for (const line of lines) consumeLine(line);
+const IMPORT_CHECKPOINT_KEY = "rcld-unified-import-checkpoint-v2";
+async function postBatch(body) {
+  let lastError;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const response = await fetch("/api/students/unified-import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const error = new Error(data.detail || data.error || ("Import request failed with HTTP " + response.status));
+        error.status = response.status;
+        if (response.status < 500 && response.status !== 429) throw error;
+        lastError = error;
+      } else return data;
+    } catch (error) {
+      if (error.status && error.status < 500 && error.status !== 429) throw error;
+      lastError = error;
     }
-    buffer += decoder.decode();
-    if (buffer.trim()) consumeLine(buffer);
-  } finally {
-    reader.releaseLock();
+    if (attempt < 2) await new Promise(resolve => setTimeout(resolve, 700 * (attempt + 1)));
   }
-  if (!completed?.summary?.complete) throw new Error("The stream ended before the server confirmed import completion.");
-  return completed.summary;
+  throw lastError || new Error("Chunk failed after 3 attempts.");
 }
 
 export default function BulkImportPage() {
@@ -299,6 +288,9 @@ export default function BulkImportPage() {
   const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
   const runningRef = useRef(false);
   const [progress, setProgress] = useState({ stage: "Idle", percent: 0, done: 0, total: 0 });
+  const checkpointRef = useRef(null);
+  const [resumeAvailable, setResumeAvailable] = useState(false);
+  const [telemetry, setTelemetry] = useState({ studentsDone: 0, studentsTotal: 0, registrationsDone: 0, registrationsTotal: 0, feesDone: 0, feesTotal: 0, elapsedSeconds: 0 });
   const notify = useErpToast();
   const { invalidate } = useErpCache();
 
@@ -309,6 +301,21 @@ export default function BulkImportPage() {
     try {
       const workbook = XLSX.read(await selectedFile.arrayBuffer(), { type: "array", cellDates: true });
       const payload = buildWorkbookPayload(workbook);
+      const fingerprint = [selectedFile.name, selectedFile.size, selectedFile.lastModified].join("|");
+      let savedCheckpoint = null;
+      try {
+        const rawCheckpoint = localStorage.getItem(IMPORT_CHECKPOINT_KEY);
+        const parsedCheckpoint = rawCheckpoint ? JSON.parse(rawCheckpoint) : null;
+        if (parsedCheckpoint?.fingerprint === fingerprint && !parsedCheckpoint?.complete) savedCheckpoint = parsedCheckpoint;
+      } catch {}
+      checkpointRef.current = savedCheckpoint;
+      setResumeAvailable(Boolean(savedCheckpoint));
+      if (savedCheckpoint) {
+        setTelemetry(savedCheckpoint.telemetry || { studentsDone: 0, studentsTotal: payload.profiles.length, registrationsDone: 0, registrationsTotal: payload.registrationCount, feesDone: 0, feesTotal: payload.feeRows.length, elapsedSeconds: 0 });
+        setProgress({ stage: "Paused import found", percent: Number(savedCheckpoint.percent || 0), done: 0, total: payload.profiles.length + payload.feeRows.length, message: "Select Resume Import to continue from the saved chunk." });
+      } else {
+        setTelemetry({ studentsDone: 0, studentsTotal: payload.profiles.length, registrationsDone: 0, registrationsTotal: payload.registrationCount, feesDone: 0, feesTotal: payload.feeRows.length, elapsedSeconds: 0 });
+      }
       setPreview({
         ...payload,
         profileCount: payload.profiles.length,
@@ -321,84 +328,110 @@ export default function BulkImportPage() {
     }
   }
 
-  async function runImport() {
+  async function runImport(resume = false) {
     if (!preview || busy || runningRef.current) return;
-    if (!window.confirm(
-      "Import the COMPLETE workbook in one operation?\n\n" +
-      preview.profileCount.toLocaleString("en-IN") + " unified student profiles\n" +
-      preview.registrationCount.toLocaleString("en-IN") + " registration codes\n" +
-      preview.feeRows.length.toLocaleString("en-IN") + " fee receipts\n\n" +
-      "The server will process internal database chunks automatically. You will not need to start separate batches."
+    const fingerprint = [file?.name, file?.size, file?.lastModified].join("|");
+    let checkpoint = resume ? checkpointRef.current : null;
+    if (!resume && !window.confirm(
+      "Import this workbook in automatic chunks?\\n\\n" +
+      preview.profileCount.toLocaleString("en-IN") + " unified student profiles\\n" +
+      preview.registrationCount.toLocaleString("en-IN") + " registration codes\\n" +
+      preview.feeRows.length.toLocaleString("en-IN") + " fee receipts\\n\\n" +
+      "Students (200 at a time), fees (500 at a time), and fee summaries will run sequentially."
     )) return;
-
-    runningRef.current = true;
-    setBusy(true);
-    setError("");
-    setResult(null);
-    setProgress({
-      stage: "Validating & parsing payload",
-      percent: 5,
-      done: 0,
-      total: preview.profileCount + preview.feeRows.length,
-      message: "Starting streamed import"
-    });
-
-    try {
-      // One browser request for the entire workbook. Database writes remain
-      // internally chunked on the server to avoid oversized MongoDB operations.
-      const data = await postBatch({
-        action: "complete",
-        groups: preview.profiles,
-        rows: preview.feeRows
-      }, event => {
-        setProgress({
-          stage: event.stage || "Importing",
-          percent: Math.max(0, Math.min(99, Number(event.percent || 0))),
-          done: Number(event.processed || 0),
-          total: Number(event.total || 0),
-          message: event.message || ""
-        });
-      });
-
-      if (!data.complete) throw new Error("The server did not confirm that the complete import finished.");
-
-      const summary = {
-        studentsMatchedUpdated: Number(data.studentsMatchedUpdated || 0),
-        newStudentsCreated: Number(data.newStudentsCreated || 0),
-        registrationsLinked: Number(data.registrationsLinked || 0),
-        newReceiptsAdded: Number(data.newReceiptsAdded || 0),
-        existingReceiptsUpdatedOrSkipped: Number(data.existingReceiptsUpdatedOrSkipped || 0),
-        duplicateReceiptsSkipped: Number(data.duplicateReceiptsSkipped || 0),
-        existingReceiptsUpdated: Number(data.existingReceiptsUpdated || 0),
-        unmatchedRows: [...preview.warnings, ...(data.unmatchedRows || [])],
-        studentProfilesProcessed: Number(data.studentProfilesProcessed || 0),
-        feeRowsProcessed: Number(data.feeRowsProcessed || 0),
-        studentsFinalized: Number(data.studentsFinalized || 0),
-        enrollmentsFinalized: Number(data.enrollmentsFinalized || 0)
+    if (!checkpoint) {
+      checkpoint = {
+        fingerprint, studentIndex: 0, feeIndex: 0, registrationMap: {}, studentIds: [],
+        summary: { created: 0, updated: 0, enrollmentsLinked: 0, newReceiptsAdded: 0, existingReceiptsUpdatedOrSkipped: 0, duplicateReceiptsSkipped: 0, existingReceiptsUpdated: 0, warnings: [] },
+        percent: 0, telemetry: { studentsDone: 0, studentsTotal: preview.profiles.length, registrationsDone: 0, registrationsTotal: preview.registrationCount, feesDone: 0, feesTotal: preview.feeRows.length, elapsedSeconds: 0 }
       };
+    }
+    const startedAt = Date.now() - Number(checkpoint.elapsedMs || 0);
+    const saveCheckpoint = () => {
+      checkpoint.elapsedMs = Date.now() - startedAt;
+      checkpoint.telemetry = { ...checkpoint.telemetry, elapsedSeconds: Math.floor(checkpoint.elapsedMs / 1000) };
+      checkpointRef.current = checkpoint;
+      try { localStorage.setItem(IMPORT_CHECKPOINT_KEY, JSON.stringify(checkpoint)); } catch (storageError) {
+        console.warn("[unified-import] checkpoint storage unavailable", storageError);
+      }
+      setTelemetry(checkpoint.telemetry);
+      setProgress(p => ({ ...p, percent: checkpoint.percent }));
+    };
+    runningRef.current = true; setBusy(true); setError(""); setResult(null);
+    try {
+      const studentChunkSize = 200;
+      const registrationTotal = preview.registrationCount;
+      for (let offset = checkpoint.studentIndex; offset < preview.profiles.length; offset += studentChunkSize) {
+        const chunkIndex = Math.floor(offset / studentChunkSize);
+        const groups = preview.profiles.slice(offset, offset + studentChunkSize);
+        setProgress({ stage: "Phase 1 · Students & Enrollments", percent: Math.max(checkpoint.percent, Math.floor(offset / Math.max(preview.profiles.length,1) * 45)), done: offset, total: preview.profiles.length, message: "Saving student chunk " + (chunkIndex + 1) });
+        const data = await postBatch({ action: "students", phase: "students", chunkIndex, groups });
+        for (const item of data.registrationMapChunk || []) checkpoint.registrationMap[item.registrationId] = item;
+        checkpoint.studentIds = [...new Set([...(checkpoint.studentIds || []), ...(data.studentIds || [])])];
+        checkpoint.summary.created += Number(data.created || 0);
+        checkpoint.summary.updated += Number(data.updated || 0);
+        checkpoint.summary.enrollmentsLinked += Number(data.enrollmentsLinked || 0);
+        checkpoint.summary.warnings.push(...(data.warnings || []));
+        checkpoint.studentIndex = Math.min(offset + groups.length, preview.profiles.length);
+        checkpoint.telemetry.studentsDone = checkpoint.studentIndex;
+        checkpoint.telemetry.registrationsDone = preview.profiles.slice(0, checkpoint.studentIndex).reduce((sum, group) => sum + (group.registrations || []).length, 0);
+        checkpoint.percent = Math.min(45, Math.round(checkpoint.studentIndex / Math.max(preview.profiles.length,1) * 45));
+        saveCheckpoint();
+      }
 
-      setProgress({
-        stage: "Complete",
-        percent: 100,
-        done: summary.studentProfilesProcessed + summary.feeRowsProcessed,
-        total: summary.studentProfilesProcessed + summary.feeRowsProcessed,
-        message: "All student profiles, enrollments, receipts and fee summaries are complete"
-      });
-      setResult(summary);
-      setSummaryOpen(true);
-      setPreview(null);
+      const feeChunkSize = 500;
+      for (let offset = checkpoint.feeIndex; offset < preview.feeRows.length; offset += feeChunkSize) {
+        const chunkIndex = Math.floor(offset / feeChunkSize);
+        const rows = preview.feeRows.slice(offset, offset + feeChunkSize);
+        setProgress({ stage: "Phase 2 · Fee Receipts", percent: Math.max(45, 45 + Math.floor(offset / Math.max(preview.feeRows.length,1) * 47)), done: offset, total: preview.feeRows.length, message: "Saving fee receipt chunk " + (chunkIndex + 1) });
+        const mapping = rows.map(row => checkpoint.registrationMap[row.registrationId]).filter(Boolean);
+        const data = await postBatch({ action: "fees", phase: "fees", chunkIndex, rows, registrationMap: mapping });
+        checkpoint.summary.newReceiptsAdded += Number(data.newReceiptsAdded || 0);
+        checkpoint.summary.existingReceiptsUpdatedOrSkipped += Number(data.existingReceiptsUpdatedOrSkipped || 0);
+        checkpoint.summary.duplicateReceiptsSkipped += Number(data.duplicateReceiptsSkipped || 0);
+        checkpoint.summary.existingReceiptsUpdated += Number(data.existingReceiptsUpdated || 0);
+        checkpoint.summary.warnings.push(...(data.unmatchedRows || []));
+        checkpoint.feeIndex = Math.min(offset + rows.length, preview.feeRows.length);
+        checkpoint.telemetry.feesDone = checkpoint.feeIndex;
+        checkpoint.percent = Math.min(92, 45 + Math.round(checkpoint.feeIndex / Math.max(preview.feeRows.length,1) * 47));
+        saveCheckpoint();
+      }
+
+      setProgress({ stage: "Phase 3 · Finalizing Fee Summaries", percent: 94, done: 0, total: checkpoint.studentIds.length, message: "Recalculating totals for affected Master Students" });
+      const finalized = await postBatch({ action: "finalize", phase: "finalize", studentIds: checkpoint.studentIds });
+      checkpoint.percent = 100;
+      checkpoint.complete = true;
+      saveCheckpoint();
+      const summary = {
+        studentsMatchedUpdated: checkpoint.summary.updated,
+        newStudentsCreated: checkpoint.summary.created,
+        registrationsLinked: checkpoint.summary.enrollmentsLinked,
+        newReceiptsAdded: checkpoint.summary.newReceiptsAdded,
+        existingReceiptsUpdatedOrSkipped: checkpoint.summary.existingReceiptsUpdatedOrSkipped,
+        duplicateReceiptsSkipped: checkpoint.summary.duplicateReceiptsSkipped,
+        existingReceiptsUpdated: checkpoint.summary.existingReceiptsUpdated,
+        unmatchedRows: [...preview.warnings, ...checkpoint.summary.warnings],
+        studentProfilesProcessed: preview.profiles.length,
+        feeRowsProcessed: preview.feeRows.length,
+        studentsFinalized: Number(finalized.studentsFinalized || 0),
+        enrollmentsFinalized: Number(finalized.enrollmentsFinalized || 0)
+      };
+      setProgress({ stage: "Complete", percent: 100, done: preview.profiles.length + preview.feeRows.length, total: preview.profiles.length + preview.feeRows.length, message: "All import phases completed successfully." });
+      setResult(summary); setSummaryOpen(true); setPreview(null); setResumeAvailable(false);
+      try { localStorage.removeItem(IMPORT_CHECKPOINT_KEY); } catch {}
+      checkpointRef.current = null;
       notify("Complete workbook import finished successfully.", "success");
       invalidate(["lookup:", "students:", "student-detail:", "student-fees:", "dashboard-stats", "batches:"]);
     } catch (err) {
-      setError(
-        (err.message || "The complete workbook import failed.") +
-        " You can retry the same workbook; the import is designed to skip or repair records already written."
-      );
-      setProgress({ stage: "Import failed", percent: 10, done: 0, total: 0, message: err.message || "Import failed" });
-      notify(err.message || "Unified import failed.", "error");
+      checkpoint.percent = Math.min(checkpoint.percent || 0, 99);
+      checkpoint.error = err.message || "Import chunk failed.";
+      saveCheckpoint();
+      setResumeAvailable(true);
+      setError("Import paused at student chunk " + (Math.floor(checkpoint.studentIndex / 200) + 1) + " / fee chunk " + (Math.floor(checkpoint.feeIndex / 500) + 1) + ": " + checkpoint.error + ". Completed chunks are saved. Select Resume Import to continue.");
+      setProgress(p => ({ ...p, stage: "Paused · Resume available", message: checkpoint.error }));
+      notify(checkpoint.error, "error");
     } finally {
-      runningRef.current = false;
-      setBusy(false);
+      runningRef.current = false; setBusy(false);
     }
   }
 
@@ -449,9 +482,16 @@ export default function BulkImportPage() {
             <div style={{ height: 10, borderRadius: 99, background: "var(--border,#e5e7eb)", overflow: "hidden" }}><div style={{ height: "100%", width: progress.percent + "%", background: "var(--primary,#315efb)", transition: "width .2s ease" }}/></div>
             {progress.message && <small className="form-help">{progress.message}</small>}
             {progress.total > 0 && <small className="form-help">{progress.done.toLocaleString("en-IN")} / {progress.total.toLocaleString("en-IN")} records</small>}
+            <div className="form-help" style={{ display: "grid", gap: 4 }}>
+              <span>Students: {telemetry.studentsDone.toLocaleString("en-IN")} / {telemetry.studentsTotal.toLocaleString("en-IN")} · Registrations: {telemetry.registrationsDone.toLocaleString("en-IN")} / {telemetry.registrationsTotal.toLocaleString("en-IN")}</span>
+              <span>Fee Receipts: {telemetry.feesDone.toLocaleString("en-IN")} / {telemetry.feesTotal.toLocaleString("en-IN")} · Elapsed: {Math.floor(telemetry.elapsedSeconds / 60)}m {telemetry.elapsedSeconds % 60}s</span>
+            </div>
           </div>}
           {error && <div className="error-msg" role="alert">{error}</div>}
-          <div><button className="primary-btn" type="button" disabled={!preview || busy} onClick={runImport}><Upload size={16}/>{busy ? "Import running…" : "Import Students + Fees"}</button></div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button className="primary-btn" type="button" disabled={!preview || busy} onClick={() => runImport(false)}><Upload size={16}/>{busy ? "Import running…" : "Import Students + Fees"}</button>
+            {resumeAvailable && <button className="ghost-btn" type="button" disabled={!preview || busy} onClick={() => runImport(true)}>Resume Import</button>}
+          </div>
         </div>
       </section>
 
