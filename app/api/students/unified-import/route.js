@@ -492,7 +492,7 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
         }
       };
       if (!existingEnrollment) {
-        enrollmentOps.push({ _id: enrollmentId, set: enrollmentSet, isNew: true });
+        enrollmentOps.push({ _id: enrollmentId, set: enrollmentSet, isNew: true, uniqueKey: targetEnrollmentKey });
       } else {
         const patch = {};
         if (existingEnrollment.courseName !== registration.course) patch.courseName = registration.course;
@@ -507,7 +507,7 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
         if (!existingEnrollment.rawStName && registration.rawStName) patch.rawStName = registration.rawStName;
         if (!existingEnrollment.admissionDate && registration.dateOfAdmission) patch.admissionDate = registration.dateOfAdmission;
         if (!existingEnrollment.earliestPaymentDate && registration.earliestPaymentDate) patch.earliestPaymentDate = registration.earliestPaymentDate;
-        if (Object.keys(patch).length) enrollmentOps.push({ _id: existingEnrollment._id, set: patch, isNew: false });
+        if (Object.keys(patch).length) enrollmentOps.push({ _id: existingEnrollment._id, set: patch, isNew: false, uniqueKey: targetEnrollmentKey });
       }
       outputMap.push({ registrationId: registration.registrationId, stCode: registration.stCode, studentId: masterId.toString(), enrollmentId: enrollmentId.toString(), course: registration.course });
     }
@@ -525,7 +525,7 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
   }
 
   const enrollmentOpsByKey=new Map();
-  for(const op of enrollmentOps){const d=op.set||{},k=enrollmentUniqueKey(d);if(!d.studentId||!d.stCode||!d.normalizedFullName||!d.courseCode){flaggedRows.push({phase:"enrollment",reason:"Incomplete enrollment key skipped."});continue;}const old=enrollmentOpsByKey.get(k);if(!old)enrollmentOpsByKey.set(k,op);else if(old.isNew)old.set={...old.set,...d};else if(!op.isNew)old.set={...old.set,...d};}
+  for(const op of enrollmentOps){const d=op.set||{},k=op.uniqueKey||enrollmentUniqueKey(d);if(!k||k==="||||"){flaggedRows.push({phase:"enrollment",reason:"Incomplete enrollment key skipped."});continue;}const old=enrollmentOpsByKey.get(k);if(!old)enrollmentOpsByKey.set(k,op);else if(old.isNew)old.set={...old.set,...d};else if(!op.isNew)old.set={...old.set,...d};}
   const writeWarnings=[];
   async function insertChunks(Model,docs,phase,size=200){for(let off=0;off<docs.length;off+=size){const chunk=docs.slice(off,off+size),t=Date.now();try{await Model.insertMany(chunk,{ordered:false});}catch(e){if(e.code!==11000&&!(e.writeErrors||[]).some(x=>x.code===11000))throw e;const found=await Model.find({_id:{$in:chunk.map(x=>x._id)}}).select("_id").lean(),ids=new Set(found.map(x=>String(x._id))),missing=chunk.filter(x=>!ids.has(String(x._id)));if(missing.length)try{await Model.insertMany(missing,{ordered:false});}catch(re){if(re.code!==11000&&!(re.writeErrors||[]).some(x=>x.code===11000))throw re;writeWarnings.push({phase,code:11000,reason:"Duplicate insert safely skipped after _id recheck."});}writeWarnings.push({phase,code:11000,reason:"Existing duplicate records skipped."});}console.log("[unified-import]",phase,Math.floor(off/size)+1,Date.now()-t,{attempted:chunk.length});}}
   async function updateChunks(Model,ops,phase,size=500){for(let off=0;off<ops.length;off+=size){const chunk=ops.slice(off,off+size),t=Date.now();if(chunk.length)await Model.bulkWrite(chunk,{ordered:false});console.log("[unified-import]",phase,Math.floor(off/size)+1,Date.now()-t,{updated:chunk.length});}}
@@ -572,7 +572,7 @@ async function syncFeeRows(rows = [], onProgress = () => {}, registrationMap = [
     const linkedEnrollment = enrollmentByMongoId.get(String(item.enrollmentId || ""));
     const identity = String(linkedEnrollment?.stCode || item.stCode || "").toUpperCase();
     const masterIdentity = String(linkedEnrollment?.studentId || item.masterStudentId || item.studentId || "");
-    if (identity && masterIdentity) existingByKey.set([masterIdentity, identity, item.mrNo, dateKey, amountKey].join("|"), item);
+    if (identity && masterIdentity) existingByKey.set([identity, item.mrNo, dateKey, amountKey].join("|"), item);
     const looseKey = [masterIdentity, String(item.stCode || ""), item.mrNo, dateKey, amountKey].join("|");
     if (!existingByLooseKey.has(looseKey)) existingByLooseKey.set(looseKey, item);
   }
