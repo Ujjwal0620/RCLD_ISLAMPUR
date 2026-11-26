@@ -30,9 +30,6 @@ const StudentFeePaymentSchema = new mongoose.Schema({
 }, { timestamps: true, collection: "student_fee_payments" });
 
 StudentFeePaymentSchema.index({ studentId: 1, enrollmentId: 1, mrNo: 1, paymentDate: 1, amountPaid: 1 }, { name: "student_course_receipt_lookup" });
-StudentFeePaymentSchema.index(
-  { masterStudentId: 1, stCode: 1, mrNo: 1, paymentDate: 1, amountPaid: 1 },
-  { unique: true, name: "master_stcode_receipt_date_amount_unique", partialFilterExpression: { importBatchKey: "UNIFIED_WORKBOOK_IMPORT", masterStudentId: { $type: "objectId" }, stCode: { $type: "string", $gt: "" }, mrNo: { $type: "string", $gt: "" }, paymentDate: { $type: "date" }, amountPaid: { $type: "number" } } }
-);
+
 
 export default mongoose.models.StudentFeePayment || mongoose.model("StudentFeePayment", StudentFeePaymentSchema);
