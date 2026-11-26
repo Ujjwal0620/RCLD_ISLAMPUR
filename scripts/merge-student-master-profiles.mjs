@@ -155,6 +155,25 @@ async function main() {
     legacyIdsByCanonical.set(String(canonicalId), legacyIds);
   }
 
+  const importedFeeDuplicateGroups = await paymentsCollection.aggregate([
+    { $match: {
+      importBatchKey: "UNIFIED_WORKBOOK_IMPORT",
+      stCode: { $type: "string", $gt: "" },
+      mrNo: { $type: "string", $gt: "" },
+      paymentDate: { $type: "date" },
+      amountPaid: { $type: "number" },
+    } },
+    { $group: {
+      _id: {
+        masterStudentId: { $ifNull: ["$masterStudentId", "$studentId"] },
+        stCode: "$stCode", mrNo: "$mrNo", paymentDate: "$paymentDate", amountPaid: "$amountPaid",
+      },
+      count: { $sum: 1 },
+    } },
+    { $match: { count: { $gt: 1 } } },
+  ]).toArray();
+  const importedFeeDuplicateDocs = importedFeeDuplicateGroups.reduce((sum, item) => sum + item.count - 1, 0);
+
   const report = {
     mode: apply ? "APPLY" : "DRY RUN",
     masterProfilesScanned: allMasters.length,
@@ -163,6 +182,7 @@ async function main() {
     duplicateMasterProfilesToMarkMerged: duplicateMasterIds.length,
     studentEnrollmentRecordsToInspect: enrollmentDocs.length,
     duplicateEnrollmentKeysToRetainAndMark: projectedDuplicateEnrollmentKeys,
+    duplicateImportedFeeReceiptsToArchiveWithoutDeleting: importedFeeDuplicateDocs,
     feeRecordsToRelink: duplicateMasterIds.length ? await paymentsCollection.countDocuments({
       $or: [
         { studentId: { $in: duplicateMasterIds } },
