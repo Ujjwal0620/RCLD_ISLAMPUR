@@ -140,11 +140,7 @@ export default function StudentFeeWorkspace({
     return [...totals.entries()].sort((a, b) => b[1] - a[1]);
   }, [paymentHistory]);
   const paymentRows = useMemo(() => visibleRows.map(payment => {
-    const paymentId = String(payment.registrationId || payment.stNameKey || "").toUpperCase();
-    const matchedCard = codeCards.find(item => String(item.registrationId || "").toUpperCase() === paymentId)
-      || (payment.stCode && codeCount.get(String(payment.stCode)) === 1
-        ? codeCards.find(item => String(item.stCode) === String(payment.stCode))
-        : null);
+    const matchedCard = resolvePaymentCard(payment, codeCards);
     return {
       ...payment,
       registrationId: payment.registrationId || payment.stNameKey || matchedCard?.registrationId || "",
