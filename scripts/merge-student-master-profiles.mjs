@@ -242,7 +242,7 @@ async function main() {
 
     const activeEnrollmentRows = await enrollmentCollection.find({
       studentId: canonicalId,
-      mergedIntoEnrollmentId: { $exists: false },
+      mergedIntoEnrollmentId: null,
     }).toArray();
     activeEnrollmentRows.sort((a, b) => (effectiveDate(b)?.getTime() || 0) - (effectiveDate(a)?.getTime() || 0));
     if (activeEnrollmentRows[0]) {
@@ -278,7 +278,7 @@ async function main() {
 
     const canonicalEnrollments = await enrollmentCollection.find({
       studentId: canonicalId,
-      mergedIntoEnrollmentId: { $exists: false },
+      mergedIntoEnrollmentId: null,
     }).toArray();
     const byRegistration = new Map();
     const byCode = new Map();
