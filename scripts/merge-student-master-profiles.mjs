@@ -358,6 +358,86 @@ async function main() {
     });
   }
 
+  // Reconcile duplicate enrollment keys after Master IDs have been consolidated.
+  // Duplicate enrollment documents are retained; dependent receipts point to the canonical enrollment.
+  const activeEnrollmentRows = await enrollmentCollection.find({ mergedIntoEnrollmentId: null }).toArray();
+  const enrollmentGroups = new Map();
+  for (const item of activeEnrollmentRows) {
+    const key = String(item.studentId) + "|" + registrationKey(item);
+    enrollmentGroups.set(key, [...(enrollmentGroups.get(key) || []), item]);
+  }
+  for (const rows of enrollmentGroups.values()) {
+    if (rows.length < 2) continue;
+    rows.sort((a, b) =>
+      Number(Boolean(b.feeConfig?.configured)) - Number(Boolean(a.feeConfig?.configured))
+      || (b.installments?.length || 0) - (a.installments?.length || 0)
+      || new Date(a.createdAt || 0) - new Date(b.createdAt || 0)
+    );
+    const canonicalEnrollment = rows[0];
+    for (const duplicate of rows.slice(1)) {
+      await enrollmentCollection.updateOne({ _id: duplicate._id }, { $set: {
+        mergedIntoEnrollmentId: canonicalEnrollment._id,
+        masterStudentId: canonicalEnrollment.studentId,
+        mergeStatus: "DUPLICATE_RETAINED",
+      } });
+      await paymentsCollection.updateMany({ enrollmentId: duplicate._id }, { $set: {
+        enrollmentId: canonicalEnrollment._id,
+        studentId: canonicalEnrollment.studentId,
+        masterStudentId: canonicalEnrollment.studentId,
+      } });
+      await mastersCollection.updateMany({ activeEnrollmentId: duplicate._id }, { $set: { activeEnrollmentId: canonicalEnrollment._id } });
+    }
+  }
+
+  const enrollmentIndexes = await enrollmentCollection.indexes();
+  for (const oldName of ["student_registration_identity_unique", "student_course_enrollment_unique"]) {
+    const oldIndex = enrollmentIndexes.find(index => index.name === oldName && index.unique);
+    if (oldIndex) await enrollmentCollection.dropIndex(oldIndex.name);
+  }
+  await enrollmentCollection.createIndex(
+    { studentId: 1, stCode: 1, courseCode: 1, admissionDate: 1 },
+    {
+      unique: true,
+      name: "student_stcode_course_admission_unique",
+      partialFilterExpression: {
+        mergedIntoEnrollmentId: null,
+        stCode: { $type: "string", $gt: "" },
+        courseCode: { $type: "string", $gt: "" },
+      },
+    }
+  );
+
+  // Refresh fee totals from the preserved receipt collection for every active Master profile.
+  const activeMastersForFees = await mastersCollection.find({ mergedIntoMasterId: null, isMerged: { $ne: true } }).toArray();
+  for (const master of activeMastersForFees) {
+    const activeEnrollments = await enrollmentCollection.find({ studentId: master._id, mergedIntoEnrollmentId: null }).toArray();
+    if (!activeEnrollments.length) continue;
+    const totals = await paymentsCollection.aggregate([
+      { $match: { enrollmentId: { $in: activeEnrollments.map(item => item._id) } } },
+      { $group: { _id: "$enrollmentId", totalPaid: { $sum: "$amountPaid" } } },
+    ]).toArray();
+    const paidMap = new Map(totals.map(item => [String(item._id), Number(item.totalPaid || 0)]));
+    let totalFee = 0, discount = 0, totalPaid = 0, balanceDue = 0, hasConfiguredFee = false;
+    for (const enrollment of activeEnrollments) {
+      const fee = Number(enrollment.feeConfig?.grossFee ?? enrollment.summary?.totalFee ?? 0);
+      const due = Number(enrollment.feeConfig?.netPayableFee ?? enrollment.summary?.totalDue ?? 0);
+      const paid = paidMap.get(String(enrollment._id)) || 0;
+      const balance = Math.max(0, due - paid);
+      const configured = enrollment.feeConfig?.configured !== false && enrollment.feeConfig?.feeRuleSource !== "UNCONFIGURED";
+      const feeStatus = configured && balance === 0 ? "Paid" : paid > 0 ? "Partial" : "Unpaid";
+      await enrollmentCollection.updateOne({ _id: enrollment._id }, { $set: { summary: {
+        ...(enrollment.summary || {}), totalFee: fee, totalDue: due, totalPaid: paid, balanceDue: balance, feeStatus,
+      } } });
+      totalFee += fee; discount += Number(enrollment.feeConfig?.discountAmount || 0);
+      totalPaid += paid; balanceDue += balance; hasConfiguredFee ||= configured;
+    }
+    await mastersCollection.updateOne({ _id: master._id }, { $set: { feeSummary: {
+      totalFee, discount, totalPaid, balanceDue,
+      feeStatus: hasConfiguredFee && balanceDue === 0 ? "Paid" : totalPaid > 0 ? "Partial" : "Unpaid",
+      courseCount: activeEnrollments.length, updatedAt: new Date(),
+    } } });
+  }
+
   console.log("Non-destructive merge completed. Duplicate master/enrollment records and all legacy Student/fee/ID-card documents were retained.");
 }
 
