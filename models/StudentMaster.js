@@ -2,6 +2,10 @@ import mongoose from "mongoose";
 
 const RegistrationSchema = new mongoose.Schema({
   stCode: { type: String, required: true, trim: true },
+  admissionDate: { type: Date, default: null },
+  qualification: { type: String, default: "" },
+  rawAddress: { type: String, default: "" },
+  rawStName: { type: String, default: "" },
   registrationId: { type: String, required: true, trim: true, uppercase: true },
   course: { type: String, default: "Previous Course (Legacy)", trim: true },
   dateOfAdmission: { type: Date, default: null },
@@ -12,6 +16,10 @@ const RegistrationSchema = new mongoose.Schema({
 
 const EnrollmentHistorySchema = new mongoose.Schema({
   stCode: { type: String, required: true, trim: true },
+  admissionDate: { type: Date, default: null },
+  qualification: { type: String, default: "" },
+  rawAddress: { type: String, default: "" },
+  rawStName: { type: String, default: "" },
   registrationId: { type: String, default: "", trim: true, uppercase: true },
   course: { type: String, default: "Previous Course (Legacy)", trim: true },
   dateOfAdmission: { type: Date, default: null },
@@ -31,6 +39,10 @@ const StudentMasterSchema = new mongoose.Schema({
   address: { type: String, default: "" },
   photoUrl: { type: String, default: "" },
   hasPhoto: { type: Boolean, default: false },
+  primaryStCode: { type: String, default: "", trim: true, index: true },
+  studentCodes: { type: [String], default: [], index: true },
+  alternateNames: { type: [String], default: [] },
+  phones: { type: [String], default: [], index: true },
   stCodes: { type: [String], default: [] },
   registrations: { type: [RegistrationSchema], default: [] },
   enrollments: { type: [EnrollmentHistorySchema], default: [] },
@@ -58,6 +70,9 @@ const StudentMasterSchema = new mongoose.Schema({
 }, { timestamps: true, collection: "student_master_profiles" });
 
 StudentMasterSchema.index({ stCodes: 1 });
+StudentMasterSchema.index({ studentCodes: 1 });
+StudentMasterSchema.index({ alternateNames: 1 });
+StudentMasterSchema.index({ phones: 1 });
 StudentMasterSchema.index({ "registrations.registrationId": 1 });
 StudentMasterSchema.index({ phoneNumbers: 1 });
 StudentMasterSchema.index({ normalizedFullName: 1, dob: 1 });
