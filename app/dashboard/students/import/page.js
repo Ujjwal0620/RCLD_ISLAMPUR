@@ -139,12 +139,12 @@ function buildWorkbookPayload(workbook) {
       registrations: items.map(item => ({ ...item, alternateNames: names, isCurrent: item.registrationId === latest.registrationId }))
     };
   });
-  const studentCodeCounts = new Map();
-  for (const profile of profiles) for (const record of profile.registrations) {
-    studentCodeCounts.set(record.stCode, (studentCodeCounts.get(record.stCode) || 0) + 1);
+  const studentCodeProfiles = new Map();
+  for (const [profileIndex, profile] of profiles.entries()) for (const record of profile.registrations) {
+    studentCodeProfiles.set(record.stCode, new Set([...(studentCodeProfiles.get(record.stCode) || []), profileIndex]));
   }
   for (const profile of profiles) for (const record of profile.registrations) {
-    record.stCodeUnique = studentCodeCounts.get(record.stCode) === 1;
+    record.stCodeUnique = studentCodeProfiles.get(record.stCode)?.size === 1;
     if (!record.stCodeUnique) studentWarnings.push({
       sheet: studentSheet.name, row: record.rowNo, studentId: record.registrationId,
       stCode: record.stCode, name: record.cleanName,
@@ -155,7 +155,9 @@ function buildWorkbookPayload(workbook) {
   const feeAt = key => feeHeaders.indexOf(key);
   const feeGet = (row, key) => feeAt(key) >= 0 ? row[feeAt(key)] : "";
   const profileByName = new Map();
-  for (const profile of profiles) profileByName.set(profile.cleanName, [...(profileByName.get(profile.cleanName) || []), profile]);
+  for (const profile of profiles) for (const alias of new Set([profile.cleanName, ...(profile.alternateNames || [])])) {
+    profileByName.set(alias, [...(profileByName.get(alias) || []), profile]);
+  }
   const registrationById = new Map();
   const registrationByCode = new Map();
   for (const profile of profiles) for (const registration of profile.registrations) {
