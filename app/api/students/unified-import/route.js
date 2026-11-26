@@ -513,8 +513,9 @@ async function syncFeeRows(rows = []) {
     const amountKey = Number(item.amountPaid).toFixed(2);
     const linkedEnrollment = enrollmentByMongoId.get(String(item.enrollmentId || ""));
     const identity = String(linkedEnrollment?.stCode || item.stCode || "").toUpperCase();
-    if (identity) existingByKey.set([identity, item.mrNo, dateKey, amountKey].join("|"), item);
-    const looseKey = [String(item.stCode || ""), item.mrNo, dateKey, amountKey].join("|");
+    const masterIdentity = String(linkedEnrollment?.studentId || item.masterStudentId || item.studentId || "");
+    if (identity && masterIdentity) existingByKey.set([masterIdentity, identity, item.mrNo, dateKey, amountKey].join("|"), item);
+    const looseKey = [masterIdentity, String(item.stCode || ""), item.mrNo, dateKey, amountKey].join("|");
     if (!existingByLooseKey.has(looseKey)) existingByLooseKey.set(looseKey, item);
   }
   const operations = [];
@@ -545,7 +546,7 @@ async function syncFeeRows(rows = []) {
       unmatchedRows.push({ row: row.rowNo, sheet: row.sourceSheet || "", studentId: registrationId || row.stCode || "", stCode: row.stCode || "", name: row.cleanName || "", course: row.course || "", mrNo, paymentDate: row.paymentDate || "", amountPaid: row.amountPaid ?? "", reason: enrollmentCandidates.length > 1 ? "Registration identity maps to multiple Master Students or ambiguous admission/course periods; fee row was not linked automatically." : !enrollment ? "No matching registration/enrollment was found." : "Missing or invalid receipt number, date, or amount." });
       continue;
     }
-    const key = [clean(enrollment.stCode), mrNo, paymentDate.toISOString().slice(0, 10), amountPaid.toFixed(2)].join("|");
+    const key = [String(enrollment.studentId), clean(enrollment.stCode), mrNo, paymentDate.toISOString().slice(0, 10), amountPaid.toFixed(2)].join("|");
     const priorReceipt = existingByKey.get(key);
     if (priorReceipt) {
       const priorEnrollment = enrollmentByMongoId.get(String(priorReceipt.enrollmentId || ""));
@@ -574,7 +575,7 @@ async function syncFeeRows(rows = []) {
       existingReceiptsUpdatedOrSkipped += 1;
       continue;
     }
-    const looseKey = [clean(row.stCode), mrNo, paymentDate.toISOString().slice(0, 10), amountPaid.toFixed(2)].join("|");
+    const looseKey = [String(enrollment.studentId), clean(row.stCode), mrNo, paymentDate.toISOString().slice(0, 10), amountPaid.toFixed(2)].join("|");
     if (existingByLooseKey.has(looseKey) && (registrationsByCode.get(clean(row.stCode))?.size || 0) > 1) {
       unmatchedRows.push({ row: row.rowNo, sheet: row.sourceSheet || "", studentId: registrationId, stCode: row.stCode || "", name: row.cleanName || "", course: row.course || "", mrNo, paymentDate, amountPaid, reason: "An existing receipt has this reused St_Code but no registration identity; it was not reassigned to avoid cross-student payment mixing." });
       continue;
