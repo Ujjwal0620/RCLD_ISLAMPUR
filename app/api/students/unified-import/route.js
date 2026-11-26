@@ -126,7 +126,7 @@ async function syncStudentGroups(groups = []) {
 
   const [existingStudents, existingEnrollments, courseDocuments] = await Promise.all([
     Student.find({ $or: [{ regnNo: { $in: codes } }, { enrollmentNo: { $in: codes } }] }).lean(),
-    StudentEnrollment.find({ $or: [{ registrationId: { $in: registrationIds } }, { stCode: { $in: codes } }] }).lean(),
+    StudentEnrollment.find({ mergedIntoEnrollmentId: null, $or: [{ registrationId: { $in: registrationIds } }, { stCode: { $in: codes } }] }).lean(),
     Course.find({ code: { $in: courseLookupCodes } }).lean()
   ]);
   const existingStudentIds = existingStudents.map(item => item._id);
@@ -587,7 +587,7 @@ async function finalizeFeeSummaries(rawStudentIds = []) {
   const studentIds = [...new Set(rawStudentIds.filter(validObjectId).map(id => String(id)))];
   if (!studentIds.length || studentIds.length > 500) throw new Error("Finalize batch must contain between 1 and 500 student IDs.");
   const objectIds = studentIds.map(id => new mongoose.Types.ObjectId(id));
-  const enrollments = await StudentEnrollment.find({ studentId: { $in: objectIds } }).lean();
+  const enrollments = await StudentEnrollment.find({ studentId: { $in: objectIds }, mergedIntoEnrollmentId: null }).lean();
   if (!enrollments.length) return { studentsFinalized: 0, enrollmentsFinalized: 0 };
   const enrollmentIds = enrollments.map(item => item._id);
   const paymentTotals = await StudentFeePayment.aggregate([
