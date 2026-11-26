@@ -469,7 +469,7 @@ async function syncFeeRows(rows = []) {
   if (!Array.isArray(rows) || rows.length > 1000) throw new Error("Fee batch must contain between 1 and 1,000 rows.");
   await ensureReceiptIndex();
   const ids = [...new Set(rows.map(item => clean(item.registrationId)).filter(Boolean))];
-  const enrollments = await StudentEnrollment.find({ registrationId: { $in: ids } }).lean();
+  const enrollments = await StudentEnrollment.find({ registrationId: { $in: ids }, mergedIntoEnrollmentId: null }).lean();
   const enrollmentById = new Map();
   for (const item of enrollments) {
     const key = String(item.registrationId || "");
