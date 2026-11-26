@@ -29,6 +29,7 @@ const StudentEnrollmentSchema = new mongoose.Schema({
   qualification: { type: String, default: "" },
   rawAddress: { type: String, default: "" },
   rawStName: { type: String, default: "" },
+  course: { type: String, default: "" },
   courseCode: { type: String, required: true, trim: true, uppercase: true, index: true },
   courseName: { type: String, default: "" },
   courseCategory: { type: String, enum: ["ROBOTICS", "CODING_FOR_KIDS", "DOM", "OTHER"], default: "OTHER" },
