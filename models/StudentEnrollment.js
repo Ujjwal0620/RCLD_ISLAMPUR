@@ -71,4 +71,11 @@ StudentEnrollmentSchema.index({ studentId: 1, registrationId: 1 });
 StudentEnrollmentSchema.index({ stCode: 1 });
 StudentEnrollmentSchema.index({ studentId: 1, admissionDate: 1 });
 
+// Retained duplicate enrollment documents remain in MongoDB for audit, but normal ERP reads
+// should only expose the canonical enrollment row.
+StudentEnrollmentSchema.pre(/^find/, function (next) {
+  this.where({ mergedIntoEnrollmentId: null });
+  next();
+});
+
 export default mongoose.models.StudentEnrollment || mongoose.model("StudentEnrollment", StudentEnrollmentSchema);
