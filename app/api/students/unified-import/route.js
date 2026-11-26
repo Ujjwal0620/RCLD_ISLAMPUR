@@ -809,6 +809,12 @@ async function runCompleteImport(groups = [], rows = [], onProgress = () => {}) 
     const processedProfiles = Math.min(offset + chunkGroups.length, groups.length);
     const processedRegistrations = groups.slice(0, processedProfiles).reduce((sum, item) => sum + (item.registrations || []).length, 0);
     const totalRegistrations = groups.reduce((sum, item) => sum + (item.registrations || []).length, 0);
+    onProgress({
+      percent: 10 + Math.round(offset / groups.length * 35),
+      stage: "Syncing Master Student Profiles",
+      message: "Loading matching records for profile chunk",
+      processed: offset, total: groups.length
+    });
     const result = await syncStudentGroups(chunkGroups, phase => {
       if (phase === "profiles") onProgress({
         percent: 10 + Math.round(processedProfiles / groups.length * 35),
@@ -834,6 +840,7 @@ async function runCompleteImport(groups = [], rows = [], onProgress = () => {}) 
 
   }
 
+  onProgress({ percent: 65, stage: "Importing Fee Receipts", message: "Matching fee receipts and loading existing receipt keys", processed: 0, total: rows.length });
   const feeResult = await syncFeeRows(rows, onProgress);
   summary.newReceiptsAdded += Number(feeResult.newReceiptsAdded || 0);
   summary.existingReceiptsUpdatedOrSkipped += Number(feeResult.existingReceiptsUpdatedOrSkipped || 0);
