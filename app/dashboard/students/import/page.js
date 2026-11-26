@@ -11,7 +11,6 @@ import { clusterStudentRegistrations, normalizeStudentName, normalizeIndianPhone
 const clean = value => String(value ?? "").trim();
 const headerKey = value => clean(value).toLowerCase().replace(/[^a-z0-9]/g, "");
 const normalizeName = value => normalizeStudentName(value);
-const normalizeFather = value => normalizeName(value).replace(/[^A-Z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
 
 function parseDate(value) {
   if (value === null || value === undefined || value === "") return null;
@@ -117,10 +116,6 @@ function buildWorkbookPayload(workbook) {
       for (const key of ["course","dateOfAdmission","formNo","dob","sex","fatherName","address","qualification"]) if (!previous[key] && record[key]) previous[key] = record[key];
     }
   }
-
-  const studentCodeCounts = new Map();
-  for (const record of registrations.values()) studentCodeCounts.set(record.stCode, (studentCodeCounts.get(record.stCode) || 0) + 1);
-  for (const record of registrations.values()) record.stCodeUnique = studentCodeCounts.get(record.stCode) === 1;
 
   const rawRecords = [...registrations.values()];
   const clusters = clusterStudentRegistrations(rawRecords);
