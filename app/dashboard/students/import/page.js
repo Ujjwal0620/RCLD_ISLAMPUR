@@ -252,13 +252,41 @@ function buildWorkbookPayload(workbook) {
   return { studentSheetName: studentSheet.name, feeSheetName: feeSheet.name, studentRows: studentDataRows, registrationCount: registrations.size, profiles, feeRows, warnings: [...studentWarnings, ...feeWarnings] };
 }
 
-async function postBatch(body) {
+async function postBatch(body, onProgress = () => {}) {
   const response = await fetch("/api/students/unified-import", {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
   });
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.detail || data.error || "Import batch failed.");
-  return data;
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.detail || data.error || "Import request failed.");
+  }
+  if (!response.body) throw new Error("This browser does not support streaming import progress.");
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "", completed = null;
+  const consumeLine = line => {
+    if (!line.trim()) return;
+    const event = JSON.parse(line);
+    if (event.type === "progress") onProgress(event);
+    else if (event.type === "error") throw new Error(event.message || "Import failed during " + (event.phase || "processing"));
+    else if (event.type === "complete") completed = event;
+  };
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+      for (const line of lines) consumeLine(line);
+    }
+    buffer += decoder.decode();
+    if (buffer.trim()) consumeLine(buffer);
+  } finally {
+    reader.releaseLock();
+  }
+  if (!completed?.summary?.complete) throw new Error("The stream ended before the server confirmed import completion.");
+  return completed.summary;
 }
 
 export default function BulkImportPage() {
@@ -308,10 +336,11 @@ export default function BulkImportPage() {
     setError("");
     setResult(null);
     setProgress({
-      stage: "Sending complete workbook to server",
-      percent: 12,
+      stage: "Validating & parsing payload",
+      percent: 5,
       done: 0,
-      total: preview.profileCount + preview.feeRows.length
+      total: preview.profileCount + preview.feeRows.length,
+      message: "Starting streamed import"
     });
 
     try {
@@ -321,6 +350,14 @@ export default function BulkImportPage() {
         action: "complete",
         groups: preview.profiles,
         rows: preview.feeRows
+      }, event => {
+        setProgress({
+          stage: event.stage || "Importing",
+          percent: Math.max(0, Math.min(99, Number(event.percent || 0))),
+          done: Number(event.processed || 0),
+          total: Number(event.total || 0),
+          message: event.message || ""
+        });
       });
 
       if (!data.complete) throw new Error("The server did not confirm that the complete import finished.");
@@ -344,7 +381,8 @@ export default function BulkImportPage() {
         stage: "Complete",
         percent: 100,
         done: summary.studentProfilesProcessed + summary.feeRowsProcessed,
-        total: summary.studentProfilesProcessed + summary.feeRowsProcessed
+        total: summary.studentProfilesProcessed + summary.feeRowsProcessed,
+        message: "All student profiles, enrollments, receipts and fee summaries are complete"
       });
       setResult(summary);
       setSummaryOpen(true);
@@ -356,7 +394,7 @@ export default function BulkImportPage() {
         (err.message || "The complete workbook import failed.") +
         " You can retry the same workbook; the import is designed to skip or repair records already written."
       );
-      setProgress({ stage: "Import failed", percent: 12, done: 0, total: 0 });
+      setProgress({ stage: "Import failed", percent: 10, done: 0, total: 0, message: err.message || "Import failed" });
       notify(err.message || "Unified import failed.", "error");
     } finally {
       runningRef.current = false;
@@ -409,6 +447,7 @@ export default function BulkImportPage() {
           {progress.stage !== "Idle" && <div style={{ display: "grid", gap: 8 }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}><strong>{progress.stage}</strong><b>{progress.percent}%</b></div>
             <div style={{ height: 10, borderRadius: 99, background: "var(--border,#e5e7eb)", overflow: "hidden" }}><div style={{ height: "100%", width: progress.percent + "%", background: "var(--primary,#315efb)", transition: "width .2s ease" }}/></div>
+            {progress.message && <small className="form-help">{progress.message}</small>}
             {progress.total > 0 && <small className="form-help">{progress.done.toLocaleString("en-IN")} / {progress.total.toLocaleString("en-IN")} records</small>}
           </div>}
           {error && <div className="error-msg" role="alert">{error}</div>}
