@@ -361,7 +361,7 @@ async function main() {
       const totalDue = Number(enrollment.feeConfig?.netPayableFee ?? enrollment.summary?.totalDue ?? 0);
       const totalPaid = paidByEnrollment.get(String(enrollment._id)) || 0;
       const balanceDue = Math.max(0, totalDue - totalPaid);
-      const configured = enrollment.feeConfig?.configured !== false && enrollment.feeConfig?.feeRuleSource !== "UNCONFIGURED";
+      const configured = enrollment.feeConfig?.configured === true || (due > 0 && enrollment.feeConfig?.feeRuleSource !== "UNCONFIGURED");
       const feeStatus = configured && balanceDue === 0 ? "Paid" : totalPaid > 0 ? "Partial" : "Unpaid";
       await enrollmentCollection.updateOne({ _id: enrollment._id }, { $set: { summary: {
         ...(enrollment.summary || {}), totalFee, totalDue, totalPaid, balanceDue, feeStatus,
@@ -533,7 +533,7 @@ async function main() {
       const due = Number(enrollment.feeConfig?.netPayableFee ?? enrollment.summary?.totalDue ?? 0);
       const paid = paidMap.get(String(enrollment._id)) || 0;
       const balance = Math.max(0, due - paid);
-      const configured = enrollment.feeConfig?.configured !== false && enrollment.feeConfig?.feeRuleSource !== "UNCONFIGURED";
+      const configured = enrollment.feeConfig?.configured === true || (due > 0 && enrollment.feeConfig?.feeRuleSource !== "UNCONFIGURED");
       const feeStatus = configured && balance === 0 ? "Paid" : paid > 0 ? "Partial" : "Unpaid";
       await enrollmentCollection.updateOne({ _id: enrollment._id }, { $set: { summary: {
         ...(enrollment.summary || {}), totalFee: fee, totalDue: due, totalPaid: paid, balanceDue: balance, feeStatus,
