@@ -430,7 +430,8 @@ async function syncStudentGroups(groups = []) {
       } else {
         const patch = {};
         if (existingEnrollment.courseName !== registration.course) patch.courseName = registration.course;
-        if (!existingEnrollment.registrationId) patch.registrationId = registration.registrationId;
+        if (String(existingEnrollment.registrationId || "").toUpperCase() !== registration.registrationId.toUpperCase()) patch.registrationId = registration.registrationId;
+        if (normalizeName(existingEnrollment.normalizedFullName) !== normalizeName(group.cleanName)) patch.normalizedFullName = normalizeName(group.cleanName);
         if (existingEnrollment.courseCode !== courseCode && (existingEnrollment.registrationId === registration.registrationId || !existingEnrollment.courseCode || String(existingEnrollment.courseCode).toUpperCase() === "LEGACY")) patch.courseCode = courseCode;
         if (existingEnrollment.feeConfig?.configured === false && courseRule.feeConfig?.configured) patch.feeConfig = courseRule.feeConfig;
         if (!existingEnrollment.semesterLabel && registration.course) patch.semesterLabel = registration.course;
