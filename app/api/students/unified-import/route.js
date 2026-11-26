@@ -122,8 +122,8 @@ async function syncStudentGroups(groups = []) {
   }))).filter(item => item.registrationId && item.stCode && item.cleanName);
   const codes = [...new Set(allRegistrations.map(item => item.stCode))];
   const registrationIds = [...new Set(allRegistrations.map(item => item.registrationId))];
-  const names = [...new Set(groups.map(group => normalizeName(group.cleanName)).filter(Boolean))];
-  const phones = [...new Set(groups.flatMap(group => group.phones || []).map(value => clean(value).replace(/\D/g, "")).filter(value => value.length === 10))];
+  const names = [...new Set(groups.flatMap(group => [group.cleanName, ...(group.alternateNames || [])]).map(normalizeName).filter(Boolean))];
+  const phones = [...new Set(groups.flatMap(group => group.phones || []).flatMap(value => String(value).replace(/\D/g, "").length === 10 ? [String(value).replace(/\D/g, "")] : []))];
   const dobs = [...new Set(groups.flatMap(group => [group.dob, ...(group.dobs || [])]).map(value => asDate(value)?.toISOString().slice(0, 10)).filter(Boolean))];
   const fathers = [...new Set(groups.flatMap(group => [group.fatherName, ...(group.fatherNames || [])]).map(normalizeFather).filter(Boolean))];
   const courseCodes = [...new Set(allRegistrations.map(item => normalizeCourseCode(item.course)).filter(Boolean))];
@@ -140,12 +140,13 @@ async function syncStudentGroups(groups = []) {
   const existingMasters = await StudentMaster.find({
     $or: [
       { normalizedFullName: { $in: names } },
+      { alternateNames: { $in: names } },
       ...(registrationIds.length ? [
         { "registrations.registrationId": { $in: registrationIds } },
         { "enrollments.registrationId": { $in: registrationIds } }
       ] : []),
       ...(existingEnrollmentMasterIds.length ? [{ _id: { $in: existingEnrollmentMasterIds } }] : []),
-      ...(phones.length ? [{ phoneNumbers: { $in: phones } }] : []),
+      ...(phones.length ? [{ phoneNumbers: { $in: phones } }, { phones: { $in: phones } }] : []),
       ...(dobs.length ? [{ dob: { $in: dobs.map(value => new Date(value + "T00:00:00.000Z")) } }] : []),
       ...(fathers.length ? [{ normalizedFatherName: { $in: fathers } }] : []),
       ...(existingStudentIds.length ? [{ legacyStudentIds: { $in: existingStudentIds } }] : [])
@@ -205,12 +206,13 @@ async function syncStudentGroups(groups = []) {
       const sourceRegistrationId = sourceCode ? normalizeName(rawSourceName.replace(/_[A-Z0-9-]+$/i, "")) + "_" + sourceCode : "";
       if (sourceRegistrationId && groupRegistrationIds.has(sourceRegistrationId.toUpperCase())) return true;
       const studentPhones = [student.mobileNumber, student.phone, student.whatsappNumber, student.guardianContactNumber, student.sourcePhone]
-        .join(",").split(/[,;/|]/).map(normalizePhone).filter(Boolean);
+        .join(",").split(/[,;/|\s]+/).map(normalizePhone).filter(Boolean);
       return hasIdentityAnchor(group, {
-        fullName: sourceName,
-        dob: student.dateOfBirth || student.dob,
+        fullName: sourceName, dob: student.dateOfBirth || student.dob,
+        sex: student.sex || student.gender || student.sourceSex,
         fatherName: student.fatherOrHusbandName || student.fatherName,
-        phoneNumbers: studentPhones
+        phones: studentPhones, phoneNumbers: studentPhones,
+        studentCodes: [student.regnNo, student.enrollmentNo].filter(Boolean)
       });
     });
     const linkedMasterIds = new Set(existingLegacy.map(item => masterByStudentId.get(String(item._id))).filter(Boolean).map(item => String(item._id)));
