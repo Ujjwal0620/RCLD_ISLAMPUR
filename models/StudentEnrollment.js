@@ -66,8 +66,9 @@ const StudentEnrollmentSchema = new mongoose.Schema({
   mergeStatus: { type: String, default: "" }
 }, { timestamps: true, collection: "student_enrollments" });
 
-StudentEnrollmentSchema.index({ studentId: 1, registrationId: 1 }, { unique: true, name: "student_registration_identity_unique", partialFilterExpression: { registrationId: { $type: "string", $gt: "" } } });
-StudentEnrollmentSchema.index({ studentId: 1, stCode: 1, normalizedFullName: 1, courseCode: 1 }, { unique: true, name: "student_course_enrollment_unique" });
+// The migration script installs the unique partial index after it marks retained duplicates.
+StudentEnrollmentSchema.index({ studentId: 1, stCode: 1, courseCode: 1, admissionDate: 1 }, { name: "student_stcode_course_admission_lookup" });
+StudentEnrollmentSchema.index({ studentId: 1, registrationId: 1 });
 StudentEnrollmentSchema.index({ stCode: 1 });
 StudentEnrollmentSchema.index({ studentId: 1, admissionDate: 1 });
 
