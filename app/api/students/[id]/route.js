@@ -88,7 +88,8 @@ export async function GET(req,{params}){
         ...payment,
         registrationId: payment.registrationId || enrollment.registrationId || derivedRegistrationId,
         courseCode: payment.courseCode || enrollment.courseCode || "",
-        courseName: enrollment.courseName || courseNameMap.get(String(payment.courseCode || enrollment.courseCode || "").toUpperCase()) || payment.courseCode || enrollment.courseCode || "Previous Course (Legacy)",
+        course: payment.course || enrollment.courseName || courseNameMap.get(String(payment.courseCode || enrollment.courseCode || "").toUpperCase()) || payment.courseCode || enrollment.courseCode || "Previous Course (Legacy)",
+        courseName: payment.course || enrollment.courseName || courseNameMap.get(String(payment.courseCode || enrollment.courseCode || "").toUpperCase()) || payment.courseCode || enrollment.courseCode || "Previous Course (Legacy)",
         semesterLabel: enrollment.semesterLabel || "LEGACY",
         installmentApplied: (payment.allocations || []).map(item => item.label + ": ₹" + Number(item.allocatedAmount || 0).toLocaleString("en-IN")).join(", ") || (payment.importWarnings?.length ? "Needs review: " + payment.importWarnings.join(" ") : "Legacy receipt / not allocated"),
       };
