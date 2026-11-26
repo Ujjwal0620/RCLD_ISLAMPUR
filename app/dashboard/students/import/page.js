@@ -396,14 +396,16 @@ export default function BulkImportPage() {
       {result && <section className="panel" style={{ marginBottom: 18 }}>
         <div className="panel-head"><div><h3>Import Summary</h3><p>Completed in resumable student and fee batches. Existing receipts were not duplicated.</p></div><CheckCircle2 size={22}/></div>
         <div className="student-summary-grid" style={{ padding: 20 }}>
-          <div className="summary-card"><span>Students Matched / Updated</span><strong>{result.studentsMatchedUpdated}</strong></div>
-          <div className="summary-card"><span>New Students Created</span><strong>{result.newStudentsCreated}</strong></div>
-          <div className="summary-card"><span>Registrations Linked</span><strong>{result.registrationsLinked}</strong></div>
-          <div className="summary-card"><span>New Fee Receipts Added</span><strong>{result.newReceiptsAdded}</strong></div>
-          <div className="summary-card"><span>Existing Receipts Updated / Skipped</span><strong>{result.existingReceiptsUpdatedOrSkipped}</strong></div>
+          <div className="summary-card"><span>New Profiles Created</span><strong>{result.newStudentsCreated}</strong></div>
+          <div className="summary-card"><span>Existing Profiles Updated / Merged</span><strong>{result.studentsMatchedUpdated}</strong></div>
+          <div className="summary-card"><span>New St_Codes Linked</span><strong>{result.registrationsLinked}</strong></div>
+          <div className="summary-card"><span>Fee Receipts Added</span><strong>{result.newReceiptsAdded}</strong></div>
+          <div className="summary-card"><span>Duplicate Receipts Skipped</span><strong>{result.duplicateReceiptsSkipped}</strong></div>
+          <div className="summary-card"><span>St_Code Collisions Flagged</span><strong>{collisionCount}</strong></div>
+          <div className="summary-card"><span>Unmatched Fee-Only Codes</span><strong>{unmatchedFeeCodes}</strong></div>
           <div className="summary-card"><span>Rows Requiring Review</span><strong>{result.unmatchedRows.length}</strong></div>
         </div>
-        {result.unmatchedRows.length > 0 && <div style={{ padding: "0 20px 20px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}><AlertTriangle size={16}/><span>{result.unmatchedRows.length} rows need manual review.</span><button className="ghost-btn" type="button" onClick={downloadWarnings}><Download size={15}/> Download flagged rows</button></div>}
+        {result.unmatchedRows.length > 0 && <div style={{ padding: "0 20px 20px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}><AlertTriangle size={16}/><span>{result.unmatchedRows.length} rows need manual review.</span><button className="ghost-btn" type="button" onClick={() => downloadWarnings("csv")}><Download size={15}/> Download CSV</button><button className="ghost-btn" type="button" onClick={() => downloadWarnings("json")}><Download size={15}/> Download JSON</button></div>}
       </section>}
 
       <BulkStudentPhotoUploadDialog open={photoDialogOpen} onClose={() => setPhotoDialogOpen(false)} onComplete={() => invalidate(["students:", "student-detail:"])} />
