@@ -240,6 +240,22 @@ async function main() {
       }
     }
 
+    const activeEnrollmentRows = await enrollmentCollection.find({
+      studentId: canonicalId,
+      mergedIntoEnrollmentId: { $exists: false },
+    }).toArray();
+    activeEnrollmentRows.sort((a, b) => (effectiveDate(b)?.getTime() || 0) - (effectiveDate(a)?.getTime() || 0));
+    if (activeEnrollmentRows[0]) {
+      const latestEnrollment = activeEnrollmentRows[0];
+      await mastersCollection.updateOne({ _id: canonicalId }, { $set: {
+        activeEnrollmentId: latestEnrollment._id,
+        primaryStCode: latestEnrollment.stCode || latest?.stCode || canonical.primaryStCode || "",
+        currentStCode: latestEnrollment.stCode || latest?.stCode || canonical.currentStCode || "",
+        currentRegistrationId: latestEnrollment.registrationId || latest?.registrationId || canonical.currentRegistrationId || "",
+        currentCourse: latestEnrollment.courseName || latestEnrollment.courseCode || latest?.course || canonical.currentCourse || "",
+        currentAdmissionDate: latestEnrollment.admissionDate || latest?.dateOfAdmission || null,
+      }});
+    }
     const enrollmentReplacementEntries = [...enrollmentReplacements.entries()];
     for (const [oldEnrollmentId, newEnrollmentId] of enrollmentReplacementEntries) {
       await paymentsCollection.updateMany({ enrollmentId: new mongoose.Types.ObjectId(oldEnrollmentId) }, {
