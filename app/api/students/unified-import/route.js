@@ -417,6 +417,7 @@ async function syncStudentGroups(groups = []) {
         qualification: registration.qualification || "",
         rawAddress: registration.address || "",
         rawStName: registration.rawStName || (registration.cleanName + "_" + registration.stCode),
+        course: registration.course || courseCode,
         courseCode,
         courseName: registration.course,
         admissionDate: registration.dateOfAdmission,
