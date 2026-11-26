@@ -9,6 +9,7 @@ import StudentFeePayment from "@/models/StudentFeePayment";
 import Course from "@/models/Course";
 import { normalizeCourseCode, resolveCourseFeeConfigFromDocument } from "@/lib/student-import/course-fee-rules";
 import { buildInstallments } from "@/lib/student-import/fee-allocation";
+import { resolveStudentIdentity, normalizeIndianPhones } from "@/lib/student-import/identity-resolution";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -102,14 +103,7 @@ const registrationIdentity = item => clean(item.registrationId)
   || (clean(item.cleanName) && clean(item.stCode) ? normalizeName(item.cleanName) + "_" + clean(item.stCode) : "");
 
 function hasIdentityAnchor(group, candidate) {
-  if (normalizeName(candidate.normalizedFullName || candidate.fullName) !== normalizeName(group.cleanName)) return false;
-  const incomingPhones = new Set((group.phones || []).map(normalizePhone).filter(Boolean));
-  const existingPhones = (candidate.phoneNumbers || []).map(normalizePhone).filter(Boolean);
-  const samePhone = existingPhones.some(value => incomingPhones.has(value));
-  const sameDob = [group.dob, ...(group.dobs || [])].some(value => sameDate(value, candidate.dob));
-  const fatherNames = [...new Set([group.fatherName, ...(group.fatherNames || [])].map(normalizeFather).filter(Boolean))];
-  const sameFather = fatherNames.includes(normalizeFather(candidate.fatherName));
-  return samePhone || sameDob || sameFather;
+  return resolveStudentIdentity(group, candidate).matched;
 }
 
 function registrationSort(a, b) {
