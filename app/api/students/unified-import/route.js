@@ -300,6 +300,7 @@ async function syncStudentGroups(groups = []) {
       if (id && !existingRegs.has(key)) existingRegs.set(key, {
         stCode: clean(item.stCode), registrationId: id, course: clean(item.course || item.courseCode) || "Previous Course (Legacy)",
         dateOfAdmission: asDate(item.dateOfAdmission || item.admissionDate),
+        admissionDate: asDate(item.admissionDate || item.dateOfAdmission),
         earliestPaymentDate: asDate(item.earliestPaymentDate),
         formNo: clean(item.formNo), qualification: clean(item.qualification),
         address: clean(item.rawAddress || item.address), rawAddress: clean(item.rawAddress || item.address),
@@ -313,7 +314,7 @@ async function syncStudentGroups(groups = []) {
       if (id && !existingRegs.has(key)) existingRegs.set(key, {
         stCode: clean(item.stCode), registrationId: id,
         course: clean(item.courseName || item.courseCode) || "Previous Course (Legacy)",
-        dateOfAdmission: asDate(item.admissionDate), earliestPaymentDate: asDate(item.earliestPaymentDate),
+        dateOfAdmission: asDate(item.admissionDate), admissionDate: asDate(item.admissionDate), earliestPaymentDate: asDate(item.earliestPaymentDate),
         formNo: clean(item.formNo), qualification: clean(item.qualification),
         address: clean(item.rawAddress), rawAddress: clean(item.rawAddress), rawStName: clean(item.rawStName), isCurrent: false
       });
@@ -326,6 +327,7 @@ async function syncStudentGroups(groups = []) {
         ...prior, stCode: item.stCode, registrationId: item.registrationId,
         course: item.course || prior.course,
         dateOfAdmission: item.dateOfAdmission || prior.dateOfAdmission,
+        admissionDate: item.dateOfAdmission || prior.admissionDate || prior.dateOfAdmission,
         earliestPaymentDate: item.earliestPaymentDate || prior.earliestPaymentDate,
         formNo: item.formNo || prior.formNo,
         qualification: item.qualification || prior.qualification,
