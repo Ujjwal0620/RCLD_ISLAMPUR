@@ -123,6 +123,22 @@ function buildWorkbookPayload(workbook) {
     items.sort((a,b) => new Date(b.dateOfAdmission || 0) - new Date(a.dateOfAdmission || 0));
     const latest = items[0];
     const names = [...new Set(items.map(item => item.cleanName).filter(Boolean))];
+    const enrollmentMap = new Map();
+    for (const item of items) {
+      const admissionDateKey = item.dateOfAdmission ? new Date(item.dateOfAdmission).toISOString().slice(0, 10) : "";
+      const enrollmentKey = [item.stCode, String(item.course || "").toUpperCase(), admissionDateKey].join("|");
+      const previous = enrollmentMap.get(enrollmentKey);
+      if (!previous) enrollmentMap.set(enrollmentKey, { ...item });
+      else {
+        previous.phones = [...new Set([...(previous.phones || []), ...(item.phones || [])])];
+        previous.alternateNames = [...new Set([...(previous.alternateNames || []), item.cleanName].filter(Boolean))];
+        if (!previous.formNo && item.formNo) previous.formNo = item.formNo;
+        if (!previous.qualification && item.qualification) previous.qualification = item.qualification;
+        if (!previous.address && item.address) previous.address = item.address;
+        if (!previous.rawStName && item.rawStName) previous.rawStName = item.rawStName;
+      }
+    }
+    const uniqueItems = [...enrollmentMap.values()].sort((a,b) => new Date(b.dateOfAdmission || b.earliestPaymentDate || 0) - new Date(a.dateOfAdmission || a.earliestPaymentDate || 0));
     return {
       cleanName: latest.cleanName,
       alternateNames: names,
@@ -131,8 +147,8 @@ function buildWorkbookPayload(workbook) {
       fatherName: items.find(item => item.fatherName)?.fatherName || "",
       fatherNames: [...new Set(items.map(item => item.fatherName).filter(Boolean))],
       phones: [...new Set(items.flatMap(item => item.phones))],
-      studentCodes: [...new Set(items.map(item => item.stCode))],
-      registrations: items.map(item => ({ ...item, alternateNames: names, isCurrent: item.registrationId === latest.registrationId }))
+      studentCodes: [...new Set(uniqueItems.map(item => item.stCode))],
+      registrations: uniqueItems.map(item => ({ ...item, alternateNames: names, isCurrent: item.stCode === latest.stCode && item.course === latest.course && String(item.dateOfAdmission || "") === String(latest.dateOfAdmission || "") }))
     };
   });
   const studentCodeProfiles = new Map();
