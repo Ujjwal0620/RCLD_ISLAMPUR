@@ -42,7 +42,7 @@ const dateValue = value => value && !Number.isNaN(new Date(value).getTime()) ? n
 const effectiveDate = item => dateValue(item?.dateOfAdmission || item?.admissionDate || item?.earliestPaymentDate);
 const registrationKey = item => [
   codeOf(item.stCode),
-  clean(item.course || item.courseCode).toUpperCase(),
+  clean(item.courseCode || item.course || item.courseName).toUpperCase(),
   normalizeIdentityDate(item.dateOfAdmission || item.admissionDate || item.earliestPaymentDate),
 ].join("|");
 
@@ -387,6 +387,20 @@ async function main() {
       } });
       await mastersCollection.updateMany({ activeEnrollmentId: duplicate._id }, { $set: { activeEnrollmentId: canonicalEnrollment._id } });
     }
+  }
+
+  const missingCourseCodeRows = await enrollmentCollection.find({
+    mergedIntoEnrollmentId: null,
+    courseCode: { $in: ["", null] },
+    courseName: { $type: "string", $ne: "" },
+  }).toArray();
+  if (missingCourseCodeRows.length) {
+    await enrollmentCollection.bulkWrite(missingCourseCodeRows.map(item => ({
+      updateOne: {
+        filter: { _id: item._id },
+        update: { $set: { courseCode: clean(item.courseName).toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-|-$/g, "") } },
+      },
+    })), { ordered: false });
   }
 
   const enrollmentIndexes = await enrollmentCollection.indexes();
