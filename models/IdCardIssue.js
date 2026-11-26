@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 const IdCardIssueSchema = new mongoose.Schema({
   idCardNumber: { type: String, required: true, trim: true, unique: true, index: true },
   studentId: { type: mongoose.Schema.Types.ObjectId, ref: "Student", required: true, unique: true, index: true },
+  masterStudentId: { type: mongoose.Schema.Types.ObjectId, ref: "StudentMaster", default: null, index: true },
   formNo: { type: String, default: "" },
   applicantName: { type: String, default: "" },
   photoUrl: { type: String, default: "" },
