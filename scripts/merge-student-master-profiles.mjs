@@ -18,7 +18,7 @@ import {
   normalizeIdentityDate,
   normalizeIndianPhones,
   normalizeFatherName,
-} from "../lib/student-import/identity-resolution.js";
+} from "../lib/student-import/identity-resolution.mjs";
 
 function loadLocalEnvironment() {
   const mode = process.env.NODE_ENV || "development";
