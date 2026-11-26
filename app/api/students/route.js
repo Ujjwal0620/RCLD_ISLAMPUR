@@ -60,18 +60,23 @@ export async function GET(request) {
         "qualifications.examCourse","qualifications.boardUniversity","qualifications.collegeInstitute","qualifications.year","qualifications.percentage","admissionDate"
       ];
       filter.$or = searchFields.map(field => ({ [field]: rx }));
-      // Historical registration codes still resolve to the same canonical master profile.
-      const codeMatches = await StudentMaster.find({ stCodes: rx })
-        .select("_id legacyStudentIds activeEnrollmentId").lean();
-      if (codeMatches.length) {
+      // Search every alias/code/contact field on the permanent master identity.
+      const numericPhoneSearch = search.replace(/\D/g, "");
+      const masterMatches = await StudentMaster.find({ $or: [
+        { stCodes: rx }, { studentCodes: rx }, { primaryStCode: rx },
+        { fullName: rx }, { normalizedFullName: rx }, { alternateNames: rx },
+        { fatherName: rx }, { normalizedFatherName: rx },
+        { phoneNumbers: rx }, { phones: numericPhoneSearch ? new RegExp(numericPhoneSearch) : rx }
+      ] }).select("_id legacyStudentIds activeEnrollmentId studentCodes stCodes primaryStCode alternateNames phones phoneNumbers").lean();
+      if (masterMatches.length) {
         const activeCodeEnrollments = await StudentEnrollment.find({
-          _id: { $in: codeMatches.map(master => master.activeEnrollmentId).filter(Boolean) }
+          _id: { $in: masterMatches.map(master => master.activeEnrollmentId).filter(Boolean) }
         }).select("_id legacyStudentId").lean();
         const activeCodeMap = new Map(activeCodeEnrollments.map(item => [String(item._id), item]));
-        const canonicalCodeIds = codeMatches.map(master =>
-          activeCodeMap.get(String(master.activeEnrollmentId))?.legacyStudentId
-          || master.legacyStudentIds?.[master.legacyStudentIds.length - 1]
-        ).filter(Boolean);
+        const canonicalCodeIds = masterMatches.flatMap(master => {
+          const activeId = activeCodeMap.get(String(master.activeEnrollmentId))?.legacyStudentId;
+          return activeId ? [activeId] : (master.legacyStudentIds || []).slice(-1);
+        }).filter(Boolean);
         if (canonicalCodeIds.length) filter.$or.push({ _id: { $in: canonicalCodeIds } });
       }
       const numericSearch = Number(search);
@@ -195,7 +200,15 @@ export async function GET(request) {
           : ""
       );
       const feeSummary = profile?.feeSummary || null;
-      return { ...student, photoUrl, feeSummary, dueAmount: feeSummary ? feeSummary.balanceDue : student.dueAmount };
+      return {
+        ...student, photoUrl, feeSummary,
+        primaryStCode: profile?.primaryStCode || profile?.currentStCode || student.regnNo || "",
+        studentCodes: [...new Set([...(profile?.studentCodes || []), ...(profile?.stCodes || [])])],
+        alternateNames: profile?.alternateNames || [],
+        phones: [...new Set([...(profile?.phones || []), ...(profile?.phoneNumbers || [])])],
+        masterStudentId: profile?._id || null,
+        dueAmount: feeSummary ? feeSummary.balanceDue : student.dueAmount
+      };
     });
 
     const courses = [...new Set([...DEFAULT_COURSES, ...dbCourses.filter(Boolean)])].sort();
