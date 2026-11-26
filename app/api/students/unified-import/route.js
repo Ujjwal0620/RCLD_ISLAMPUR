@@ -24,6 +24,7 @@ async function ensureReceiptIndex() {
       });
       const legacyIndexes = indexes.filter(index => index.unique
         && !index.key?.registrationId
+        && !index.key?.stCode
         && ["mrNo", "paymentDate", "amountPaid"].every(key => index.key?.[key] === 1));
       const oldRegistrationIndexes = indexes.filter(index => index.unique
         && index.key?.registrationId === 1
