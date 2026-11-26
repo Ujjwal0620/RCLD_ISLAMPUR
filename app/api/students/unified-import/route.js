@@ -289,7 +289,9 @@ async function syncStudentGroups(groups = []) {
         stCode: clean(item.stCode), registrationId: id, course: clean(item.course || item.courseCode) || "Previous Course (Legacy)",
         dateOfAdmission: asDate(item.dateOfAdmission || item.admissionDate),
         earliestPaymentDate: asDate(item.earliestPaymentDate),
-        formNo: clean(item.formNo), isCurrent: false
+        formNo: clean(item.formNo), qualification: clean(item.qualification),
+        address: clean(item.rawAddress || item.address), rawAddress: clean(item.rawAddress || item.address),
+        rawStName: clean(item.rawStName), isCurrent: false
       });
     }
     for (const item of existingEnrollments) {
@@ -298,7 +300,9 @@ async function syncStudentGroups(groups = []) {
       if (id && !existingRegs.has(id)) existingRegs.set(id, {
         stCode: clean(item.stCode), registrationId: id,
         course: clean(item.courseName || item.courseCode) || "Previous Course (Legacy)",
-        dateOfAdmission: asDate(item.admissionDate), earliestPaymentDate: asDate(item.earliestPaymentDate), formNo: clean(item.formNo), isCurrent: false
+        dateOfAdmission: asDate(item.admissionDate), earliestPaymentDate: asDate(item.earliestPaymentDate),
+        formNo: clean(item.formNo), qualification: clean(item.qualification),
+        address: clean(item.rawAddress), rawAddress: clean(item.rawAddress), rawStName: clean(item.rawStName), isCurrent: false
       });
     }
     for (const item of registrations) {
@@ -310,6 +314,9 @@ async function syncStudentGroups(groups = []) {
         dateOfAdmission: item.dateOfAdmission || prior.dateOfAdmission,
         earliestPaymentDate: item.earliestPaymentDate || prior.earliestPaymentDate,
         formNo: item.formNo || prior.formNo,
+        qualification: item.qualification || prior.qualification,
+        rawAddress: item.address || prior.rawAddress || prior.address,
+        rawStName: item.rawStName || prior.rawStName || (item.cleanName + "_" + item.stCode),
         isCurrent: false
       });
       registrationsSeen += 1;
