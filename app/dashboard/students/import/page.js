@@ -239,6 +239,7 @@ export default function BulkImportPage() {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [result, setResult] = useState(null);
+  const [summaryOpen, setSummaryOpen] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
@@ -319,6 +320,7 @@ export default function BulkImportPage() {
       }
       setProgress({ stage: "Complete", percent: 100, done: 1, total: 1 });
       setResult(summary);
+      setSummaryOpen(true);
       setPreview(null);
       notify("Unified student and fee import completed.", "success");
       invalidate(["lookup:", "students:", "student-detail:", "student-fees:", "dashboard-stats", "batches:"]);
