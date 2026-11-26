@@ -525,7 +525,7 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
   }
 
   const enrollmentOpsByKey=new Map();
-  for(const op of enrollmentOps){const d=op.set||{},k=enrollmentUniqueKey(d);if(!d.studentId||!d.stCode||!d.normalizedFullName||!d.courseCode){flaggedRows.push({phase:"enrollment",reason:"Incomplete enrollment key skipped."});continue;}const old=enrollmentOpsByKey.get(k);if(!old||(old.isNew&&!op.isNew))enrollmentOpsByKey.set(k,op);else if(!old.isNew&&!op.isNew)old.set={...old.set,...d};}
+  for(const op of enrollmentOps){const d=op.set||{},k=enrollmentUniqueKey(d);if(!d.studentId||!d.stCode||!d.normalizedFullName||!d.courseCode){flaggedRows.push({phase:"enrollment",reason:"Incomplete enrollment key skipped."});continue;}const old=enrollmentOpsByKey.get(k);if(!old)enrollmentOpsByKey.set(k,op);else if(old.isNew)old.set={...old.set,...d};else if(!op.isNew)old.set={...old.set,...d};}
   const writeWarnings=[];
   async function insertChunks(Model,docs,phase,size=200){for(let off=0;off<docs.length;off+=size){const chunk=docs.slice(off,off+size),t=Date.now();try{await Model.insertMany(chunk,{ordered:false});}catch(e){if(e.code!==11000&&!(e.writeErrors||[]).some(x=>x.code===11000))throw e;const found=await Model.find({_id:{$in:chunk.map(x=>x._id)}}).select("_id").lean(),ids=new Set(found.map(x=>String(x._id))),missing=chunk.filter(x=>!ids.has(String(x._id)));if(missing.length)try{await Model.insertMany(missing,{ordered:false});}catch(re){if(re.code!==11000&&!(re.writeErrors||[]).some(x=>x.code===11000))throw re;writeWarnings.push({phase,code:11000,reason:"Duplicate insert safely skipped after _id recheck."});}writeWarnings.push({phase,code:11000,reason:"Existing duplicate records skipped."});}console.log("[unified-import]",phase,Math.floor(off/size)+1,Date.now()-t,{attempted:chunk.length});}}
   async function updateChunks(Model,ops,phase,size=500){for(let off=0;off<ops.length;off+=size){const chunk=ops.slice(off,off+size),t=Date.now();if(chunk.length)await Model.bulkWrite(chunk,{ordered:false});console.log("[unified-import]",phase,Math.floor(off/size)+1,Date.now()-t,{updated:chunk.length});}}
@@ -539,11 +539,12 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
   return { studentsMatchedUpdated: matchedProfiles, newStudentsCreated: newProfiles, registrationsLinked, registrationsSeen, registrationMap: outputMap, flaggedRows, warnings: writeWarnings };
 }
 
-async function syncFeeRows(rows = [], onProgress = () => {}) {
+async function syncFeeRows(rows = [], onProgress = () => {}, registrationMap = []) {
   if (!Array.isArray(rows) || rows.length > 20000) throw new Error("Fee import must contain between 1 and 20,000 rows.");
   await ensureReceiptIndex();
   const ids = [...new Set(rows.map(item => clean(item.registrationId)).filter(Boolean))];
   const enrollments = await StudentEnrollment.find({ registrationId: { $in: ids }, mergedIntoEnrollmentId: null }).lean();
+  const mappedRegistrationById = new Map((registrationMap || []).map(item => [String(item.registrationId || ""), item]));
   const enrollmentById = new Map();
   for (const item of enrollments) {
     const key = String(item.registrationId || "");
@@ -581,7 +582,9 @@ async function syncFeeRows(rows = [], onProgress = () => {}) {
   const seenInBatch = new Set();
   for (const row of rows) {
     const registrationId = clean(row.registrationId);
-    const enrollmentCandidates = enrollmentById.get(registrationId) || [];
+    const mappedRegistration = mappedRegistrationById.get(registrationId);
+    const allEnrollmentCandidates = enrollmentById.get(registrationId) || [];
+    const enrollmentCandidates = mappedRegistration?.studentId ? allEnrollmentCandidates.filter(item => String(item.studentId) === String(mappedRegistration.studentId)) : allEnrollmentCandidates;
     const paymentDate = asDate(row.paymentDate);
     let enrollment = enrollmentCandidates.length === 1 ? enrollmentCandidates[0] : null;
     if (!enrollment && enrollmentCandidates.length > 1) {
@@ -664,10 +667,11 @@ async function finalizeFeeSummaries(rawStudentIds = []) {
   if (!enrollments.length) return { studentsFinalized: 0, enrollmentsFinalized: 0 };
   const enrollmentIds = enrollments.map(item => item._id);
   const paymentTotals = await StudentFeePayment.aggregate([
-    { $match: { enrollmentId: { $in: enrollmentIds } } },
-    { $group: { _id: "$enrollmentId", totalPaid: { $sum: "$amountPaid" } } }
+    { $match: { studentId: { $in: objectIds }, enrollmentId: { $in: enrollmentIds } } },
+    { $group: { _id: { studentId: "$studentId", enrollmentId: "$enrollmentId" }, totalPaid: { $sum: "$amountPaid" } } },
+    { $group: { _id: "$_id.studentId", enrollmentTotals: { $push: { enrollmentId: "$_id.enrollmentId", totalPaid: "$totalPaid" } }, studentTotalPaid: { $sum: "$totalPaid" } } }
   ]);
-  const paidByEnrollment = new Map(paymentTotals.map(item => [String(item._id), Number(item.totalPaid || 0)]));
+  const paidByEnrollment = new Map(paymentTotals.flatMap(item => (item.enrollmentTotals || []).map(entry => [String(entry.enrollmentId), Number(entry.totalPaid || 0)])));
   const enrollmentOps = [];
   const masterTotals = new Map();
   for (const enrollment of enrollments) {
