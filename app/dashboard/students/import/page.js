@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, Download, ImagePlus } from "lucide-react";
 import * as XLSX from "xlsx";
 import ERPLayout from "@/components/ERPLayout";
@@ -293,6 +293,15 @@ export default function BulkImportPage() {
   const [telemetry, setTelemetry] = useState({ studentsDone: 0, studentsTotal: 0, registrationsDone: 0, registrationsTotal: 0, feesDone: 0, feesTotal: 0, elapsedSeconds: 0 });
   const notify = useErpToast();
   const { invalidate } = useErpCache();
+  useEffect(() => {
+    if (!busy) return undefined;
+    const interval = setInterval(() => {
+      const active = checkpointRef.current;
+      if (!active?.startedAt) return;
+      setTelemetry(previous => ({ ...previous, elapsedSeconds: Math.floor((Date.now() - active.startedAt) / 1000) }));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [busy]);
 
   async function parseSelectedWorkbook(selectedFile) {
     if (!selectedFile) return;
@@ -347,6 +356,7 @@ export default function BulkImportPage() {
       };
     }
     const startedAt = Date.now() - Number(checkpoint.elapsedMs || 0);
+    checkpoint.startedAt = startedAt;
     const saveCheckpoint = () => {
       checkpoint.elapsedMs = Date.now() - startedAt;
       checkpoint.telemetry = { ...checkpoint.telemetry, elapsedSeconds: Math.floor(checkpoint.elapsedMs / 1000) };
