@@ -533,7 +533,10 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
   const enrollmentOpsByKey=new Map();
   for(const op of enrollmentOps){const d=op.set||{},k=op.uniqueKey||enrollmentUniqueKey(d);if(!k||k==="||||"){flaggedRows.push({phase:"enrollment",reason:"Incomplete enrollment key skipped."});continue;}const old=enrollmentOpsByKey.get(k);if(!old)enrollmentOpsByKey.set(k,op);else if(old.isNew)old.set={...old.set,...d};else if(!op.isNew)old.set={...old.set,...d};}
   const writeWarnings=[];
-  async function insertChunks(Model,docs,phase,size=200){for(let off=0;off<docs.length;off+=size){const chunk=docs.slice(off,off+size),t=Date.now();try{await Model.insertMany(chunk,{ordered:false});}catch(e){if(e.code!==11000&&!(e.writeErrors||[]).some(x=>x.code===11000))throw e;const found=await Model.find({_id:{$in:chunk.map(x=>x._id)}}).select("_id").lean(),ids=new Set(found.map(x=>String(x._id))),missing=chunk.filter(x=>!ids.has(String(x._id)));if(missing.length)try{await Model.insertMany(missing,{ordered:false});}catch(re){if(re.code!==11000&&!(re.writeErrors||[]).some(x=>x.code===11000))throw re;writeWarnings.push({phase,code:11000,reason:"Duplicate insert safely skipped after _id recheck."});}writeWarnings.push({phase,code:11000,reason:"Existing duplicate records skipped."});}console.log("[unified-import]",phase,Math.floor(off/size)+1,Date.now()-t,{attempted:chunk.length});}}
+  let duplicateDocsSkipped = 0;
+  async function insertChunks(Model,docs,phase,size=200){for(let off=0;off<docs.length;off+=size){const chunk=docs.slice(off,off+size),t=Date.now();try{await Model.insertMany(chunk,{ordered:false});}catch(e){if(e.code!==11000&&!(e.writeErrors||[]).some(x=>x.code===11000))throw e;const found=await Model.find({_id:{$in:chunk.map(x=>x._id)}}).select("_id").lean(),ids=new Set(found.map(x=>String(x._id))),missing=chunk.filter(x=>!ids.has(String(x._id)));duplicateDocsSkipped += found.length;
+        if(missing.length)try{await Model.insertMany(missing,{ordered:false});}catch(re){if(re.code!==11000&&!(re.writeErrors||[]).some(x=>x.code===11000))throw re;duplicateDocsSkipped += missing.length;writeWarnings.push({phase,code:11000,reason:"Duplicate insert safely skipped after unique-key conflict."});}
+        writeWarnings.push({phase,code:11000,reason:"Existing duplicate records skipped."});}console.log("[unified-import]",phase,Math.floor(off/size)+1,Date.now()-t,{attempted:chunk.length});}}
   async function updateChunks(Model,ops,phase,size=500){for(let off=0;off<ops.length;off+=size){const chunk=ops.slice(off,off+size),t=Date.now();if(chunk.length)await Model.bulkWrite(chunk,{ordered:false});console.log("[unified-import]",phase,Math.floor(off/size)+1,Date.now()-t,{updated:chunk.length});}}
   await insertChunks(Student,studentOps,"students-insert");
   const knownMasters=new Set(existingMasters.map(x=>String(x._id))),newMasters=[],masterUpdates=[];
@@ -567,7 +570,7 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
   await updateChunks(StudentEnrollment,enrollmentUpdates,"enrollment-update");
   await updateChunks(StudentEnrollment,enrollmentStatusOps,"enrollment-status");
   onPhase("profiles");onPhase("enrollments");
-  return { studentsMatchedUpdated: matchedProfiles, newStudentsCreated: newProfiles, registrationsLinked, registrationsSeen, registrationMap: outputMap, flaggedRows, warnings: writeWarnings };
+  return { studentsMatchedUpdated: matchedProfiles, newStudentsCreated: newProfiles, registrationsLinked, registrationsSeen, duplicatesSkipped: duplicateDocsSkipped, registrationMap: outputMap, flaggedRows, warnings: writeWarnings };
 }
 
 async function syncFeeRows(rows = [], onProgress = () => {}, registrationMap = []) {
@@ -767,7 +770,7 @@ export async function POST(request) {
       if(!Array.isArray(body.groups)||body.groups.length>200)return NextResponse.json({error:"Student chunks are limited to 200 profiles."},{status:400});
       const t=Date.now(),r=await syncStudentGroups(body.groups);
       console.log("[unified-import]","students",Number(body.chunkIndex||0)+1,Date.now()-t,{profiles:body.groups.length,created:r.newStudentsCreated,updated:r.studentsMatchedUpdated,registrations:r.registrationsSeen});
-      return NextResponse.json({registrationMapChunk:r.registrationMap||[],created:r.newStudentsCreated||0,updated:r.studentsMatchedUpdated||0,enrollmentsLinked:r.registrationsLinked||0,warnings:[...(r.flaggedRows||[]),...(r.warnings||[])],studentIds:[...new Set((r.registrationMap||[]).map(x=>x.studentId).filter(Boolean))]});
+      return NextResponse.json({registrationMapChunk:r.registrationMap||[],created:r.newStudentsCreated||0,updated:r.studentsMatchedUpdated||0,enrollmentsLinked:r.registrationsLinked||0,duplicatesSkipped:r.duplicatesSkipped||0,warnings:[...(r.flaggedRows||[]),...(r.warnings||[])],studentIds:[...new Set((r.registrationMap||[]).map(x=>x.studentId).filter(Boolean))]});
     }
     if (body.action === "fees") {
       if(!Array.isArray(body.rows)||body.rows.length>500)return NextResponse.json({error:"Fee chunks are limited to 500 receipts."},{status:400});
