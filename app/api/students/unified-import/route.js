@@ -667,8 +667,8 @@ async function finalizeFeeSummaries(rawStudentIds = []) {
   if (!enrollments.length) return { studentsFinalized: 0, enrollmentsFinalized: 0 };
   const enrollmentIds = enrollments.map(item => item._id);
   const paymentTotals = await StudentFeePayment.aggregate([
-    { $match: { studentId: { $in: objectIds }, enrollmentId: { $in: enrollmentIds } } },
-    { $group: { _id: { studentId: "$studentId", enrollmentId: "$enrollmentId" }, totalPaid: { $sum: "$amountPaid" } } },
+    { $match: { $or: [{ studentId: { $in: objectIds } }, { masterStudentId: { $in: objectIds } }], enrollmentId: { $in: enrollmentIds } } },
+    { $group: { _id: { studentId: { $ifNull: ["$studentId", "$masterStudentId"] }, enrollmentId: "$enrollmentId" }, totalPaid: { $sum: "$amountPaid" } } },
     { $group: { _id: "$_id.studentId", enrollmentTotals: { $push: { enrollmentId: "$_id.enrollmentId", totalPaid: "$totalPaid" } }, studentTotalPaid: { $sum: "$totalPaid" } } }
   ]);
   const paidByEnrollment = new Map(paymentTotals.flatMap(item => (item.enrollmentTotals || []).map(entry => [String(entry.enrollmentId), Number(entry.totalPaid || 0)])));
