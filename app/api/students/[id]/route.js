@@ -21,7 +21,7 @@ export async function GET(req,{params}){
 
     const masterProfile = await StudentMaster.findOne({ legacyStudentIds: student._id, mergedIntoMasterId: null, isMerged: { $ne: true } }).lean();
     const enrollmentQuery = masterProfile ? { studentId: masterProfile._id } : { legacyStudentId: student._id };
-    const enrollments = await StudentEnrollment.find(enrollmentQuery).sort({ admissionDate: -1, createdAt: -1 }).lean();
+    const enrollments = await StudentEnrollment.find({ ...enrollmentQuery, mergedIntoEnrollmentId: null }).sort({ admissionDate: -1, createdAt: -1 }).lean();
     const activeEnrollment = masterProfile
       ? (enrollments.find(item => String(item.registrationId || "") === String(masterProfile.currentRegistrationId || ""))
         || enrollments.find(item => String(item._id) === String(masterProfile.activeEnrollmentId))
