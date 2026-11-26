@@ -6,7 +6,7 @@ import * as XLSX from "xlsx";
 import ERPLayout from "@/components/ERPLayout";
 import BulkStudentPhotoUploadDialog from "@/components/students/BulkStudentPhotoUploadDialog";
 import { useErpCache, useErpToast } from "@/components/providers/ERPUIProvider";
-import { clusterStudentRegistrations, normalizeStudentName, normalizeIndianPhones } from "@/lib/student-import/identity-resolution";
+import { clusterStudentRegistrations, normalizeStudentName, normalizeIndianPhones } from "@/lib/student-import/identity-resolution.mjs";
 
 const clean = value => String(value ?? "").trim();
 const headerKey = value => clean(value).toLowerCase().replace(/[^a-z0-9]/g, "");
