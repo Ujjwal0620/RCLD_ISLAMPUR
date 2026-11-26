@@ -12,7 +12,7 @@ import { buildInstallments } from "@/lib/student-import/fee-allocation";
 import { resolveStudentIdentity, normalizeStudentName, normalizeIndianPhones } from "@/lib/student-import/identity-resolution.mjs";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 let receiptIndexPromise;
 async function ensureReceiptIndex() {
@@ -677,6 +677,73 @@ async function finalizeFeeSummaries(rawStudentIds = []) {
   return { studentsFinalized: masterOps.length, enrollmentsFinalized: enrollmentOps.length };
 }
 
+
+// One-click workbook import. The browser submits the workbook once; the server
+// performs bounded MongoDB writes internally so large imports do not require
+// repeated browser requests or manual batch actions.
+async function runCompleteImport(groups = [], rows = []) {
+  if (!Array.isArray(groups) || !groups.length) throw new Error("No student profiles were supplied.");
+  if (!Array.isArray(rows)) throw new Error("Fee rows must be an array.");
+
+  const summary = {
+    studentsMatchedUpdated: 0,
+    newStudentsCreated: 0,
+    registrationsLinked: 0,
+    newReceiptsAdded: 0,
+    existingReceiptsUpdatedOrSkipped: 0,
+    duplicateReceiptsSkipped: 0,
+    existingReceiptsUpdated: 0,
+    studentProfilesProcessed: 0,
+    feeRowsProcessed: 0,
+    studentsFinalized: 0,
+    enrollmentsFinalized: 0,
+    unmatchedRows: []
+  };
+  const touchedStudentIds = new Set();
+
+  // syncStudentGroups deliberately has a bounded per-call limit. Keep those
+  // implementation batches entirely on the server, hidden from the user.
+  const studentChunkSize = 250;
+  for (let offset = 0; offset < groups.length; offset += studentChunkSize) {
+    const result = await syncStudentGroups(groups.slice(offset, offset + studentChunkSize));
+    summary.studentsMatchedUpdated += Number(result.studentsMatchedUpdated || 0);
+    summary.newStudentsCreated += Number(result.newStudentsCreated || 0);
+    summary.registrationsLinked += Number(result.registrationsLinked || 0);
+    summary.studentProfilesProcessed += Math.min(studentChunkSize, groups.length - offset);
+    for (const item of result.registrationMap || []) {
+      if (item.studentId) touchedStudentIds.add(String(item.studentId));
+    }
+    summary.unmatchedRows.push(...(result.flaggedRows || []));
+  }
+
+  // All enrollments now exist, so receipt rows can be linked safely.
+  const feeChunkSize = 500;
+  for (let offset = 0; offset < rows.length; offset += feeChunkSize) {
+    const result = await syncFeeRows(rows.slice(offset, offset + feeChunkSize));
+    summary.newReceiptsAdded += Number(result.newReceiptsAdded || 0);
+    summary.existingReceiptsUpdatedOrSkipped += Number(result.existingReceiptsUpdatedOrSkipped || 0);
+    summary.duplicateReceiptsSkipped += Number(result.duplicateReceiptsSkipped || 0);
+    summary.existingReceiptsUpdated += Number(result.existingReceiptsUpdated || 0);
+    summary.feeRowsProcessed += Number(result.feeRowsProcessed || 0);
+    summary.unmatchedRows.push(...(result.unmatchedRows || []));
+  }
+
+  const studentIds = [...touchedStudentIds];
+  for (let offset = 0; offset < studentIds.length; offset += 500) {
+    const result = await finalizeFeeSummaries(studentIds.slice(offset, offset + 500));
+    summary.studentsFinalized += Number(result.studentsFinalized || 0);
+    summary.enrollmentsFinalized += Number(result.enrollmentsFinalized || 0);
+  }
+
+  return {
+    ...summary,
+    registrationProfiles: groups.length,
+    feeRowsSubmitted: rows.length,
+    uniqueStudentsFinalized: touchedStudentIds.size,
+    complete: true
+  };
+}
+
 export async function POST(request) {
   try {
     const session = await getSession();
@@ -686,6 +753,10 @@ export async function POST(request) {
     }
     await connectMongoDB();
     const body = await request.json();
+    if (body.action === "complete") {
+      const result = await runCompleteImport(body.groups || [], body.rows || []);
+      return NextResponse.json(result);
+    }
     if (body.action === "students") {
       const result = await syncStudentGroups(body.groups || []);
       return NextResponse.json(result);
