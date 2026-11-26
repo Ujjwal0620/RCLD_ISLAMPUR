@@ -385,6 +385,9 @@ async function syncStudentGroups(groups = []) {
         registrationId: registration.registrationId,
         normalizedFullName: normalizeName(group.cleanName),
         formNo: registration.formNo || "",
+        qualification: registration.qualification || "",
+        rawAddress: registration.address || "",
+        rawStName: registration.rawStName || (registration.cleanName + "_" + registration.stCode),
         courseCode,
         courseName: registration.course,
         admissionDate: registration.dateOfAdmission,
@@ -417,6 +420,9 @@ async function syncStudentGroups(groups = []) {
         if (existingEnrollment.feeConfig?.configured === false && courseRule.feeConfig?.configured) patch.feeConfig = courseRule.feeConfig;
         if (!existingEnrollment.semesterLabel && registration.course) patch.semesterLabel = registration.course;
         if (!existingEnrollment.formNo && registration.formNo) patch.formNo = registration.formNo;
+        if (!existingEnrollment.qualification && registration.qualification) patch.qualification = registration.qualification;
+        if (!existingEnrollment.rawAddress && registration.address) patch.rawAddress = registration.address;
+        if (!existingEnrollment.rawStName && registration.rawStName) patch.rawStName = registration.rawStName;
         if (!existingEnrollment.admissionDate && registration.dateOfAdmission) patch.admissionDate = registration.dateOfAdmission;
         if (!existingEnrollment.earliestPaymentDate && registration.earliestPaymentDate) patch.earliestPaymentDate = registration.earliestPaymentDate;
         if (Object.keys(patch).length) enrollmentOps.push({ updateOne: { filter: { _id: existingEnrollment._id }, update: { $set: patch } } });
