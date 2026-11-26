@@ -107,7 +107,7 @@ export default function StudentFeeWorkspace({
   }), [visibleRows, codeCards]);
   const selectedPaid = paymentRows.reduce((sum, item) => sum + Number(item.amountPaid ?? item.amount ?? 0), 0);
   const selectedCourse = selectedCode === "ALL"
-    ? [...new Set(codeCards.map(item => item.course || item.courseName || item.courseCode).filter(Boolean))].join(", ") || "All Registrations"
+    ? [...new Set(codeCards.map(item => item.course || item.courseName || item.courseCode).filter(Boolean))].join(", ") || "All Codes"
     : selectedEnrollment?.courseName || selectedEnrollment?.courseCode || selectedRegistration?.course || selectedRegistration?.courseCode || "Previous Course (Legacy)";
   const configuredFee = enrollment => Boolean(enrollment?.feeConfig)
     && enrollment.feeConfig.configured !== false
@@ -148,11 +148,11 @@ export default function StudentFeeWorkspace({
     <section className="detail-section student-fees-section">
       <div className="detail-section-title">
         <CreditCard size={17} />
-        <div><h3>Fees & Payments</h3><span>Registration-wise fee summaries and date-wise receipt ledger</span></div>
+        <div><h3>Fees & Payments</h3><span>Consolidated fee history across every linked student code</span></div>
       </div>
 
       <div className="student-code-switcher" style={{ display: "flex", flexWrap: "wrap", gap: 10, margin: "16px 0" }}>
-        <button type="button" className={selectedCode === "ALL" ? "primary-btn" : "ghost-btn"} onClick={() => setSelectedCodeState("ALL")} aria-pressed={selectedCode === "ALL"}>All Registrations</button>
+        <button type="button" className={selectedCode === "ALL" ? "primary-btn" : "ghost-btn"} onClick={() => setSelectedCodeState("ALL")} aria-pressed={selectedCode === "ALL"}>All Codes</button>
         {codeCards.map(item => {
           const id = String(item.registrationId);
           const current = id === currentRegistrationId || Boolean(item.isCurrent) || String(item.stCode) === currentStCode;
@@ -170,7 +170,7 @@ export default function StudentFeeWorkspace({
 
       <div className="student-fee-overview">
         <div className="fee-overview-card"><span>Course(s)</span><strong style={{ fontSize: 17 }}>{selectedCourse || "—"}</strong></div>
-        <div className="fee-overview-card"><span>Registration Code</span><strong>{selectedCode === "ALL" ? "All Registrations" : selectedCode}</strong></div>
+        <div className="fee-overview-card"><span>Registration Code</span><strong>{selectedCode === "ALL" ? "All Codes" : selectedCode}</strong></div>
         <div className="fee-overview-card fee-total"><span>Total Course Fee</span><strong>{selectedTotalFee === null ? "—" : money(selectedTotalFee)}</strong><small>{selectedDiscount ? "Discount: " + money(selectedDiscount) : "Course fee rule"}</small></div>
         <div className="fee-overview-card fee-paid"><span>Total Paid</span><strong>{money(selectedPaid)}</strong><small>{paymentRows.length} receipt(s)</small></div>
         <div className="fee-overview-card fee-due"><span>Balance Due</span><strong>{selectedBalance === null ? "—" : money(selectedBalance)}</strong></div>
@@ -178,7 +178,7 @@ export default function StudentFeeWorkspace({
 
       <section className="student-payment-history-ledger" style={{ marginTop: 20, padding: 16, border: "1px solid var(--border,#e3e7ef)", borderRadius: 12 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <div><h3 style={{ margin: 0 }}>Date-wise Payment Ledger</h3><small>Sorted chronologically by D_O_P · {selectedCode === "ALL" ? "all registration codes" : selectedCode}</small></div>
+          <div><h3 style={{ margin: 0 }}>Date-wise Payment Ledger</h3><small>Sorted chronologically by D_O_P · {selectedCode === "ALL" ? "all linked student codes" : selectedCode}</small></div>
         </div>
         <div style={{ overflowX: "auto", marginTop: 12 }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 820 }}>
