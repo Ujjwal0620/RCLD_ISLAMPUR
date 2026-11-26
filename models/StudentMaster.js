@@ -57,6 +57,10 @@ const StudentMasterSchema = new mongoose.Schema({
   activeEnrollmentId: { type: mongoose.Schema.Types.ObjectId, ref: "StudentEnrollment", default: null },
   legacyStudentIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Student" }],
   identityMatchMethod: { type: String, default: "IMPORT" },
+  mergedIntoMasterId: { type: mongoose.Schema.Types.ObjectId, ref: "StudentMaster", default: null, index: true },
+  isMerged: { type: Boolean, default: false },
+  mergedAt: { type: Date, default: null },
+  mergeMethod: { type: String, default: "" },
   identityWarnings: { type: [String], default: [] },
   feeSummary: {
     totalFee: { type: Number, default: 0 },
@@ -70,9 +74,7 @@ const StudentMasterSchema = new mongoose.Schema({
 }, { timestamps: true, collection: "student_master_profiles" });
 
 StudentMasterSchema.index({ stCodes: 1 });
-StudentMasterSchema.index({ studentCodes: 1 });
 StudentMasterSchema.index({ alternateNames: 1 });
-StudentMasterSchema.index({ phones: 1 });
 StudentMasterSchema.index({ "registrations.registrationId": 1 });
 StudentMasterSchema.index({ phoneNumbers: 1 });
 StudentMasterSchema.index({ normalizedFullName: 1, dob: 1 });
