@@ -38,11 +38,14 @@ export async function GET(req,{params}){
     const linkedStudentIds = masterProfile?.legacyStudentIds?.length
       ? masterProfile.legacyStudentIds : [student._id];
     const allEnrollmentCodes = [...new Set([
+      ...(masterProfile?.studentCodes || []),
       ...(masterProfile?.stCodes || []),
+      ...(masterProfile?.primaryStCode ? [masterProfile.primaryStCode] : []),
       ...enrollments.map(item => String(item.stCode || "")),
     ].filter(Boolean))];
     const paymentQuery = masterProfile
       ? { $or: [
+          { masterStudentId: masterProfile._id },
           { studentId: masterProfile._id },
           { studentId: { $in: linkedStudentIds } },
           { enrollmentId: { $in: enrollmentIds } },
@@ -139,6 +142,10 @@ export async function GET(req,{params}){
       enrollmentNo: masterProfile?.currentStCode || activeEnrollment?.stCode || canonicalStudent.enrollmentNo,
       courseName: masterProfile?.currentCourse || activeEnrollment?.courseName || canonicalStudent.courseName,
       currentRegistrationId: masterProfile?.currentRegistrationId || activeEnrollment?.registrationId || "",
+      primaryStCode: masterProfile?.primaryStCode || masterProfile?.currentStCode || activeEnrollment?.stCode || "",
+      studentCodes: [...new Set([...(masterProfile?.studentCodes || []), ...(masterProfile?.stCodes || []), ...allEnrollmentCodes])],
+      alternateNames: masterProfile?.alternateNames || [],
+      phones: [...new Set([...(masterProfile?.phones || []), ...(masterProfile?.phoneNumbers || [])])],
       registrationCount: masterProfile?.registrations?.length || masterProfile?.enrollments?.length || enrollments.length,
       courseCode: activeEnrollment?.courseCode || canonicalStudent.courseCode,
       dateOfAdmission: masterProfile ? (masterProfile.currentAdmissionDate || null) : (activeEnrollment?.admissionDate || canonicalStudent.dateOfAdmission),
@@ -149,8 +156,8 @@ export async function GET(req,{params}){
       mobileNumber: masterProfile?.phoneNumbers?.[0] || canonicalStudent.mobileNumber,
       whatsappNumber: masterProfile?.phoneNumbers?.[1] || canonicalStudent.whatsappNumber,
       qualification: masterProfile?.qualification || canonicalStudent.qualification,
-      phoneNumbers: masterProfile?.phoneNumbers || [],
-      photoUrl: masterProfile?.photoUrl || canonicalStudent.photoUrl || ((canonicalStudent.regnNo || activeEnrollment?.stCode || masterProfile?.stCodes?.[0]) ? `/api/students/photo/${encodeURIComponent(String(canonicalStudent.regnNo || activeEnrollment?.stCode || masterProfile?.stCodes?.[0]).trim())}` : ""),
+      phoneNumbers: masterProfile?.phones?.length ? masterProfile.phones : (masterProfile?.phoneNumbers || []),
+      photoUrl: masterProfile?.photoUrl || canonicalStudent.photoUrl || ((canonicalStudent.regnNo || activeEnrollment?.stCode || masterProfile?.primaryStCode || masterProfile?.stCodes?.[0]) ? `/api/students/photo/${encodeURIComponent(String(canonicalStudent.regnNo || activeEnrollment?.stCode || masterProfile?.primaryStCode || masterProfile?.stCodes?.[0]).trim())}` : ""),
       masterProfile,
       enrollments: enrichedEnrollments,
       activeEnrollment: enrichedEnrollments.find(item => String(item._id) === String(activeEnrollment?._id)) || activeEnrollment,
