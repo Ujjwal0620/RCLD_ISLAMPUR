@@ -540,7 +540,32 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
   for(const item of masterOps){if(item.isNew||!knownMasters.has(String(item._id))){newMasters.push({_id:item._id,...item.insertDefaults,...item.set});continue;}const prior=existingMasters.find(x=>String(x._id)===String(item._id)),patch={};for(const [k,v] of Object.entries(item.set||{})){const blank=v===""||v===null||v===undefined||(Array.isArray(v)&&!v.length);if(blank&&prior?.[k]!==undefined&&prior?.[k]!==null&&prior?.[k]!=="")continue;if(JSON.stringify(prior?.[k])!==JSON.stringify(v))patch[k]=v;}if(Object.keys(patch).length)masterUpdates.push({updateOne:{filter:{_id:item._id},update:{$set:patch}}});}
   await insertChunks(StudentMaster,newMasters,"master-insert");await updateChunks(StudentMaster,masterUpdates,"master-update");await updateChunks(StudentMaster,activeMasterOps,"active-master");
   const newEnrollments=[],enrollmentUpdates=[];for(const item of enrollmentOpsByKey.values())if(item.isNew)newEnrollments.push({_id:item._id,...item.set});else enrollmentUpdates.push({updateOne:{filter:{_id:item._id},update:{$set:item.set}}});
-  await insertChunks(StudentEnrollment,newEnrollments,"enrollment-insert");await updateChunks(StudentEnrollment,enrollmentUpdates,"enrollment-update");await updateChunks(StudentEnrollment,enrollmentStatusOps,"enrollment-status");
+  await insertChunks(StudentEnrollment,newEnrollments,"enrollment-insert");
+  if (newEnrollments.length) {
+    const persisted = await StudentEnrollment.find({ $or: newEnrollments.map(item => ({
+      studentId: item.studentId, stCode: item.stCode,
+      normalizedFullName: item.normalizedFullName, courseCode: item.courseCode
+    })) }).lean();
+    const persistedByKey = new Map(persisted.map(item => [enrollmentUniqueKey(item), item]));
+    const actualIds = new Map();
+    for (const item of newEnrollments) {
+      const actual = persistedByKey.get(enrollmentUniqueKey(item));
+      if (actual) actualIds.set(String(item._id), actual._id);
+    }
+    for (const operation of activeMasterOps) {
+      const currentId = operation.updateOne?.update?.$set?.activeEnrollmentId;
+      if (currentId && actualIds.has(String(currentId))) operation.updateOne.update.$set.activeEnrollmentId = actualIds.get(String(currentId));
+    }
+    for (const item of outputMap) {
+      if (actualIds.has(String(item.enrollmentId))) item.enrollmentId = String(actualIds.get(String(item.enrollmentId)));
+    }
+    for (const operation of enrollmentStatusOps) {
+      const id = operation.updateOne?.filter?._id;
+      if (id && actualIds.has(String(id))) operation.updateOne.filter._id = actualIds.get(String(id));
+    }
+  }
+  await updateChunks(StudentEnrollment,enrollmentUpdates,"enrollment-update");
+  await updateChunks(StudentEnrollment,enrollmentStatusOps,"enrollment-status");
   onPhase("profiles");onPhase("enrollments");
   return { studentsMatchedUpdated: matchedProfiles, newStudentsCreated: newProfiles, registrationsLinked, registrationsSeen, registrationMap: outputMap, flaggedRows, warnings: writeWarnings };
 }
