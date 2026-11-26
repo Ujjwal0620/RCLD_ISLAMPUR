@@ -4,6 +4,7 @@ import ERPLayout from "@/components/ERPLayout";
 import StudentProfileStyles from "@/components/students/profile/StudentProfileStyles";
 import StudentProfileHeader from "@/components/students/profile/StudentProfileHeader";
 import StudentProfileHero from "@/components/students/profile/StudentProfileHero";
+import StudentIdentityHistory from "@/components/students/profile/StudentIdentityHistory";
 import CodingForKidsSemesterPanel from "@/components/students/profile/CodingForKidsSemesterPanel";
 import CodingForKidsIcardDialog from "@/components/students/profile/CodingForKidsIcardDialog";
 import StudentEditPanel from "@/components/students/profile/StudentEditPanel";
@@ -103,6 +104,7 @@ export default function StudentDetailsPage({ params }) {
             photoUploading={photoUploading}
           />
           <StudentProfileHero student={student} uploadStudentPhoto={uploadStudentPhoto} photoUploading={photoUploading} />
+          <StudentIdentityHistory student={student} />
           <nav className="student-profile-tabs" aria-label="Student profile sections">
             {[
               ["overview", "Overview"],
