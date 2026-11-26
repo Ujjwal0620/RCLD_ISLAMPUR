@@ -6,10 +6,11 @@ import * as XLSX from "xlsx";
 import ERPLayout from "@/components/ERPLayout";
 import BulkStudentPhotoUploadDialog from "@/components/students/BulkStudentPhotoUploadDialog";
 import { useErpCache, useErpToast } from "@/components/providers/ERPUIProvider";
+import { clusterStudentRegistrations, normalizeStudentName, normalizeIndianPhones } from "@/lib/student-import/identity-resolution";
 
 const clean = value => String(value ?? "").trim();
 const headerKey = value => clean(value).toLowerCase().replace(/[^a-z0-9]/g, "");
-const normalizeName = value => clean(value).normalize("NFKC").toUpperCase().replace(/\s+/g, " ").trim();
+const normalizeName = value => normalizeStudentName(value);
 const normalizeFather = value => normalizeName(value).replace(/[^A-Z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
 
 function parseDate(value) {
@@ -45,22 +46,16 @@ function parseDate(value) {
 
 function parseIdentity(rawName, fallbackCode) {
   const firstLine = clean(rawName).split(/\r?\n/)[0].replace(/\s+/g, " ").trim().toUpperCase();
-  const splitAt = firstLine.lastIndexOf("_");
-  let name = splitAt > 0 ? firstLine.slice(0, splitAt).replace(/\s+/g, " ").trim() : firstLine;
-  let code = splitAt > 0 ? firstLine.slice(splitAt + 1).trim() : "";
-  if (!code) code = clean(fallbackCode).replace(/\s+/g, "").replace(/\.0+$/, "").replace(/[^A-Za-z0-9-]/g, "").trim().toUpperCase();
-  code = code.replace(/\.0+$/, "");
+  const suffix = firstLine.match(/_(\d+)[\s\S]*$/);
+  const name = normalizeStudentName(firstLine);
+  let code = suffix?.[1] || "";
+  if (!code) code = clean(fallbackCode).replace(/\.0+$/, "").replace(/\D/g, "");
   if (!name || !code) return { cleanName: name, stCode: code, registrationId: "" };
   return { cleanName: name, stCode: code, registrationId: name + "_" + code };
 }
 
 function phonesFrom(value) {
-  return [...new Set(clean(value).split(/[,/;|\s]+/).map(part => {
-    let digits = part.replace(/\D/g, "");
-    if (digits.length === 12 && digits.startsWith("91")) digits = digits.slice(2);
-    if (digits.length === 11 && digits.startsWith("0")) digits = digits.slice(1);
-    return digits;
-  }).filter(part => part.length === 10))];
+  return normalizeIndianPhones(value);
 }
 
 function findSheet(workbook, kind) {
@@ -105,6 +100,7 @@ function buildWorkbookPayload(workbook) {
       dateOfAdmission: parseDate(studentGet(row, "doa")),
       formNo: clean(studentGet(row, "formno")).replace(/\.0+$/, ""),
       dob: parseDate(studentGet(row, "dob")),
+      invalidDob: Boolean(parseDate(studentGet(row, "dob")) && (new Date(parseDate(studentGet(row, "dob"))).getUTCFullYear() < 1965 || new Date(parseDate(studentGet(row, "dob"))).getUTCFullYear() > 2023)),
       sex: clean(studentGet(row, "sex")).toUpperCase(),
       fatherName: clean(studentGet(row, "stfather")),
       address: clean(studentGet(row, "address")),
@@ -112,6 +108,7 @@ function buildWorkbookPayload(workbook) {
       qualification: clean(studentGet(row, "qualification")),
       rowNo: index + 1
     };
+    if (record.invalidDob) { studentWarnings.push({ sheet: studentSheet.name, row: index + 1, studentId: identity.registrationId, reason: "DOB year is outside the allowed 1965–2023 range; DOB was ignored for identity matching." }); record.dob = null; }
     const previous = registrations.get(identity.registrationId);
     if (!previous) registrations.set(identity.registrationId, record);
     else {
@@ -124,39 +121,35 @@ function buildWorkbookPayload(workbook) {
   for (const record of registrations.values()) studentCodeCounts.set(record.stCode, (studentCodeCounts.get(record.stCode) || 0) + 1);
   for (const record of registrations.values()) record.stCodeUnique = studentCodeCounts.get(record.stCode) === 1;
 
-  const byName = new Map();
-  for (const record of registrations.values()) byName.set(record.cleanName, [...(byName.get(record.cleanName) || []), record]);
-  const parent = new Map([...registrations.keys()].map(key => [key, key]));
-  const find = key => { let root = key; while (parent.get(root) !== root) root = parent.get(root); while (parent.get(key) !== key) { const next = parent.get(key); parent.set(key, root); key = next; } return root; };
-  const union = (a, b) => { const ra = find(a), rb = find(b); if (ra !== rb) parent.set(rb, ra); };
-  for (const list of byName.values()) {
-    for (let i = 0; i < list.length; i += 1) for (let j = i + 1; j < list.length; j += 1) {
-      const a = list[i], b = list[j];
-      const overlap = a.phones.some(phone => b.phones.includes(phone));
-      const dobMatch = Boolean(a.dob && b.dob && a.dob.slice(0,10) === b.dob.slice(0,10));
-      const fatherMatch = Boolean(normalizeFather(a.fatherName) && normalizeFather(a.fatherName) === normalizeFather(b.fatherName));
-      if (overlap || dobMatch || fatherMatch) union(a.registrationId, b.registrationId);
-    }
-  }
-  const grouped = new Map();
-  for (const record of registrations.values()) {
-    const root = find(record.registrationId);
-    grouped.set(root, [...(grouped.get(root) || []), record]);
-  }
-  const profiles = [...grouped.values()].map(items => {
+  const rawRecords = [...registrations.values()];
+  const clusters = clusterStudentRegistrations(rawRecords);
+  const profiles = clusters.map(items => {
     items.sort((a,b) => new Date(b.dateOfAdmission || 0) - new Date(a.dateOfAdmission || 0));
     const latest = items[0];
+    const names = [...new Set(items.map(item => item.cleanName).filter(Boolean))];
     return {
       cleanName: latest.cleanName,
-      dob: items.find(item => item.dob)?.dob || null,
+      alternateNames: names,
+      dob: items.find(item => item.dob && !item.invalidDob)?.dob || null,
       dobs: [...new Set(items.map(item => item.dob).filter(Boolean))],
       fatherName: items.find(item => item.fatherName)?.fatherName || "",
       fatherNames: [...new Set(items.map(item => item.fatherName).filter(Boolean))],
       phones: [...new Set(items.flatMap(item => item.phones))],
-      registrations: items.map(item => ({ ...item, isCurrent: item.registrationId === latest.registrationId }))
+      registrations: items.map(item => ({ ...item, alternateNames: names, isCurrent: item.registrationId === latest.registrationId }))
     };
   });
-
+  const studentCodeCounts = new Map();
+  for (const profile of profiles) for (const record of profile.registrations) {
+    studentCodeCounts.set(record.stCode, (studentCodeCounts.get(record.stCode) || 0) + 1);
+  }
+  for (const profile of profiles) for (const record of profile.registrations) {
+    record.stCodeUnique = studentCodeCounts.get(record.stCode) === 1;
+    if (!record.stCodeUnique) studentWarnings.push({
+      sheet: studentSheet.name, row: record.rowNo, studentId: record.registrationId,
+      stCode: record.stCode, name: record.cleanName,
+      reason: "St_Code collision: this code belongs to more than one distinct identity in the workbook; manual review required."
+    });
+  }
   const feeHeaders = feeSheet.grid[feeSheet.headerIndex].map(headerKey);
   const feeAt = key => feeHeaders.indexOf(key);
   const feeGet = (row, key) => feeAt(key) >= 0 ? row[feeAt(key)] : "";
