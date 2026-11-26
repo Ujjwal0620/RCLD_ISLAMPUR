@@ -321,7 +321,7 @@ export default function BulkImportPage() {
         profileCount: payload.profiles.length,
         legacyRegistrations: payload.profiles.reduce((sum, profile) => sum + profile.registrations.filter(item => item.course === "Previous Course (Legacy)").length, 0)
       });
-      setProgress({ stage: "Ready to import", percent: 10, done: 0, total: 0 });
+      setProgress({ stage: "Ready to import", percent: 0, done: 0, total: 0 });
     } catch (err) {
       setError(err.message || "Unable to parse workbook.");
       setProgress({ stage: "Error", percent: 0, done: 0, total: 0 });
@@ -357,6 +357,7 @@ export default function BulkImportPage() {
       setTelemetry(checkpoint.telemetry);
       setProgress(p => ({ ...p, percent: checkpoint.percent }));
     };
+    saveCheckpoint();
     runningRef.current = true; setBusy(true); setError(""); setResult(null);
     try {
       const studentChunkSize = 200;
@@ -365,7 +366,9 @@ export default function BulkImportPage() {
         const chunkIndex = Math.floor(offset / studentChunkSize);
         const groups = preview.profiles.slice(offset, offset + studentChunkSize);
         setProgress({ stage: "Phase 1 · Students & Enrollments", percent: Math.max(checkpoint.percent, Math.floor(offset / Math.max(preview.profiles.length,1) * 45)), done: offset, total: preview.profiles.length, message: "Saving student chunk " + (chunkIndex + 1) });
+        checkpoint.failedPhase = "students"; checkpoint.failedChunk = chunkIndex + 1; saveCheckpoint();
         const data = await postBatch({ action: "students", phase: "students", chunkIndex, groups });
+        checkpoint.failedPhase = null; checkpoint.failedChunk = null;
         for (const item of data.registrationMapChunk || []) checkpoint.registrationMap[item.registrationId] = item;
         checkpoint.studentIds = [...new Set([...(checkpoint.studentIds || []), ...(data.studentIds || [])])];
         checkpoint.summary.created += Number(data.created || 0);
@@ -385,7 +388,9 @@ export default function BulkImportPage() {
         const rows = preview.feeRows.slice(offset, offset + feeChunkSize);
         setProgress({ stage: "Phase 2 · Fee Receipts", percent: Math.max(45, 45 + Math.floor(offset / Math.max(preview.feeRows.length,1) * 47)), done: offset, total: preview.feeRows.length, message: "Saving fee receipt chunk " + (chunkIndex + 1) });
         const mapping = rows.map(row => checkpoint.registrationMap[row.registrationId]).filter(Boolean);
+        checkpoint.failedPhase = "fees"; checkpoint.failedChunk = chunkIndex + 1; saveCheckpoint();
         const data = await postBatch({ action: "fees", phase: "fees", chunkIndex, rows, registrationMap: mapping });
+        checkpoint.failedPhase = null; checkpoint.failedChunk = null;
         checkpoint.summary.newReceiptsAdded += Number(data.newReceiptsAdded || 0);
         checkpoint.summary.existingReceiptsUpdatedOrSkipped += Number(data.existingReceiptsUpdatedOrSkipped || 0);
         checkpoint.summary.duplicateReceiptsSkipped += Number(data.duplicateReceiptsSkipped || 0);
@@ -398,7 +403,9 @@ export default function BulkImportPage() {
       }
 
       setProgress({ stage: "Phase 3 · Finalizing Fee Summaries", percent: 94, done: 0, total: checkpoint.studentIds.length, message: "Recalculating totals for affected Master Students" });
+      checkpoint.failedPhase = "finalize"; checkpoint.failedChunk = 1; saveCheckpoint();
       const finalized = await postBatch({ action: "finalize", phase: "finalize", studentIds: checkpoint.studentIds });
+      checkpoint.failedPhase = null; checkpoint.failedChunk = null;
       checkpoint.percent = 100;
       checkpoint.complete = true;
       saveCheckpoint();
@@ -427,7 +434,7 @@ export default function BulkImportPage() {
       checkpoint.error = err.message || "Import chunk failed.";
       saveCheckpoint();
       setResumeAvailable(true);
-      setError("Import paused at student chunk " + (Math.floor(checkpoint.studentIndex / 200) + 1) + " / fee chunk " + (Math.floor(checkpoint.feeIndex / 500) + 1) + ": " + checkpoint.error + ". Completed chunks are saved. Select Resume Import to continue.");
+      setError("Import paused during " + (checkpoint.failedPhase || "finalize") + " chunk " + (checkpoint.failedChunk || 1) + ": " + checkpoint.error + ". Completed chunks are saved. Select Resume Import to continue.");
       setProgress(p => ({ ...p, stage: "Paused · Resume available", message: checkpoint.error }));
       notify(checkpoint.error, "error");
     } finally {
