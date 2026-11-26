@@ -1,18 +1,25 @@
 /**
- * One-time, conservative StudentMaster consolidation.
+ * Non-destructive Master Student consolidation.
  *
- * Dry run:
+ * Preview only (default):
  *   npm run merge:student-profiles
  *
- * Apply after reviewing the dry-run counts:
+ * Apply only after reviewing the dry-run report and backing up MongoDB:
  *   npm run merge:student-profiles -- --apply
  *
- * Legacy Student documents are deliberately retained because attendance, batches,
- * payments and other operational records may reference their ObjectIds. The API
- * presents one canonical directory profile per StudentMaster identity.
+ * No Student, StudentMaster, StudentEnrollment, fee, or ID-card documents are deleted.
+ * Duplicate Master/Enrollment documents are retained and marked with merge pointers.
  */
 import mongoose from "mongoose";
 import { existsSync, readFileSync } from "node:fs";
+import {
+  clusterStudentRegistrations,
+  normalizeStudentName,
+  normalizeIdentityDate,
+  normalizeIndianPhones,
+  normalizeFatherName,
+  resolveStudentIdentity,
+} from "../lib/student-import/identity-resolution.js";
 
 function loadLocalEnvironment() {
   const mode = process.env.NODE_ENV || "development";
@@ -22,9 +29,7 @@ function loadLocalEnvironment() {
       const match = line.trim().match(/^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
       if (!match || process.env[match[1]] !== undefined) continue;
       let value = match[2].trim();
-      if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-        value = value.slice(1, -1);
-      }
+      if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) value = value.slice(1, -1);
       process.env[match[1]] = value;
     }
   }
@@ -32,309 +37,229 @@ function loadLocalEnvironment() {
 loadLocalEnvironment();
 
 const apply = process.argv.includes("--apply");
-const normalizeName = value => String(value ?? "").trim().normalize("NFKC")
-  .replace(/[',.]+$/, "").replace(/_\d+\s*$/, "").toUpperCase().replace(/\s+/g, " ")
-  .replace(/[',.]+$/, "").trim();
-const normalizeFather = value => normalizeName(value).replace(/[^A-Z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
-const phones = value => [...new Set(String(value ?? "").split(/[,;/|]/)
-  .map(item => item.replace(/\D/g, "")).map(item => item.length > 10 ? item.slice(-10) : item)
-  .filter(item => item.length === 10))];
-const tokenOverlap = (a, b) => {
-  const normalizedLeft = normalizeFather(a), normalizedRight = normalizeFather(b);
-  if (normalizedLeft && normalizedLeft === normalizedRight) return true;
-  const left = new Set(normalizedLeft.split(" ").filter(Boolean));
-  const right = new Set(normalizedRight.split(" ").filter(Boolean));
-  if (!left.size || !right.size) return false;
-  const common = [...left].filter(token => right.has(token)).length;
-  return common >= 2 && common / Math.min(left.size, right.size) >= 0.6;
-};
-const similarity = (left, right) => {
-  const a = normalizeName(left), b = normalizeName(right);
-  if (a === b) return 1;
-  if (!a || !b) return 0;
-  const row = Array.from({ length: b.length + 1 }, (_, i) => i);
-  for (let i = 1; i <= a.length; i++) {
-    let diagonal = row[0]; row[0] = i;
-    for (let j = 1; j <= b.length; j++) {
-      const above = row[j];
-      row[j] = Math.min(row[j] + 1, row[j - 1] + 1, diagonal + (a[i - 1] === b[j - 1] ? 0 : 1));
-      diagonal = above;
-    }
-  }
-  return 1 - row[b.length] / Math.max(a.length, b.length);
-};
-const dateKey = value => {
-  if (!value) return "";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
-};
-function findIdentityMatch(row, candidates) {
-  const name = normalizeName(row.fullName), father = normalizeFather(row.fatherName);
-  const dob = dateKey(row.dob), rowPhones = new Set(row.phoneNumbers || []);
-  if (!name) return { match: null, ambiguous: false, candidateIds: [] };
-  const exact = [], spelling = [];
-  for (const candidate of candidates) {
-    const candidateName = normalizeName(candidate.fullName || candidate.normalizedFullName);
-    const candidateFather = normalizeFather(candidate.fatherName);
-    const sameDob = Boolean(dob && dateKey(candidate.dob) === dob);
-    const sameFather = Boolean(father && candidateFather && (father === candidateFather || tokenOverlap(father, candidateFather)));
-    const samePhone = (candidate.phoneNumbers || []).some(phone => rowPhones.has(phone));
-    if (candidateName === name && (sameDob || sameFather || samePhone)) {
-      exact.push(candidate); continue;
-    }
-    if (sameDob && father && candidateFather && father === candidateFather && similarity(name, candidateName) >= 0.85) spelling.push(candidate);
-  }
-  const matches = exact.length ? exact : spelling;
-  const distinct = [];
-  for (const candidate of matches) {
-    const duplicate = distinct.some(other => {
-      const sameName = normalizeName(candidate.fullName || candidate.normalizedFullName) === normalizeName(other.fullName || other.normalizedFullName);
-      const sameDob = Boolean(dateKey(candidate.dob) && dateKey(candidate.dob) === dateKey(other.dob));
-      const sameFather = tokenOverlap(candidate.fatherName, other.fatherName);
-      const candidatePhones = new Set(candidate.phoneNumbers || []);
-      const samePhone = (other.phoneNumbers || []).some(phone => candidatePhones.has(phone));
-      return sameName && (sameDob || sameFather || samePhone);
-    });
-    if (!duplicate) distinct.push(candidate);
-  }
-  if (distinct.length === 1) return { match: distinct[0], ambiguous: false };
-  return { match: null, ambiguous: distinct.length > 1, candidateIds: distinct.map(candidate => String(candidate._id)) };
-}
-const StudentSchema = new mongoose.Schema({}, { strict: false, timestamps: true });
-const MasterSchema = new mongoose.Schema({
-  fullName: String, normalizedFullName: String, dob: Date, fatherName: String, normalizedFatherName: String,
-  address: String, photoUrl: String, stCodes: [String], phoneNumbers: [String], qualification: String,
-  activeEnrollmentId: mongoose.Schema.Types.ObjectId, legacyStudentIds: [mongoose.Schema.Types.ObjectId],
-  identityMatchMethod: String, identityWarnings: [String],
-}, { strict: false, timestamps: true, collection: "student_master_profiles" });
-const EnrollmentSchema = new mongoose.Schema({
-  studentId: mongoose.Schema.Types.ObjectId, legacyStudentId: mongoose.Schema.Types.ObjectId,
-  stCode: String, normalizedFullName: String, formNo: String, courseCode: String,
-  semesterLabel: String, admissionDate: Date, status: String, feeConfig: mongoose.Schema.Types.Mixed,
-  installments: [mongoose.Schema.Types.Mixed], summary: mongoose.Schema.Types.Mixed,
-}, { strict: false, timestamps: true, collection: "student_enrollments" });
-const Student = mongoose.models.Student || mongoose.model("Student", StudentSchema);
-const StudentMaster = mongoose.models.StudentMaster || mongoose.model("StudentMaster", MasterSchema);
-const StudentEnrollment = mongoose.models.StudentEnrollment || mongoose.model("StudentEnrollment", EnrollmentSchema);
+const clean = value => String(value ?? "").trim();
+const codeOf = value => clean(value).replace(/\.0+$/, "");
+const dateValue = value => value && !Number.isNaN(new Date(value).getTime()) ? new Date(value) : null;
+const effectiveDate = item => dateValue(item?.dateOfAdmission || item?.admissionDate || item?.earliestPaymentDate);
+const registrationKey = item => [
+  codeOf(item.stCode),
+  clean(item.course || item.courseCode).toUpperCase(),
+  normalizeIdentityDate(item.dateOfAdmission || item.admissionDate || item.earliestPaymentDate),
+].join("|");
 
-const identityOf = student => ({
-  fullName: student.applicantName || student.sourceStudentName || student.name || "UNIDENTIFIED STUDENT " + String(student._id),
-  dob: student.dateOfBirth || student.dob || null,
-  fatherName: student.fatherOrHusbandName || student.fatherName || "",
-  phoneNumbers: phones([student.mobileNumber, student.guardianContactNumber, student.whatsappNumber, student.sourcePhone].filter(Boolean).join(",")),
-});
-const stCodeOf = student => String(student.regnNo || student.enrollmentNo || student.studentCode || "").replace(/\.0$/, "").trim();
+function identityFromMaster(master) {
+  return {
+    fullName: master.fullName || master.normalizedFullName || "",
+    normalizedFullName: master.normalizedFullName || "",
+    alternateNames: master.alternateNames || [],
+    dob: master.dob || null,
+    sex: master.gender || master.sex || "",
+    fatherName: master.fatherName || "",
+    phones: [...new Set([...(master.phones || []), ...(master.phoneNumbers || [])])],
+    phoneNumbers: [...new Set([...(master.phones || []), ...(master.phoneNumbers || [])])],
+    studentCodes: [...new Set([...(master.studentCodes || []), ...(master.stCodes || []), master.primaryStCode, master.currentStCode].filter(Boolean))],
+    stCodes: [...new Set([...(master.studentCodes || []), ...(master.stCodes || [])])],
+  };
+}
+function latestRegistration(registrations = []) {
+  return [...registrations].sort((a, b) => (effectiveDate(b)?.getTime() || 0) - (effectiveDate(a)?.getTime() || 0))[0] || null;
+}
+function mergeHistory(...arrays) {
+  const map = new Map();
+  for (const item of arrays.flat()) {
+    if (!item?.stCode) continue;
+    const key = registrationKey(item);
+    const prior = map.get(key) || {};
+    map.set(key, {
+      ...prior,
+      ...item,
+      course: item.course || item.courseName || item.courseCode || prior.course || "Previous Course (Legacy)",
+      dateOfAdmission: item.dateOfAdmission || item.admissionDate || prior.dateOfAdmission || null,
+      admissionDate: item.admissionDate || item.dateOfAdmission || prior.admissionDate || null,
+      formNo: item.formNo || prior.formNo || "",
+      qualification: item.qualification || prior.qualification || "",
+      rawAddress: item.rawAddress || item.address || prior.rawAddress || "",
+      rawStName: item.rawStName || prior.rawStName || "",
+      isCurrent: false,
+    });
+  }
+  const rows = [...map.values()].sort((a, b) => (effectiveDate(b)?.getTime() || 0) - (effectiveDate(a)?.getTime() || 0));
+  rows.forEach((item, index) => { item.isCurrent = index === 0; });
+  return rows;
+}
 
 async function main() {
-  const mongoUri = process.env.MONGODB_URI
-    || (process.env.NODE_ENV !== "production" ? "mongodb://127.0.0.1:27017/rcld_islampur" : "");
-  if (!mongoUri) throw new Error("MONGODB_URI is required for production cleanup.");
-  await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 5000 });
-  const students = await Student.find({}).sort({ admissionDate: 1, createdAt: 1, _id: 1 }).lean();
-  const existing = await StudentMaster.find({}).sort({ createdAt: 1, _id: 1 }).lean();
-  const groups = [];
-  for (const master of existing) {
-    const match = findIdentityMatch({
-      fullName: master.fullName || master.normalizedFullName,
-      dob: master.dob, fatherName: master.fatherName, phoneNumbers: master.phoneNumbers || [],
-    }, groups);
-    if (match.match) {
-      const canonical = match.match;
-      canonical.duplicateMasterIds = [...new Set([...(canonical.duplicateMasterIds || []), master._id])];
-      canonical.legacyStudentIds = [...new Map([...(canonical.legacyStudentIds || []), ...(master.legacyStudentIds || [])].map(id => [String(id), id])).values()];
-      canonical.stCodes = [...new Set([...(canonical.stCodes || []), ...(master.stCodes || [])])];
-      canonical.phoneNumbers = [...new Set([...(canonical.phoneNumbers || []), ...(master.phoneNumbers || [])])];
-      canonical.address = canonical.address || master.address;
-      canonical.qualification = canonical.qualification || master.qualification;
-      canonical.photoUrl = canonical.photoUrl || master.photoUrl;
-      canonical.activeEnrollmentId = canonical.activeEnrollmentId || master.activeEnrollmentId;
-      canonical.identityWarnings = [...new Set([...(canonical.identityWarnings || []), ...(master.identityWarnings || [])])];
-    } else {
-      groups.push({ ...master, _existing: true, duplicateMasterIds: [] });
-    }
-  }
-  const assignments = [];
-  let ambiguous = 0, newGroups = 0;
-  const ambiguousSamples = [];
-  for (const student of students) {
-    const linked = groups.find(master => (master.legacyStudentIds || []).some(id => String(id) === String(student._id)));
-    if (linked) { assignments.push({ student, group: linked, method: "ALREADY_LINKED" }); continue; }
-    const match = findIdentityMatch(identityOf(student), groups);
-    if (match.match) { assignments.push({ student, group: match.match, method: "IDENTITY_MATCH" }); continue; }
-    if (match.ambiguous) {
-      ambiguous += 1;
-      ambiguousSamples.push({ studentId: String(student._id), name: identityOf(student).fullName,
-        dob: identityOf(student).dob || "", fatherName: identityOf(student).fatherName || "",
-        candidateIds: match.candidateIds || [] });
-    }
-    const group = {
-      _id: "NEW-" + String(student._id), ...identityOf(student),
-      normalizedFullName: normalizeName(identityOf(student).fullName),
-      legacyStudentIds: [], stCodes: [], duplicateMasterIds: [], _existing: false,
-      identityWarnings: match.ambiguous ? ["Ambiguous identity candidates; not merged automatically."] : [],
-    };
-    groups.push(group);
-    assignments.push({ student, group, method: match.ambiguous ? "AMBIGUOUS_NEW_PROFILE" : "NEW_PROFILE" });
-    newGroups += 1;
-  }
-  console.log(JSON.stringify({
-    mode: apply ? "APPLY" : "DRY RUN", studentRecords: students.length,
-    existingMasterProfiles: existing.length,
-    duplicateMasterProfilesDetected: groups.reduce((sum, group) => sum + (group.duplicateMasterIds?.length || 0), 0),
-    resultingMasterProfiles: groups.length,
-    recordsToLink: assignments.filter(item => item.method !== "ALREADY_LINKED").length,
-    newMasterProfiles: newGroups, ambiguousRecordsKeptSeparate: ambiguous,
-    ambiguousSamples: ambiguousSamples.slice(0, 30),
-    registrationCodes: assignments.filter(item => stCodeOf(item.student)).length,
-  }, null, 2));
-  if (!apply) { console.log("No database writes were made. Review the report, then rerun with --apply."); return; }
+  const mongoUri = process.env.MONGODB_URI || (process.env.NODE_ENV !== "production" ? "mongodb://127.0.0.1:27017/rcld_islampur" : "");
+  if (!mongoUri) throw new Error("MONGODB_URI is required.");
+  await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 10000 });
+  const mastersCollection = mongoose.connection.collection("student_master_profiles");
+  const enrollmentCollection = mongoose.connection.collection("student_enrollments");
+  const paymentsCollection = mongoose.connection.collection("student_fee_payments");
+  const idCardsCollection = mongoose.connection.collection("idCardIssues");
 
-  let enrollmentIndexes = [];
-  try { enrollmentIndexes = await StudentEnrollment.collection.indexes(); }
-  catch (error) { if (error.code !== 26 && error.codeName !== "NamespaceNotFound") throw error; }
-  const oldEnrollmentIndex = enrollmentIndexes.find(index => index.unique
-    && index.key?.stCode === 1 && index.key?.normalizedFullName === 1 && !index.key?.studentId);
-  if (oldEnrollmentIndex) await StudentEnrollment.collection.dropIndex(oldEnrollmentIndex.name);
-  const duplicateEnrollmentGroups = await StudentEnrollment.aggregate([
-    { $group: { _id: { studentId: "$studentId", stCode: "$stCode", normalizedFullName: "$normalizedFullName" },
-      count: { $sum: 1 }, ids: { $push: "$_id" } } },
-    { $match: { count: { $gt: 1 } } }
-  ]);
-  const paymentCollection = mongoose.connection.collection("student_fee_payments");
-  for (const group of duplicateEnrollmentGroups) {
-    const records = await StudentEnrollment.find({ _id: { $in: group.ids } }).sort({ createdAt: 1 }).lean();
-    const ranked = [...records].sort((a, b) =>
-      Number(Boolean(b.feeConfig?.configured)) - Number(Boolean(a.feeConfig?.configured))
-      || (b.installments?.length || 0) - (a.installments?.length || 0)
+  const allMasters = await mastersCollection.find({}).toArray();
+  const activeMasters = allMasters.filter(item => !item.mergedIntoMasterId && item.isMerged !== true);
+  const identityRows = activeMasters.map(master => ({ ...identityFromMaster(master), _id: master._id }));
+  const clusters = clusterStudentRegistrations(identityRows);
+  const mergeGroups = clusters.filter(group => group.length > 1).map(group => {
+    const records = group.map(row => activeMasters.find(master => String(master._id) === String(row._id))).filter(Boolean);
+    records.sort((a, b) =>
+      (b.legacyStudentIds?.length || 0) - (a.legacyStudentIds?.length || 0)
+      || Number(Boolean(b.photoUrl)) - Number(Boolean(a.photoUrl))
       || new Date(a.createdAt || 0) - new Date(b.createdAt || 0)
     );
-    const canonical = ranked[0];
-    for (const duplicate of ranked.slice(1)) {
-      const receipts = await paymentCollection.find({ enrollmentId: duplicate._id }).toArray();
-      for (const receipt of receipts) {
-        const existingReceipt = await paymentCollection.findOne({
-          mrNo: receipt.mrNo, stCode: receipt.stCode,
-          paymentDate: receipt.paymentDate || null, amountPaid: receipt.amountPaid,
-        });
-        if (existingReceipt && String(existingReceipt._id) !== String(receipt._id)) {
-          await paymentCollection.deleteOne({ _id: receipt._id });
-        } else {
-          await paymentCollection.updateOne({ _id: receipt._id }, {
-            $set: { studentId: canonical.studentId, enrollmentId: canonical._id }
-          });
-        }
-      }
-      await StudentMaster.updateOne({ activeEnrollmentId: duplicate._id }, { $set: { activeEnrollmentId: canonical._id } });
-      await StudentEnrollment.deleteOne({ _id: duplicate._id });
-    }
-  }
-  await StudentEnrollment.collection.createIndex(
-    { studentId: 1, stCode: 1, normalizedFullName: 1 },
-    { unique: true, name: "studentId_1_stCode_1_normalizedFullName_1" }
-  );
+    return { canonical: records[0], duplicates: records.slice(1) };
+  });
 
-  const idMap = new Map();
-  for (const group of groups) {
-    if (group._existing) idMap.set(String(group._id), group._id);
-    else {
-      const master = await StudentMaster.create({
-        fullName: group.fullName || "Student",
-        normalizedFullName: group.normalizedFullName,
-        dob: group.dob || null, fatherName: group.fatherName || "",
-        normalizedFatherName: normalizeFather(group.fatherName),
-        phoneNumbers: group.phoneNumbers || [], identityWarnings: group.identityWarnings || [],
-        identityMatchMethod: group.identityWarnings?.length ? "AMBIGUOUS_NEW_PROFILE" : "CLEANUP_NEW_PROFILE",
-        legacyStudentIds: [], stCodes: [],
-      });
-      idMap.set(String(group._id), master._id);
-    }
-  }
-  for (const group of groups.filter(item => item._existing && item.duplicateMasterIds?.length)) {
-    const canonicalId = idMap.get(String(group._id));
-    const canonicalMaster = await StudentMaster.findById(canonicalId);
-    if (canonicalMaster) {
-      canonicalMaster.legacyStudentIds = group.legacyStudentIds || canonicalMaster.legacyStudentIds;
-      canonicalMaster.stCodes = [...new Set([...(canonicalMaster.stCodes || []), ...(group.stCodes || [])])];
-      canonicalMaster.phoneNumbers = [...new Set([...(canonicalMaster.phoneNumbers || []), ...(group.phoneNumbers || [])])];
-      canonicalMaster.address = canonicalMaster.address || group.address || "";
-      canonicalMaster.qualification = canonicalMaster.qualification || group.qualification || "";
-      canonicalMaster.photoUrl = canonicalMaster.photoUrl || group.photoUrl || "";
-      canonicalMaster.activeEnrollmentId = canonicalMaster.activeEnrollmentId || group.activeEnrollmentId || null;
-      canonicalMaster.identityWarnings = [...new Set([...(canonicalMaster.identityWarnings || []), ...(group.identityWarnings || [])])];
-      await canonicalMaster.save();
-    }
-    for (const duplicateId of group.duplicateMasterIds) {
-      const duplicateEnrollments = await StudentEnrollment.find({ studentId: duplicateId }).lean();
-      for (const duplicateEnrollment of duplicateEnrollments) {
-        const canonicalEnrollment = await StudentEnrollment.findOne({
-          studentId: canonicalId, stCode: duplicateEnrollment.stCode,
-          normalizedFullName: duplicateEnrollment.normalizedFullName,
-        }).lean();
-        if (canonicalEnrollment) {
-          const duplicateReceipts = await paymentCollection.find({ enrollmentId: duplicateEnrollment._id }).toArray();
-          for (const receipt of duplicateReceipts) {
-            const existingReceipt = await paymentCollection.findOne({
-              mrNo: receipt.mrNo, stCode: receipt.stCode,
-              paymentDate: receipt.paymentDate || null, amountPaid: receipt.amountPaid,
-            });
-            if (existingReceipt && String(existingReceipt._id) !== String(receipt._id)) {
-              await paymentCollection.deleteOne({ _id: receipt._id });
-            } else {
-              await paymentCollection.updateOne({ _id: receipt._id }, {
-                $set: { studentId: canonicalId, enrollmentId: canonicalEnrollment._id }
-              });
-            }
-          }
-          if ((!canonicalEnrollment.installments || !canonicalEnrollment.installments.length)
-            && duplicateEnrollment.installments?.length) {
-            await StudentEnrollment.updateOne({ _id: canonicalEnrollment._id }, {
-              $set: { installments: duplicateEnrollment.installments, feeConfig: duplicateEnrollment.feeConfig,
-                summary: duplicateEnrollment.summary }
-            });
-          }
-          await StudentEnrollment.deleteOne({ _id: duplicateEnrollment._id });
-        } else {
-          await StudentEnrollment.updateOne({ _id: duplicateEnrollment._id }, { $set: { studentId: canonicalId } });
-        }
+  const mergeMap = new Map();
+  for (const group of mergeGroups) for (const duplicate of group.duplicates) mergeMap.set(String(duplicate._id), group.canonical._id);
+  const groupReports = mergeGroups.map(group => ({
+    canonicalId: String(group.canonical._id),
+    canonicalName: group.canonical.fullName || group.canonical.normalizedFullName || "",
+    duplicateIds: group.duplicates.map(item => String(item._id)),
+    codes: [...new Set([...identityFromMaster(group.canonical).studentCodes, ...group.duplicates.flatMap(item => identityFromMaster(item).studentCodes)])],
+  }));
+
+  const duplicateMasterIds = [...mergeMap.keys()].map(id => new mongoose.Types.ObjectId(id));
+  const legacyIdsByCanonical = new Map();
+  const enrollmentDocs = duplicateMasterIds.length
+    ? await enrollmentCollection.find({ studentId: { $in: duplicateMasterIds } }).toArray()
+    : [];
+  const enrollmentIds = enrollmentDocs.map(item => item._id);
+  const enrollmentMap = new Map();
+  for (const group of mergeGroups) {
+    const canonicalId = group.canonical._id;
+    const allGroupIds = [canonicalId, ...group.duplicates.map(item => item._id)];
+    const enrollments = await enrollmentCollection.find({ studentId: { $in: allGroupIds } }).toArray();
+    const canonicalEnrollments = await enrollmentCollection.find({ studentId: canonicalId }).toArray();
+    const canonicalByKey = new Map(canonicalEnrollments.map(item => [registrationKey(item), item]));
+    for (const item of enrollments) {
+      const match = canonicalByKey.get(registrationKey(item));
+      if (match && String(match._id) !== String(item._id)) enrollmentMap.set(String(item._id), match._id);
+      else if (String(item.studentId) !== String(canonicalId)) {
+        // A unique enrollment can be reassigned in place; the source document remains intact.
+        enrollmentMap.set(String(item._id), item._id);
       }
-      await mongoose.connection.collection("student_fee_payments").updateMany(
-        { studentId: duplicateId }, { $set: { studentId: canonicalId } }
-      );
-      await StudentMaster.deleteOne({ _id: duplicateId });
     }
+    const legacyIds = [...new Set(allGroupIds.flatMap(id => {
+      const source = group.canonical._id && String(group.canonical._id) === String(id)
+        ? group.canonical : group.duplicates.find(item => String(item._id) === String(id));
+      return (source?.legacyStudentIds || []).map(String);
+    }))];
+    legacyIdsByCanonical.set(String(canonicalId), legacyIds);
   }
-  for (const { student, group } of assignments) {
-    const master = await StudentMaster.findById(idMap.get(String(group._id)));
-    if (!master.legacyStudentIds.some(id => String(id) === String(student._id))) master.legacyStudentIds.push(student._id);
-    master.address = student.address || master.address;
-    master.phoneNumbers = [...new Set([...(master.phoneNumbers || []), ...identityOf(student).phoneNumbers])];
-    master.qualification = student.sourceQualification || master.qualification;
-    if (!master.photoUrl && student.photoUrl) master.photoUrl = student.photoUrl;
-    const stCode = stCodeOf(student);
-    if (stCode) {
-      if (!master.stCodes.includes(stCode)) master.stCodes.push(stCode);
-      const normalizedFullName = normalizeName(identityOf(student).fullName);
-      let enrollment = await StudentEnrollment.findOne({ studentId: master._id, stCode, normalizedFullName });
-      if (!enrollment) {
-        enrollment = await StudentEnrollment.create({
-          studentId: master._id, legacyStudentId: student._id, stCode, normalizedFullName,
-          formNo: student.formNo || "", courseCode: String(student.courseCode || "LEGACY").toUpperCase(),
-          semesterLabel: student.sourceCourseLabel || student.courseCode || "LEGACY",
-          admissionDate: student.admissionDate ? new Date(student.admissionDate) : null,
-          status: "ACTIVE", feeConfig: { configured: false, feeRuleSource: "CLEANUP_REVIEW_REQUIRED" },
+
+  const report = {
+    mode: apply ? "APPLY" : "DRY RUN",
+    masterProfilesScanned: allMasters.length,
+    activeMasterProfiles: activeMasters.length,
+    confidentDuplicateGroups: mergeGroups.length,
+    duplicateMasterProfilesToMarkMerged: duplicateMasterIds.length,
+    studentEnrollmentRecordsToInspect: enrollmentDocs.length,
+    feeRecordsToRelink: duplicateMasterIds.length ? await paymentsCollection.countDocuments({
+      $or: [{ studentId: { $in: duplicateMasterIds } }, { masterStudentId: { $in: duplicateMasterIds } }, { enrollmentId: { $in: enrollmentIds } }]
+    }) : 0,
+    idCardLogsToLink: duplicateMasterIds.length ? await idCardsCollection.countDocuments({
+      studentId: { $in: [...legacyIdsByCanonical.values()].flat().map(id => new mongoose.Types.ObjectId(id)) }
+    }) : 0,
+    groups: groupReports.slice(0, 50),
+    destructiveDeletes: 0,
+  };
+  console.log(JSON.stringify(report, null, 2));
+  if (!apply) {
+    console.log("Dry run only: no database records or indexes were changed. Review the groups, back up MongoDB, then rerun with --apply.");
+    return;
+  }
+
+  for (const group of mergeGroups) {
+    const canonical = group.canonical;
+    const canonicalId = canonical._id;
+    const duplicateIds = group.duplicates.map(item => item._id);
+    const allProfiles = [canonical, ...group.duplicates];
+    const registrations = mergeHistory(...allProfiles.map(item => item.registrations || []), ...allProfiles.map(item => item.enrollments || []));
+    const allStudentCodes = [...new Set(allProfiles.flatMap(item => [
+      ...(item.studentCodes || []), ...(item.stCodes || []), item.primaryStCode, item.currentStCode,
+    ]).map(codeOf).filter(Boolean))];
+    const allPhones = [...new Set(allProfiles.flatMap(item => [...(item.phones || []), ...(item.phoneNumbers || [])]).flatMap(value => normalizeIndianPhones(value)))];
+    const allAliases = [...new Set(allProfiles.flatMap(item => [
+      item.fullName, item.normalizedFullName, ...(item.alternateNames || []),
+    ]).map(normalizeStudentName).filter(Boolean))];
+    const latest = latestRegistration(registrations);
+    const latestDate = effectiveDate(latest);
+    const existingDate = dateValue(canonical.currentAdmissionDate || canonical.dateOfAdmission);
+    const update = {
+      $set: {
+        legacyStudentIds: [...new Map(allProfiles.flatMap(item => item.legacyStudentIds || []).map(id => [String(id), id])).values()],
+        studentCodes: allStudentCodes,
+        stCodes: allStudentCodes,
+        alternateNames: allAliases,
+        phones: allPhones,
+        phoneNumbers: allPhones,
+        registrations,
+        enrollments: registrations,
+        primaryStCode: latest?.stCode || canonical.primaryStCode || canonical.currentStCode || "",
+        currentStCode: latest?.stCode || canonical.currentStCode || "",
+        currentRegistrationId: latest?.registrationId || canonical.currentRegistrationId || "",
+        currentCourse: latest?.course || canonical.currentCourse || "",
+        currentAdmissionDate: latestDate || canonical.currentAdmissionDate || null,
+        dateOfAdmission: latestDate || canonical.dateOfAdmission || null,
+        normalizedFullName: normalizeStudentName(canonical.fullName || canonical.normalizedFullName),
+        normalizedFatherName: normalizeFatherName(canonical.fatherName || ""),
+        photoUrl: canonical.photoUrl || allProfiles.find(item => item.photoUrl)?.photoUrl || "",
+        hasPhoto: Boolean(canonical.photoUrl || allProfiles.find(item => item.photoUrl)?.photoUrl),
+        identityWarnings: [...new Set(allProfiles.flatMap(item => item.identityWarnings || []))],
+        mergedProfileCount: allProfiles.length,
+        lastIdentityMergeAt: new Date(),
+      }
+    };
+    if ((!canonical.address || (latestDate && existingDate && latestDate >= existingDate)) && latest?.rawAddress) update.$set.address = latest.rawAddress;
+    if ((!canonical.qualification || (latestDate && existingDate && latestDate >= existingDate)) && latest?.qualification) update.$set.qualification = latest.qualification;
+    await mastersCollection.updateOne({ _id: canonicalId }, update);
+
+    // Keep every duplicate Master document for audit/history; only add a merge pointer.
+    await mastersCollection.updateMany({ _id: { $in: duplicateIds } }, {
+      $set: { mergedIntoMasterId: canonicalId, isMerged: true, mergedAt: new Date(), mergeMethod: "FOUR_TIER_IDENTITY_RESOLUTION" }
+    });
+
+    const allEnrollmentRows = await enrollmentCollection.find({ studentId: { $in: [canonicalId, ...duplicateIds] } }).toArray();
+    const canonicalRows = allEnrollmentRows.filter(item => String(item.studentId) === String(canonicalId));
+    const canonicalByKey = new Map(canonicalRows.map(item => [registrationKey(item), item]));
+    const enrollmentReplacements = new Map();
+    for (const row of allEnrollmentRows) {
+      const existing = canonicalByKey.get(registrationKey(row));
+      if (existing && String(existing._id) !== String(row._id)) {
+        enrollmentReplacements.set(String(row._id), existing._id);
+        await enrollmentCollection.updateOne({ _id: row._id }, {
+          $set: { mergedIntoEnrollmentId: existing._id, masterStudentId: canonicalId, mergeStatus: "DUPLICATE_RETAINED" }
         });
+      } else {
+        if (String(row.studentId) !== String(canonicalId)) {
+          await enrollmentCollection.updateOne({ _id: row._id }, { $set: { studentId: canonicalId, masterStudentId: canonicalId } });
+        } else {
+          await enrollmentCollection.updateOne({ _id: row._id }, { $set: { masterStudentId: canonicalId } });
+        }
+        canonicalByKey.set(registrationKey(row), row);
       }
-      await StudentEnrollment.updateMany(
-        { studentId: master._id, status: "ACTIVE", _id: { $ne: enrollment._id } },
-        { $set: { status: "PROMOTED" } }
-      );
-      enrollment.status = "ACTIVE";
-      await enrollment.save();
-      master.activeEnrollmentId = enrollment._id;
     }
-    await master.save();
+
+    const enrollmentReplacementEntries = [...enrollmentReplacements.entries()];
+    for (const [oldEnrollmentId, newEnrollmentId] of enrollmentReplacementEntries) {
+      await paymentsCollection.updateMany({ enrollmentId: new mongoose.Types.ObjectId(oldEnrollmentId) }, {
+        $set: { enrollmentId: newEnrollmentId, studentId: canonicalId, masterStudentId: canonicalId }
+      });
+    }
+    await paymentsCollection.updateMany({
+      $or: [{ studentId: { $in: duplicateIds } }, { masterStudentId: { $in: duplicateIds } }]
+    }, { $set: { studentId: canonicalId, masterStudentId: canonicalId } });
+
+    const legacyIds = (update.$set.legacyStudentIds || []).map(id => id instanceof mongoose.Types.ObjectId ? id : new mongoose.Types.ObjectId(id));
+    if (legacyIds.length) {
+      // Keep each ID-card log's legacy Student reference; add the durable master link.
+      await idCardsCollection.updateMany({ studentId: { $in: legacyIds } }, { $set: { masterStudentId: canonicalId } });
+    }
   }
-  console.log("Consolidation complete. Legacy Student documents were retained; one master identity now links their enrollments.");
+
+  console.log("Non-destructive merge completed. Duplicate master/enrollment records and all legacy Student/fee/ID-card documents were retained.");
 }
 
 main().catch(error => { console.error(error); process.exitCode = 1; })
