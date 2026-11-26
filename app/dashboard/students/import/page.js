@@ -427,6 +427,7 @@ export default function BulkImportPage() {
             <div className="summary-card"><span>New St_Codes Linked</span><strong>{result.registrationsLinked}</strong></div>
             <div className="summary-card"><span>Fee Receipts Added</span><strong>{result.newReceiptsAdded}</strong></div>
             <div className="summary-card"><span>Duplicate Receipts Skipped</span><strong>{result.duplicateReceiptsSkipped}</strong></div>
+            <div className="summary-card"><span>Existing Receipts Repaired</span><strong>{result.existingReceiptsUpdated}</strong></div>
             <div className="summary-card"><span>St_Code Collisions Flagged</span><strong>{collisionCount}</strong></div>
             <div className="summary-card"><span>Unmatched Fee-Only Codes</span><strong>{unmatchedFeeCodes}</strong></div>
             <div className="summary-card"><span>Rows Requiring Review</span><strong>{result.unmatchedRows.length}</strong></div>
