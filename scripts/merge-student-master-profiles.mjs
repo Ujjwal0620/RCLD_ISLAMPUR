@@ -275,6 +275,74 @@ async function main() {
       // Keep each ID-card log's legacy Student reference; add the durable master link.
       await idCardsCollection.updateMany({ studentId: { $in: legacyIds } }, { $set: { masterStudentId: canonicalId } });
     }
+
+    const canonicalEnrollments = await enrollmentCollection.find({
+      studentId: canonicalId,
+      mergedIntoEnrollmentId: { $exists: false },
+    }).toArray();
+    const byRegistration = new Map();
+    const byCode = new Map();
+    for (const enrollment of canonicalEnrollments) {
+      if (enrollment.registrationId) byRegistration.set(String(enrollment.registrationId).toUpperCase(), [...(byRegistration.get(String(enrollment.registrationId).toUpperCase()) || []), enrollment]);
+      if (enrollment.stCode) byCode.set(String(enrollment.stCode), [...(byCode.get(String(enrollment.stCode)) || []), enrollment]);
+    }
+    const canonicalPayments = await paymentsCollection.find({
+      $or: [{ studentId: canonicalId }, { masterStudentId: canonicalId }],
+    }).toArray();
+    for (const payment of canonicalPayments) {
+      const registration = String(payment.registrationId || payment.stNameKey || "").toUpperCase();
+      const candidates = byRegistration.get(registration) || byCode.get(String(payment.stCode || "")) || [];
+      if (!payment.enrollmentId && candidates.length === 1) {
+        const enrollment = candidates[0];
+        await paymentsCollection.updateOne({ _id: payment._id }, { $set: {
+          enrollmentId: enrollment._id,
+          studentId: canonicalId,
+          masterStudentId: canonicalId,
+          stCode: payment.stCode || enrollment.stCode,
+          courseCode: payment.courseCode || enrollment.courseCode || "",
+          course: payment.course || enrollment.courseName || enrollment.courseCode || "",
+        }});
+      } else if (payment.enrollmentId) {
+        const enrollment = canonicalEnrollments.find(item => String(item._id) === String(payment.enrollmentId));
+        if (enrollment) await paymentsCollection.updateOne({ _id: payment._id }, { $set: {
+          studentId: canonicalId, masterStudentId: canonicalId,
+          courseCode: payment.courseCode || enrollment.courseCode || "",
+          course: payment.course || enrollment.courseName || enrollment.courseCode || "",
+        }});
+      }
+    }
+    const paidTotals = await paymentsCollection.aggregate([
+      { $match: { enrollmentId: { $in: canonicalEnrollments.map(item => item._id) } } },
+      { $group: { _id: "$enrollmentId", totalPaid: { $sum: "$amountPaid" } } },
+    ]).toArray();
+    const paidByEnrollment = new Map(paidTotals.map(item => [String(item._id), Number(item.totalPaid || 0)]));
+    let masterFee = { totalFee: 0, discount: 0, totalPaid: 0, balanceDue: 0, courseCount: canonicalEnrollments.length, hasConfiguredFee: false };
+    for (const enrollment of canonicalEnrollments) {
+      const totalFee = Number(enrollment.feeConfig?.grossFee ?? enrollment.summary?.totalFee ?? 0);
+      const totalDue = Number(enrollment.feeConfig?.netPayableFee ?? enrollment.summary?.totalDue ?? 0);
+      const totalPaid = paidByEnrollment.get(String(enrollment._id)) || 0;
+      const balanceDue = Math.max(0, totalDue - totalPaid);
+      const configured = enrollment.feeConfig?.configured !== false && enrollment.feeConfig?.feeRuleSource !== "UNCONFIGURED";
+      const feeStatus = configured && balanceDue === 0 ? "Paid" : totalPaid > 0 ? "Partial" : "Unpaid";
+      await enrollmentCollection.updateOne({ _id: enrollment._id }, { $set: { summary: {
+        ...(enrollment.summary || {}), totalFee, totalDue, totalPaid, balanceDue, feeStatus,
+      } } });
+      masterFee.totalFee += totalFee;
+      masterFee.discount += Number(enrollment.feeConfig?.discountAmount || 0);
+      masterFee.totalPaid += totalPaid;
+      masterFee.balanceDue += balanceDue;
+      masterFee.hasConfiguredFee ||= configured;
+    }
+    await mastersCollection.updateOne({ _id: canonicalId }, { $set: { feeSummary: {
+      totalFee: masterFee.totalFee,
+      discount: masterFee.discount,
+      totalPaid: masterFee.totalPaid,
+      balanceDue: masterFee.balanceDue,
+      feeStatus: masterFee.hasConfiguredFee && masterFee.balanceDue === 0 ? "Paid" : masterFee.totalPaid > 0 ? "Partial" : "Unpaid",
+      courseCount: masterFee.courseCount,
+      updatedAt: new Date(),
+    } } });
+
     // Mark duplicate master records only after all dependent references have been re-linked.
     await mastersCollection.updateMany({ _id: { $in: duplicateIds } }, {
       $set: { mergedIntoMasterId: canonicalId, isMerged: true, mergedAt: new Date(), mergeMethod: "FOUR_TIER_IDENTITY_RESOLUTION" }
