@@ -253,14 +253,11 @@ async function commitOne(stage, importBatchId, decision) {
       $or: [
         { normalizedPaymentKey: key },
         {
-          $or: [
-            { studentId: master._id },
-            { masterStudentId: master._id }
-          ],
-          normalizedStCode: code,
-          mrNo,
-          amountPaid: amount,
-          paymentDate: payment.paymentDate || null
+          $and: [
+            { $or: [{ studentId: master._id }, { masterStudentId: master._id }] },
+            { $or: [{ normalizedStCode: code }, { stCode: code }] },
+            { mrNo, amountPaid: amount, paymentDate: payment.paymentDate || null }
+          ]
         }
       ]
     }).select("_id").lean();
