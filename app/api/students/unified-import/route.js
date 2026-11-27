@@ -577,124 +577,206 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
   };
 }
 
-async function syncFeeRows(rows = [], onProgress = () => {}, registrationMap = []) {
+async function syncFeeRows(rows = [], onProgress = () => {}, registrationMap = [], batchKey = "") {
   if (!Array.isArray(rows) || rows.length > 20000) throw new Error("Fee import must contain between 1 and 20,000 rows.");
   await ensureReceiptIndex();
+  const codes = [...new Set(rows.map(item => normalizeStudentCode(item.stCode)).filter(Boolean))];
+  const variants = [...new Set(codes.flatMap(codeLookupVariants))];
   const ids = [...new Set(rows.map(item => clean(item.registrationId)).filter(Boolean))];
-  const enrollments = await StudentEnrollment.find({ registrationId: { $in: ids }, mergedIntoEnrollmentId: null }).lean();
-  const mappedRegistrationById = new Map((registrationMap || []).map(item => [String(item.registrationId || ""), item]));
+  const enrollments = await StudentEnrollment.find({ mergedIntoEnrollmentId: null, $or: [
+    { normalizedStCode: { $in: codes } }, { stCode: { $in: variants } }, { registrationId: { $in: ids } }
+  ] }).lean();
+  const enrollmentByCode = new Map();
   const enrollmentById = new Map();
   for (const item of enrollments) {
-    const key = String(item.registrationId || "");
-    if (key) enrollmentById.set(key, [...(enrollmentById.get(key) || []), item]);
+    const code = normalizeStudentCode(item.normalizedStCode || item.stCode);
+    if (code) enrollmentByCode.set(code, [...(enrollmentByCode.get(code) || []), item]);
+    if (item.registrationId) enrollmentById.set(String(item.registrationId), item);
   }
-  const enrollmentByMongoId = new Map(enrollments.map(item => [String(item._id), item]));
-  const codes = [...new Set(rows.map(item => clean(item.stCode)).filter(Boolean))];
-  const registrationsByCode = new Map();
-  for (const row of rows) {
-    const code = clean(row.stCode);
-    const id = clean(row.registrationId);
-    if (code && id) registrationsByCode.set(code, new Set([...(registrationsByCode.get(code) || []), id]));
-  }
-  const enrollmentObjectIds = enrollments.map(item => item._id);
+  const mappedByCode = new Map((registrationMap || []).map(item => [normalizeStudentCode(item.stCode), item]));
+  const sourceRowKeys = rows.map(row => {
+    const code = normalizeStudentCode(row.stCode);
+    const key = makeReceiptBusinessKey(code, row.mrNo, row.paymentDate, row.amountPaid);
+    return [clean(batchKey), clean(row.sourceSheet), Number(row.rowNo || 0), key].join("|");
+  }).filter(Boolean);
   const existing = await StudentFeePayment.find({ $or: [
+    { normalizedStCode: { $in: codes } },
+    { stCode: { $in: variants } },
     { registrationId: { $in: ids } },
-    { stCode: { $in: codes } },
-    { enrollmentId: { $in: enrollmentObjectIds } }
-  ] }).select("registrationId stNameKey stCode mrNo paymentDate amountPaid studentId masterStudentId enrollmentId courseCode course").lean();
-  const existingByKey = new Map();
-  const existingByLooseKey = new Map();
+    ...(sourceRowKeys.length ? [{ sourceRowKey: { $in: sourceRowKeys } }] : [])
+  ] }).select("sourceRowKey sourceBatchKey normalizedStCode registrationId stNameKey stCode mrNo paymentDate amountPaid studentId masterStudentId enrollmentId courseCode course importBatchKey").lean();
+  const existingByBusinessKey = new Map();
+  const existingBySourceKey = new Map();
   for (const item of existing) {
-    const dateKey = asDate(item.paymentDate)?.toISOString().slice(0, 10) || "";
-    const amountKey = Number(item.amountPaid).toFixed(2);
-    const linkedEnrollment = enrollmentByMongoId.get(String(item.enrollmentId || ""));
-    const identity = String(linkedEnrollment?.stCode || item.stCode || "").toUpperCase();
-    const masterIdentity = String(linkedEnrollment?.studentId || item.masterStudentId || item.studentId || "");
-    if (identity && masterIdentity) existingByKey.set([identity, item.mrNo, dateKey, amountKey].join("|"), item);
-    const looseKey = [masterIdentity, String(item.stCode || ""), item.mrNo, dateKey, amountKey].join("|");
-    if (!existingByLooseKey.has(looseKey)) existingByLooseKey.set(looseKey, item);
+    const code = normalizeStudentCode(item.normalizedStCode || item.stCode);
+    const key = makeReceiptBusinessKey(code, item.mrNo, item.paymentDate, item.amountPaid);
+    if (code && key && !existingByBusinessKey.has(key)) existingByBusinessKey.set(key, item);
+    if (item.sourceRowKey) existingBySourceKey.set(String(item.sourceRowKey), item);
   }
-  const operations = [];
+
+  const newDocs = [];
+  const updateById = new Map();
   const unmatchedRows = [];
+  const seenBusinessKeys = new Set();
+  const seenSourceKeys = new Set();
   let newReceiptsAdded = 0, existingReceiptsUpdatedOrSkipped = 0, duplicateReceiptsSkipped = 0, existingReceiptsUpdated = 0;
-  const seenInBatch = new Set();
   for (const row of rows) {
-    const registrationId = clean(row.registrationId);
-    const mappedRegistration = mappedRegistrationById.get(registrationId);
-    const allEnrollmentCandidates = enrollmentById.get(registrationId) || [];
-    const enrollmentCandidates = mappedRegistration?.studentId ? allEnrollmentCandidates.filter(item => String(item.studentId) === String(mappedRegistration.studentId)) : allEnrollmentCandidates;
+    const stCode = normalizeStudentCode(row.stCode);
     const paymentDate = asDate(row.paymentDate);
-    let enrollment = enrollmentCandidates.length === 1 ? enrollmentCandidates[0] : null;
-    if (!enrollment && enrollmentCandidates.length > 1) {
-      const masterIds = new Set(enrollmentCandidates.map(item => String(item.studentId)));
-      if (masterIds.size === 1 && paymentDate) {
-        const eligible = enrollmentCandidates
-          .filter(item => asDate(item.admissionDate) && asDate(item.admissionDate) <= paymentDate)
-          .sort((a, b) => asDate(b.admissionDate).getTime() - asDate(a.admissionDate).getTime());
-        if (eligible.length) {
-          const latestDate = asDate(eligible[0].admissionDate).toISOString().slice(0, 10);
-          const sameAdmissionDate = eligible.filter(item => asDate(item.admissionDate).toISOString().slice(0, 10) === latestDate);
-          if (sameAdmissionDate.length === 1) enrollment = sameAdmissionDate[0];
-        }
+    const amountPaid = parseImportAmount(row.amountPaid);
+    const mrNo = normalizeReceiptNumber(row.mrNo);
+    const businessKey = makeReceiptBusinessKey(stCode, mrNo, paymentDate, amountPaid);
+    const sourceRowKey = [clean(batchKey), clean(row.sourceSheet), Number(row.rowNo || 0), businessKey].join("|");
+    const mapped = mappedByCode.get(stCode);
+    let candidates = enrollmentByCode.get(stCode) || [];
+    if (mapped?.ambiguous) candidates = [];
+    if (mapped?.studentId) candidates = candidates.filter(item => String(item.studentId) === String(mapped.studentId));
+    if (Array.isArray(mapped?.enrollmentIds) && mapped.enrollmentIds.length) {
+      const allowed = new Set(mapped.enrollmentIds.map(String));
+      candidates = candidates.filter(item => allowed.has(String(item._id)));
+    }
+    const exactRegistration = enrollmentById.get(String(row.registrationId || ""));
+    if (exactRegistration && normalizeStudentCode(exactRegistration.stCode) === stCode
+      && (!mapped?.studentId || String(exactRegistration.studentId) === String(mapped.studentId))) {
+      candidates = [exactRegistration];
+    }
+    let enrollment = null;
+    if (candidates.length === 1) enrollment = candidates[0];
+    else if (candidates.length > 1 && paymentDate) {
+      const eligible = candidates.filter(item => !asDate(item.admissionDate) || asDate(item.admissionDate) <= paymentDate);
+      if (eligible.length) {
+        const dated = eligible.filter(item => asDate(item.admissionDate));
+        if (dated.length) {
+          const latest = Math.max(...dated.map(item => asDate(item.admissionDate).getTime()));
+          const latestItems = dated.filter(item => asDate(item.admissionDate).getTime() === latest);
+          if (latestItems.length === 1) enrollment = latestItems[0];
+        } else if (eligible.length === 1) enrollment = eligible[0];
       }
     }
-    const amountPaid = Number(row.amountPaid);
-    const mrNo = clean(row.mrNo);
-    if (!registrationId || !enrollment || !paymentDate || !mrNo || !Number.isFinite(amountPaid) || amountPaid < 0) {
-      unmatchedRows.push({ row: row.rowNo, sheet: row.sourceSheet || "", studentId: registrationId || row.stCode || "", stCode: row.stCode || "", name: row.cleanName || "", course: row.course || "", mrNo, paymentDate: row.paymentDate || "", amountPaid: row.amountPaid ?? "", reason: enrollmentCandidates.length > 1 ? "Registration identity maps to multiple Master Students or ambiguous admission/course periods; fee row was not linked automatically." : !enrollment ? "No matching registration/enrollment was found." : "Missing or invalid receipt number, date, or amount." });
+    if (!stCode || !enrollment || !paymentDate || !mrNo || !Number.isFinite(amountPaid) || amountPaid < 0) {
+      unmatchedRows.push({
+        row: row.rowNo, sheet: row.sourceSheet || "", studentId: row.registrationId || stCode,
+        stCode, name: row.cleanName || "", amountPaid: row.amountPaid ?? "",
+        mrNo, paymentDate: row.paymentDate || "",
+        reason: mapped?.ambiguous ? "This Student Code maps to multiple imported student profiles." :
+          !enrollment ? (candidates.length > 1 ? "Student Code matched, but course/admission selection is ambiguous for this payment date." : "No enrollment exists for this normalized Student Code.") :
+          "Receipt number, payment date, or amount is invalid."
+      });
       continue;
     }
-    const key = [clean(enrollment.stCode), mrNo, paymentDate.toISOString().slice(0,10), amountPaid.toFixed(2)].join("|");
-    const priorReceipt = existingByKey.get(key);
+    const key = makeReceiptBusinessKey(stCode, mrNo, paymentDate, amountPaid);
+    if (seenBusinessKeys.has(key) || seenSourceKeys.has(sourceRowKey)) {
+      duplicateReceiptsSkipped += 1;
+      existingReceiptsUpdatedOrSkipped += 1;
+      unmatchedRows.push({
+        row: row.rowNo, sheet: row.sourceSheet || "", studentId: row.registrationId || stCode,
+        stCode, name: row.cleanName || "", amountPaid, mrNo, paymentDate,
+        reason: "Duplicate payment business key appears more than once in this workbook; the first occurrence was retained."
+      });
+      continue;
+    }
+    seenBusinessKeys.add(key);
+    seenSourceKeys.add(sourceRowKey);
+    const priorReceipt = existingBySourceKey.get(sourceRowKey) || existingByBusinessKey.get(key);
+    const courseCode = normalizeCourseCode(enrollment.courseCode || row.course);
+    const paymentValues = {
+      studentId: enrollment.studentId, masterStudentId: enrollment.studentId,
+      enrollmentId: enrollment._id, stCode, normalizedStCode: stCode,
+      registrationId: enrollment.registrationId || row.registrationId || "",
+      stNameKey: enrollment.registrationId || row.registrationId || "",
+      courseCode, course: enrollment.course || enrollment.courseName || row.course || "",
+      mrNo, paymentDate, amountPaid, rawPaymentDate: paymentDate,
+      sourceSheet: clean(row.sourceSheet), sourceRowNo: Number(row.rowNo || 0),
+      importBatchKey: "UNIFIED_WORKBOOK_IMPORT",
+      sourceBatchKey: clean(batchKey), sourceRowKey,
+      allocations: priorReceipt?.allocations || [],
+      importWarnings: priorReceipt?.importWarnings || []
+    };
     if (priorReceipt) {
-      const priorEnrollment = enrollmentByMongoId.get(String(priorReceipt.enrollmentId || ""));
-      const priorMasterId = priorEnrollment?.studentId || priorReceipt.masterStudentId || priorReceipt.studentId || null;
-      const sameMaster = priorMasterId && String(priorMasterId) === String(enrollment.studentId);
-      if (!sameMaster) {
-        unmatchedRows.push({ row: row.rowNo, sheet: row.sourceSheet || "", studentId: registrationId, stCode: row.stCode || "", name: row.cleanName || "", mrNo, paymentDate, amountPaid, reason: "A receipt with the same St_Code/MR/date/amount is linked to a different or unknown master identity. It was preserved and flagged for manual review." });
-        continue;
+      const patch = {};
+      for (const [keyName, value] of Object.entries(paymentValues)) {
+        if (value === "" || value === null || value === undefined) continue;
+        if (keyName === "allocations" || keyName === "importWarnings") continue;
+        if (String(priorReceipt[keyName] ?? "") !== String(value)) patch[keyName] = value;
       }
-      const courseCode = clean(enrollment.courseCode || row.course).toUpperCase();
-      const repair = {};
-      const linkedToThisEnrollment = String(priorReceipt.enrollmentId || "") === String(enrollment._id);
-      if (!priorReceipt.registrationId || (linkedToThisEnrollment && String(priorReceipt.registrationId).toUpperCase() !== registrationId.toUpperCase())) repair.registrationId = registrationId;
-      if (!priorReceipt.stNameKey || (linkedToThisEnrollment && String(priorReceipt.stNameKey).toUpperCase() !== registrationId.toUpperCase())) repair.stNameKey = registrationId;
-      if (!priorReceipt.studentId || String(priorReceipt.studentId) !== String(enrollment.studentId)) repair.studentId = enrollment.studentId;
-      if (!priorReceipt.masterStudentId || String(priorReceipt.masterStudentId) !== String(enrollment.studentId)) repair.masterStudentId = enrollment.studentId;
-      if (!priorReceipt.enrollmentId || String(priorReceipt.enrollmentId) !== String(enrollment._id)) repair.enrollmentId = enrollment._id;
-      if (!priorReceipt.courseCode || (linkedToThisEnrollment && String(priorReceipt.courseCode).toUpperCase() !== courseCode)) repair.courseCode = courseCode;
-      if (!priorReceipt.course || (linkedToThisEnrollment && String(priorReceipt.course) !== String(enrollment.course || enrollment.courseName || row.course || ""))) repair.course = enrollment.course || enrollment.courseName || row.course || "";
-      if (!priorReceipt.stCode || (linkedToThisEnrollment && String(priorReceipt.stCode) !== String(enrollment.stCode))) repair.stCode = enrollment.stCode;
-      if (Object.keys(repair).length) {
-        operations.push({ updateOne: { filter: { _id: priorReceipt._id }, update: { $set: repair } } });
+      if (Object.keys(patch).length) {
+        updateById.set(String(priorReceipt._id), { updateOne: { filter: { _id: priorReceipt._id }, update: { $set: patch } } });
         existingReceiptsUpdated += 1;
       } else duplicateReceiptsSkipped += 1;
       existingReceiptsUpdatedOrSkipped += 1;
       continue;
     }
-    const looseKey = [String(enrollment.studentId), clean(row.stCode), mrNo, paymentDate.toISOString().slice(0, 10), amountPaid.toFixed(2)].join("|");
-    if (existingByLooseKey.has(looseKey) && (registrationsByCode.get(clean(row.stCode))?.size || 0) > 1) {
-      unmatchedRows.push({ row: row.rowNo, sheet: row.sourceSheet || "", studentId: registrationId, stCode: row.stCode || "", name: row.cleanName || "", course: row.course || "", mrNo, paymentDate, amountPaid, reason: "An existing receipt has this reused St_Code but no registration identity; it was not reassigned to avoid cross-student payment mixing." });
-      continue;
-    }
-    if (seenInBatch.has(key)) {
-      existingReceiptsUpdatedOrSkipped += 1;
-      duplicateReceiptsSkipped += 1;
-      continue;
-    }
-    seenInBatch.add(key);
-    const courseCode = clean(enrollment.courseCode || row.course).toUpperCase();
-    operations.push({ insertDoc: { _id: new mongoose.Types.ObjectId(), studentId: enrollment.studentId, masterStudentId: enrollment.studentId, enrollmentId: enrollment._id, stCode: enrollment.stCode, registrationId, courseCode, course: enrollment.course || enrollment.courseName || row.course || "", mrNo, paymentDate, amountPaid, rawPaymentDate: paymentDate, sourceSheet: clean(row.sourceSheet), sourceRowNo: Number(row.rowNo || 0), importBatchKey: "UNIFIED_WORKBOOK_IMPORT", stNameKey: registrationId, allocations: [], importWarnings: [] } });
+    newDocs.push({ _id: new mongoose.Types.ObjectId(), ...paymentValues });
   }
-  const newReceiptDocs=[],receiptUpdates=[];for(const op of operations){if(op.insertDoc)newReceiptDocs.push(op.insertDoc);else if(op.updateOne?.filter?._id)receiptUpdates.push(op);}
-  for(let off=0;off<newReceiptDocs.length;off+=500){const chunk=newReceiptDocs.slice(off,off+500),t=Date.now();try{newReceiptsAdded+=(await StudentFeePayment.insertMany(chunk,{ordered:false})).length;}catch(e){if(e.code!==11000&&!(e.writeErrors||[]).some(x=>x.code===11000))throw e;const found=await StudentFeePayment.find({_id:{$in:chunk.map(x=>x._id)}}).select("_id").lean(),ids=new Set(found.map(x=>String(x._id)));newReceiptsAdded+=found.length;const missing=chunk.filter(x=>!ids.has(String(x._id)));if(missing.length)try{newReceiptsAdded+=(await StudentFeePayment.insertMany(missing,{ordered:false})).length;}catch(re){if(re.code!==11000&&!(re.writeErrors||[]).some(x=>x.code===11000))throw re;duplicateReceiptsSkipped+=missing.length;existingReceiptsUpdatedOrSkipped+=missing.length;}duplicateReceiptsSkipped+=chunk.length-found.length-missing.length;existingReceiptsUpdatedOrSkipped+=chunk.length-found.length-missing.length;}console.log("[unified-import]","fee-insert",Math.floor(off/500)+1,Date.now()-t,{attempted:chunk.length});}
-  for(let off=0;off<receiptUpdates.length;off+=500){const chunk=receiptUpdates.slice(off,off+500),t=Date.now();if(chunk.length)await StudentFeePayment.bulkWrite(chunk,{ordered:false});console.log("[unified-import]","fee-update",Math.floor(off/500)+1,Date.now()-t,{updated:chunk.length});}
-  onProgress({
-    percent: 92, stage: "Importing Fee Receipts",
-    message: "Fee Receipts: " + rows.length.toLocaleString("en-IN") + " / " + rows.length.toLocaleString("en-IN") + " processed",
-    processed: rows.length, total: rows.length
-  });
-  return { newReceiptsAdded, existingReceiptsUpdatedOrSkipped, duplicateReceiptsSkipped, existingReceiptsUpdated, unmatchedRows, feeRowsProcessed: rows.length };
+
+  const updateOps = [...updateById.values()];
+  for (let offset = 0; offset < updateOps.length; offset += 500) {
+    const chunk = updateOps.slice(offset, offset + 500);
+    const started = Date.now();
+    await StudentFeePayment.bulkWrite(chunk, { ordered: false });
+    console.log("[unified-import]", "fee-repair", Math.floor(offset / 500) + 1, Date.now() - started, { updated: chunk.length });
+  }
+  for (let offset = 0; offset < newDocs.length; offset += 500) {
+    const chunk = newDocs.slice(offset, offset + 500);
+    const started = Date.now();
+    try {
+      const inserted = await StudentFeePayment.insertMany(chunk, { ordered: false });
+      newReceiptsAdded += inserted.length;
+    } catch (error) {
+      const writeErrors = error.writeErrors || error.result?.writeErrors || [];
+      const duplicateOnly = error.code === 11000 || (writeErrors.length > 0 && writeErrors.every(item => item.code === 11000));
+      if (!duplicateOnly) throw error;
+      const keys = chunk.map(item => makeReceiptBusinessKey(item.normalizedStCode, item.mrNo, item.paymentDate, item.amountPaid));
+      const persisted = await StudentFeePayment.find({ $or: [
+        { sourceRowKey: { $in: chunk.map(item => item.sourceRowKey) } },
+        ...chunk.map(item => ({ normalizedStCode: item.normalizedStCode, mrNo: item.mrNo, paymentDate: item.paymentDate, amountPaid: item.amountPaid })),
+        ...chunk.map(item => ({ stCode: item.stCode, mrNo: item.mrNo, paymentDate: item.paymentDate, amountPaid: item.amountPaid }))
+      ] }).lean();
+      const persistedKeys = new Set(persisted.map(item => makeReceiptBusinessKey(item.normalizedStCode || item.stCode, item.mrNo, item.paymentDate, item.amountPaid)));
+      const persistedSourceKeys = new Set(persisted.map(item => String(item.sourceRowKey || "")));
+      const missing = chunk.filter(item => !persistedSourceKeys.has(item.sourceRowKey) && !persistedKeys.has(makeReceiptBusinessKey(item.normalizedStCode, item.mrNo, item.paymentDate, item.amountPaid)));
+      const repairs = [];
+      for (const item of chunk) {
+        const prior = persisted.find(doc => String(doc.sourceRowKey || "") === item.sourceRowKey
+          || makeReceiptBusinessKey(doc.normalizedStCode || doc.stCode, doc.mrNo, doc.paymentDate, doc.amountPaid) === makeReceiptBusinessKey(item.normalizedStCode, item.mrNo, item.paymentDate, item.amountPaid));
+        if (prior) {
+          repairs.push({ updateOne: { filter: { _id: prior._id }, update: { $set: {
+            studentId: item.studentId, masterStudentId: item.masterStudentId, enrollmentId: item.enrollmentId,
+            stCode: item.stCode, normalizedStCode: item.normalizedStCode, registrationId: item.registrationId,
+            stNameKey: item.stNameKey, courseCode: item.courseCode, course: item.course,
+            sourceRowKey: item.sourceRowKey, sourceBatchKey: item.sourceBatchKey, importBatchKey: item.importBatchKey
+          } } } });
+          duplicateReceiptsSkipped += 1;
+          existingReceiptsUpdatedOrSkipped += 1;
+        }
+      }
+      if (repairs.length) await StudentFeePayment.bulkWrite(repairs, { ordered: false });
+      if (missing.length) {
+        try {
+          const inserted = await StudentFeePayment.insertMany(missing, { ordered: false });
+          newReceiptsAdded += inserted.length;
+        } catch (retryError) {
+          const retryErrors = retryError.writeErrors || retryError.result?.writeErrors || [];
+          if (retryError.code !== 11000 && !retryErrors.every(item => item.code === 11000)) throw retryError;
+          const unresolved = await StudentFeePayment.find({ sourceRowKey: { $in: missing.map(item => item.sourceRowKey) } }).select("sourceRowKey").lean();
+          const savedKeys = new Set(unresolved.map(item => item.sourceRowKey));
+          const notSaved = missing.filter(item => !savedKeys.has(item.sourceRowKey));
+          for (const item of notSaved) unmatchedRows.push({
+            row: item.sourceRowNo, sheet: item.sourceSheet, stCode: item.stCode,
+            name: item.stNameKey, amountPaid: item.amountPaid, mrNo: item.mrNo,
+            paymentDate: item.paymentDate, reason: "MongoDB rejected this receipt with a duplicate-key conflict and no matching existing receipt could be found."
+          });
+        }
+      }
+    }
+    console.log("[unified-import]", "fee-insert", Math.floor(offset / 500) + 1, Date.now() - started, { attempted: chunk.length });
+  }
+  onProgress({ percent: 92, stage: "Importing Fee Receipts", processed: rows.length, total: rows.length });
+  return {
+    newReceiptsAdded, existingReceiptsUpdatedOrSkipped, duplicateReceiptsSkipped,
+    existingReceiptsUpdated, unmatchedRows, feeRowsProcessed: rows.length,
+    feeRowsSavedOrAlreadyPresent: newReceiptsAdded + existingReceiptsUpdatedOrSkipped
+  };
 }
 
 async function finalizeFeeSummaries(rawStudentIds = []) {
