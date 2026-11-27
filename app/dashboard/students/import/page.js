@@ -64,7 +64,8 @@ function parseDate(value) {
 }
 
 function parseIdentity(rawName, explicitCode) {
-  const firstLine = clean(rawName).split(/\r?\n/)[0].replace(/[\u200B-\u200D\uFEFF]/g, "").replace(/\s+/g, " ").trim();
+  const rawNameValue = clean(rawName);
+  const firstLine = (rawNameValue === "__FORMULA_WITHOUT_CACHED_VALUE__" ? "" : rawNameValue).split(/\r?\n/)[0].replace(/[\u200B-\u200D\uFEFF]/g, "").replace(/\s+/g, " ").trim();
   const nameWithoutSuffix = firstLine.replace(/_\s*\d+\s*$/, "").trim();
   const name = normalizeName(nameWithoutSuffix || firstLine);
   const explicitCodeValue = clean(explicitCode);
@@ -160,7 +161,7 @@ function buildWorkbookPayload(workbook) {
   }
   const studentHeaders = studentSheet.grid[studentSheet.headerIndex].map(headerKey);
   const studentAt = key => columnIndex(studentHeaders, key);
-  const studentGet = (row, key) => studentAt(key) >= 0 ? row[studentAt(key)] : "";
+  const studentGet = (row, key) => { const value = studentAt(key) >= 0 ? row[studentAt(key)] : ""; return clean(value) === "__FORMULA_WITHOUT_CACHED_VALUE__" ? "" : value; };
   const recordsByKey = new Map();
   const studentWarnings = [];
   let studentRowsRead = 0;
@@ -263,7 +264,9 @@ function buildWorkbookPayload(workbook) {
     paymentRowsRead += 1;
     const sourceCodeValue = clean(feeGet(row, "stcode"));
     const sourceStCode = sourceCodeValue === "__FORMULA_WITHOUT_CACHED_VALUE__" ? "" : normalizeStudentCode(sourceCodeValue);
-    const feeNameRaw = feeGet(row, "stnamecr") || feeGet(row, "stname");
+    const cleanFeeName = clean(feeGet(row, "stnamecr"));
+    const fallbackFeeName = clean(feeGet(row, "stname"));
+    const feeNameRaw = cleanFeeName && cleanFeeName !== "__FORMULA_WITHOUT_CACHED_VALUE__" ? cleanFeeName : (fallbackFeeName === "__FORMULA_WITHOUT_CACHED_VALUE__" ? "" : fallbackFeeName);
     const feeName = normalizeName(clean(feeNameRaw).split(/\r?\n/)[0].replace(/_\s*\d+\s*$/, ""));
     const paymentDate = parseDate(feeGet(row, "dop"));
     const amountPaid = parseImportAmount(feeGet(row, "amtpaid"));
