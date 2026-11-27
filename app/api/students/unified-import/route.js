@@ -871,13 +871,26 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
       ...(suppliedCodes.length ? [{ normalizedStCodes: { $in: suppliedCodes } }, { studentCodes: { $in: [...new Set(suppliedCodes.flatMap(codeLookupVariants))] } }] : [])
     ]
   }).lean();
+  const legacyIds = [...new Set(masters.flatMap(master => master.legacyStudentIds || []).filter(validObjectId).map(String))];
+  const legacyObjectIds = legacyIds.map(id => new mongoose.Types.ObjectId(id));
+  const legacyStudents = await Student.find({
+    $or: [
+      ...(legacyObjectIds.length ? [{ _id: { $in: legacyObjectIds } }] : []),
+      ...(suppliedCodes.length ? [{ normalizedStCode: { $in: suppliedCodes } }, { regnNo: { $in: [...new Set(suppliedCodes.flatMap(codeLookupVariants))] } }, { enrollmentNo: { $in: [...new Set(suppliedCodes.flatMap(codeLookupVariants))] } }] : [])
+    ]
+  }).lean();
+  const legacyStudentById = new Map(legacyStudents.map(item => [String(item._id), item]));
   const codes = [...new Set([
     ...suppliedCodes,
     ...masters.flatMap(master => [
       ...(master.normalizedStCodes || []), ...(master.studentCodes || []), ...(master.stCodes || []),
       master.primaryStCode, master.currentStCode,
       ...(master.registrations || []).map(item => item.stCode),
-      ...(master.enrollments || []).map(item => item.stCode)
+      ...(master.enrollments || []).map(item => item.stCode),
+      ...(master.legacyStudentIds || []).map(id => {
+        const linked = legacyStudentById.get(String(id));
+        return linked?.normalizedStCode || linked?.regnNo || linked?.enrollmentNo;
+      })
     ])
   ].map(normalizeStudentCode).filter(Boolean))];
   if (!masters.length && !codes.length) return { studentsFinalized: 0, enrollmentsFinalized: 0, databasePaymentRows: 0, databasePaymentTotal: 0, paymentReconciliationMatches: false };
@@ -960,19 +973,10 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
     const key = String(enrollment.studentId);
     enrollmentsByMaster.set(key, [...(enrollmentsByMaster.get(key) || []), enrollment]);
   }
-  const legacyIds = [...new Set(masters.flatMap(master => master.legacyStudentIds || []).filter(validObjectId).map(String))];
-  const legacyObjectIds = legacyIds.map(id => new mongoose.Types.ObjectId(id));
-  const legacyStudents = await Student.find({
-    $or: [
-      ...(legacyObjectIds.length ? [{ _id: { $in: legacyObjectIds } }] : []),
-      ...(codes.length ? [{ normalizedStCode: { $in: codes } }, { regnNo: { $in: codeVariants } }, { enrollmentNo: { $in: codeVariants } }] : [])
-    ]
-  }).lean();
   const LegacyFeeSchema = new mongoose.Schema({ studentId: mongoose.Schema.Types.ObjectId, payments: [mongoose.Schema.Types.Mixed] }, { strict: false });
   const StudentFee = mongoose.models.StudentFee || mongoose.model("StudentFee", LegacyFeeSchema);
   const legacyStudentIds = legacyStudents.map(item => item._id);
   const legacyFees = legacyStudentIds.length ? await StudentFee.find({ studentId: { $in: legacyStudentIds } }).lean() : [];
-  const legacyStudentById = new Map(legacyStudents.map(item => [String(item._id), item]));
   const importedReceiptKeys = new Set();
   const importedPaymentDocs = codes.length ? await StudentFeePayment.find({
     $or: [...codes.map(code => ({ normalizedStCode: code })), { stCode: { $in: codeVariants } }]
