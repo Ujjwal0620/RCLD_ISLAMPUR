@@ -889,7 +889,8 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
   }
   await insertChunks(StudentMaster, masterInserts, "master-code-insert");
   await updateChunks(StudentMaster, masterUpdates, "master-code-update");
-  await updateChunks(StudentMaster, activeMasterOps, "active-master");
+  // Active enrollment IDs are written only after enrollment inserts have been
+  // reconciled to their persisted MongoDB IDs below.
   // Deduplicate incoming enrollments by the exact same natural key as the
   // MongoDB unique index. This prevents two rows in one unordered insert chunk
   // from racing each other before the database can persist either one.
@@ -951,6 +952,7 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
       if (id && actualIds.has(String(id))) operation.updateOne.filter._id = actualIds.get(id);
     }
   }
+  await updateChunks(StudentMaster, activeMasterOps, "active-master");
   await updateChunks(StudentEnrollment, enrollmentUpdates, "enrollment-code-update");
   await updateChunks(StudentEnrollment, enrollmentStatusOps, "enrollment-status");
   onPhase("students");
