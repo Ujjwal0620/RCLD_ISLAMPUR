@@ -356,7 +356,15 @@ export async function POST(request) {
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const workbook = XLSX.read(buffer, { type: "buffer", cellDates: true });
-    if (String(form.get("feeOnly") || "").toLowerCase() === "true") {
+    const feeOnlyRequest = String(form.get("feeOnly") || "").toLowerCase() === "true";
+    if (mode === "import" && !feeOnlyRequest) {
+      return NextResponse.json({
+        error: "The legacy student bulk-import writer is disabled because it grouped rows by registration number and could skip course records. Use the unified Student + Fees importer at /dashboard/students/import.",
+        code: "LEGACY_IMPORT_DISABLED",
+        safeImporter: "/dashboard/students/import"
+      }, { status: 410 });
+    }
+    if (feeOnlyRequest) {
       await connectMongoDB();
       const feeResult = await reconcileStudentFeesOnly(workbook, { sourceName: String(file.name || "Fee-only reconciliation").slice(0, 180) });
       return NextResponse.json({
