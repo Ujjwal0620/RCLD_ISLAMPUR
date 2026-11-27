@@ -324,6 +324,13 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
       continue;
     }
     const master = linkedMaster || codeMasters[0] || null;
+    const masterExistingCodes = new Set([
+      ...(master?.normalizedStCodes || []), ...(master?.studentCodes || []), ...(master?.stCodes || []),
+      master?.primaryStCode, master?.currentStCode,
+      ...(master?.registrations || []).map(item => item.stCode),
+      ...(master?.enrollments || []).map(item => item.stCode)
+    ].map(normalizeStudentCode).filter(Boolean));
+    const masterHasOtherCodes = [...masterExistingCodes].some(existingCode => existingCode !== code);
 
     const masterId = master?._id || new mongoose.Types.ObjectId();
     if (master) matchedProfiles += 1;
@@ -423,8 +430,8 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
     const incomingPhones = normalizeIndianPhones([...(group.phones || []), ...(master?.phoneNumbers || []), ...(master?.phones || [])]);
     const legacyIds = [...new Set([...(master?.legacyStudentIds || []).map(String), String(studentId)])];
     const masterSet = {
-      fullName: displayName(group.cleanName || newest.cleanName),
-      normalizedFullName: incomingName,
+      fullName: masterHasOtherCodes ? (master?.fullName || displayName(group.cleanName || newest.cleanName)) : displayName(group.cleanName || newest.cleanName),
+      normalizedFullName: masterHasOtherCodes ? (master?.normalizedFullName || incomingName) : incomingName,
       normalizedStCodes: [...new Set([...(master?.normalizedStCodes || []).map(normalizeStudentCode), code])],
       primaryStCode: master?.primaryStCode || code,
       studentCodes: [...new Set([...(master?.studentCodes || []), code])],
@@ -441,11 +448,13 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
     if (!master?.dob && asDate(group.dob)) masterSet.dob = asDate(group.dob);
     if (!master?.fatherName && (group.fatherName || newest.fatherName)) masterSet.fatherName = group.fatherName || newest.fatherName;
     if (!master?.gender && newest.sex) masterSet.gender = newest.sex;
-    masterSet.currentStCode = code;
-    masterSet.currentRegistrationId = current.registrationId;
-    masterSet.currentCourse = current.course;
-    masterSet.currentAdmissionDate = current.dateOfAdmission || null;
-    masterSet.dateOfAdmission = current.dateOfAdmission || null;
+    if (!masterHasOtherCodes || !master?.currentStCode) {
+      masterSet.currentStCode = code;
+      masterSet.currentRegistrationId = current.registrationId;
+      masterSet.currentCourse = current.course;
+      masterSet.currentAdmissionDate = current.dateOfAdmission || null;
+      masterSet.dateOfAdmission = current.dateOfAdmission || null;
+    }
     masterSet.formNo = current.formNo || master?.formNo || "";
     if (!master?.address && currentIncoming.address) masterSet.address = currentIncoming.address;
     if (!master?.qualification && currentIncoming.qualification) masterSet.qualification = currentIncoming.qualification;
