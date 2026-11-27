@@ -755,7 +755,9 @@ async function syncFeeRows(rows = [], onProgress = () => {}, registrationMap = [
     if (priorReceipt) {
       if (clean(priorReceipt.sourceBatchKey) === clean(batchKey)
         && clean(priorReceipt.sourceRowKey)
-        && String(priorReceipt.sourceRowKey) !== sourceRowKey) {
+        && String(priorReceipt.sourceRowKey) !== sourceRowKey
+        && (Number(priorReceipt.sourceRowNo || 0) !== Number(row.rowNo || 0)
+          || clean(priorReceipt.sourceSheet) !== clean(row.sourceSheet))) {
         duplicateReceiptsSkipped += 1;
         existingReceiptsUpdatedOrSkipped += 1;
         unmatchedRows.push({
