@@ -687,6 +687,7 @@ export default function BulkImportPage() {
             <div className="summary-card"><span>Duplicate Names Across Student Codes</span><strong>{result.duplicateNameStudentCount}</strong></div>
             <div className="summary-card"><span>Student Code Collisions</span><strong>{collisionCount}</strong></div>
             <div className="summary-card"><span>Student Rows Read / Valid</span><strong>{result.studentRowsRead} / {result.studentRowsValid}</strong></div>
+            <div className="summary-card"><span>Student Rows Skipped / Flagged</span><strong>{Math.max(0, Number(result.studentRowsRead || 0) - Number(result.studentRowsValid || 0))}</strong></div>
             <div className="summary-card"><span>Payment Rows Read / Saved</span><strong>{result.paymentRowsRead} / {result.databasePaymentRows}</strong></div>
             <div className="summary-card"><span>Matched Payment Rows Submitted</span><strong>{result.feeRowsSubmitted}</strong></div>
             <div className="summary-card"><span>Unmatched Payment Rows</span><strong>{result.unmatchedPayments?.length || 0}</strong></div>
@@ -700,6 +701,18 @@ export default function BulkImportPage() {
             <div className="summary-card"><span>All Source Rows + Amounts Accounted</span><strong>{result.sourcePaymentReconciliationMatches ? "Matched" : "Needs Review"}</strong></div>
             <div className="summary-card"><span>Duplicate Payment Documents in DB</span><strong>{result.duplicatePaymentDocumentsFound}</strong></div>
           </div>
+          {result.duplicateNameStudents?.length > 0 && <div style={{ padding: "0 20px 20px" }}>
+            <h4>Names Associated With Multiple Student Codes ({result.duplicateNameStudents.length})</h4>
+            <div style={{ maxHeight: 220, overflow: "auto", border: "1px solid var(--border,#e5e7eb)", borderRadius: 10 }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                <thead><tr><th style={{ padding: 8, textAlign: "left" }}>Normalized Student Name</th><th style={{ padding: 8, textAlign: "left" }}>Student Codes</th></tr></thead>
+                <tbody>{result.duplicateNameStudents.map((item, index) => <tr key={item.name + "-" + index}>
+                  <td style={{ padding: 8 }}>{item.name}</td>
+                  <td style={{ padding: 8 }}>{(item.studentCodes || []).join(", ")}</td>
+                </tr>)}</tbody>
+              </table>
+            </div>
+          </div>}
           {result.unmatchedPayments?.length > 0 && <div style={{ padding: "0 20px 20px" }}>
             <h4>Unmatched / Rejected Payment Rows ({result.unmatchedPayments.length})</h4>
             <div style={{ maxHeight: 360, overflow: "auto", border: "1px solid var(--border,#e5e7eb)", borderRadius: 10 }}>
