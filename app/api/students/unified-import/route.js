@@ -1121,7 +1121,7 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
                             ""
                           ] }
                         ] }
-                      ] }}
+                      ] }
                     ] }
                   ] }
                 ] }
