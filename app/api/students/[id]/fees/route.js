@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { connectMongoDB } from "@/lib/mongodb";
 import { getSession, roleOfEmployee } from "@/lib/auth";
+import Student from "@/models/Student";
+import { normalizeStCode } from "@/lib/student-import/normalization";
+import { recalculateImportedStudentCodes } from "@/lib/student-import/import-payment-sheet";
 
 const PaymentSchema = new mongoose.Schema({
   amount: { type: Number, required: true, min: 0 },
