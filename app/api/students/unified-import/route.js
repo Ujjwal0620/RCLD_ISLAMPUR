@@ -606,9 +606,10 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
   await insertChunks(StudentEnrollment, enrollmentInserts, "enrollment-code-insert");
   if (enrollmentInserts.length) {
     const persisted = await StudentEnrollment.find({ $or: enrollmentInserts.map(item => ({
-      studentId: item.studentId, normalizedStCode: item.normalizedStCode,
-      normalizedFullName: item.normalizedFullName, courseCode: item.courseCode,
-      admissionDate: item.admissionDate
+      studentId: item.studentId,
+      normalizedStCode: normalizeStudentCode(item.normalizedStCode || item.stCode),
+      courseCode: item.courseCode,
+      admissionDate: item.admissionDate || null
     })) }).lean();
     const persistedByKey = new Map(persisted.map(item => [enrollmentUniqueKey(item), item]));
     const actualIds = new Map();
