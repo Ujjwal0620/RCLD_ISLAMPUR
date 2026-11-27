@@ -333,7 +333,7 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
     const studentValues = {
       normalizedStCode: code,
       regnNo: code,
-      enrollmentNo: codeAmbiguous ? (canonicalStudent?.enrollmentNo || "") : (canonicalStudent?.enrollmentNo || code),
+      enrollmentNo: canonicalStudent ? (canonicalStudent.enrollmentNo || "") : code,
       formNo: newest.formNo || "",
       admissionDate: newest.dateOfAdmission?.toISOString() || "",
       dateOfAdmission: newest.dateOfAdmission?.toISOString() || "",
