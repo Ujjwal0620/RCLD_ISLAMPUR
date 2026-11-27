@@ -23,37 +23,38 @@ async function ensureReceiptIndex() {
         if (error.code === 26 || error.codeName === "NamespaceNotFound") return [];
         throw error;
       });
-      // Receipt-only unique indexes reject the same MR/date/amount for different students.
-      // Registration-name indexes are also unsuitable now that normalized Student Code is primary.
+      // Old unique indexes that include amountPaid allow a corrected amount to create a second receipt.
+      // Replace only index definitions; never delete, archive, or rewrite payment documents.
       const obsolete = indexes.filter(index => index.unique
-        && !index.key?.stCode
-        && !index.key?.normalizedStCode
-        && (
-          ["mrNo", "paymentDate", "amountPaid"].every(key => index.key?.[key] === 1)
-          || (index.key?.registrationId === 1 && ["mrNo", "paymentDate", "amountPaid"].every(key => index.key?.[key] === 1))
-        ));
+        && index.name !== "student_fee_source_row_unique"
+        && index.key?.mrNo === 1
+        && index.key?.paymentDate === 1
+        && (index.key?.amountPaid === 1 || index.key?.stCode === 1
+          || index.key?.normalizedStCode === 1 || index.key?.registrationId === 1
+          || index.key?.masterStudentId === 1));
       for (const index of obsolete) await StudentFeePayment.collection.dropIndex(index.name);
-      const current = indexes.find(index => index.name === "student_fee_source_row_unique");
-      if (!current) await StudentFeePayment.collection.createIndex(
-        { sourceRowKey: 1 },
-        {
-          unique: true,
-          name: "student_fee_source_row_unique",
-          partialFilterExpression: { sourceRowKey: { $type: "string", $gt: "" } }
-        }
-      );
-      if (!indexes.some(index => index.name === "master_normalized_stcode_receipt_unique")) {
+
+      const currentIndexes = await StudentFeePayment.collection.indexes().catch(() => []);
+      if (!currentIndexes.some(index => index.name === "student_fee_source_row_unique")) {
+        await StudentFeePayment.collection.createIndex(
+          { sourceRowKey: 1 },
+          {
+            unique: true,
+            name: "student_fee_source_row_unique",
+            partialFilterExpression: { sourceRowKey: { $type: "string", $gt: "" } }
+          }
+        );
+      }
+      if (!currentIndexes.some(index => index.name === "normalized_stcode_receipt_date_unique")) {
         const duplicateKeys = await StudentFeePayment.collection.aggregate([
           { $match: {
             importBatchKey: "UNIFIED_WORKBOOK_IMPORT",
-            masterStudentId: { $type: "objectId" },
             normalizedStCode: { $type: "string", $gt: "" },
             mrNo: { $type: "string", $gt: "" },
-            paymentDate: { $type: "date" },
-            amountPaid: { $type: "number" }
+            paymentDate: { $type: "date" }
           } },
           { $group: {
-            _id: { masterStudentId: "$masterStudentId", normalizedStCode: "$normalizedStCode", mrNo: "$mrNo", paymentDate: "$paymentDate", amountPaid: "$amountPaid" },
+            _id: { normalizedStCode: "$normalizedStCode", mrNo: "$mrNo", paymentDate: "$paymentDate" },
             count: { $sum: 1 }
           } },
           { $match: { count: { $gt: 1 } } },
@@ -61,25 +62,22 @@ async function ensureReceiptIndex() {
         ]).toArray();
         if (!duplicateKeys.length) {
           await StudentFeePayment.collection.createIndex(
-            { masterStudentId: 1, normalizedStCode: 1, mrNo: 1, paymentDate: 1, amountPaid: 1 },
+            { normalizedStCode: 1, mrNo: 1, paymentDate: 1 },
             {
               unique: true,
-              name: "master_normalized_stcode_receipt_unique",
+              name: "normalized_stcode_receipt_date_unique",
               partialFilterExpression: {
                 importBatchKey: "UNIFIED_WORKBOOK_IMPORT",
-                masterStudentId: { $type: "objectId" },
                 normalizedStCode: { $type: "string", $gt: "" },
                 mrNo: { $type: "string", $gt: "" },
-                paymentDate: { $type: "date" },
-                amountPaid: { $type: "number" }
+                paymentDate: { $type: "date" }
               }
             }
           );
         } else {
-          console.warn("[unified-import] existing duplicate receipt business keys detected; preserving all documents and relying on import reconciliation until reviewed");
+          console.warn("[unified-import] duplicate normalized Student Code / receipt / date records already exist; all records are preserved and receipt totals will be deduplicated during reconciliation");
         }
       }
-      // Existing receipt documents are never deleted, archived, or rewritten during index setup.
     })().catch(error => {
       receiptIndexPromise = null;
       throw error;
