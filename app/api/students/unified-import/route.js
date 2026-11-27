@@ -153,10 +153,15 @@ function registrationSort(a, b) {
   return db - da || String(b.stCode).localeCompare(String(a.stCode));
 }
 
-const enrollmentUniqueKey = item => [
-  String(item.studentId || ""), normalizeStudentCode(item.normalizedStCode || item.stCode),
-  normalizeCourseCode(item.courseCode), asDate(item.admissionDate)?.toISOString().slice(0, 10) || ""
-].join("|");
+const enrollmentUniqueKey = item => {
+  const studentId = String(item.studentId?._id || item.studentId || "").trim().toLowerCase();
+  const studentCode = normalizeStudentCode(item.normalizedStCode || item.stCode);
+  const courseCode = normalizeCourseCode(item.courseCode || "") || clean(item.courseCode).toUpperCase();
+  const admissionDate = asDate(item.admissionDate);
+  // The MongoDB unique index compares the complete BSON Date value, not just
+  // the calendar day. Use the same canonical instant for input and DB docs.
+  return [studentId, studentCode, courseCode, admissionDate ? admissionDate.toISOString() : ""].join("|");
+};
 
 async function bulkWriteChunked(model, operations, warnings, label, chunkSize = 500) {
   for (let offset = 0; offset < operations.length; offset += chunkSize) {
@@ -581,6 +586,7 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
   }
 
   let duplicateDocsSkipped = 0;
+  const enrollmentIdAliases = new Map();
   const insertChunks = async (Model, docs, phase, size = 200) => {
     for (let offset = 0; offset < docs.length; offset += size) {
       const chunk = docs.slice(offset, offset + size);
@@ -588,29 +594,156 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
       try {
         await Model.insertMany(chunk, { ordered: false });
       } catch (error) {
-        const writeErrors = error.writeErrors || error.result?.writeErrors || [];
-        const onlyDuplicates = error.code === 11000 || (writeErrors.length && writeErrors.every(item => item.code === 11000));
+        const extractWriteErrors = value => value?.writeErrors
+          || value?.result?.writeErrors
+          || value?.result?.getWriteErrors?.()
+          || value?.cause?.writeErrors
+          || [];
+        const writeErrors = extractWriteErrors(error);
+        const onlyDuplicates = error.code === 11000
+          || (writeErrors.length > 0 && writeErrors.every(item => Number(item.code || item.err?.code) === 11000));
         if (!onlyDuplicates) throw error;
-        duplicateDocsSkipped += writeErrors.filter(item => item.code === 11000).length || 1;
+        duplicateDocsSkipped += writeErrors.filter(item => Number(item.code || item.err?.code) === 11000).length || 1;
+
         if (Model.modelName === "StudentEnrollment") {
-          const naturalQuery = { $or: chunk.map(item => ({
-            studentId: item.studentId, normalizedStCode: item.normalizedStCode,
-            courseCode: item.courseCode, admissionDate: item.admissionDate || null
-          })) };
-          let persisted = await StudentEnrollment.find(naturalQuery).lean();
-          const persistedKeys = new Set(persisted.map(enrollmentUniqueKey));
-          const missing = chunk.filter(item => !persistedKeys.has(enrollmentUniqueKey(item)));
-          if (missing.length) {
-            try { await Model.insertMany(missing, { ordered: false }); }
-            catch (retryError) {
-              const retryErrors = retryError.writeErrors || retryError.result?.writeErrors || [];
-              if (retryError.code !== 11000 && !(retryErrors.length && retryErrors.every(item => item.code === 11000))) throw retryError;
-              duplicateDocsSkipped += retryErrors.filter(item => item.code === 11000).length || 1;
-              persisted = await StudentEnrollment.find(naturalQuery).lean();
-              const afterRetry = new Set(persisted.map(enrollmentUniqueKey));
-              const unresolved = missing.filter(item => !afterRetry.has(enrollmentUniqueKey(item)));
-              if (unresolved.length) throw new Error("Enrollment duplicate recovery could not confirm " + unresolved.length + " records by their natural Student Code key.");
+          const getPattern = item => item.keyPattern || item.err?.keyPattern || item.errInfo?.keyPattern
+            || item.err?.errInfo?.keyPattern || {};
+          const getValue = item => item.keyValue || item.err?.keyValue || item.errInfo?.keyValue
+            || item.err?.errInfo?.keyValue || {};
+          const getIndexFilter = (doc, pattern) => {
+            const filter = {};
+            for (const field of Object.keys(pattern || {})) {
+              const value = field.split(".").reduce((current, part) => current?.[part], doc);
+              if (value !== undefined) filter[field] = value;
             }
+            return Object.keys(filter).length ? filter : null;
+          };
+          const errorByChunkIndex = new Map(writeErrors.map(item => [Number(item.index), item]));
+          const naturalFilters = chunk.map(item => ({
+            studentId: item.studentId,
+            normalizedStCode: normalizeStudentCode(item.normalizedStCode || item.stCode),
+            courseCode: normalizeCourseCode(item.courseCode || "") || clean(item.courseCode).toUpperCase(),
+            admissionDate: asDate(item.admissionDate)
+          }));
+          const conflictingFilters = [];
+          for (const [index, writeError] of errorByChunkIndex) {
+            const attempted = chunk[index];
+            if (!attempted) continue;
+            const filter = getIndexFilter(attempted, getPattern(writeError));
+            if (filter) conflictingFilters.push(filter);
+          }
+          // Native collection reads bypass the schema's find middleware, so
+          // merged/archived rows are visible when diagnosing a unique conflict.
+          const readPersisted = async candidates => {
+            const filters = [...naturalFilters, ...candidates].filter(item => item && Object.keys(item).length);
+            return filters.length ? StudentEnrollment.collection.find({ $or: filters }).toArray() : [];
+          };
+          let persisted = await readPersisted(conflictingFilters);
+          const persistedByNaturalKey = new Map(persisted.map(item => [enrollmentUniqueKey(item), item]));
+          const diagnosticsFor = (item, writeError, reason, conflict = null) => ({
+            reason,
+            enrollmentUniqueKey: enrollmentUniqueKey(item),
+            studentCode: normalizeStudentCode(item.normalizedStCode || item.stCode),
+            studentId: String(item.studentId?._id || item.studentId || ""),
+            conflictingDocumentId: conflict?._id ? String(conflict._id) : null,
+            mongo: {
+              code: Number(writeError?.code || writeError?.err?.code || error.code || 11000),
+              message: writeError?.errmsg || writeError?.err?.errmsg || writeError?.message || error.message,
+              keyPattern: getPattern(writeError),
+              keyValue: getValue(writeError)
+            }
+          });
+          const missing = [];
+          const unresolvedDiagnostics = [];
+          for (let index = 0; index < chunk.length; index += 1) {
+            const item = chunk[index];
+            const naturalKey = enrollmentUniqueKey(item);
+            const exact = persistedByNaturalKey.get(naturalKey);
+            if (exact) {
+              enrollmentIdAliases.set(String(item._id), exact._id);
+              continue;
+            }
+            const writeError = errorByChunkIndex.get(index);
+            if (!writeError) {
+              // ordered:false can persist some documents while reporting only
+              // the failed indexes. An unreported item is retried idempotently.
+              missing.push(item);
+              continue;
+            }
+            const pattern = getPattern(writeError);
+            const conflictFilter = getIndexFilter(item, pattern);
+            const conflict = conflictFilter
+              ? persisted.find(row => Object.entries(conflictFilter).every(([key, value]) => {
+                  const actual = key.split(".").reduce((current, part) => current?.[part], row);
+                  return String(actual ?? "") === String(value ?? "");
+                }))
+              : null;
+            if (conflict && enrollmentUniqueKey(conflict) !== naturalKey) {
+              unresolvedDiagnostics.push(diagnosticsFor(item, writeError,
+                "MongoDB duplicate key belongs to a different enrollment natural key; no other student's record was overwritten.", conflict));
+            } else {
+              missing.push(item);
+            }
+          }
+
+          if (missing.length) {
+            try {
+              await Model.insertMany(missing, { ordered: false });
+            } catch (retryError) {
+              const retryErrors = extractWriteErrors(retryError);
+              const duplicateRetryOnly = retryError.code === 11000
+                || (retryErrors.length > 0 && retryErrors.every(item => Number(item.code || item.err?.code) === 11000));
+              if (!duplicateRetryOnly) throw retryError;
+              const retryByIndex = new Map(retryErrors.map(item => [Number(item.index), item]));
+              const retryFilters = retryErrors.map(item => {
+                const attempted = missing[Number(item.index)];
+                return attempted ? getIndexFilter(attempted, getPattern(item)) : null;
+              }).filter(Boolean);
+              persisted = await readPersisted(retryFilters);
+              for (let index = 0; index < missing.length; index += 1) {
+                const item = missing[index];
+                const actual = persisted.find(row => enrollmentUniqueKey(row) === enrollmentUniqueKey(item));
+                if (actual) {
+                  enrollmentIdAliases.set(String(item._id), actual._id);
+                  continue;
+                }
+                const retryErrorForItem = retryByIndex.get(index) || retryErrors[0] || null;
+                const pattern = getPattern(retryErrorForItem);
+                const filter = getIndexFilter(item, pattern);
+                const conflict = filter ? persisted.find(row => Object.entries(filter).every(([key, value]) => {
+                  const actualValue = key.split(".").reduce((current, part) => current?.[part], row);
+                  return String(actualValue ?? "") === String(value ?? "");
+                })) : null;
+                unresolvedDiagnostics.push(diagnosticsFor(item, retryErrorForItem,
+                  "Retry duplicate could not be reconciled to the same natural enrollment key.", conflict));
+              }
+            }
+            // Confirm every attempted record from MongoDB, including successful
+            // retry inserts, and remap generated IDs to the persisted IDs.
+            const verifyFilters = missing.map(item => ({
+              studentId: item.studentId,
+              normalizedStCode: normalizeStudentCode(item.normalizedStCode || item.stCode),
+              courseCode: normalizeCourseCode(item.courseCode || "") || clean(item.courseCode).toUpperCase(),
+              admissionDate: asDate(item.admissionDate)
+            }));
+            const verified = await StudentEnrollment.collection.find({ $or: verifyFilters }).toArray();
+            const verifiedByKey = new Map(verified.map(item => [enrollmentUniqueKey(item), item]));
+            for (const item of missing) {
+              const actual = verifiedByKey.get(enrollmentUniqueKey(item));
+              if (actual) enrollmentIdAliases.set(String(item._id), actual._id);
+              else if (!unresolvedDiagnostics.some(itemError => itemError.enrollmentUniqueKey === enrollmentUniqueKey(item))) {
+                unresolvedDiagnostics.push(diagnosticsFor(item, null, "MongoDB did not return the inserted enrollment after duplicate recovery."));
+              }
+            }
+          }
+          if (unresolvedDiagnostics.length) {
+            console.error("[unified-import] enrollment-duplicate-recovery-unresolved", {
+              phase, chunkOffset: offset, diagnostics: unresolvedDiagnostics
+            });
+            const recoveryError = new Error("Enrollment duplicate recovery could not confirm " + unresolvedDiagnostics.length + " records. See structured E11000 diagnostics.");
+            recoveryError.code = "ENROLLMENT_DUPLICATE_RECOVERY_FAILED";
+            recoveryError.unresolved = unresolvedDiagnostics;
+            throw recoveryError;
           }
         } else if (Model.modelName === "Student") {
           const query = { $or: chunk.map(item => ({
@@ -626,9 +759,9 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
           if (missing.length) {
             try { await Model.insertMany(missing, { ordered: false }); }
             catch (retryError) {
-              const retryErrors = retryError.writeErrors || retryError.result?.writeErrors || [];
-              if (retryError.code !== 11000 && !(retryErrors.length && retryErrors.every(item => item.code === 11000))) throw retryError;
-              duplicateDocsSkipped += retryErrors.filter(item => item.code === 11000).length || 1;
+              const retryErrors = extractWriteErrors(retryError);
+              if (retryError.code !== 11000 && !(retryErrors.length && retryErrors.every(item => Number(item.code || item.err?.code) === 11000))) throw retryError;
+              duplicateDocsSkipped += retryErrors.filter(item => Number(item.code || item.err?.code) === 11000).length || 1;
               persisted = await Student.find(query).select("normalizedStCode regnNo enrollmentNo applicantName").lean();
               const afterRetry = new Set(persisted.map(item => normalizeStudentCode(item.normalizedStCode || item.regnNo || item.enrollmentNo)));
               const unresolved = missing.filter(item => !afterRetry.has(normalizeStudentCode(item.normalizedStCode || item.regnNo || item.enrollmentNo)));
