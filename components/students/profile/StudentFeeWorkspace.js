@@ -32,6 +32,11 @@ function printReceipt(payment, student) {
   popup.print();
 }
 
+const normalizeFeeCode = value => {
+  let code = String(value ?? "").normalize("NFKC").replace(/[\\u200B-\\u200D\\uFEFF]/g, "").replace(/[\\u00A0\\s]+/g, "").trim().toUpperCase().replace(/\\.0+$/, "");
+  if (/^\\d+$/.test(code)) code = code.replace(/^0+(?=\\d)/, "");
+  return code;
+};
 const enrollmentCourseKey = item => String(item?.course || item?.courseCode || item?.courseName || "").trim().toUpperCase();
 const enrollmentDateKey = item => {
   const value = item?.admissionDate || item?.dateOfAdmission;
@@ -44,7 +49,7 @@ const safeDateKey = value => {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
 };
-const enrollmentFilterKey = item => [String(item?.stCode || ""), enrollmentCourseKey(item), enrollmentDateKey(item)].join("|");
+const enrollmentFilterKey = item => [normalizeFeeCode(item?.normalizedStCode || item?.stCode), enrollmentCourseKey(item), enrollmentDateKey(item)].join("|");
 function resolvePaymentCard(payment, cards) {
   if (payment?.enrollmentId) {
     const linked = cards.find(item => String(item._id || "") === String(payment.enrollmentId));
@@ -52,9 +57,9 @@ function resolvePaymentCard(payment, cards) {
   }
   const paymentId = String(payment?.registrationId || payment?.stNameKey || "").toUpperCase();
   let candidates = cards.filter(item => paymentId && String(item.registrationId || "").toUpperCase() === paymentId);
-  const paymentCode = String(payment?.stCode || "");
-  if (paymentCode) candidates = candidates.filter(item => String(item.stCode || "") === paymentCode);
-  if (!candidates.length && paymentCode) candidates = cards.filter(item => String(item.stCode || "") === paymentCode);
+  const paymentCode = normalizeFeeCode(payment?.normalizedStCode || payment?.stCode);
+  if (paymentCode) candidates = candidates.filter(item => normalizeFeeCode(item.normalizedStCode || item.stCode) === paymentCode);
+  if (!candidates.length && paymentCode) candidates = cards.filter(item => normalizeFeeCode(item.normalizedStCode || item.stCode) === paymentCode);
   const paymentCourse = String(payment?.course || payment?.courseCode || payment?.courseName || "").trim().toUpperCase();
   if (paymentCourse && candidates.length > 1) {
     const courseMatches = candidates.filter(item => [item.course, item.courseCode, item.courseName].some(value => String(value || "").trim().toUpperCase() === paymentCourse));
@@ -91,7 +96,7 @@ export default function StudentFeeWorkspace({
     || enrollmentOptions.find(item => String(item.stCode) === String(student.masterProfile?.currentStCode || ""))
     || enrollmentOptions.find(item => item.status === "ACTIVE")
     || enrollmentOptions[0];
-  const currentStCode = String(student.masterProfile?.currentStCode || currentEnrollment?.stCode || student.regnNo || student.enrollmentNo || "");
+  const currentStCode = normalizeFeeCode(student.masterProfile?.currentStCode || currentEnrollment?.normalizedStCode || currentEnrollment?.stCode || student.normalizedStCode || student.regnNo || student.enrollmentNo || "");
   const currentRegistrationId = String(student.masterProfile?.currentRegistrationId || currentEnrollment?.registrationId || (currentStCode && (student.masterProfile?.fullName || student.applicantName) ? String(student.masterProfile?.fullName || student.applicantName).trim().toUpperCase().replace(/\s+/g, " ") + "_" + currentStCode : ""));
   const [selectedCodeState, setSelectedCodeState] = useState("ALL");
   const selectedCode = selectedCodeState || "ALL";
@@ -126,6 +131,14 @@ export default function StudentFeeWorkspace({
         .reduce((sum, payment) => sum + Number(payment.amountPaid ?? payment.amount ?? 0), 0)
     }));
   }, [historyMetadata, enrollmentOptions, paymentHistory]);
+  const codeCount = useMemo(() => {
+    const counts = new Map();
+    for (const item of codeCards) {
+      const code = normalizeFeeCode(item.normalizedStCode || item.stCode);
+      if (code) counts.set(code, (counts.get(code) || 0) + 1);
+    }
+    return counts;
+  }, [codeCards]);
   const selectedCard = codeCards.find(item => item.filterKey === selectedCode) || null;
   const selectedEnrollment = selectedCard?._id
     ? enrollmentOptions.find(item => String(item._id) === String(selectedCard._id))
@@ -164,7 +177,7 @@ export default function StudentFeeWorkspace({
     && String(enrollment.courseCode || "").toUpperCase() !== "PREVIOUS-LEGACY"
     && String(enrollment.courseName || enrollment.semesterLabel || "").toLowerCase() !== "previous course (legacy)";
   const enrollmentForRegistration = item => enrollmentOptions.find(entry => String(entry.registrationId || "") === String(item.registrationId))
-    || (codeCount.get(String(item.stCode)) === 1 ? enrollmentOptions.find(entry => String(entry.stCode || "") === String(item.stCode)) : null);
+    || (codeCount.get(normalizeFeeCode(item.normalizedStCode || item.stCode)) === 1 ? enrollmentOptions.find(entry => normalizeFeeCode(entry.normalizedStCode || entry.stCode) === normalizeFeeCode(item.normalizedStCode || item.stCode)) : null);
   const configuredRegistrationCount = codeCards.filter(item => configuredFee(enrollmentForRegistration(item))).length;
   const selectedTotalFee = selectedCode === "ALL"
     ? (configuredRegistrationCount ? codeCards.reduce((sum, item) => {
