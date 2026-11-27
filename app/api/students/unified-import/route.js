@@ -1072,7 +1072,7 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
         } else {
           const type = String(payment.paymentType || "").toLowerCase();
           coursePaid = ["late fine", "lab charge", "registration fee"].some(label => type.includes(label))
-            ? 0 : Number(payment.amount || 0);
+            ? 0 : (Number.isFinite(parseImportAmount(payment.amount)) ? parseImportAmount(payment.amount) : 0);
         }
       }
       legacyPaidByCode.set(code, (legacyPaidByCode.get(code) || 0) + Math.max(0, coursePaid));
