@@ -1460,7 +1460,7 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
 
   ]);
   // Normalize and reconcile receipt keys in Node.js. MongoDB aggregation
-  // supports $regexMatch/$regexFind, but does not provide a $regexReplace
+  // supports regex matching, but not regex replacement as an aggregation
   // expression; doing this in JS is portable across supported server versions.
   const receiptGroups = new Map();
   for (const payment of paymentTotals) {
