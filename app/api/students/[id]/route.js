@@ -21,8 +21,35 @@ export async function GET(req,{params}){
     if(!student)return NextResponse.json({error:"Student not found."},{status:404});
 
     const masterProfile = await StudentMaster.findOne({ legacyStudentIds: student._id, mergedIntoMasterId: null, isMerged: { $ne: true } }).lean();
-    const enrollmentQuery = masterProfile ? { studentId: masterProfile._id } : { legacyStudentId: student._id };
+    const studentCode = normalizeStudentCode(student.normalizedStCode || student.regnNo || student.enrollmentNo);
+    const studentCodeVariants = studentCode ? [studentCode, ...(/^\d+$/.test(studentCode) ? Array.from({ length: 8 }, (_, index) => "0".repeat(index + 1) + studentCode) : [])] : [];
+    if (studentCode && /^\d+$/.test(studentCode)) studentCodeVariants.push(new RegExp("^\\s*0*" + studentCode + "(?:\\.0+)?\\s*$", "i"));
+    const enrollmentQuery = masterProfile
+      ? { studentId: masterProfile._id, $or: [{ normalizedStCode: studentCode }, { stCode: { $in: studentCodeVariants } }] }
+      : { legacyStudentId: student._id };
     const enrollments = await StudentEnrollment.find({ ...enrollmentQuery, mergedIntoEnrollmentId: null }).sort({ admissionDate: -1, createdAt: -1 }).lean();
+    const masterCodeSet = new Set([
+      ...(masterProfile?.normalizedStCodes || []), ...(masterProfile?.studentCodes || []), ...(masterProfile?.stCodes || []),
+      masterProfile?.primaryStCode, masterProfile?.currentStCode,
+      ...(masterProfile?.registrations || []).map(item => item.stCode),
+      ...(masterProfile?.enrollments || []).map(item => item.stCode)
+    ].map(normalizeStudentCode).filter(Boolean));
+    const includeMasterPaymentScope = !masterProfile || masterCodeSet.size <= 1 || masterCodeSet.has(studentCode);
+    const codeSpecificMasterProfile = masterProfile ? {
+      ...masterProfile,
+      normalizedStCodes: studentCode ? [studentCode] : [],
+      studentCodes: studentCode ? [studentCode] : [],
+      stCodes: studentCode ? [studentCode] : [],
+      primaryStCode: studentCode || masterProfile.primaryStCode,
+      currentStCode: studentCode || masterProfile.currentStCode,
+      legacyStudentIds: [student._id],
+      feeSummary: student.feeSummaryUpdatedAt ? {
+        ...(masterProfile.feeSummary || {}),
+        totalFee: Number(student.totalFee || 0), totalPaid: Number(student.totalPaid || 0),
+        balanceDue: Number(student.dueAmount || 0), feeStatus: student.feeStatus || "Not Paid",
+        updatedAt: student.feeSummaryUpdatedAt, scope: "STUDENT_CODE"
+      } : masterProfile.feeSummary
+    } : null;
     const activeEnrollment = masterProfile
       ? (enrollments.find(item => String(item.registrationId || "") === String(masterProfile.currentRegistrationId || ""))
         || enrollments.find(item => String(item._id) === String(masterProfile.activeEnrollmentId))
@@ -36,14 +63,9 @@ export async function GET(req,{params}){
       ? student
       : (await Student.findById(canonicalStudentId).lean()) || student;
     const enrollmentIds = enrollments.map(item => item._id);
-    const linkedStudentIds = masterProfile?.legacyStudentIds?.length
-      ? masterProfile.legacyStudentIds : [student._id];
+    const linkedStudentIds = [student._id];
     const allEnrollmentCodes = [...new Set([
-      ...(masterProfile?.normalizedStCodes || []),
-      ...(masterProfile?.studentCodes || []),
-      ...(masterProfile?.stCodes || []),
-      masterProfile?.primaryStCode, masterProfile?.currentStCode,
-      student.normalizedStCode, student.regnNo, student.enrollmentNo,
+      studentCode,
       ...enrollments.map(item => item.normalizedStCode || item.stCode),
     ].map(normalizeStudentCode).filter(Boolean))];
     const codeVariants = allEnrollmentCodes.flatMap(code => {
@@ -55,7 +77,7 @@ export async function GET(req,{params}){
       return values;
     });
     const paymentQuery = { $or: [
-      ...(masterProfile ? [{ masterStudentId: masterProfile._id }, { studentId: masterProfile._id }] : []),
+      ...(includeMasterPaymentScope && masterProfile ? [{ masterStudentId: masterProfile._id }, { studentId: masterProfile._id }] : []),
       { studentId: { $in: linkedStudentIds } },
       ...(enrollmentIds.length ? [{ enrollmentId: { $in: enrollmentIds } }] : []),
       ...(allEnrollmentCodes.length ? [{ normalizedStCode: { $in: allEnrollmentCodes } }, { stCode: { $in: codeVariants } }] : [])
@@ -172,12 +194,12 @@ export async function GET(req,{params}){
       qualification: masterProfile?.qualification || canonicalStudent.qualification,
       phoneNumbers: masterProfile?.phones?.length ? masterProfile.phones : (masterProfile?.phoneNumbers || []),
       photoUrl: masterProfile?.photoUrl || canonicalStudent.photoUrl || ((canonicalStudent.regnNo || activeEnrollment?.stCode || masterProfile?.primaryStCode || masterProfile?.stCodes?.[0]) ? `/api/students/photo/${encodeURIComponent(String(canonicalStudent.regnNo || activeEnrollment?.stCode || masterProfile?.primaryStCode || masterProfile?.stCodes?.[0]).trim())}` : ""),
-      masterProfile,
+      masterProfile: codeSpecificMasterProfile,
       enrollments: enrichedEnrollments,
       activeEnrollment: enrichedEnrollments.find(item => String(item._id) === String(activeEnrollment?._id)) || activeEnrollment,
       paymentHistory,
     };
-    return NextResponse.json({ student: enrichedStudent, masterProfile, enrollments, paymentHistory });
+    return NextResponse.json({ student: enrichedStudent, masterProfile: codeSpecificMasterProfile, enrollments: enrichedEnrollments, paymentHistory });
   }catch(error){return NextResponse.json({error:"Unable to load student.",detail:error.message},{status:500});}
 }
 
