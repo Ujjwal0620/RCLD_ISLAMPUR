@@ -67,7 +67,8 @@ function parseIdentity(rawName, explicitCode) {
   const firstLine = clean(rawName).split(/\r?\n/)[0].replace(/[\u200B-\u200D\uFEFF]/g, "").replace(/\s+/g, " ").trim();
   const nameWithoutSuffix = firstLine.replace(/_\s*\d+\s*$/, "").trim();
   const name = normalizeName(nameWithoutSuffix || firstLine);
-  const stCode = normalizeStudentCode(explicitCode);
+  const explicitCodeValue = clean(explicitCode);
+  const stCode = explicitCodeValue === "__FORMULA_WITHOUT_CACHED_VALUE__" ? "" : normalizeStudentCode(explicitCode);
   if (!stCode) return { cleanName: name, stCode, registrationId: "", missingCode: true };
   return { cleanName: name || ("STUDENT " + stCode), stCode, registrationId: stCode, missingName: !name };
 }
@@ -262,7 +263,8 @@ function buildWorkbookPayload(workbook) {
     const row = feeSheet.grid[index] || [];
     if (!row.some(value => clean(value))) continue;
     paymentRowsRead += 1;
-    const sourceStCode = normalizeStudentCode(feeGet(row, "stcode"));
+    const sourceCodeValue = clean(feeGet(row, "stcode"));
+    const sourceStCode = sourceCodeValue === "__FORMULA_WITHOUT_CACHED_VALUE__" ? "" : normalizeStudentCode(sourceCodeValue);
     const feeNameRaw = feeGet(row, "stnamecr") || feeGet(row, "stname");
     const feeName = normalizeName(clean(feeNameRaw).split(/\r?\n/)[0].replace(/_\s*\d+\s*$/, ""));
     const paymentDate = parseDate(feeGet(row, "dop"));
@@ -317,7 +319,7 @@ function buildWorkbookPayload(workbook) {
         sheet: feeSheet.name, row: index + 1, stCode: sourceStCode, name: feeNameRaw || "",
         amountPaid: Number.isFinite(amountPaid) ? amountPaid : clean(feeGet(row, "amtpaid")),
         mrNo, paymentDate: paymentDate || clean(feeGet(row, "dop")),
-        reason: "Receipt number, payment date, or amount is invalid."
+        reason: clean(feeGet(row, "amtpaid")) === "__FORMULA_WITHOUT_CACHED_VALUE__" ? "Amount formula has no cached calculated value; recalculate the workbook in Excel and save it before importing." : clean(feeGet(row, "dop")) === "__FORMULA_WITHOUT_CACHED_VALUE__" ? "Payment date formula has no cached calculated value; recalculate the workbook in Excel and save it before importing." : "Receipt number, payment date, or amount is invalid."
       });
       continue;
     }
