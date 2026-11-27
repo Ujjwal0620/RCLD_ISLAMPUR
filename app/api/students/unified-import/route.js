@@ -171,6 +171,8 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
       { stCodes: { $in: codeVariants } },
       { primaryStCode: { $in: codeVariants } },
       { currentStCode: { $in: codeVariants } },
+      { "registrations.stCode": { $in: codeVariants } },
+      { "enrollments.stCode": { $in: codeVariants } },
       ...(existingStudentIds.length ? [{ legacyStudentIds: { $in: existingStudentIds } }] : [])
     ]
   }).lean();
@@ -464,19 +466,41 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
         const onlyDuplicates = error.code === 11000 || (writeErrors.length && writeErrors.every(item => item.code === 11000));
         if (!onlyDuplicates) throw error;
         if (Model.modelName === "StudentEnrollment") {
-          const persisted = await StudentEnrollment.find({ $or: chunk.map(item => ({
+          const naturalQuery = { $or: chunk.map(item => ({
             studentId: item.studentId, normalizedStCode: item.normalizedStCode,
             normalizedFullName: item.normalizedFullName, courseCode: item.courseCode,
             admissionDate: item.admissionDate
-          })) }).lean();
+          })) };
+          let persisted = await StudentEnrollment.find(naturalQuery).lean();
           const persistedKeys = new Set(persisted.map(enrollmentUniqueKey));
           const missing = chunk.filter(item => !persistedKeys.has(enrollmentUniqueKey(item)));
-          if (missing.length) await Model.insertMany(missing, { ordered: false });
+          if (missing.length) {
+            try { await Model.insertMany(missing, { ordered: false }); }
+            catch (retryError) {
+              const retryErrors = retryError.writeErrors || retryError.result?.writeErrors || [];
+              if (retryError.code !== 11000 && !(retryErrors.length && retryErrors.every(item => item.code === 11000))) throw retryError;
+              persisted = await StudentEnrollment.find(naturalQuery).lean();
+              const afterRetry = new Set(persisted.map(enrollmentUniqueKey));
+              const unresolved = missing.filter(item => !afterRetry.has(enrollmentUniqueKey(item)));
+              if (unresolved.length) throw new Error("Enrollment duplicate recovery could not confirm " + unresolved.length + " records by their natural Student Code key.");
+            }
+          }
         } else if (Model.modelName === "Student") {
-          const persisted = await Student.find({ normalizedStCode: { $in: chunk.map(item => item.normalizedStCode) } }).select("normalizedStCode").lean();
+          const query = { normalizedStCode: { $in: chunk.map(item => item.normalizedStCode) } };
+          let persisted = await Student.find(query).select("normalizedStCode").lean();
           const persistedCodes = new Set(persisted.map(item => normalizeStudentCode(item.normalizedStCode)));
           const missing = chunk.filter(item => !persistedCodes.has(normalizeStudentCode(item.normalizedStCode)));
-          if (missing.length) await Model.insertMany(missing, { ordered: false });
+          if (missing.length) {
+            try { await Model.insertMany(missing, { ordered: false }); }
+            catch (retryError) {
+              const retryErrors = retryError.writeErrors || retryError.result?.writeErrors || [];
+              if (retryError.code !== 11000 && !(retryErrors.length && retryErrors.every(item => item.code === 11000))) throw retryError;
+              persisted = await Student.find(query).select("normalizedStCode").lean();
+              const afterRetry = new Set(persisted.map(item => normalizeStudentCode(item.normalizedStCode)));
+              const unresolved = missing.filter(item => !afterRetry.has(normalizeStudentCode(item.normalizedStCode)));
+              if (unresolved.length) throw new Error("Student Code duplicate recovery could not confirm " + unresolved.length + " Student records.");
+            }
+          }
         } else {
           throw error;
         }
