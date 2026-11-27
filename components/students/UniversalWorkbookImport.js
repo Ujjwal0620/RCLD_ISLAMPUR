@@ -184,8 +184,8 @@ export default function UniversalWorkbookImport() {
           <h4 style={{ marginBottom: 8 }}><AlertTriangle size={15} style={{ verticalAlign: "middle" }}/> Review required ({conflicts.length} shown)</h4>
           <div style={{ display: "grid", gap: 8 }}>
             {conflicts.map(item => <div key={item.sequence} style={{ padding: 12, border: "1px solid var(--border,#e2e6ed)", borderRadius: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}><strong>Row group #{item.sequence + 1} · {item.student?.name || "Unnamed student"}</strong><small>{item.action}</small></div>
-              <div style={{ fontSize: 12, color: "var(--text-muted,#687386)", margin: "5px 0" }}>Codes: {(item.student?.codes || []).join(", ") || "None"} · {(item.warnings || []).join(" ")}</div>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}><strong>Row group #{item.sequence + 1} · {item.student?.name || item.studentName || "Unnamed student"}</strong><small>{item.action}</small></div>
+              <div style={{ fontSize: 12, color: "var(--text-muted,#687386)", margin: "5px 0" }}>Codes: {(item.student?.codes || item.codes || []).join(", ") || "None"} · {(item.warnings || []).join(" ")}</div>
               {(item.conflicts || []).map((conflict, index) => <div key={index} style={{ fontSize: 12, marginBottom: 3 }}>Possible match: {conflict.existingName || conflict.studentId} · {conflict.studentId}</div>)}
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
                 <select value={decisions[item.sequence]?.decision || ""} onChange={event => setDecision(item.sequence, event.target.value)} style={{ minWidth: 190 }}>
