@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ArrowLeft, CreditCard, WalletCards, Printer } from "lucide-react";
 import StudentFeePlanSection from "@/components/students/profile/fee-workspace/StudentFeePlanSection";
 import StudentPaymentEntrySection from "@/components/students/profile/fee-workspace/StudentPaymentEntrySection";
@@ -129,11 +129,9 @@ export default function StudentFeeWorkspace({
         .reduce((sum, payment) => sum + Number(payment.amountPaid ?? payment.amount ?? 0), 0)
     }));
   }, [historyMetadata, enrollmentOptions, paymentHistory]);
-  useEffect(() => {
-    if (selectedCode !== "ALL" && !codeCards.some(item => item.filterKey === selectedCode)) {
-      setSelectedCodeState("ALL");
-    }
-  }, [selectedCode, codeCards]);
+  const activeSelectedCode = selectedCode !== "ALL" && codeCards.some(item => item.filterKey === selectedCode)
+    ? selectedCode
+    : "ALL";
   const codeCount = useMemo(() => {
     const counts = new Map();
     for (const item of codeCards) {
