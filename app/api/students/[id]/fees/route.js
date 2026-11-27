@@ -254,7 +254,16 @@ export async function POST(request, { params }) {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     ).lean();
 
-    return NextResponse.json({ fee: feeSummary(fee) }, { status: 200 });
+    let feeStatusRecalculation = { success: true };
+    try {
+      const student = await Student.findById(id).select("normalizedStCode regnNo enrollmentNo").lean();
+      const code = normalizeStCode(student?.normalizedStCode || student?.regnNo || student?.enrollmentNo);
+      if (code) await recalculateImportedStudentCodes([code]);
+    } catch (recalculationError) {
+      feeStatusRecalculation = { success: false, error: recalculationError.message };
+      console.error("[student-fees] status recalculation failed", recalculationError);
+    }
+    return NextResponse.json({ fee: feeSummary(fee), feeStatusRecalculation }, { status: 200 });
   } catch (error) {
     return NextResponse.json({ error: "Unable to save fee details.", detail: error.message }, { status: 500 });
   }
