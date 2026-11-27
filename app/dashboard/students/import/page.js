@@ -11,6 +11,24 @@ import { normalizeStudentCode, normalizeImportName, parseImportAmount, normalize
 
 const clean = value => String(value ?? "").replace(/[\u200B-\u200D\uFEFF]/g, "").replace(/\u00A0/g, " ").trim();
 const headerKey = value => clean(value).toLowerCase().replace(/[^a-z0-9]/g, "");
+const COLUMN_ALIASES = {
+  stcode: ["stcode", "studentcode", "registrationcode", "regnno", "enrollmentno"],
+  stname: ["stname", "studentname", "name"],
+  stnamecr: ["stnamecr", "studentnamecr"],
+  doa: ["doa", "dateofadmission", "admissiondate"],
+  course: ["course", "coursename", "coursecode"],
+  formno: ["formno", "formnumber", "applicationno"],
+  dob: ["dob", "dateofbirth"],
+  sex: ["sex", "gender"],
+  stfather: ["stfather", "fathername", "guardianname"],
+  address: ["address", "presentaddress"],
+  phno: ["phno", "phone", "mobile", "mobilenumber", "contactnumber"],
+  qualification: ["qualification", "education"],
+  amtpaid: ["amtpaid", "amountpaid", "paidamount", "paymentamount", "amount"],
+  mrno: ["mrno", "receiptno", "receipt", "receiptnumber", "mrnumber"],
+  dop: ["dop", "dateofpayment", "paymentdate", "paymentdate", "date"]
+};
+const columnIndex = (headers, key) => (COLUMN_ALIASES[key] || [key]).map(alias => headers.indexOf(alias)).find(index => index >= 0) ?? -1;
 const normalizeName = value => normalizeImportName(value);
 
 
@@ -71,8 +89,8 @@ function findSheet(workbook, kind) {
     }
     const index = grid.findIndex(row => {
       const keys = row.map(headerKey);
-      if (kind === "student") return ["stcode", "stname", "doa", "course"].every(key => keys.includes(key));
-      return ["amtpaid", "mrno", "dop"].every(key => keys.includes(key)) && (keys.includes("stname") || keys.includes("stnamecr"));
+      if (kind === "student") return ["stcode", "stname", "doa", "course"].every(key => columnIndex(keys, key) >= 0);
+      return ["amtpaid", "mrno", "dop"].every(key => columnIndex(keys, key) >= 0) && (columnIndex(keys, "stname") >= 0 || columnIndex(keys, "stnamecr") >= 0 || columnIndex(keys, "stcode") >= 0);
     });
     if (index >= 0) {
       // Carry vertically merged identifiers (e.g. one Student Code merged over several course/payment rows).
@@ -128,7 +146,7 @@ function buildWorkbookPayload(workbook) {
     throw new Error("Workbook must contain a Student Data sheet and a separate Fee sheet with St_Code, Amt_Paid, MR_No and D_O_P.");
   }
   const studentHeaders = studentSheet.grid[studentSheet.headerIndex].map(headerKey);
-  const studentAt = key => studentHeaders.indexOf(key);
+  const studentAt = key => columnIndex(studentHeaders, key);
   const studentGet = (row, key) => studentAt(key) >= 0 ? row[studentAt(key)] : "";
   const recordsByKey = new Map();
   const studentWarnings = [];
@@ -215,7 +233,7 @@ function buildWorkbookPayload(workbook) {
   }
 
   const feeHeaders = feeSheet.grid[feeSheet.headerIndex].map(headerKey);
-  const feeAt = key => feeHeaders.indexOf(key);
+  const feeAt = key => columnIndex(feeHeaders, key);
   const feeGet = (row, key) => feeAt(key) >= 0 ? row[feeAt(key)] : "";
   const feeRows = [];
   const unmatchedPayments = [];
