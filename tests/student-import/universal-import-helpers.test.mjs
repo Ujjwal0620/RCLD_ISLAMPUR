@@ -77,3 +77,15 @@ test("code collision with a different student name is flagged", () => {
   );
   assert.equal(result.status, "CONFLICT");
 });
+
+test("a code shared by an exact-name and different-name profile still requires review", () => {
+  const result = matchStudentByIdentity(
+    { name: "NILIMA MANDAL", codes: ["19150"] },
+    [
+      { _id: "a1", fullName: "NILIMA MANDAL", currentStCode: "19150" },
+      { _id: "b2", fullName: "ANOTHER STUDENT", currentStCode: "19150" }
+    ]
+  );
+  assert.equal(result.status, "CONFLICT");
+  assert.equal(result.conflicts.length, 2);
+});
