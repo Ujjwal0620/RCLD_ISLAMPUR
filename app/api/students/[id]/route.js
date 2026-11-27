@@ -7,6 +7,7 @@ import Batch from "@/models/Batch";
 import StudentMaster from "@/models/StudentMaster";
 import StudentEnrollment from "@/models/StudentEnrollment";
 import StudentFeePayment from "@/models/StudentFeePayment";
+import { normalizeStudentCode, normalizeReceiptNumber } from "@/lib/student-import/normalization.mjs";
 
 
 const ReferralSchema=new mongoose.Schema({}, {strict:false});
@@ -38,27 +39,32 @@ export async function GET(req,{params}){
     const linkedStudentIds = masterProfile?.legacyStudentIds?.length
       ? masterProfile.legacyStudentIds : [student._id];
     const allEnrollmentCodes = [...new Set([
+      ...(masterProfile?.normalizedStCodes || []),
       ...(masterProfile?.studentCodes || []),
       ...(masterProfile?.stCodes || []),
-      ...(masterProfile?.primaryStCode ? [masterProfile.primaryStCode] : []),
-      ...enrollments.map(item => String(item.stCode || "")),
-    ].filter(Boolean))];
-    const paymentQuery = masterProfile
-      ? { $or: [
-          { masterStudentId: masterProfile._id },
-          { studentId: masterProfile._id },
-          { studentId: { $in: linkedStudentIds } },
-          { enrollmentId: { $in: enrollmentIds } },
-          { studentId: masterProfile._id, stCode: { $in: allEnrollmentCodes } },
-        ] }
-      : { $or: [{ studentId: student._id }, { enrollmentId: { $in: enrollmentIds } }] };
+      masterProfile?.primaryStCode, masterProfile?.currentStCode,
+      student.normalizedStCode, student.regnNo, student.enrollmentNo,
+      ...enrollments.map(item => item.normalizedStCode || item.stCode),
+    ].map(normalizeStudentCode).filter(Boolean))];
+    const codeVariants = allEnrollmentCodes.flatMap(code => {
+      const values = [code];
+      if (/^\d+$/.test(code)) {
+        for (let zeroes = 1; zeroes <= 8; zeroes += 1) values.push("0".repeat(zeroes) + code);
+        values.push(new RegExp("^\\s*0*" + code + "(?:\\.0+)?\\s*$", "i"));
+      }
+      return values;
+    });
+    const paymentQuery = { $or: [
+      ...(masterProfile ? [{ masterStudentId: masterProfile._id }, { studentId: masterProfile._id }] : []),
+      { studentId: { $in: linkedStudentIds } },
+      ...(enrollmentIds.length ? [{ enrollmentId: { $in: enrollmentIds } }] : []),
+      ...(allEnrollmentCodes.length ? [{ normalizedStCode: { $in: allEnrollmentCodes } }, { stCode: { $in: codeVariants } }] : [])
+    ] };
     const FeeSchema = new mongoose.Schema({ studentId: mongoose.Schema.Types.ObjectId, payments: [mongoose.Schema.Types.Mixed] }, { strict: false });
     const StudentFee = mongoose.models.StudentFee || mongoose.model("StudentFee", FeeSchema);
     const enrollmentCourseCodes = [...new Set(enrollments.map(item => String(item.courseCode || "").toUpperCase()).filter(Boolean))];
     const [importedPayments, courseDocuments, legacyData] = await Promise.all([
-      enrollmentIds.length || masterProfile
-        ? StudentFeePayment.find(paymentQuery).sort({ paymentDate: 1, mrNo: 1 }).lean()
-        : Promise.resolve([]),
+      StudentFeePayment.find(paymentQuery).sort({ paymentDate: 1, mrNo: 1 }).lean(),
       enrollmentCourseCodes.length
         ? Course.find({ code: { $in: enrollmentCourseCodes } }).select("code name").lean()
         : Promise.resolve([]),
@@ -71,7 +77,7 @@ export async function GET(req,{params}){
     const enrollmentMap = new Map(enrollments.map(item => [String(item._id), item]));
     const enrollmentByCode = new Map();
     for (const item of enrollments) {
-      const code = String(item.stCode || "");
+      const code = normalizeStudentCode(item.normalizedStCode || item.stCode);
       if (code) enrollmentByCode.set(code, [...(enrollmentByCode.get(code) || []), item]);
     }
     const enrollmentByRegistration = new Map(enrollments.filter(item => item.registrationId).map(item => [String(item.registrationId), item]));
