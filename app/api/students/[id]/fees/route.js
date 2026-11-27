@@ -295,7 +295,14 @@ export async function POST(request, { params }) {
     try {
       const student = await Student.findById(id).select("normalizedStCode regnNo enrollmentNo").lean();
       const code = normalizeStCode(student?.normalizedStCode || student?.regnNo || student?.enrollmentNo);
-      if (code) await recalculateImportedStudentCodes([code]);
+      if (code) {
+        const recalculated = await recalculateImportedStudentCodes([code]);
+        feeStatusRecalculation = {
+          success: !(recalculated.ambiguousCodes || []).includes(code),
+          ambiguousCodes: recalculated.ambiguousCodes || [],
+          duplicatePaymentDocumentsFound: recalculated.duplicatePaymentDocumentsFound || 0
+        };
+      }
     } catch (recalculationError) {
       feeStatusRecalculation = { success: false, error: recalculationError.message };
       console.error("[student-fees] status recalculation failed", recalculationError);
