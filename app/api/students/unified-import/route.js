@@ -801,8 +801,8 @@ async function syncFeeRows(rows = [], onProgress = () => {}, registrationMap = [
       const keys = chunk.map(item => makeReceiptBusinessKey(item.normalizedStCode, item.mrNo, item.paymentDate, item.amountPaid));
       const persisted = await StudentFeePayment.find({ $or: [
         { sourceRowKey: { $in: chunk.map(item => item.sourceRowKey) } },
-        ...chunk.map(item => ({ normalizedStCode: item.normalizedStCode, mrNo: item.mrNo, paymentDate: item.paymentDate, amountPaid: item.amountPaid })),
-        ...chunk.map(item => ({ stCode: item.stCode, mrNo: item.mrNo, paymentDate: item.paymentDate, amountPaid: item.amountPaid }))
+        ...chunk.map(item => ({ normalizedStCode: item.normalizedStCode, mrNo: item.mrNo, paymentDate: item.paymentDate })),
+        ...chunk.map(item => ({ stCode: item.stCode, mrNo: item.mrNo, paymentDate: item.paymentDate }))
       ] }).lean();
       const persistedKeys = new Set(persisted.map(item => makeReceiptBusinessKey(item.normalizedStCode || item.stCode, item.mrNo, item.paymentDate, item.amountPaid)));
       const persistedSourceKeys = new Set(persisted.map(item => String(item.sourceRowKey || "")));
@@ -816,6 +816,8 @@ async function syncFeeRows(rows = [], onProgress = () => {}, registrationMap = [
             studentId: item.studentId, masterStudentId: item.masterStudentId, enrollmentId: item.enrollmentId,
             stCode: item.stCode, sourceStCode: item.sourceStCode, normalizedStCode: item.normalizedStCode, registrationId: item.registrationId,
             stNameKey: item.stNameKey, courseCode: item.courseCode, course: item.course,
+            mrNo: item.mrNo, paymentDate: item.paymentDate, amountPaid: item.amountPaid, rawPaymentDate: item.rawPaymentDate,
+            sourceSheet: item.sourceSheet, sourceRowNo: item.sourceRowNo,
             sourceRowKey: item.sourceRowKey, sourceBatchKey: item.sourceBatchKey, importBatchKey: item.importBatchKey
           } } } });
           duplicateReceiptsSkipped += 1;
