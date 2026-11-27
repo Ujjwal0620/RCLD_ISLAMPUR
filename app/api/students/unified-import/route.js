@@ -267,33 +267,62 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
     }
     const codeAmbiguous = registrations.some(item => item.stCodeUnique === false);
     const incomingName = normalizeName(group.cleanName || newest.cleanName);
+    if (codeAmbiguous) {
+      flaggedRows.push({
+        row: newest.rowNo || "", stCode: code, name: incomingName,
+        reason: "This Student Code is associated with multiple names in the workbook; no student or enrollment record was created or overwritten."
+      });
+      continue;
+    }
 
     const legacyCandidates = studentByCode.get(code) || [];
-    let legacyMatches = legacyCandidates;
-    if (legacyCandidates.length > 1) legacyMatches = legacyCandidates.filter(item =>
-      normalizeName(item.applicantName || item.name || item.sourceStudentName) === incomingName
-    );
-    const canonicalStudent = legacyMatches.length === 1 ? legacyMatches[0] : null;
-    if (legacyCandidates.length > 1 && !canonicalStudent) flaggedRows.push({
-      row: newest.rowNo || "", stCode: code, name: incomingName,
-      reason: "Multiple existing legacy Student records use this normalized Student Code; no record was overwritten."
-    });
+    let canonicalStudent = null;
+    if (legacyCandidates.length === 1) canonicalStudent = legacyCandidates[0];
+    else if (legacyCandidates.length > 1) {
+      const existingNames = new Set(legacyCandidates.map(item => normalizeName(item.applicantName || item.name || item.sourceStudentName)).filter(Boolean));
+      if (existingNames.size === 1) {
+        canonicalStudent = [...legacyCandidates].sort((left, right) =>
+          new Date(right.updatedAt || right.createdAt || 0) - new Date(left.updatedAt || left.createdAt || 0)
+        )[0];
+      } else {
+        flaggedRows.push({
+          row: newest.rowNo || "", stCode: code, name: incomingName,
+          reason: "Multiple existing legacy Student records with this Student Code have different names; the code collision requires review."
+        });
+        continue;
+      }
+    }
 
     const codeMasters = masterByCode.get(code) || [];
-    let masterCandidates = codeMasters;
-    if (codeAmbiguous || codeMasters.length > 1) masterCandidates = codeMasters.filter(item =>
-      normalizeName(item.normalizedFullName || item.fullName) === incomingName
-    );
-    const linkedMaster = canonicalStudent ? masterByStudentId.get(String(canonicalStudent._id)) : null;
-    let master = linkedMaster || (masterCandidates.length === 1 ? masterCandidates[0] : null);
-    if (linkedMaster && codeMasters.length && !codeMasters.some(item => String(item._id) === String(linkedMaster._id))) {
-      flaggedRows.push({ row: newest.rowNo || "", stCode: code, reason: "Legacy Student points to a Master Student that does not list this Student Code; the existing link was preserved for review." });
-      master = null;
+    if (codeMasters.length > 1) {
+      flaggedRows.push({
+        row: newest.rowNo || "", stCode: code, name: incomingName,
+        reason: "Multiple active Master Student profiles already claim this Student Code; no profile was guessed or overwritten."
+      });
+      continue;
     }
-    if (masterCandidates.length > 1 || (codeMasters.length > 1 && !master)) flaggedRows.push({
-      row: newest.rowNo || "", stCode: code, name: incomingName,
-      reason: "Multiple existing Master Student profiles use this Student Code; an exact normalized-name match was not unique."
-    });
+    const linkedMaster = canonicalStudent ? masterByStudentId.get(String(canonicalStudent._id)) : null;
+    const linkedMasterCodes = new Set([
+      ...(linkedMaster?.normalizedStCodes || []), ...(linkedMaster?.studentCodes || []), ...(linkedMaster?.stCodes || []),
+      linkedMaster?.primaryStCode, linkedMaster?.currentStCode,
+      ...(linkedMaster?.registrations || []).map(item => item.stCode),
+      ...(linkedMaster?.enrollments || []).map(item => item.stCode)
+    ].map(normalizeStudentCode).filter(Boolean));
+    if (linkedMaster && linkedMasterCodes.size && !linkedMasterCodes.has(code)) {
+      flaggedRows.push({
+        row: newest.rowNo || "", stCode: code,
+        reason: "The existing legacy Student points to a Master profile that does not list this Student Code; the existing link was preserved for review."
+      });
+      continue;
+    }
+    if (linkedMaster && codeMasters.length === 1 && String(linkedMaster._id) !== String(codeMasters[0]._id)) {
+      flaggedRows.push({
+        row: newest.rowNo || "", stCode: code,
+        reason: "The legacy Student link and the active Student Code owner point to different Master profiles; the record was not overwritten."
+      });
+      continue;
+    }
+    const master = linkedMaster || codeMasters[0] || null;
 
     const masterId = master?._id || new mongoose.Types.ObjectId();
     if (master) matchedProfiles += 1;
