@@ -9,7 +9,7 @@ import { useErpCache, useErpToast } from "@/components/providers/ERPUIProvider";
 import { normalizeIndianPhones } from "@/lib/student-import/identity-resolution.mjs";
 import { normalizeStudentCode, normalizeImportName, parseImportAmount, normalizeReceiptNumber } from "@/lib/student-import/normalization.mjs";
 
-const clean = value => String(value ?? "").replace(/[\\u200B-\\u200D\\uFEFF]/g, "").replace(/\\u00A0/g, " ").trim();
+const clean = value => String(value ?? "").replace(/[\u200B-\u200D\uFEFF]/g, "").replace(/\u00A0/g, " ").trim();
 const headerKey = value => clean(value).toLowerCase().replace(/[^a-z0-9]/g, "");
 const normalizeName = value => normalizeImportName(value);
 
