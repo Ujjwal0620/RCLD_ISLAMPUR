@@ -220,9 +220,10 @@ async function commitOne(stage, importBatchId, decision) {
       master.dateOfAdmission = master.currentAdmissionDate;
     }
   }
-  if (!master.activeEnrollmentId && enrollmentByCode.size) {
-    const selected = enrollmentByCode.get(resolvedCode) || enrollmentByCode.values().next().value;
-    if (selected) master.activeEnrollmentId = selected._id;
+  const selectedCurrentEnrollment = resolvedCode ? enrollmentByCode.get(resolvedCode) : null;
+  if (selectedCurrentEnrollment) master.activeEnrollmentId = selectedCurrentEnrollment._id;
+  else if (!master.activeEnrollmentId && enrollmentByCode.size) {
+    master.activeEnrollmentId = enrollmentByCode.values().next().value._id;
   }
   await master.save();
 
