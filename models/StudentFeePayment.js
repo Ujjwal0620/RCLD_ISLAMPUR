@@ -22,6 +22,7 @@ const StudentFeePaymentSchema = new mongoose.Schema({
   courseCode: { type: String, default: "" },
   course: { type: String, default: "" },
   mrNo: { type: String, required: true, trim: true },
+  normalizedMrNo: { type: String, default: "", trim: true, index: true },
   paymentMode: { type: String, default: "" },
   amountPaid: { type: Number, required: true, min: 0 },
   paymentDate: { type: Date, default: null },
