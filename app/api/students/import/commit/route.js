@@ -91,6 +91,7 @@ async function ensureEnrollment(master, student, registration, importBatchId, se
 async function commitOne(stage, importBatchId, decision) {
   const incoming = stage.student || {};
   const chosen = decision?.decision || stage.action;
+  const importSourceKey = importBatchId + ":" + String(stage.sequence);
   if (chosen === "SKIP") {
     await StudentImportStaging.updateOne({ _id: stage._id, committedAt: null }, {
       $set: { action: "SKIP", committedAt: new Date(), committedResult: { skipped: true } }
@@ -98,8 +99,8 @@ async function commitOne(stage, importBatchId, decision) {
     return { skipped: true };
   }
 
-  let master = null;
-  if (chosen === "LINK_EXISTING") {
+  let master = await StudentMaster.findOne({ importSourceKeys: importSourceKey, mergedIntoMasterId: null });
+  if (!master && chosen === "LINK_EXISTING") {
     if (!mongoose.Types.ObjectId.isValid(decision?.masterId)) throw new Error("A valid existing Student Master ID is required for LINK_EXISTING.");
     const allowedCandidate = (stage.conflicts || []).some(item => String(item.studentId || "") === String(decision.masterId));
     if (!allowedCandidate) throw new Error("Selected profile was not one of the identity candidates in this preview.");
@@ -118,6 +119,7 @@ async function commitOne(stage, importBatchId, decision) {
           primaryStCode: sanitizeStudentCode(legacy.normalizedStCode || legacy.regnNo || incoming.primaryCode),
           currentStCode: sanitizeStudentCode(legacy.normalizedStCode || legacy.regnNo || incoming.primaryCode),
           legacyStudentIds: [legacy._id],
+          importSourceKeys: [importSourceKey],
           identityMatchMethod: "IMPORT_LEGACY_LINK"
         });
       }
@@ -172,6 +174,7 @@ async function commitOne(stage, importBatchId, decision) {
     master.codeSourceDate = stage.codeSourceDate || null;
   }
   master.importBatchId = importBatchId;
+  master.importSourceKeys = addUnique(master.importSourceKeys, importSourceKey);
   if (stage.matchedLegacyStudentId) master.legacyStudentIds = [...new Set([...(master.legacyStudentIds || []).map(String), String(stage.matchedLegacyStudentId)])];
   await master.save();
 
