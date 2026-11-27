@@ -1298,6 +1298,24 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
   if (batchKey) {
     const [batchTotals] = await StudentFeePayment.aggregate([
       { $match: { sourceBatchKey: batchKey } },
+      { $addFields: {
+        _receiptCode: { $ifNull: ["$normalizedStCode", "$stCode"] },
+        _receiptNumber: { $ifNull: ["$normalizedMrNo", "$mrNo"] },
+        _receiptDate: { $cond: [
+          { $eq: [{ $type: "$paymentDate" }, "date"] },
+          { $dateToString: { format: "%Y-%m-%d", date: "$paymentDate", timezone: "UTC" } },
+          ""
+        ] }
+      } },
+      { $sort: { updatedAt: -1, createdAt: -1 } },
+      { $group: {
+        _id: {
+          code: "$_receiptCode",
+          receipt: { $cond: [{ $ne: ["$_receiptNumber", ""] }, "$_receiptNumber", { $toString: "$_id" }] },
+          date: "$_receiptDate"
+        },
+        amountPaid: { $first: "$amountPaid" }
+      } },
       { $group: { _id: null, rows: { $sum: 1 }, total: { $sum: "$amountPaid" } } }
     ]);
     databasePaymentRows = Number(batchTotals?.rows || 0);
