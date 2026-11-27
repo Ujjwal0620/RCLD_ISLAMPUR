@@ -147,8 +147,9 @@ async function commitOne(stage, importBatchId, decision) {
   }
   if (text(incoming.address) && !master.address) master.address = text(incoming.address);
   const phoneData = normalizePhoneNumbers([incoming.phone, ...(incoming.alternatePhones || [])].filter(Boolean).join(","));
-  master.phones = [...new Set([...(master.phones || []), ...(phoneData.allPhones || []), ...(phoneData.primaryPhone ? [phoneData.primaryPhone] : [])])];
-  master.phoneNumbers = [...new Set([...(master.phoneNumbers || []), ...(phoneData.allPhones || []), ...(phoneData.primaryPhone ? [phoneData.primaryPhone] : [])])];
+  const importedPhones = [...(phoneData.primaryPhone ? [phoneData.primaryPhone] : []), ...(phoneData.alternatePhones || [])];
+  master.phones = [...new Set([...(master.phones || []), ...importedPhones])];
+  master.phoneNumbers = [...new Set([...(master.phoneNumbers || []), ...importedPhones])];
   if (text(incoming.formNo) && !master.formNo) master.formNo = text(incoming.formNo);
   if (text(incoming.qualification) && !master.qualification) master.qualification = text(incoming.qualification);
 
