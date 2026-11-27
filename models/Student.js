@@ -8,6 +8,7 @@ const StudentSchema = new mongoose.Schema({
   totalFee: { type: Number, default: 0 },
   totalPaid: { type: Number, default: 0 },
   feeStatus: { type: String, enum: ["Paid", "Partial", "Not Paid"], default: "Not Paid" },
+  feeSummaryUpdatedAt: { type: Date, default: null },
   enrollmentNo: String,
   admissionDate: String,
   dateOfAdmission: String,
