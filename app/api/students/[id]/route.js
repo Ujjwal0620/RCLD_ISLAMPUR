@@ -36,7 +36,7 @@ export async function GET(req,{params}){
       ...(masterProfile?.registrations || []).map(item => item.stCode),
       ...(masterProfile?.enrollments || []).map(item => item.stCode)
     ].map(normalizeStudentCode).filter(Boolean));
-    const includeMasterPaymentScope = !masterProfile || (masterCodeSet.size === 1 && masterCodeSet.has(studentCode));
+    const includeMasterPaymentScope = !masterProfile || (masterCodeSet.size === 1 && masterCodeSet.has(studentCode)) || (masterCodeSet.size === 0 && (masterProfile.legacyStudentIds || []).length <= 1);
     const codeSpecificMasterProfile = masterProfile ? {
       ...masterProfile,
       fullName: student.applicantName || student.name || masterProfile.fullName || "",
