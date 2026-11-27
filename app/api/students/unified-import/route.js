@@ -888,6 +888,17 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
     if (code) studentsByCode.set(code, [...(studentsByCode.get(code) || []), student]);
   }
 
+  const codeOwnerCounts = new Map();
+  for (const master of masters) {
+    const ownerCodes = new Set([
+      ...(master.normalizedStCodes || []), ...(master.studentCodes || []), ...(master.stCodes || []),
+      master.primaryStCode, master.currentStCode,
+      ...(master.registrations || []).map(item => item.stCode),
+      ...(master.enrollments || []).map(item => item.stCode)
+    ].map(normalizeStudentCode).filter(Boolean));
+    for (const code of ownerCodes) codeOwnerCounts.set(code, (codeOwnerCounts.get(code) || 0) + 1);
+  }
+  const ambiguousCodes = new Set();
   const enrollmentOps = [];
   const masterOps = [];
   const studentOpsById = new Map();
@@ -902,6 +913,10 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
     const relatedAll = enrollmentsByMaster.get(masterId) || [];
     let masterTotalFee = 0, masterTotalPaid = 0, masterBalanceDue = 0, masterDiscount = 0, masterCourseCount = 0, anyConfiguredFee = false;
     for (const code of masterCodes) {
+      if ((codeOwnerCounts.get(code) || 0) > 1) {
+        ambiguousCodes.add(code);
+        continue;
+      }
       const related = relatedAll.filter(item => normalizeStudentCode(item.normalizedStCode || item.stCode) === code);
       const totalPaid = Number(paidByCode.get(code) || 0);
       const totalFee = related.reduce((sum, item) => sum + Number(item.feeConfig?.netPayableFee ?? item.summary?.totalDue ?? item.feeConfig?.grossFee ?? item.summary?.totalFee ?? 0), 0);
@@ -989,7 +1004,8 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
     databasePaymentTotal: Number(databasePaymentTotal.toFixed(2)),
     expectedPaymentRows: expectedRows,
     expectedPaymentTotal: Number(expectedTotal.toFixed(2)),
-    paymentReconciliationMatches
+    paymentReconciliationMatches,
+    ambiguousCodes: [...ambiguousCodes]
   };
 }
 
