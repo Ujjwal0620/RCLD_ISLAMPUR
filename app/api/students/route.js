@@ -199,15 +199,29 @@ export async function GET(request) {
           ? `/api/students/photo/${encodeURIComponent(registrationNo)}`
           : ""
       );
-      const feeSummary = profile?.feeSummary || null;
+      const currentCode = String(student.normalizedStCode || student.regnNo || student.enrollmentNo || "").trim();
+      const hasCodeFeeSummary = Boolean(student.feeSummaryUpdatedAt);
+      const feeSummary = hasCodeFeeSummary
+        ? {
+            ...(profile?.feeSummary || {}),
+            totalFee: Number(student.totalFee || 0),
+            totalPaid: Number(student.totalPaid || 0),
+            balanceDue: Number(student.dueAmount || 0),
+            feeStatus: student.feeStatus || "Not Paid",
+            updatedAt: student.feeSummaryUpdatedAt,
+            scope: "STUDENT_CODE"
+          }
+        : profile?.feeSummary || null;
       return {
         ...student, photoUrl, feeSummary,
-        primaryStCode: profile?.primaryStCode || profile?.currentStCode || student.regnNo || "",
-        studentCodes: [...new Set([...(profile?.studentCodes || []), ...(profile?.stCodes || [])])],
+        primaryStCode: currentCode || profile?.primaryStCode || profile?.currentStCode || "",
+        studentCodes: hasCodeFeeSummary && currentCode
+          ? [currentCode]
+          : [...new Set([...(profile?.studentCodes || []), ...(profile?.stCodes || [])])],
         alternateNames: profile?.alternateNames || [],
         phones: [...new Set([...(profile?.phones || []), ...(profile?.phoneNumbers || [])])],
         masterStudentId: profile?._id || null,
-        dueAmount: feeSummary ? feeSummary.balanceDue : student.dueAmount
+        dueAmount: hasCodeFeeSummary ? Number(student.dueAmount || 0) : feeSummary ? feeSummary.balanceDue : student.dueAmount
       };
     });
 
