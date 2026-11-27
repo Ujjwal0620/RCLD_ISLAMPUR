@@ -9,7 +9,8 @@ import StudentFeePayment from "@/models/StudentFeePayment";
 import Course from "@/models/Course";
 import { normalizeCourseCode, resolveCourseFeeConfigFromDocument } from "@/lib/student-import/course-fee-rules";
 import { buildInstallments } from "@/lib/student-import/fee-allocation";
-import { resolveStudentIdentity, normalizeStudentName, normalizeIndianPhones } from "@/lib/student-import/identity-resolution.mjs";
+import { normalizeStudentName, normalizeIndianPhones } from "@/lib/student-import/identity-resolution.mjs";
+import { normalizeStudentCode, normalizeImportName, normalizeReceiptNumber, makeReceiptBusinessKey } from "@/lib/student-import/normalization.mjs";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -81,7 +82,14 @@ async function ensureReceiptIndex() {
   return receiptIndexPromise;
 }
 
-const clean = value => String(value ?? "").trim();
+const clean = value => String(value ?? "").replace(/[\\u200B-\\u200D\\uFEFF]/g, "").replace(/\\u00A0/g, " ").trim();
+const codeLookupVariants = value => {
+  const code = normalizeStudentCode(value);
+  if (!code) return [];
+  const variants = new Set([code, String(value ?? "").trim()]);
+  if (/^\\d+$/.test(code)) for (let zeroes = 1; zeroes <= 8; zeroes += 1) variants.add("0".repeat(zeroes) + code);
+  return [...variants].filter(Boolean);
+};
 const displayName = value => clean(value).normalize("NFKC").toUpperCase().replace(/\s+/g, " ").trim();
 const normalizeName = value => clean(value).normalize("NFKC").toUpperCase()
   .replace(/[^A-Z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
@@ -155,72 +163,75 @@ async function bulkWriteChunked(model, operations, warnings, label, chunkSize = 
 }
 
 async function syncStudentGroups(groups = [], onPhase = () => {}) {
-  if (!Array.isArray(groups) || groups.length > 500) throw new Error("Student batch must contain between 1 and 500 profile groups.");
+  if (!Array.isArray(groups) || groups.length > 500) throw new Error("Student batch must contain between 1 and 500 Student Code profiles.");
   const allRegistrations = groups.flatMap(group => (group.registrations || []).map(item => ({
     ...item,
-    registrationId: registrationIdentity(item),
+    stCode: normalizeStudentCode(item.stCode),
+    registrationId: registrationIdentity({ ...item, stCode: normalizeStudentCode(item.stCode) }),
     cleanName: normalizeName(item.cleanName || group.cleanName),
-    stCode: clean(item.stCode)
-  }))).filter(item => item.registrationId && item.stCode && item.cleanName);
+    course: clean(item.course) || "Previous Course (Legacy)",
+    dateOfAdmission: asDate(item.dateOfAdmission)
+  }))).filter(item => item.stCode && item.cleanName);
   const codes = [...new Set(allRegistrations.map(item => item.stCode))];
+  const codeVariants = [...new Set(codes.flatMap(codeLookupVariants))];
   const registrationIds = [...new Set(allRegistrations.map(item => item.registrationId))];
-  const names = [...new Set(groups.flatMap(group => [group.cleanName, ...(group.alternateNames || [])]).map(normalizeName).filter(Boolean))];
-  const phones = [...new Set(groups.flatMap(group => group.phones || []).flatMap(value => String(value).replace(/\D/g, "").length === 10 ? [String(value).replace(/\D/g, "")] : []))];
-  const dobs = [...new Set(groups.flatMap(group => [group.dob, ...(group.dobs || [])]).map(value => asDate(value)?.toISOString().slice(0, 10)).filter(Boolean))];
-  const fathers = [...new Set(groups.flatMap(group => [group.fatherName, ...(group.fatherNames || [])]).map(normalizeFather).filter(Boolean))];
   const courseCodes = [...new Set(allRegistrations.map(item => normalizeCourseCode(item.course)).filter(Boolean))];
   const courseLookupCodes = [...new Set(courseCodes.flatMap(code => [code, code.replace(/[-_].*$/, "")]))];
 
   const [existingStudents, existingEnrollments, courseDocuments] = await Promise.all([
-    Student.find({ $or: [{ regnNo: { $in: codes } }, { enrollmentNo: { $in: codes } }] }).lean(),
-    StudentEnrollment.find({ mergedIntoEnrollmentId: null, $or: [{ registrationId: { $in: registrationIds } }, { stCode: { $in: codes } }] }).lean(),
+    Student.find({ $or: [
+      { normalizedStCode: { $in: codes } },
+      { regnNo: { $in: codeVariants } },
+      { enrollmentNo: { $in: codeVariants } }
+    ] }).lean(),
+    StudentEnrollment.find({ mergedIntoEnrollmentId: null, $or: [
+      { normalizedStCode: { $in: codes } },
+      { stCode: { $in: codeVariants } },
+      { registrationId: { $in: registrationIds } }
+    ] }).lean(),
     Course.find({ code: { $in: courseLookupCodes } }).lean()
   ]);
   const existingStudentIds = existingStudents.map(item => item._id);
-  const existingEnrollmentMasterIds = [...new Set(existingEnrollments.map(item => String(item.studentId)).filter(validObjectId))]
-    .map(id => new mongoose.Types.ObjectId(id));
   const existingMasters = await StudentMaster.find({
     mergedIntoMasterId: null,
     isMerged: { $ne: true },
     $or: [
-      { normalizedFullName: { $in: names } },
-      { alternateNames: { $in: names } },
-      ...(codes.length ? [
-        { studentCodes: { $in: codes } }, { stCodes: { $in: codes } }, { primaryStCode: { $in: codes } }, { currentStCode: { $in: codes } }
-      ] : []),
-      ...(registrationIds.length ? [
-        { "registrations.registrationId": { $in: registrationIds } },
-        { "enrollments.registrationId": { $in: registrationIds } }
-      ] : []),
-      ...(existingEnrollmentMasterIds.length ? [{ _id: { $in: existingEnrollmentMasterIds } }] : []),
-      ...(phones.length ? [{ phoneNumbers: { $in: phones } }, { phones: { $in: phones } }] : []),
-      ...(dobs.length ? [{ dob: { $in: dobs.map(value => new Date(value + "T00:00:00.000Z")) } }] : []),
-      ...(fathers.length ? [{ normalizedFatherName: { $in: fathers } }] : []),
+      { normalizedStCodes: { $in: codes } },
+      { studentCodes: { $in: codeVariants } },
+      { stCodes: { $in: codeVariants } },
+      { primaryStCode: { $in: codeVariants } },
+      { currentStCode: { $in: codeVariants } },
       ...(existingStudentIds.length ? [{ legacyStudentIds: { $in: existingStudentIds } }] : [])
     ]
   }).lean();
 
-  const enrollmentByUniqueKey = new Map();
-  for (const enrollment of existingEnrollments) {
-    enrollmentByUniqueKey.set(enrollmentUniqueKey(enrollment), enrollment);
-  }
-
   const studentByCode = new Map();
   for (const student of existingStudents) {
-    for (const code of [student.regnNo, student.enrollmentNo]) {
-      const key = clean(code).replace(/\.0+$/, "");
-      if (key) studentByCode.set(key, [...(studentByCode.get(key) || []), student]);
-    }
+    const code = normalizeStudentCode(student.normalizedStCode || student.regnNo || student.enrollmentNo);
+    if (code) studentByCode.set(code, [...(studentByCode.get(code) || []), student]);
   }
+  const masterByCode = new Map();
   const masterByStudentId = new Map();
   for (const master of existingMasters) {
+    const masterCodes = new Set([
+      ...(master.normalizedStCodes || []), ...(master.studentCodes || []), ...(master.stCodes || []),
+      master.primaryStCode, master.currentStCode,
+      ...(master.registrations || []).map(item => item.stCode),
+      ...(master.enrollments || []).map(item => item.stCode)
+    ].map(normalizeStudentCode).filter(Boolean));
+    for (const code of masterCodes) masterByCode.set(code, [...(masterByCode.get(code) || []), master]);
     for (const id of master.legacyStudentIds || []) masterByStudentId.set(String(id), master);
   }
+  const enrollmentByUniqueKey = new Map();
+  for (const enrollment of existingEnrollments) enrollmentByUniqueKey.set(enrollmentUniqueKey(enrollment), enrollment);
   const courseByCode = new Map(courseDocuments.map(item => [normalizeCourseCode(item.code), item]));
-  const studentOps = [];
+
+  const studentInserts = [];
+  const studentUpdates = [];
   const masterOps = [];
   const activeMasterOps = [];
-  const enrollmentOps = [];
+  const enrollmentInserts = [];
+  const enrollmentUpdates = [];
   const enrollmentStatusOps = [];
   const outputMap = [];
   const flaggedRows = [];
@@ -230,224 +241,192 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
   for (const group of groups) {
     const registrations = (group.registrations || []).map(item => ({
       ...item,
-      registrationId: registrationIdentity(item),
-      stCode: clean(item.stCode),
+      stCode: normalizeStudentCode(item.stCode),
+      registrationId: registrationIdentity({ ...item, stCode: normalizeStudentCode(item.stCode) }),
       cleanName: normalizeName(item.cleanName || group.cleanName),
       course: clean(item.course) || "Previous Course (Legacy)",
       dateOfAdmission: asDate(item.dateOfAdmission),
       earliestPaymentDate: asDate(item.earliestPaymentDate),
       formNo: clean(item.formNo)
-    })).filter(item => item.registrationId && item.stCode);
+    })).filter(item => item.stCode && item.cleanName);
     if (!registrations.length) continue;
     registrations.sort(registrationSort);
     const newest = registrations[0];
-    const groupRegistrationIds = new Set(registrations.map(item => item.registrationId.toUpperCase()));
-    const codeCandidates = [...new Map(registrations.flatMap(item => studentByCode.get(item.stCode) || [])
-      .map(student => [String(student._id), student])).values()];
-    const existingLegacy = codeCandidates.filter(student => {
-      const sourceName = String(student.applicantName || student.name || student.sourceStudentName || "")
-        .replace(/_[A-Z0-9-]+$/i, "");
-      if (normalizeName(sourceName) !== normalizeName(group.cleanName)) return false;
-      const rawSourceName = String(student.sourceStudentName || "");
-      const sourceCode = rawSourceName.match(/_([A-Z0-9-]+)$/i)?.[1] || "";
-      const sourceRegistrationId = sourceCode ? normalizeName(rawSourceName.replace(/_[A-Z0-9-]+$/i, "")) + "_" + sourceCode : "";
-      if (sourceRegistrationId && groupRegistrationIds.has(sourceRegistrationId.toUpperCase())) return true;
-      const studentPhones = [student.mobileNumber, student.phone, student.whatsappNumber, student.guardianContactNumber, student.sourcePhone]
-        .join(",").split(/[,;/|\s]+/).map(normalizePhone).filter(Boolean);
-      return hasIdentityAnchor(group, {
-        fullName: sourceName, dob: student.dateOfBirth || student.dob,
-        sex: student.sex || student.gender || student.sourceSex,
-        fatherName: student.fatherOrHusbandName || student.fatherName,
-        phones: studentPhones, phoneNumbers: studentPhones,
-        studentCodes: [student.regnNo, student.enrollmentNo].filter(Boolean)
-      });
-    });
-    const linkedMasterIds = new Set(existingLegacy.map(item => masterByStudentId.get(String(item._id))).filter(Boolean).map(item => String(item._id)));
-    const registrationCandidates = existingMasters.filter(candidate =>
-      [...(candidate.registrations || []), ...(candidate.enrollments || [])]
-        .some(item => {
-          const storedId = item.registrationId || (item.stCode
-            ? normalizeName(candidate.normalizedFullName || candidate.fullName) + "_" + clean(item.stCode)
-            : "");
-          return groupRegistrationIds.has(String(storedId).toUpperCase())
-            && resolveStudentIdentity(group, candidate).matched;
-        })
-      || (existingEnrollments.some(item => String(item.studentId) === String(candidate._id)
-        && groupRegistrationIds.has(String(item.registrationId || (item.stCode
-          ? normalizeName(item.normalizedFullName) + "_" + clean(item.stCode)
-          : "")).toUpperCase()))
-        && resolveStudentIdentity(group, candidate).matched)
+    const code = normalizeStudentCode(group.studentCodes?.[0] || registrations[0].stCode);
+    if (!code) {
+      flaggedRows.push({ row: newest.rowNo || "", reason: "Student profile has no normalized Student Code." });
+      continue;
+    }
+    const codeAmbiguous = registrations.some(item => item.stCodeUnique === false);
+    const incomingName = normalizeName(group.cleanName || newest.cleanName);
+
+    const legacyCandidates = studentByCode.get(code) || [];
+    let legacyMatches = legacyCandidates;
+    if (legacyCandidates.length > 1) legacyMatches = legacyCandidates.filter(item =>
+      normalizeName(item.applicantName || item.name || item.sourceStudentName) === incomingName
     );
-    const candidates = existingMasters.filter(candidate => hasIdentityAnchor(group, candidate));
-    const incomingCodes = new Set(registrations.map(item => item.stCode));
-    const conflictingMasterCodes = existingMasters.filter(candidate => {
-      const existingCodes = new Set([...(candidate.studentCodes || []), ...(candidate.stCodes || []), candidate.primaryStCode, candidate.currentStCode].map(clean).filter(Boolean));
-      return [...incomingCodes].some(code => existingCodes.has(code)) && !resolveStudentIdentity(group, candidate).matched;
+    const canonicalStudent = legacyMatches.length === 1 ? legacyMatches[0] : null;
+    if (legacyCandidates.length > 1 && !canonicalStudent) flaggedRows.push({
+      row: newest.rowNo || "", stCode: code, name: incomingName,
+      reason: "Multiple existing legacy Student records use this normalized Student Code; no record was overwritten."
     });
-    const byLinked = linkedMasterIds.size === 1 ? existingMasters.find(item => String(item._id) === [...linkedMasterIds][0]) : null;
-    let master = linkedMasterIds.size > 1 ? null : (byLinked || (candidates.length === 1 ? candidates[0] : null));
-    const ambiguous = linkedMasterIds.size > 1 || (!master && candidates.length > 1);
-    if (ambiguous) flaggedRows.push({ row: registrations[0]?.rowNo || "", studentId: registrations.map(item => item.registrationId).join(", "), reason: "Multiple existing student profiles matched this name; created a separate profile rather than merging uncertain identities." });
-    const masterLinkedLegacy = master ? codeCandidates.filter(student => (master.legacyStudentIds || []).some(id => String(id) === String(student._id))) : [];
-    const safeExistingLegacy = ambiguous ? [] : [...new Map([...existingLegacy, ...masterLinkedLegacy].map(item => [String(item._id), item])).values()];
-    const codeCollision = codeCandidates.length > safeExistingLegacy.length || conflictingMasterCodes.length > 0 || registrations.some(item => item.stCodeUnique === false) || linkedMasterIds.size > 1;
-    if (codeCollision) flaggedRows.push({ row: registrations[0]?.rowNo || "", studentId: registrations.map(item => item.registrationId).join(", "), stCode: [...new Set(registrations.map(item => item.stCode).filter(Boolean))], reason: "A registration code is reused or the existing record lacks a matching identity anchor. The code-only match was rejected; a separate profile was created." });
+
+    const codeMasters = masterByCode.get(code) || [];
+    let masterCandidates = codeMasters;
+    if (codeAmbiguous || codeMasters.length > 1) masterCandidates = codeMasters.filter(item =>
+      normalizeName(item.normalizedFullName || item.fullName) === incomingName
+    );
+    const linkedMaster = canonicalStudent ? masterByStudentId.get(String(canonicalStudent._id)) : null;
+    let master = linkedMaster || (masterCandidates.length === 1 ? masterCandidates[0] : null);
+    if (linkedMaster && codeMasters.length && !codeMasters.some(item => String(item._id) === String(linkedMaster._id))) {
+      flaggedRows.push({ row: newest.rowNo || "", stCode: code, reason: "Legacy Student points to a Master Student that does not list this Student Code; the existing link was preserved for review." });
+      master = null;
+    }
+    if (masterCandidates.length > 1 || (codeMasters.length > 1 && !master)) flaggedRows.push({
+      row: newest.rowNo || "", stCode: code, name: incomingName,
+      reason: "Multiple existing Master Student profiles use this Student Code; an exact normalized-name match was not unique."
+    });
+
     const masterId = master?._id || new mongoose.Types.ObjectId();
     if (master) matchedProfiles += 1;
     else newProfiles += 1;
 
-    let legacyIds = [...new Set([
-      ...(master?.legacyStudentIds || []).map(String),
-      ...safeExistingLegacy.map(item => String(item._id))
-    ])];
-    let canonicalStudent = safeExistingLegacy[0] || null;
+    const studentId = canonicalStudent?._id || new mongoose.Types.ObjectId();
+    const studentValues = {
+      normalizedStCode: code,
+      regnNo: code,
+      enrollmentNo: codeAmbiguous ? (canonicalStudent?.enrollmentNo || "") : (canonicalStudent?.enrollmentNo || code),
+      formNo: newest.formNo || "",
+      admissionDate: newest.dateOfAdmission?.toISOString() || "",
+      dateOfAdmission: newest.dateOfAdmission?.toISOString() || "",
+      applicantName: displayName(group.cleanName || newest.cleanName),
+      name: displayName(group.cleanName || newest.cleanName),
+      sourceStudentName: displayName(group.cleanName || newest.cleanName) + "_" + code,
+      sourceSex: newest.sex || "",
+      sex: newest.sex || "",
+      gender: newest.sex || "",
+      fatherOrHusbandName: group.fatherName || newest.fatherName || "",
+      fatherName: group.fatherName || newest.fatherName || "",
+      address: newest.address || "",
+      presentAddress: newest.address || "",
+      mobileNumber: (group.phones || [])[0] || "",
+      whatsappNumber: (group.phones || [])[1] || "",
+      sourcePhone: (group.phones || []).join(","),
+      qualification: newest.qualification || "",
+      sourceQualification: newest.qualification || "",
+      courseCode: newest.course || "",
+      courseName: newest.course || "",
+      course: newest.course || "",
+      importSource: "Unified Excel Workbook"
+    };
     if (!canonicalStudent) {
-      const newStudentId = new mongoose.Types.ObjectId();
-      canonicalStudent = {
-        _id: newStudentId,
-        formNo: newest.formNo || "",
-        regnNo: newest.stCode,
-        enrollmentNo: codeCollision ? "" : newest.stCode,
-        admissionDate: newest.dateOfAdmission?.toISOString() || "",
-        dateOfAdmission: newest.dateOfAdmission?.toISOString() || "",
-        applicantName: displayName(group.cleanName),
-        name: displayName(group.cleanName),
-        sourceStudentName: displayName(group.cleanName) + "_" + newest.stCode,
-        sourceSex: newest.sex || "",
-        sex: newest.sex || "",
-        gender: newest.sex || "",
-        fatherOrHusbandName: group.fatherName || newest.fatherName || "",
-        fatherName: group.fatherName || newest.fatherName || "",
-        address: newest.address || "",
-        presentAddress: newest.address || "",
-        mobileNumber: (group.phones || [])[0] || "",
-        whatsappNumber: (group.phones || [])[1] || "",
-        sourcePhone: (group.phones || []).join(","),
-        qualification: newest.qualification || "",
-        sourceQualification: newest.qualification || "",
-        courseCode: newest.course || "",
-        courseName: newest.course || "",
-        course: newest.course || "",
-        status: "Registered",
-        importSource: "Unified Excel Workbook"
-      };
-      studentOps.push(canonicalStudent);
-      legacyIds.push(String(newStudentId));
+      studentInserts.push({ _id: studentId, ...studentValues, status: "Registered" });
+    } else {
+      const patch = {};
+      for (const [key, value] of Object.entries(studentValues)) {
+        if (value === "" || value === null || value === undefined) continue;
+        if (String(canonicalStudent[key] ?? "") !== String(value)) patch[key] = value;
+      }
+      if (Object.keys(patch).length) studentUpdates.push({ updateOne: { filter: { _id: canonicalStudent._id }, update: { $set: patch } } });
     }
-    const existingRegs = new Map();
+
+    const existingHistory = new Map();
     const historyKey = item => [
-      clean(item.stCode),
+      normalizeStudentCode(item.stCode),
       normalizeCourseCode(item.course || item.courseName || item.courseCode || "PREVIOUS-LEGACY"),
       asDate(item.dateOfAdmission || item.admissionDate)?.toISOString().slice(0, 10) || ""
     ].join("|");
     for (const item of [...(master?.registrations || []), ...(master?.enrollments || [])]) {
-      const id = clean(item.registrationId) || (clean(item.stCode) ? normalizeName(master?.normalizedFullName || master?.fullName || group.cleanName) + "_" + clean(item.stCode) : "");
       const key = historyKey(item);
-      if (id && !existingRegs.has(key)) existingRegs.set(key, {
-        stCode: clean(item.stCode), registrationId: id, course: clean(item.course || item.courseCode) || "Previous Course (Legacy)",
+      if (!existingHistory.has(key)) existingHistory.set(key, {
+        stCode: code, registrationId: clean(item.registrationId) || code + "_" + normalizeCourseCode(item.course || item.courseCode),
+        course: clean(item.course || item.courseCode) || "Previous Course (Legacy)",
         dateOfAdmission: asDate(item.dateOfAdmission || item.admissionDate),
         admissionDate: asDate(item.admissionDate || item.dateOfAdmission),
         earliestPaymentDate: asDate(item.earliestPaymentDate),
         formNo: clean(item.formNo), qualification: clean(item.qualification),
-        address: clean(item.rawAddress || item.address), rawAddress: clean(item.rawAddress || item.address),
-        rawStName: clean(item.rawStName), isCurrent: false
+        rawAddress: clean(item.rawAddress || item.address), rawStName: clean(item.rawStName), isCurrent: false
       });
     }
     for (const item of existingEnrollments) {
-      if (String(item.studentId) !== String(masterId)) continue;
-      const id = clean(item.registrationId) || (clean(item.stCode) ? normalizeName(group.cleanName) + "_" + clean(item.stCode) : "");
+      if (String(item.studentId) !== String(masterId) || normalizeStudentCode(item.stCode) !== code) continue;
       const key = historyKey({ ...item, course: item.courseName || item.courseCode });
-      if (id && !existingRegs.has(key)) existingRegs.set(key, {
-        stCode: clean(item.stCode), registrationId: id,
+      if (!existingHistory.has(key)) existingHistory.set(key, {
+        stCode: code, registrationId: clean(item.registrationId) || code + "_" + normalizeCourseCode(item.courseCode),
         course: clean(item.courseName || item.courseCode) || "Previous Course (Legacy)",
-        dateOfAdmission: asDate(item.admissionDate), admissionDate: asDate(item.admissionDate), earliestPaymentDate: asDate(item.earliestPaymentDate),
-        formNo: clean(item.formNo), qualification: clean(item.qualification),
-        address: clean(item.rawAddress), rawAddress: clean(item.rawAddress), rawStName: clean(item.rawStName), isCurrent: false
+        dateOfAdmission: asDate(item.admissionDate), admissionDate: asDate(item.admissionDate),
+        earliestPaymentDate: asDate(item.earliestPaymentDate), formNo: clean(item.formNo),
+        qualification: clean(item.qualification), rawAddress: clean(item.rawAddress),
+        rawStName: clean(item.rawStName), isCurrent: false
       });
     }
     for (const item of registrations) {
       const key = historyKey(item);
-      if (!existingRegs.has(key)) registrationsLinked += 1;
-      const prior = existingRegs.get(key) || {};
-      existingRegs.set(key, {
-        ...prior, stCode: item.stCode, registrationId: item.registrationId,
+      if (!existingHistory.has(key)) registrationsLinked += 1;
+      const prior = existingHistory.get(key) || {};
+      existingHistory.set(key, {
+        ...prior, stCode: code, registrationId: item.registrationId,
         course: item.course || prior.course,
         dateOfAdmission: item.dateOfAdmission || prior.dateOfAdmission,
         admissionDate: item.dateOfAdmission || prior.admissionDate || prior.dateOfAdmission,
         earliestPaymentDate: item.earliestPaymentDate || prior.earliestPaymentDate,
         formNo: item.formNo || prior.formNo,
         qualification: item.qualification || prior.qualification,
-        rawAddress: item.address || prior.rawAddress || prior.address,
-        rawStName: item.rawStName || prior.rawStName || (item.cleanName + "_" + item.stCode),
+        rawAddress: item.address || prior.rawAddress,
+        rawStName: item.rawStName || prior.rawStName || (item.cleanName + "_" + code),
         isCurrent: false
       });
       registrationsSeen += 1;
     }
-    const mergedRegistrations = [...existingRegs.values()].sort(registrationSort);
+    const mergedRegistrations = [...existingHistory.values()].sort(registrationSort);
     const current = mergedRegistrations[0] || newest;
     mergedRegistrations.forEach((item, index) => { item.isCurrent = index === 0; });
-    const existingCurrent = master?.registrations?.find(item => item.isCurrent)
-      || master?.enrollments?.find(item => item.isCurrent);
-    const existingCurrentDate = asDate(master?.currentAdmissionDate || master?.dateOfAdmission
-      || existingCurrent?.dateOfAdmission || existingCurrent?.earliestPaymentDate);
-    const effectiveCurrentDate = asDate(current.dateOfAdmission || current.earliestPaymentDate);
-    const shouldPromote = !master || !existingCurrentDate || Boolean(effectiveCurrentDate && effectiveCurrentDate >= existingCurrentDate);
-    const currentIncoming = registrations.find(item => item.registrationId === current.registrationId) || current;
-    const incomingPhones = normalizeIndianPhones([...(shouldPromote ? (currentIncoming.phones || []) : []), ...(master?.phoneNumbers || []), ...(master?.phones || []), ...(group.phones || [])]);
+    const currentIncoming = registrations.find(item => historyKey(item) === historyKey(current)) || current;
+    const incomingPhones = normalizeIndianPhones([...(group.phones || []), ...(master?.phoneNumbers || []), ...(master?.phones || [])]);
+    const legacyIds = [...new Set([...(master?.legacyStudentIds || []).map(String), String(studentId)])];
     const masterSet = {
-      fullName: master?.fullName || displayName(group.cleanName),
-      normalizedFullName: normalizeName(group.cleanName),
-      legacyStudentIds: legacyIds.map(id => validObjectId(id) ? new mongoose.Types.ObjectId(id) : id),
-      primaryStCode: shouldPromote ? (current.stCode || master?.primaryStCode || "") : (master?.primaryStCode || master?.currentStCode || current.stCode || ""),
-      studentCodes: [...new Set([...(master?.studentCodes || []), ...(master?.stCodes || []), ...mergedRegistrations.map(item => item.stCode)].filter(Boolean))],
-      alternateNames: [...new Set([...(master?.alternateNames || []), master?.fullName || "", group.cleanName || "", ...(group.alternateNames || [])].map(normalizeStudentName).filter(Boolean))],
+      fullName: displayName(group.cleanName || newest.cleanName),
+      normalizedFullName: incomingName,
+      normalizedStCodes: [...new Set([...(master?.normalizedStCodes || []).map(normalizeStudentCode), code])],
+      primaryStCode: master?.primaryStCode || code,
+      studentCodes: [...new Set([...(master?.studentCodes || []), code])],
+      stCodes: [...new Set([...(master?.stCodes || []), code])],
+      alternateNames: [...new Set([...(master?.alternateNames || []), master?.fullName || "", group.cleanName || ""].map(normalizeStudentName).filter(Boolean))],
       phones: incomingPhones,
-      stCodes: [...new Set([...(master?.stCodes || []), ...mergedRegistrations.map(item => item.stCode)].filter(Boolean))],
+      phoneNumbers: incomingPhones,
       registrations: mergedRegistrations,
       enrollments: mergedRegistrations,
-      phoneNumbers: incomingPhones,
+      legacyStudentIds: legacyIds.map(id => new mongoose.Types.ObjectId(id)),
       normalizedFatherName: master?.normalizedFatherName || normalizeFather(group.fatherName || newest.fatherName),
-      identityMatchMethod: master?.identityMatchMethod || (ambiguous ? "AMBIGUOUS_NEW_PROFILE" : "WORKBOOK_IDENTITY"),
-      ...(ambiguous ? { identityWarnings: [...new Set([...(master?.identityWarnings || []), "Multiple possible existing profiles; imported history was not merged automatically."])] } : {})
+      identityMatchMethod: master ? "STUDENT_CODE" : "STUDENT_CODE_NEW"
     };
     if (!master?.dob && asDate(group.dob)) masterSet.dob = asDate(group.dob);
     if (!master?.fatherName && (group.fatherName || newest.fatherName)) masterSet.fatherName = group.fatherName || newest.fatherName;
     if (!master?.gender && newest.sex) masterSet.gender = newest.sex;
-    if (shouldPromote) {
-      masterSet.currentStCode = current.stCode;
-      masterSet.currentRegistrationId = current.registrationId;
-      masterSet.currentCourse = current.course;
-      masterSet.currentAdmissionDate = current.dateOfAdmission || null;
-      masterSet.dateOfAdmission = current.dateOfAdmission || null;
-      masterSet.formNo = current.formNo || master?.formNo || "";
-      masterSet.address = master?.address || currentIncoming.address || "";
-      masterSet.qualification = master?.qualification || currentIncoming.qualification || "";
-    } else {
-      for (const [key, value] of [["address", currentIncoming.address], ["qualification", currentIncoming.qualification]]) {
-        if (!master?.[key] && value) masterSet[key] = value;
-      }
-    }
+    masterSet.currentStCode = code;
+    masterSet.currentRegistrationId = current.registrationId;
+    masterSet.currentCourse = current.course;
+    masterSet.currentAdmissionDate = current.dateOfAdmission || null;
+    masterSet.dateOfAdmission = current.dateOfAdmission || null;
+    masterSet.formNo = current.formNo || master?.formNo || "";
+    if (!master?.address && currentIncoming.address) masterSet.address = currentIncoming.address;
+    if (!master?.qualification && currentIncoming.qualification) masterSet.qualification = currentIncoming.qualification;
     masterOps.push({ _id: masterId, isNew: !master, set: masterSet, insertDefaults: { photoUrl: "", hasPhoto: false } });
 
-    let currentEnrollmentId = null;
+    let activeEnrollmentId = null;
     for (const registration of registrations) {
-      const courseCode = registration.course === "Previous Course (Legacy)" ? "PREVIOUS-LEGACY" : registration.course.toUpperCase();
-      const registrationDateKey = asDate(registration.dateOfAdmission)?.toISOString().slice(0, 10) || "";
-      const normalizedEnrollmentName = normalizeName(group.cleanName);
-      const targetEnrollmentKey = enrollmentUniqueKey({
-        studentId: masterId, stCode: registration.stCode,
-        normalizedFullName: normalizedEnrollmentName, courseCode
+      const courseCode = registration.course === "Previous Course (Legacy)" ? "PREVIOUS-LEGACY" : normalizeCourseCode(registration.course);
+      const targetKey = enrollmentUniqueKey({
+        studentId: masterId, stCode: code, normalizedStCode: code,
+        normalizedFullName: incomingName, courseCode, admissionDate: registration.dateOfAdmission
       });
-      const existingEnrollment = enrollmentByUniqueKey.get(targetEnrollmentKey) || null;
+      const existingEnrollment = enrollmentByUniqueKey.get(targetKey) || null;
       const enrollmentId = existingEnrollment?._id || new mongoose.Types.ObjectId();
-      if (!existingEnrollment) {
-        // Make later duplicate workbook rows resolve to this same pending enrollment.
-        enrollmentByUniqueKey.set(targetEnrollmentKey, { _id: enrollmentId, ...{
-          studentId: masterId, stCode: registration.stCode,
-          normalizedFullName: normalizedEnrollmentName, courseCode
-        } });
-      }
-      if (registration.registrationId === current.registrationId) currentEnrollmentId = enrollmentId;
+      if (!existingEnrollment) enrollmentByUniqueKey.set(targetKey, {
+        _id: enrollmentId, studentId: masterId, stCode: code, normalizedStCode: code,
+        normalizedFullName: incomingName, courseCode, admissionDate: registration.dateOfAdmission
+      });
+      if (registration.registrationId === current.registrationId) activeEnrollmentId = enrollmentId;
       const courseRuleKey = normalizeCourseCode(courseCode);
       if (!feeRuleCache.has(courseRuleKey)) {
         const baseCode = courseRuleKey.replace(/[-_].*$/, "");
@@ -457,20 +436,14 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
       }
       const courseRule = feeRuleCache.get(courseRuleKey);
       const enrollmentSet = {
-        _id: enrollmentId,
-        studentId: masterId,
-        masterStudentId: masterId,
-        legacyStudentId: canonicalStudent?._id || null,
-        stCode: registration.stCode,
+        _id: enrollmentId, studentId: masterId, masterStudentId: masterId,
+        legacyStudentId: studentId,
+        stCode: code, normalizedStCode: code,
         registrationId: registration.registrationId,
-        normalizedFullName: normalizeName(group.cleanName),
-        formNo: registration.formNo || "",
-        qualification: registration.qualification || "",
-        rawAddress: registration.address || "",
-        rawStName: registration.rawStName || (registration.cleanName + "_" + registration.stCode),
-        course: registration.course || courseCode,
-        courseCode,
-        courseName: registration.course,
+        normalizedFullName: incomingName,
+        formNo: registration.formNo || "", qualification: registration.qualification || "",
+        rawAddress: registration.address || "", rawStName: registration.rawStName || (registration.cleanName + "_" + code),
+        course: registration.course || courseCode, courseCode, courseName: registration.course,
         admissionDate: registration.dateOfAdmission,
         earliestPaymentDate: registration.earliestPaymentDate || null,
         status: registration.registrationId === current.registrationId ? "ACTIVE" : (courseCode === "PREVIOUS-LEGACY" ? "LEGACY" : "PROMOTED"),
@@ -478,99 +451,129 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
         semesterLabel: courseRule.semesterLabel || registration.course,
         feeConfig: courseRule.feeConfig,
         installments: courseRule.feeConfig?.configured ? buildInstallments({
-          courseCode,
-          admissionDate: registration.dateOfAdmission || new Date(),
-          feeConfig: courseRule.feeConfig,
-          semesterLabel: courseRule.semesterLabel || registration.course
-        }) : [],
-        summary: {
-          totalFee: Number(courseRule.feeConfig?.grossFee || 0),
-          totalDue: Number(courseRule.feeConfig?.netPayableFee || 0),
-          totalPaid: 0,
-          balanceDue: Number(courseRule.feeConfig?.netPayableFee || 0),
-          feeStatus: "Unpaid"
-        }
+          courseCode, admissionDate: registration.dateOfAdmission || new Date(),
+          feeConfig: courseRule.feeConfig, semesterLabel: courseRule.semesterLabel || registration.course
+        }) : []
       };
       if (!existingEnrollment) {
-        enrollmentOps.push({ _id: enrollmentId, set: enrollmentSet, isNew: true, uniqueKey: targetEnrollmentKey });
+        enrollmentInserts.push(enrollmentSet);
       } else {
         const patch = {};
-        if (existingEnrollment.courseName !== registration.course) patch.courseName = registration.course;
-        if (String(existingEnrollment.registrationId || "").toUpperCase() !== registration.registrationId.toUpperCase()) patch.registrationId = registration.registrationId;
-        if (normalizeName(existingEnrollment.normalizedFullName) !== normalizeName(group.cleanName)) patch.normalizedFullName = normalizeName(group.cleanName);
-        if (existingEnrollment.courseCode !== courseCode && (existingEnrollment.registrationId === registration.registrationId || !existingEnrollment.courseCode || String(existingEnrollment.courseCode).toUpperCase() === "LEGACY")) patch.courseCode = courseCode;
+        for (const key of ["normalizedStCode", "registrationId", "normalizedFullName", "course", "courseName", "courseCode", "formNo", "qualification", "rawAddress", "rawStName", "admissionDate", "earliestPaymentDate"]) {
+          const value = enrollmentSet[key];
+          if (value !== "" && value !== null && value !== undefined && String(existingEnrollment[key] ?? "") !== String(value)) patch[key] = value;
+        }
         if (existingEnrollment.feeConfig?.configured === false && courseRule.feeConfig?.configured) patch.feeConfig = courseRule.feeConfig;
-        if (!existingEnrollment.semesterLabel && registration.course) patch.semesterLabel = registration.course;
-        if (!existingEnrollment.formNo && registration.formNo) patch.formNo = registration.formNo;
-        if (!existingEnrollment.qualification && registration.qualification) patch.qualification = registration.qualification;
-        if (!existingEnrollment.rawAddress && registration.address) patch.rawAddress = registration.address;
-        if (!existingEnrollment.rawStName && registration.rawStName) patch.rawStName = registration.rawStName;
-        if (!existingEnrollment.admissionDate && registration.dateOfAdmission) patch.admissionDate = registration.dateOfAdmission;
-        if (!existingEnrollment.earliestPaymentDate && registration.earliestPaymentDate) patch.earliestPaymentDate = registration.earliestPaymentDate;
-        if (Object.keys(patch).length) enrollmentOps.push({ _id: existingEnrollment._id, set: patch, isNew: false, uniqueKey: targetEnrollmentKey });
+        if (Object.keys(patch).length) enrollmentUpdates.push({ updateOne: { filter: { _id: existingEnrollment._id }, update: { $set: patch } } });
       }
-      outputMap.push({ registrationId: registration.registrationId, stCode: registration.stCode, studentId: masterId.toString(), enrollmentId: enrollmentId.toString(), course: registration.course });
+      outputMap.push({
+        registrationId: registration.registrationId, stCode: code, normalizedStCode: code,
+        studentId: String(masterId), enrollmentId: String(enrollmentId), course: registration.course
+      });
     }
-    if (currentEnrollmentId) {
-      activeMasterOps.push({ updateOne: { filter: { _id: masterId }, update: { $set: { activeEnrollmentId: currentEnrollmentId } } } });
-      for (const priorEnrollment of existingEnrollments) {
-        if (String(priorEnrollment.studentId) === String(masterId)
-          && String(priorEnrollment._id) !== String(currentEnrollmentId)
-          && priorEnrollment.status === "ACTIVE") {
-          enrollmentStatusOps.push({ updateOne: {
-            filter: { _id: priorEnrollment._id },
-            update: { $set: { status: "PROMOTED" } }
-          } });
+    if (activeEnrollmentId) {
+      activeMasterOps.push({ updateOne: { filter: { _id: masterId }, update: { $set: { activeEnrollmentId } } } });
+      for (const prior of existingEnrollments) {
+        if (String(prior.studentId) === String(masterId) && normalizeStudentCode(prior.stCode) === code
+          && String(prior._id) !== String(activeEnrollmentId) && prior.status === "ACTIVE") {
+          enrollmentStatusOps.push({ updateOne: { filter: { _id: prior._id }, update: { $set: { status: "PROMOTED" } } } });
         }
       }
-      enrollmentStatusOps.push({ updateOne: {
-        filter: { _id: currentEnrollmentId },
-        update: { $set: { status: "ACTIVE" } }
-      }});
+      enrollmentStatusOps.push({ updateOne: { filter: { _id: activeEnrollmentId }, update: { $set: { status: "ACTIVE" } } } });
     }
   }
 
-  const enrollmentOpsByKey=new Map();
-  for(const op of enrollmentOps){const d=op.set||{},k=op.uniqueKey||enrollmentUniqueKey(d);if(!k||k==="||||"){flaggedRows.push({phase:"enrollment",reason:"Incomplete enrollment key skipped."});continue;}const old=enrollmentOpsByKey.get(k);if(!old)enrollmentOpsByKey.set(k,op);else if(old.isNew)old.set={...old.set,...d};else if(!op.isNew)old.set={...old.set,...d};}
-  const writeWarnings=[];
-  let duplicateDocsSkipped = 0;
-  async function insertChunks(Model,docs,phase,size=200){for(let off=0;off<docs.length;off+=size){const chunk=docs.slice(off,off+size),t=Date.now();try{await Model.insertMany(chunk,{ordered:false});}catch(e){if(e.code!==11000&&!(e.writeErrors||[]).some(x=>x.code===11000))throw e;const found=await Model.find({_id:{$in:chunk.map(x=>x._id)}}).select("_id").lean(),ids=new Set(found.map(x=>String(x._id))),missing=chunk.filter(x=>!ids.has(String(x._id)));duplicateDocsSkipped += found.length;
-        if(missing.length)try{await Model.insertMany(missing,{ordered:false});}catch(re){if(re.code!==11000&&!(re.writeErrors||[]).some(x=>x.code===11000))throw re;duplicateDocsSkipped += missing.length;writeWarnings.push({phase,code:11000,reason:"Duplicate insert safely skipped after unique-key conflict."});}
-        writeWarnings.push({phase,code:11000,reason:"Existing duplicate records skipped."});}console.log("[unified-import]",phase,Math.floor(off/size)+1,Date.now()-t,{attempted:chunk.length});}}
-  async function updateChunks(Model,ops,phase,size=500){for(let off=0;off<ops.length;off+=size){const chunk=ops.slice(off,off+size),t=Date.now();if(chunk.length)await Model.bulkWrite(chunk,{ordered:false});console.log("[unified-import]",phase,Math.floor(off/size)+1,Date.now()-t,{updated:chunk.length});}}
-  await insertChunks(Student,studentOps,"students-insert");
-  const knownMasters=new Set(existingMasters.map(x=>String(x._id))),newMasters=[],masterUpdates=[];
-  for(const item of masterOps){if(item.isNew||!knownMasters.has(String(item._id))){newMasters.push({_id:item._id,...item.insertDefaults,...item.set});continue;}const prior=existingMasters.find(x=>String(x._id)===String(item._id)),patch={};for(const [k,v] of Object.entries(item.set||{})){const blank=v===""||v===null||v===undefined||(Array.isArray(v)&&!v.length);if(blank&&prior?.[k]!==undefined&&prior?.[k]!==null&&prior?.[k]!=="")continue;if(JSON.stringify(prior?.[k])!==JSON.stringify(v))patch[k]=v;}if(Object.keys(patch).length)masterUpdates.push({updateOne:{filter:{_id:item._id},update:{$set:patch}}});}
-  await insertChunks(StudentMaster,newMasters,"master-insert");await updateChunks(StudentMaster,masterUpdates,"master-update");await updateChunks(StudentMaster,activeMasterOps,"active-master");
-  const newEnrollments=[],enrollmentUpdates=[];for(const item of enrollmentOpsByKey.values())if(item.isNew)newEnrollments.push({_id:item._id,...item.set});else enrollmentUpdates.push({updateOne:{filter:{_id:item._id},update:{$set:item.set}}});
-  await insertChunks(StudentEnrollment,newEnrollments,"enrollment-insert");
-  if (newEnrollments.length) {
-    const persisted = await StudentEnrollment.find({ $or: newEnrollments.map(item => ({
-      studentId: item.studentId, stCode: item.stCode,
-      normalizedFullName: item.normalizedFullName, courseCode: item.courseCode
+  const insertChunks = async (Model, docs, phase, size = 200) => {
+    for (let offset = 0; offset < docs.length; offset += size) {
+      const chunk = docs.slice(offset, offset + size);
+      const started = Date.now();
+      try {
+        await Model.insertMany(chunk, { ordered: false });
+      } catch (error) {
+        const writeErrors = error.writeErrors || error.result?.writeErrors || [];
+        const onlyDuplicates = error.code === 11000 || (writeErrors.length && writeErrors.every(item => item.code === 11000));
+        if (!onlyDuplicates) throw error;
+        if (Model.modelName === "StudentEnrollment") {
+          const persisted = await StudentEnrollment.find({ $or: chunk.map(item => ({
+            studentId: item.studentId, normalizedStCode: item.normalizedStCode,
+            normalizedFullName: item.normalizedFullName, courseCode: item.courseCode,
+            admissionDate: item.admissionDate
+          })) }).lean();
+          const persistedKeys = new Set(persisted.map(enrollmentUniqueKey));
+          const missing = chunk.filter(item => !persistedKeys.has(enrollmentUniqueKey(item)));
+          if (missing.length) await Model.insertMany(missing, { ordered: false });
+        } else if (Model.modelName === "Student") {
+          const persisted = await Student.find({ normalizedStCode: { $in: chunk.map(item => item.normalizedStCode) } }).select("normalizedStCode").lean();
+          const persistedCodes = new Set(persisted.map(item => normalizeStudentCode(item.normalizedStCode)));
+          const missing = chunk.filter(item => !persistedCodes.has(normalizeStudentCode(item.normalizedStCode)));
+          if (missing.length) await Model.insertMany(missing, { ordered: false });
+        } else {
+          throw error;
+        }
+      }
+      console.log("[unified-import]", phase, Math.floor(offset / size) + 1, Date.now() - started, { attempted: chunk.length });
+    }
+  };
+  const updateChunks = async (Model, ops, phase, size = 500) => {
+    for (let offset = 0; offset < ops.length; offset += size) {
+      const chunk = ops.slice(offset, offset + size);
+      const started = Date.now();
+      if (chunk.length) await Model.bulkWrite(chunk, { ordered: false });
+      console.log("[unified-import]", phase, Math.floor(offset / size) + 1, Date.now() - started, { updated: chunk.length });
+    }
+  };
+  await insertChunks(Student, studentInserts, "student-code-insert");
+  await updateChunks(Student, studentUpdates, "student-code-update");
+  const knownMasters = new Set(existingMasters.map(item => String(item._id)));
+  const masterInserts = [], masterUpdates = [];
+  for (const item of masterOps) {
+    if (item.isNew || !knownMasters.has(String(item._id))) {
+      masterInserts.push({ _id: item._id, ...item.insertDefaults, ...item.set });
+      continue;
+    }
+    const prior = existingMasters.find(value => String(value._id) === String(item._id));
+    const patch = {};
+    for (const [key, value] of Object.entries(item.set || {})) {
+      if (value === "" || value === null || value === undefined) continue;
+      if (JSON.stringify(prior?.[key]) !== JSON.stringify(value)) patch[key] = value;
+    }
+    if (Object.keys(patch).length) masterUpdates.push({ updateOne: { filter: { _id: item._id }, update: { $set: patch } } });
+  }
+  await insertChunks(StudentMaster, masterInserts, "master-code-insert");
+  await updateChunks(StudentMaster, masterUpdates, "master-code-update");
+  await updateChunks(StudentMaster, activeMasterOps, "active-master");
+  await insertChunks(StudentEnrollment, enrollmentInserts, "enrollment-code-insert");
+  if (enrollmentInserts.length) {
+    const persisted = await StudentEnrollment.find({ $or: enrollmentInserts.map(item => ({
+      studentId: item.studentId, normalizedStCode: item.normalizedStCode,
+      normalizedFullName: item.normalizedFullName, courseCode: item.courseCode,
+      admissionDate: item.admissionDate
     })) }).lean();
     const persistedByKey = new Map(persisted.map(item => [enrollmentUniqueKey(item), item]));
     const actualIds = new Map();
-    for (const item of newEnrollments) {
+    for (const item of enrollmentInserts) {
       const actual = persistedByKey.get(enrollmentUniqueKey(item));
       if (actual) actualIds.set(String(item._id), actual._id);
     }
     for (const operation of activeMasterOps) {
-      const currentId = operation.updateOne?.update?.$set?.activeEnrollmentId;
-      if (currentId && actualIds.has(String(currentId))) operation.updateOne.update.$set.activeEnrollmentId = actualIds.get(String(currentId));
+      const id = operation.updateOne?.update?.$set?.activeEnrollmentId;
+      if (id && actualIds.has(String(id))) operation.updateOne.update.$set.activeEnrollmentId = actualIds.get(String(id));
     }
-    for (const item of outputMap) {
-      if (actualIds.has(String(item.enrollmentId))) item.enrollmentId = String(actualIds.get(String(item.enrollmentId)));
-    }
+    for (const item of outputMap) if (actualIds.has(String(item.enrollmentId))) item.enrollmentId = String(actualIds.get(String(item.enrollmentId)));
     for (const operation of enrollmentStatusOps) {
       const id = operation.updateOne?.filter?._id;
       if (id && actualIds.has(String(id))) operation.updateOne.filter._id = actualIds.get(String(id));
     }
   }
-  await updateChunks(StudentEnrollment,enrollmentUpdates,"enrollment-update");
-  await updateChunks(StudentEnrollment,enrollmentStatusOps,"enrollment-status");
-  onPhase("profiles");onPhase("enrollments");
-  return { studentsMatchedUpdated: matchedProfiles, newStudentsCreated: newProfiles, registrationsLinked, registrationsSeen, duplicatesSkipped: duplicateDocsSkipped, registrationMap: outputMap, flaggedRows, warnings: writeWarnings };
+  await updateChunks(StudentEnrollment, enrollmentUpdates, "enrollment-code-update");
+  await updateChunks(StudentEnrollment, enrollmentStatusOps, "enrollment-status");
+  onPhase("students");
+  onPhase("enrollments");
+  return {
+    studentsMatchedUpdated: matchedProfiles, newStudentsCreated: newProfiles,
+    registrationsLinked, registrationsSeen, duplicatesSkipped: 0,
+    registrationMap: outputMap, flaggedRows
+  };
 }
 
 async function syncFeeRows(rows = [], onProgress = () => {}, registrationMap = []) {
