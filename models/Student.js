@@ -5,6 +5,7 @@ const StudentSchema = new mongoose.Schema({
   aecCode: String,
   regnNo: { type: String, trim: true },
   normalizedStCode: { type: String, default: "", trim: true, index: true },
+  totalFee: { type: Number, default: 0 },
   totalPaid: { type: Number, default: 0 },
   feeStatus: { type: String, enum: ["Paid", "Partial", "Not Paid"], default: "Not Paid" },
   enrollmentNo: String,
