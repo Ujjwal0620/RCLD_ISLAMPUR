@@ -68,6 +68,7 @@ const StudentMasterSchema = new mongoose.Schema({
   mergeMethod: { type: String, default: "" },
   identityWarnings: { type: [String], default: [] },
   importBatchId: { type: String, default: "", index: true },
+  importSourceKeys: { type: [String], default: [], index: true },
   feeSummary: {
     totalFee: { type: Number, default: 0 },
     discount: { type: Number, default: 0 },
