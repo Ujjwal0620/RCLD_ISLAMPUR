@@ -176,6 +176,7 @@ export default function UniversalWorkbookImport() {
             ["Workbook rows", preview.summary?.totalRows], ["Unique student groups", preview.summary?.totalGroups],
             ["Existing profiles", preview.summary?.existingStudentsToUpdate], ["New profiles", preview.summary?.newStudents],
             ["Payments to add", preview.summary?.newPaymentsToAdd], ["Duplicate payments", preview.summary?.duplicatePaymentsSkipped],
+            ["Payment rows needing review", preview.summary?.paymentRowsNeedingReview],
             ["Conflicts / review", preview.summary?.conflicts], ["Warnings", preview.summary?.warnings]
           ].map(([label, value]) => <div key={label} style={{ padding: 12, border: "1px solid var(--border,#e2e6ed)", borderRadius: 10 }}><small style={{ color: "var(--text-muted,#687386)" }}>{label}</small><strong style={{ display: "block", fontSize: 20 }}>{Number(value || 0).toLocaleString("en-IN")}</strong></div>)}
         </div>
