@@ -176,10 +176,20 @@ async function commitOne(stage, importBatchId, decision) {
   await master.save();
 
   const registrationRows = Array.isArray(stage.registrations) ? stage.registrations : [];
-  const registrations = registrationRows.length ? registrationRows : (resolvedCode ? [{
+  const registrations = registrationRows.length ? [...registrationRows] : (resolvedCode ? [{
     stCode: resolvedCode, course: incoming.course, admissionDate: incoming.admissionDate,
     formNo: incoming.formNo, qualification: incoming.qualification, address: incoming.address
   }] : []);
+  if (resolvedCode && !registrations.some(item => sanitizeStudentCode(item.stCode) === resolvedCode)) {
+    registrations.push({
+      stCode: resolvedCode,
+      course: incoming.course || "Previous Course (Legacy)",
+      admissionDate: incoming.admissionDate || null,
+      formNo: incoming.formNo,
+      qualification: incoming.qualification,
+      address: incoming.address
+    });
+  }
   const enrollmentByCode = new Map();
   for (const registration of registrations) {
     const enrollment = await ensureEnrollment(master, incoming, registration, importBatchId, stage.sequence);
