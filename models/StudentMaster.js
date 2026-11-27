@@ -68,7 +68,7 @@ const StudentMasterSchema = new mongoose.Schema({
     discount: { type: Number, default: 0 },
     totalPaid: { type: Number, default: 0 },
     balanceDue: { type: Number, default: 0 },
-    feeStatus: { type: String, enum: ["Paid", "Partial", "Unpaid"], default: "Unpaid" },
+    feeStatus: { type: String, enum: ["Paid", "Partial", "Unpaid", "Not Paid"], default: "Unpaid" },
     courseCount: { type: Number, default: 0 },
     updatedAt: { type: Date, default: null }
   }
