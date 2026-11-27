@@ -14,6 +14,7 @@ const StudentFeePaymentSchema = new mongoose.Schema({
   stCode: { type: String, required: true, trim: true },
   normalizedStCode: { type: String, default: "", trim: true, index: true },
   sourceRowKey: { type: String, default: "", trim: true, index: true },
+  sourceBatchKey: { type: String, default: "", trim: true, index: true },
   registrationId: { type: String, default: "", trim: true, uppercase: true, index: true },
   financialYear: { type: String, default: "" },
   stNameKey: { type: String, default: "", index: true },
@@ -32,6 +33,7 @@ const StudentFeePaymentSchema = new mongoose.Schema({
 }, { timestamps: true, collection: "student_fee_payments" });
 
 StudentFeePaymentSchema.index({ studentId: 1, enrollmentId: 1, mrNo: 1, paymentDate: 1, amountPaid: 1 }, { name: "student_course_receipt_lookup" });
+StudentFeePaymentSchema.index({ sourceRowKey: 1 }, { unique: true, partialFilterExpression: { sourceRowKey: { $type: "string", $gt: "" } }, name: "student_fee_source_row_unique" });
 
 
 export default mongoose.models.StudentFeePayment || mongoose.model("StudentFeePayment", StudentFeePaymentSchema);
