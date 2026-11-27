@@ -242,6 +242,9 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
     ]
   }).lean();
 
+  // Resolve legacyStudentIds before building Master Student code ownership.
+  // These IDs refer to the legacy Student collection loaded above.
+  const legacyStudentById = new Map(existingStudents.map(student => [String(student._id), student]));
   const studentByCode = new Map();
   for (const student of existingStudents) {
     const code = normalizeStudentCode(student.normalizedStCode || student.regnNo || student.enrollmentNo);
