@@ -42,6 +42,43 @@ async function ensureReceiptIndex() {
           partialFilterExpression: { sourceRowKey: { $type: "string", $gt: "" } }
         }
       );
+      if (!indexes.some(index => index.name === "master_normalized_stcode_receipt_unique")) {
+        const duplicateKeys = await StudentFeePayment.collection.aggregate([
+          { $match: {
+            importBatchKey: "UNIFIED_WORKBOOK_IMPORT",
+            masterStudentId: { $type: "objectId" },
+            normalizedStCode: { $type: "string", $gt: "" },
+            mrNo: { $type: "string", $gt: "" },
+            paymentDate: { $type: "date" },
+            amountPaid: { $type: "number" }
+          } },
+          { $group: {
+            _id: { masterStudentId: "$masterStudentId", normalizedStCode: "$normalizedStCode", mrNo: "$mrNo", paymentDate: "$paymentDate", amountPaid: "$amountPaid" },
+            count: { $sum: 1 }
+          } },
+          { $match: { count: { $gt: 1 } } },
+          { $limit: 1 }
+        ]).toArray();
+        if (!duplicateKeys.length) {
+          await StudentFeePayment.collection.createIndex(
+            { masterStudentId: 1, normalizedStCode: 1, mrNo: 1, paymentDate: 1, amountPaid: 1 },
+            {
+              unique: true,
+              name: "master_normalized_stcode_receipt_unique",
+              partialFilterExpression: {
+                importBatchKey: "UNIFIED_WORKBOOK_IMPORT",
+                masterStudentId: { $type: "objectId" },
+                normalizedStCode: { $type: "string", $gt: "" },
+                mrNo: { $type: "string", $gt: "" },
+                paymentDate: { $type: "date" },
+                amountPaid: { $type: "number" }
+              }
+            }
+          );
+        } else {
+          console.warn("[unified-import] existing duplicate receipt business keys detected; preserving all documents and relying on import reconciliation until reviewed");
+        }
+      }
       // Existing receipt documents are never deleted, archived, or rewritten during index setup.
     })().catch(error => {
       receiptIndexPromise = null;
