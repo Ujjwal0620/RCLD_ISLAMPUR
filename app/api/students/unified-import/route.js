@@ -70,7 +70,7 @@ const asDate = value => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 const registrationIdentity = item => clean(item.registrationId)
-  || (clean(item.cleanName) && clean(item.stCode) ? normalizeName(item.cleanName) + "_" + clean(item.stCode) : "");
+  || (clean(item.stCode) ? normalizeName(item.cleanName) + "_" + normalizeStudentCode(item.stCode) : "");
 
 function registrationSort(a, b) {
   const da = asDate(a.dateOfAdmission)?.getTime() ?? asDate(a.earliestPaymentDate)?.getTime() ?? 0;
