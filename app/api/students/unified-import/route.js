@@ -663,7 +663,7 @@ async function syncFeeRows(rows = [], onProgress = () => {}, registrationMap = [
     { stCode: { $in: variants } },
     { registrationId: { $in: ids } },
     ...(sourceRowKeys.length ? [{ sourceRowKey: { $in: sourceRowKeys } }] : [])
-  ] }).select("sourceRowKey sourceBatchKey sourceStCode normalizedStCode registrationId stNameKey stCode mrNo paymentDate amountPaid studentId masterStudentId enrollmentId courseCode course importBatchKey").lean();
+  ] }).select("sourceRowKey sourceBatchKey sourceStCode sourceSheet sourceRowNo normalizedStCode registrationId stNameKey stCode mrNo paymentDate amountPaid studentId masterStudentId enrollmentId courseCode course importBatchKey").lean();
   const existingByBusinessKey = new Map();
   const existingBySourceKey = new Map();
   for (const item of existing) {
