@@ -11,6 +11,7 @@ import { normalizeCourseCode, resolveCourseFeeConfigFromDocument } from "@/lib/s
 import { buildInstallments } from "@/lib/student-import/fee-allocation";
 import { normalizeStudentName, normalizeIndianPhones } from "@/lib/student-import/identity-resolution.mjs";
 import { normalizeStudentCode, normalizeReceiptNumber, parseImportAmount, makeReceiptBusinessKey } from "@/lib/student-import/normalization.mjs";
+import { ensureEnrollmentIndexes } from "@/lib/student-import/import-payment-sheet";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -164,6 +165,7 @@ async function bulkWriteChunked(model, operations, warnings, label, chunkSize = 
 }
 
 async function syncStudentGroups(groups = [], onPhase = () => {}) {
+  await ensureEnrollmentIndexes();
   if (!Array.isArray(groups) || groups.length > 500) throw new Error("Student batch must contain between 1 and 500 Student Code profiles.");
   const allRegistrations = groups.flatMap(group => (group.registrations || []).map(item => ({
     ...item,
