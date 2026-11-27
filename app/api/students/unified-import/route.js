@@ -1067,17 +1067,42 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
       as: "_linkedEnrollment"
     } },
     { $addFields: { _linkedEnrollment: { $arrayElemAt: ["$_linkedEnrollment", 0] } } },
+    { $lookup: {
+      from: "student_master_profiles",
+      localField: "studentId",
+      foreignField: "_id",
+      as: "_linkedMaster"
+    } },
+    { $addFields: { _linkedMaster: { $arrayElemAt: ["$_linkedMaster", 0] } } },
     { $addFields: {
       _rawStudentCode: {
         $let: {
           vars: {
             normalized: { $trim: { input: { $ifNull: ["$normalizedStCode", ""] } } },
             direct: { $trim: { input: { $ifNull: ["$stCode", ""] } } },
-            linked: { $trim: { input: { $ifNull: ["$_linkedEnrollment.normalizedStCode", "$_linkedEnrollment.stCode"] } } }
+            linked: { $trim: { input: { $ifNull: ["$_linkedEnrollment.normalizedStCode", "$_linkedEnrollment.stCode"] } } },
+            masterNormalized: { $ifNull: ["$_linkedMaster.normalizedStCodes", []] },
+            masterCodes: { $ifNull: ["$_linkedMaster.studentCodes", []] },
+            masterLegacyCodes: { $ifNull: ["$_linkedMaster.stCodes", []] }
           },
           in: { $cond: [
-            { $ne: ["$$normalized", ""] }, "$$normalized",
-            { $cond: [{ $ne: ["$$direct", ""] }, "$$direct", "$$linked"] }
+            { $ne: ["$normalized", ""] }, "$normalized",
+            { $cond: [
+              { $ne: ["$direct", ""] }, "$direct",
+              { $cond: [
+                { $ne: ["$linked", ""] }, "$linked",
+                { $cond: [
+                  { $eq: [{ $size: "$masterNormalized" }, 1] }, { $arrayElemAt: ["$masterNormalized", 0] },
+                  { $cond: [
+                    { $eq: [{ $size: "$masterCodes" }, 1] }, { $arrayElemAt: ["$masterCodes", 0] },
+                    { $cond: [
+                      { $eq: [{ $size: "$masterLegacyCodes" }, 1] }, { $arrayElemAt: ["$masterLegacyCodes", 0] },
+                      { $ifNull: ["$_linkedMaster.primaryStCode", "$_linkedMaster.currentStCode"] }
+                    ] }
+                  ] }
+                ] }
+              ] }
+            ] }
           ] }
         }
       }
