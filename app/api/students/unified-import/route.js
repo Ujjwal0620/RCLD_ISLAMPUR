@@ -1155,11 +1155,18 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
   const legacyStudentIds = legacyStudents.map(item => item._id);
   const legacyFees = legacyStudentIds.length ? await StudentFee.find({ studentId: { $in: legacyStudentIds } }).lean() : [];
   const importedReceiptKeys = new Set();
+  const enrollmentByIdForReceipts = new Map(enrollments.map(item => [String(item._id), item]));
   const importedPaymentDocs = codes.length ? await StudentFeePayment.find({
-    $or: [...codes.map(code => ({ normalizedStCode: code })), { stCode: { $in: codeVariants } }]
-  }).select("normalizedStCode stCode mrNo normalizedMrNo paymentDate").lean() : [];
+    $or: [
+      ...codes.map(code => ({ normalizedStCode: code })),
+      { stCode: { $in: codeVariants } },
+      ...(enrollmentIds.length ? [{ enrollmentId: { $in: enrollmentIds } }] : []),
+      ...(masterObjectIds.length ? [{ studentId: { $in: masterObjectIds } }, { masterStudentId: { $in: masterObjectIds } }] : [])
+    ]
+  }).select("normalizedStCode stCode enrollmentId mrNo normalizedMrNo paymentDate").lean() : [];
   for (const payment of importedPaymentDocs) {
-    const code = normalizeStudentCode(payment.normalizedStCode || payment.stCode);
+    const linkedEnrollment = enrollmentByIdForReceipts.get(String(payment.enrollmentId));
+    const code = normalizeStudentCode(payment.normalizedStCode || payment.stCode || linkedEnrollment?.normalizedStCode || linkedEnrollment?.stCode);
     const receipt = normalizeReceiptNumber(payment.normalizedMrNo || payment.mrNo);
     if (code && receipt) importedReceiptKeys.add([code, receipt, dateKey(payment.paymentDate)].join("|"));
   }
