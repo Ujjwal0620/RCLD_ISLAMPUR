@@ -1143,7 +1143,7 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
         studentOpsById.set(String(student._id), { updateOne: {
           filter: { _id: student._id },
           update: { $set: {
-            normalizedStCode: code, totalPaid,
+            normalizedStCode: code, totalFee, totalPaid,
             dueAmount: balanceDue,
             paymentStatus: hasConfiguredFee && balanceDue <= 0 ? "Paid" : totalPaid > 0 ? "Partial" : "Not Paid",
             feeStatus: hasConfiguredFee && balanceDue <= 0 ? "Paid" : totalPaid > 0 ? "Partial" : "Not Paid"
