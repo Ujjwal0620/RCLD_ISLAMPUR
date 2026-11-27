@@ -797,7 +797,7 @@ async function syncFeeRows(rows = [], onProgress = () => {}, registrationMap = [
     { stCode: { $in: variants } },
     { registrationId: { $in: ids } },
     ...(sourceRowKeys.length ? [{ sourceRowKey: { $in: sourceRowKeys } }] : [])
-  ] }).select("sourceRowKey sourceBatchKey sourceStCode sourceSheet sourceRowNo normalizedStCode normalizedMrNo registrationId stNameKey stCode mrNo paymentDate amountPaid studentId masterStudentId enrollmentId courseCode course importBatchKey").lean();
+  ] }).select("sourceRowKey sourceBatchKey sourceStCode sourceStudentName sourceSheet sourceRowNo normalizedStCode normalizedMrNo registrationId stNameKey stCode mrNo paymentDate amountPaid studentId masterStudentId enrollmentId courseCode course importBatchKey").lean();
   const existingByBusinessKey = new Map();
   const existingBySourceKey = new Map();
   for (const item of existing) {
@@ -885,7 +885,8 @@ async function syncFeeRows(rows = [], onProgress = () => {}, registrationMap = [
       studentId: enrollment.studentId, masterStudentId: enrollment.studentId,
       enrollmentId: enrollment._id, stCode, sourceStCode: clean(row.sourceStCode || row.stCode), normalizedStCode: stCode,
       registrationId: enrollment.registrationId || row.registrationId || "",
-      stNameKey: enrollment.registrationId || row.registrationId || "",
+      stNameKey: normalizeName(row.cleanName || enrollment.normalizedFullName || ""),
+      sourceStudentName: clean(row.cleanName || enrollment.normalizedFullName || ""),
       courseCode, course: enrollment.course || enrollment.courseName || row.course || "",
       mrNo, normalizedMrNo: normalizeReceiptNumber(mrNo), paymentDate, amountPaid, rawPaymentDate: paymentDate,
       sourceSheet: clean(row.sourceSheet), sourceRowNo: Number(row.rowNo || 0),
@@ -959,7 +960,7 @@ async function syncFeeRows(rows = [], onProgress = () => {}, registrationMap = [
           repairs.push({ updateOne: { filter: { _id: prior._id }, update: { $set: {
             studentId: item.studentId, masterStudentId: item.masterStudentId, enrollmentId: item.enrollmentId,
             stCode: item.stCode, sourceStCode: item.sourceStCode, normalizedStCode: item.normalizedStCode, registrationId: item.registrationId,
-            stNameKey: item.stNameKey, courseCode: item.courseCode, course: item.course,
+            stNameKey: item.stNameKey, sourceStudentName: item.sourceStudentName, courseCode: item.courseCode, course: item.course,
             mrNo: item.mrNo, normalizedMrNo: item.normalizedMrNo, paymentDate: item.paymentDate, amountPaid: item.amountPaid, rawPaymentDate: item.rawPaymentDate,
             sourceSheet: item.sourceSheet, sourceRowNo: item.sourceRowNo,
             sourceRowKey: item.sourceRowKey, sourceBatchKey: item.sourceBatchKey, importBatchKey: item.importBatchKey
@@ -992,7 +993,7 @@ async function syncFeeRows(rows = [], onProgress = () => {}, registrationMap = [
           existingReceiptsUpdatedOrSkipped += recovered;
           for (const item of notSaved) unmatchedRows.push({
             row: item.sourceRowNo, sheet: item.sourceSheet, stCode: item.stCode,
-            name: item.stNameKey, amountPaid: item.amountPaid, mrNo: item.mrNo,
+            name: item.sourceStudentName || item.stNameKey, amountPaid: item.amountPaid, mrNo: item.mrNo,
             paymentDate: item.paymentDate, reason: "MongoDB rejected this receipt with a duplicate-key conflict and no matching existing receipt could be found."
           });
         }
