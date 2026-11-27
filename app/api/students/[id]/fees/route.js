@@ -152,10 +152,12 @@ export async function GET(request, { params }) {
       $or: [{ normalizedStCode: code }, { stCode: { $in: variants } }]
     }).select("stCode normalizedStCode mrNo normalizedMrNo paymentDate amountPaid updatedAt createdAt").lean() : [];
     const base = feeSummary(fee || { totalFee: 0, discount: 0, admissionFee: 0, registrationFee: 0, payments: [] });
-    const legacyReceiptKeys = new Set((fee?.payments || []).map(payment => [
-      code, normalizeReceiptNumber(payment.receiptNo || payment.reference),
-      String(payment.date || "").slice(0, 10)
-    ].join("|")));
+    const legacyReceiptKeys = new Set((fee?.payments || []).map(payment => {
+      const rawDate = payment.date ? new Date(payment.date) : null;
+      const legacyDateKey = rawDate && !Number.isNaN(rawDate.getTime()) ? rawDate.toISOString().slice(0, 10) : "";
+      const rawReceipt = payment.receiptNo || payment.reference;
+      return [code, normalizeReceiptNumber(rawReceipt === "—" ? "" : rawReceipt), legacyDateKey].join("|");
+    }));
     const importedByReceipt = new Map();
     for (const payment of importedPayments) {
       const receipt = normalizeReceiptNumber(payment.normalizedMrNo || payment.mrNo);
