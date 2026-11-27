@@ -358,7 +358,7 @@ async function commitOne(stage, importBatchId, decision) {
   await StudentImportStaging.updateOne({ _id: stage._id, committedAt: null }, {
     $set: {
       committedAt: new Date(),
-      committedResult: { masterId: String(master._id), enrollmentCount: enrollmentByCode.size, payments: paymentResults }
+      committedResult: { masterId: String(master._id), decision: chosen, enrollmentCount: enrollmentByCode.size, payments: paymentResults }
     }
   });
   return { masterId: String(master._id), enrollmentCount: enrollmentByCode.size, payments: paymentResults };
