@@ -113,7 +113,7 @@ export async function GET(req,{params}){
       const date = payment.paymentDate || payment.date;
       const normalizedDate = date && !Number.isNaN(new Date(date).getTime()) ? new Date(date).toISOString().slice(0, 10) : "";
       const code = normalizeStudentCode(payment.normalizedStCode || payment.stCode || payment.registrationId || payment.stNameKey);
-      const rawReceipt = payment.mrNo || payment.receiptNo || payment.reference;
+      const rawReceipt = payment.normalizedMrNo || payment.mrNo || payment.receiptNo || payment.reference;
       const receipt = normalizeReceiptNumber(rawReceipt === "—" ? "" : rawReceipt);
       return [code, receipt || String(payment._id || ""), normalizedDate].join("|");
     };
