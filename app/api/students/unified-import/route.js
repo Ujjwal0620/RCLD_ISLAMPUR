@@ -909,7 +909,7 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
     { $group: {
       _id: {
         code: "$_normalizedStudentCode",
-        mrNo: "$mrNo",
+        receiptKey: { $cond: [{ $and: [{ $ne: ["$mrNo", null] }, { $ne: ["$mrNo", ""] }] }, "$mrNo", { $toString: "$_id" }] },
         paymentDate: "$paymentDate"
       },
       totalPaid: { $first: "$amountPaid" },
