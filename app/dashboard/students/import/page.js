@@ -327,18 +327,8 @@ function buildWorkbookPayload(workbook) {
     let matchMethod = "ST_CODE";
     let candidates = resolvedCode ? (codeToProfiles.get(resolvedCode) || []).flatMap(profileIndex => profiles[profileIndex].registrations) : [];
 
-    // A reused/colliding Student Code can still be resolved when the receipt's
-    // own name exactly identifies one of the profiles carrying that code.
-    if (candidates.length) {
-      const candidateNames = new Set(candidates.map(item => normalizeName(item.cleanName)));
-      if (candidateNames.size > 1) {
-        const exactNameCandidates = candidates.filter(item => normalizeName(item.cleanName) === feeName);
-        if (exactNameCandidates.length) {
-          candidates = exactNameCandidates;
-          matchMethod = "ST_CODE_AND_NAME";
-        }
-      }
-    }
+    // A Student Code shared by different student profiles stays ambiguous.
+    // Do not use the receipt name to bypass a code collision in Student Data.
 
     // Name fallback is only for receipts whose Student Code cell is blank.
     // A nonblank but unknown code must never silently be reassigned to a
