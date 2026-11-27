@@ -198,9 +198,24 @@ async function commitOne(stage, importBatchId, decision) {
     if (!master.enrollments.some(item => item.registrationId === embedded.registrationId)) master.enrollments.push({ ...embedded, identitySource: "UNIVERSAL_WORKBOOK_IMPORT" });
   }
   if (resolvedCode) {
-    const currentRegistration = master.registrations.find(item => item.stCode === resolvedCode && item.isCurrent)
-      || master.registrations.find(item => item.stCode === resolvedCode);
-    if (currentRegistration) master.currentRegistrationId = currentRegistration.registrationId;
+    const currentCandidates = master.registrations
+      .filter(item => sanitizeStudentCode(item.stCode) === resolvedCode)
+      .sort((a, b) => new Date(b.admissionDate || b.dateOfAdmission || 0).getTime() - new Date(a.admissionDate || a.dateOfAdmission || 0).getTime());
+    const currentRegistration = currentCandidates[0] || null;
+    master.registrations = master.registrations.map(item => ({
+      ...item.toObject?.() || item,
+      isCurrent: Boolean(currentRegistration && item.registrationId === currentRegistration.registrationId)
+    }));
+    master.enrollments = master.enrollments.map(item => ({
+      ...item.toObject?.() || item,
+      isCurrent: Boolean(currentRegistration && item.registrationId === currentRegistration.registrationId)
+    }));
+    if (currentRegistration) {
+      master.currentRegistrationId = currentRegistration.registrationId;
+      master.currentCourse = currentRegistration.course || "";
+      master.currentAdmissionDate = currentRegistration.admissionDate || currentRegistration.dateOfAdmission || null;
+      master.dateOfAdmission = master.currentAdmissionDate;
+    }
   }
   if (!master.activeEnrollmentId && enrollmentByCode.size) {
     const selected = enrollmentByCode.get(resolvedCode) || enrollmentByCode.values().next().value;
