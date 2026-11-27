@@ -93,7 +93,10 @@ const codeLookupVariants = value => {
   const code = normalizeStudentCode(value);
   if (!code) return [];
   const variants = new Set([code, String(value ?? "").trim()]);
-  if (/^\d+$/.test(code)) for (let zeroes = 1; zeroes <= 8; zeroes += 1) variants.add("0".repeat(zeroes) + code);
+  if (/^\d+$/.test(code)) {
+    for (let zeroes = 1; zeroes <= 8; zeroes += 1) variants.add("0".repeat(zeroes) + code);
+    variants.add(new RegExp("^\\s*0*" + code + "(?:\\.0+)?\\s*$", "i"));
+  }
   return [...variants].filter(Boolean);
 };
 const displayName = value => clean(value).normalize("NFKC").toUpperCase().replace(/\s+/g, " ").trim();
