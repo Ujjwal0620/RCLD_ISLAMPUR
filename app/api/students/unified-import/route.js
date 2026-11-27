@@ -1060,22 +1060,43 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
       ...(enrollmentIds.length ? [{ enrollmentId: { $in: enrollmentIds } }] : []),
       ...(masterObjectIds.length ? [{ studentId: { $in: masterObjectIds } }, { masterStudentId: { $in: masterObjectIds } }] : [])
     ] } },
+    { $lookup: {
+      from: "student_enrollments",
+      localField: "enrollmentId",
+      foreignField: "_id",
+      as: "_linkedEnrollment"
+    } },
+    { $addFields: { _linkedEnrollment: { $arrayElemAt: ["$_linkedEnrollment", 0] } } },
     { $addFields: {
-      _rawStudentCode: { $toUpper: { $trim: { input: { $ifNull: [{ $cond: [
-        { $and: [{ $ne: ["$normalizedStCode", null] }, { $ne: ["$normalizedStCode", ""] }] },
-        "$normalizedStCode", "$stCode"
-      ] }, ""] } } } }
+      _rawStudentCode: {
+        $let: {
+          vars: {
+            normalized: { $trim: { input: { $ifNull: ["$normalizedStCode", ""] } } },
+            direct: { $trim: { input: { $ifNull: ["$stCode", ""] } } },
+            linked: { $trim: { input: { $ifNull: ["$_linkedEnrollment.normalizedStCode", "$_linkedEnrollment.stCode"] } } }
+          },
+          in: { $cond: [
+            { $ne: ["$$normalized", ""] }, "$$normalized",
+            { $cond: [{ $ne: ["$$direct", ""] }, "$$direct", "$$linked"] }
+          ] }
+        }
+      }
     } },
     { $addFields: {
       _normalizedStudentCode: {
-        $cond: [
-          { $regexMatch: { input: "$_rawStudentCode", regex: "^[0-9]+$" } },
-          { $let: {
-            vars: { stripped: { $regexReplace: { input: "$_rawStudentCode", regex: "^0+", replacement: "" } } },
-            in: { $cond: [{ $eq: ["$$stripped", ""] }, "0", "$$stripped"] }
-          } },
-          { $regexReplace: { input: "$_rawStudentCode", regex: "\\s+", replacement: "" } }
-        ]
+        $let: {
+          vars: { raw: { $regexReplace: { input: { $toUpper: "$_rawStudentCode" }, regex: "\\s+", replacement: "" } } },
+          in: {
+            $cond: [
+              { $regexMatch: { input: "$$raw", regex: "^[0-9]+$" } },
+              { $let: {
+                vars: { stripped: { $regexReplace: { input: "$$raw", regex: "^0+", replacement: "" } } },
+                in: { $cond: [{ $eq: ["$$stripped", ""] }, "0", "$$stripped"] }
+              } },
+              "$$raw"
+            ]
+          }
+        }
       }
     } },
     { $match: { _normalizedStudentCode: { $in: codes } } },
