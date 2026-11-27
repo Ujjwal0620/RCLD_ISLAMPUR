@@ -369,7 +369,7 @@ function buildWorkbookPayload(workbook) {
   };
 }
 
-const IMPORT_CHECKPOINT_KEY = "rcld-unified-import-checkpoint-v3";
+const IMPORT_CHECKPOINT_KEY = "rcld-unified-import-checkpoint-v4";
 async function postBatch(body) {
   let lastError;
   for (let attempt = 0; attempt < 3; attempt += 1) {
