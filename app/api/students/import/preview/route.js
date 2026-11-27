@@ -243,8 +243,15 @@ export async function POST(request) {
 
     for (let index = 0; index < groups.length; index += 1) {
       const group = groups[index];
-      const candidateSet = [...masters, ...legacyStudents];
-      const match = matchStudentByIdentity({ name: group.name, codes: group.codes }, candidateSet);
+      // Match canonical master profiles first. A legacy Student document already
+      // linked through legacyStudentIds is the same person, not a second candidate.
+      const linkedLegacyIds = new Set(masters.flatMap(item => (item.legacyStudentIds || []).map(id => String(id))));
+      const masterMatch = matchStudentByIdentity({ name: group.name, codes: group.codes }, masters);
+      let match = masterMatch;
+      if (masterMatch.status === "NEW") {
+        const unlinkedLegacyStudents = legacyStudents.filter(item => !linkedLegacyIds.has(String(item._id)));
+        match = matchStudentByIdentity({ name: group.name, codes: group.codes }, unlinkedLegacyStudents);
+      }
       const matchedMaster = match.status === "MATCH" && masters.find(item => String(item._id) === String(match.candidate._id));
       const matchedLegacy = match.status === "MATCH" && legacyStudents.find(item => String(item._id) === String(match.candidate._id));
       const existingCodeValues = matchedMaster
