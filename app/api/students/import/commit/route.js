@@ -418,6 +418,19 @@ export async function POST(request) {
       results.push({ sequence: stage.sequence, ...(await commitOne(stage, importBatchId, decision)) });
       await ImportLog.updateOne({ importBatchId, commitLockToken: lockToken }, { $inc: { committedGroups: 1 } });
     }
+    const chunkIndexes = [...new Set(stages.map(stage => Math.floor(Number(stage.sequence) / MAX_CHUNK)))];
+    for (const chunkIndex of chunkIndexes) {
+      const chunkPending = await StudentImportStaging.countDocuments({
+        importBatchId,
+        sequence: { $gte: chunkIndex * MAX_CHUNK, $lt: (chunkIndex + 1) * MAX_CHUNK },
+        committedAt: null
+      });
+      if (chunkPending === 0) {
+        await ImportLog.updateOne({ importBatchId, commitLockToken: lockToken }, {
+          $addToSet: { completedChunks: chunkIndex }
+        });
+      }
+    }
     const pendingGroups = await StudentImportStaging.countDocuments({ importBatchId, committedAt: null });
     const finalStatus = pendingGroups === 0 ? "COMPLETED" : "COMMITTING";
     await ImportLog.updateOne({ importBatchId, commitLockToken: lockToken }, {
