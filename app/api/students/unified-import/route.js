@@ -886,28 +886,65 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
   await insertChunks(StudentMaster, masterInserts, "master-code-insert");
   await updateChunks(StudentMaster, masterUpdates, "master-code-update");
   await updateChunks(StudentMaster, activeMasterOps, "active-master");
+  // Deduplicate incoming enrollments by the exact same natural key as the
+  // MongoDB unique index. This prevents two rows in one unordered insert chunk
+  // from racing each other before the database can persist either one.
+  const uniqueEnrollmentInserts = new Map();
+  for (const item of enrollmentInserts) {
+    const key = enrollmentUniqueKey(item);
+    const prior = uniqueEnrollmentInserts.get(key);
+    if (!prior) {
+      uniqueEnrollmentInserts.set(key, item);
+      continue;
+    }
+    enrollmentIdAliases.set(String(item._id), prior._id);
+    const preferIncoming = Boolean(item.feeConfig?.configured) && !Boolean(prior.feeConfig?.configured);
+    const preferred = preferIncoming ? item : prior;
+    const secondary = preferIncoming ? prior : item;
+    for (const [field, value] of Object.entries(secondary)) {
+      if (field === "_id" || value === "" || value === null || value === undefined) continue;
+      if (preferred[field] === "" || preferred[field] === null || preferred[field] === undefined) preferred[field] = value;
+    }
+    if (preferIncoming) uniqueEnrollmentInserts.set(key, item);
+  }
+  enrollmentInserts.splice(0, enrollmentInserts.length, ...uniqueEnrollmentInserts.values());
+  const remapEnrollmentId = value => enrollmentIdAliases.get(String(value)) || value;
+  for (const operation of activeMasterOps) {
+    const id = operation.updateOne?.update?.$set?.activeEnrollmentId;
+    if (id) operation.updateOne.update.$set.activeEnrollmentId = remapEnrollmentId(id);
+  }
+  for (const item of outputMap) item.enrollmentId = String(remapEnrollmentId(item.enrollmentId));
+  for (const operation of enrollmentStatusOps) {
+    const id = operation.updateOne?.filter?._id;
+    if (id) operation.updateOne.filter._id = remapEnrollmentId(id);
+  }
+
   await insertChunks(StudentEnrollment, enrollmentInserts, "enrollment-code-insert");
   if (enrollmentInserts.length) {
-    const persisted = await StudentEnrollment.find({ $or: enrollmentInserts.map(item => ({
+    const persisted = await StudentEnrollment.collection.find({ $or: enrollmentInserts.map(item => ({
       studentId: item.studentId,
       normalizedStCode: normalizeStudentCode(item.normalizedStCode || item.stCode),
-      courseCode: item.courseCode,
-      admissionDate: item.admissionDate || null
-    })) }).lean();
+      courseCode: normalizeCourseCode(item.courseCode || "") || clean(item.courseCode).toUpperCase(),
+      admissionDate: asDate(item.admissionDate)
+    })) }).toArray();
     const persistedByKey = new Map(persisted.map(item => [enrollmentUniqueKey(item), item]));
     const actualIds = new Map();
     for (const item of enrollmentInserts) {
       const actual = persistedByKey.get(enrollmentUniqueKey(item));
       if (actual) actualIds.set(String(item._id), actual._id);
     }
+    for (const [alias, canonical] of enrollmentIdAliases) {
+      const actual = actualIds.get(String(canonical)) || canonical;
+      actualIds.set(String(alias), actual);
+    }
     for (const operation of activeMasterOps) {
       const id = operation.updateOne?.update?.$set?.activeEnrollmentId;
       if (id && actualIds.has(String(id))) operation.updateOne.update.$set.activeEnrollmentId = actualIds.get(String(id));
     }
-    for (const item of outputMap) if (actualIds.has(String(item.enrollmentId))) item.enrollmentId = String(actualIds.get(String(item.enrollmentId)));
+    for (const item of outputMap) if (actualIds.has(String(item.enrollmentId))) item.enrollmentId = String(actualIds.get(item.enrollmentId));
     for (const operation of enrollmentStatusOps) {
       const id = operation.updateOne?.filter?._id;
-      if (id && actualIds.has(String(id))) operation.updateOne.filter._id = actualIds.get(String(id));
+      if (id && actualIds.has(String(id))) operation.updateOne.filter._id = actualIds.get(id);
     }
   }
   await updateChunks(StudentEnrollment, enrollmentUpdates, "enrollment-code-update");
