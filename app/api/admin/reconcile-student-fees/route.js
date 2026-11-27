@@ -29,7 +29,7 @@ export async function POST(request) {
     const workbook = XLSX.read(buffer, { type: "buffer", cellDates: true });
     const result = await reconcileStudentFeesOnly(workbook, { sourceName: String(file.name || "Fee reconciliation").slice(0, 180) });
     return NextResponse.json({
-      message: "Fee reconciliation completed. Student profile and non-fee records were not imported or overwritten.",
+      message: "Fee reconciliation completed. Student profile fields and non-fee records were preserved; payment links, fee totals and fee statuses were refreshed.",
       ...result
     });
   } catch (error) {
