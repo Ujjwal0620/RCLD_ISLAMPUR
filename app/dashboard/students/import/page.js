@@ -131,11 +131,9 @@ function chooseRegistration(candidates, paymentDate, courseValue) {
     if (byCourse.length) matches = byCourse;
   }
   const paymentTime = paymentDate ? new Date(paymentDate).getTime() : NaN;
-  if (matches.length === 1) {
-    const admission = parseDate(matches[0].dateOfAdmission);
-    if (admission && Number.isFinite(paymentTime) && new Date(admission).getTime() > paymentTime) return null;
-    return matches[0];
-  }
+  // A payment may be collected before the admission date. If the Student Code and
+  // course identify exactly one enrollment, do not reject it for being an advance payment.
+  if (matches.length === 1) return matches[0];
   if (Number.isFinite(paymentTime)) {
     const eligible = matches.filter(item => {
       const admission = parseDate(item.dateOfAdmission);
