@@ -868,14 +868,37 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
     } },
     { $match: { _normalizedStudentCode: { $in: codes } } },
     { $group: {
-      _id: { code: "$_normalizedStudentCode", enrollmentId: "$enrollmentId" },
-      totalPaid: { $sum: "$amountPaid" },
-      paymentCount: { $sum: 1 }
+      _id: {
+        code: "$_normalizedStudentCode",
+        mrNo: "$mrNo",
+        paymentDate: "$paymentDate",
+        amountPaid: "$amountPaid"
+      },
+      totalPaid: { $max: "$amountPaid" },
+      enrollmentIds: { $addToSet: "$enrollmentId" },
+      duplicateDocumentCount: { $sum: 1 }
+    } },
+    { $addFields: {
+      canonicalEnrollmentId: {
+        $cond: [
+          { $eq: [{ $size: "$enrollmentIds" }, 1] },
+          { $arrayElemAt: ["$enrollmentIds", 0] },
+          null
+        ]
+      }
+    } },
+    { $group: {
+      _id: { code: "$_id.code", enrollmentId: "$canonicalEnrollmentId" },
+      totalPaid: { $sum: "$totalPaid" },
+      paymentCount: { $sum: 1 },
+      duplicateDocumentCount: { $sum: { $subtract: ["$duplicateDocumentCount", 1] } }
     } }
   ]);
   const paidByCode = new Map();
   const paidByEnrollment = new Map();
+  let duplicatePaymentDocumentsFound = 0;
   for (const item of paymentTotals) {
+    duplicatePaymentDocumentsFound += Number(item.duplicateDocumentCount || 0);
     const code = normalizeStudentCode(item._id.code);
     const paid = Number(item.totalPaid || 0);
     paidByCode.set(code, (paidByCode.get(code) || 0) + paid);
@@ -1017,7 +1040,8 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
     expectedPaymentRows: expectedRows,
     expectedPaymentTotal: Number(expectedTotal.toFixed(2)),
     paymentReconciliationMatches,
-    ambiguousCodes: [...ambiguousCodes]
+    ambiguousCodes: [...ambiguousCodes],
+    duplicatePaymentDocumentsFound
   };
 }
 
