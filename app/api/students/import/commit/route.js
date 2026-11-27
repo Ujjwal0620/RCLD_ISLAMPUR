@@ -318,19 +318,30 @@ async function commitOne(stage, importBatchId, decision) {
   }
 
   if (stage.matchedLegacyStudentId) {
-    await Student.updateOne({ _id: stage.matchedLegacyStudentId }, {
-      $addToSet: {
-        previousCodes: { $each: (stage.codeHistory || []).filter(Boolean) },
-        allRegistrationCodes: { $each: incomingCodes }
-      },
-      $set: {
-        importBatchId,
-        ...(resolvedCode ? { normalizedStCode: resolvedCode } : {}),
-        ...(fullName ? { applicantName: fullName, name: fullName } : {}),
-        ...(text(incoming.address) ? { address: text(incoming.address) } : {}),
-        ...(text(incoming.phone) ? { mobileNumber: text(incoming.phone) } : {})
+    const legacy = await Student.findById(stage.matchedLegacyStudentId);
+    if (legacy) {
+      const oldLegacyCode = sanitizeStudentCode(legacy.normalizedStCode || legacy.regnNo || legacy.enrollmentNo);
+      legacy.previousCodes = [...new Set([
+        ...(legacy.previousCodes || []),
+        ...(stage.codeHistory || []).filter(Boolean),
+        ...(oldLegacyCode && resolvedCode && oldLegacyCode !== resolvedCode ? [oldLegacyCode] : [])
+      ])];
+      legacy.allRegistrationCodes = [...new Set([...(legacy.allRegistrationCodes || []), ...incomingCodes])];
+      if (resolvedCode) legacy.normalizedStCode = resolvedCode;
+      if (fullName && !text(legacy.applicantName)) legacy.applicantName = fullName;
+      if (fullName && !text(legacy.name)) legacy.name = fullName;
+      if (text(incoming.fatherName) && !text(legacy.fatherName)) legacy.fatherName = text(incoming.fatherName);
+      if (incoming.dob && !legacy.dob) legacy.dob = incoming.dob;
+      if (text(incoming.sex) && !text(legacy.gender || legacy.sex)) legacy.gender = text(incoming.sex);
+      if (text(incoming.address) && !text(legacy.address)) legacy.address = text(incoming.address);
+      if (text(incoming.phone) && !text(legacy.mobileNumber)) legacy.mobileNumber = text(incoming.phone);
+      legacy.importBatchId = importBatchId;
+      if (resolvedCode && oldLegacyCode !== resolvedCode) {
+        legacy.codeUpdatedAt = new Date();
+        legacy.codeSourceDate = stage.codeSourceDate || null;
       }
-    });
+      await legacy.save();
+    }
   }
 
   await StudentImportStaging.updateOne({ _id: stage._id, committedAt: null }, {
