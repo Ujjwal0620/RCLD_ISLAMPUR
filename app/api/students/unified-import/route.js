@@ -1008,10 +1008,10 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
         coursePaid = items.filter(item => courseFeePurposes.has(String(item.purpose || item.type || "").trim().toLowerCase()))
           .reduce((sum, item) => sum + Number(item.amount || 0), 0);
       } else {
-        const noteMatch = String(payment.note || "").match(/Fee sections:\\s*([\\s\\S]*)$/i);
+        const noteMatch = String(payment.note || "").match(/Fee sections:\s*([\s\S]*)$/i);
         if (noteMatch) {
-          coursePaid = noteMatch[1].split(/;\\s*/).reduce((sum, part) => {
-            const item = part.match(/^(.*?):\\s*₹([\\d,.]+)(?:\\s*\\((.*?)\\))?$/);
+          coursePaid = noteMatch[1].split(/;\s*/).reduce((sum, part) => {
+            const item = part.match(/^(.*?):\s*₹([\d,.]+)(?:\s*\((.*?)\))?$/);
             return item && courseFeePurposes.has(item[1].trim().toLowerCase())
               ? sum + Number(item[2].replace(/,/g, "")) : sum;
           }, 0);
