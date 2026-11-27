@@ -506,11 +506,46 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
       console.log("[unified-import]", phase, Math.floor(offset / size) + 1, Date.now() - started, { updated: chunk.length });
     }
   };
+  const masterOpsById = new Map();
+  const arrayFields = ["normalizedStCodes", "studentCodes", "stCodes", "alternateNames", "phones", "phoneNumbers", "legacyStudentIds", "registrations", "enrollments"];
+  const registrationMergeKey = item => [
+    normalizeStudentCode(item.stCode),
+    normalizeCourseCode(item.course || item.courseName || item.courseCode),
+    asDate(item.dateOfAdmission || item.admissionDate)?.toISOString().slice(0, 10) || ""
+  ].join("|");
+  for (const item of masterOps) {
+    const key = String(item._id);
+    const prior = masterOpsById.get(key);
+    if (!prior) {
+      masterOpsById.set(key, item);
+      continue;
+    }
+    for (const field of arrayFields) {
+      const values = [...(prior.set[field] || []), ...(item.set[field] || [])];
+      if (field === "registrations" || field === "enrollments") {
+        const byKey = new Map();
+        for (const value of values) {
+          const rowKey = registrationMergeKey(value);
+          byKey.set(rowKey, { ...(byKey.get(rowKey) || {}), ...value });
+        }
+        prior.set[field] = [...byKey.values()];
+      } else {
+        const unique = new Map(values.map(value => [String(value?._id || value), value]));
+        prior.set[field] = [...unique.values()];
+      }
+    }
+    for (const [field, value] of Object.entries(item.set || {})) {
+      if (arrayFields.includes(field) || value === "" || value === null || value === undefined) continue;
+      prior.set[field] = value;
+    }
+    prior.insertDefaults = { ...(prior.insertDefaults || {}), ...(item.insertDefaults || {}) };
+  }
+  const mergedMasterOps = [...masterOpsById.values()];
   await insertChunks(Student, studentInserts, "student-code-insert");
   await updateChunks(Student, studentUpdates, "student-code-update");
   const knownMasters = new Set(existingMasters.map(item => String(item._id)));
   const masterInserts = [], masterUpdates = [];
-  for (const item of masterOps) {
+  for (const item of mergedMasterOps) {
     if (item.isNew || !knownMasters.has(String(item._id))) {
       masterInserts.push({ _id: item._id, ...item.insertDefaults, ...item.set });
       continue;
