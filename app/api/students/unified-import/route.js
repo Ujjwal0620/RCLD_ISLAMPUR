@@ -942,12 +942,20 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
       }
     } },
     { $match: { _normalizedStudentCode: { $in: codes } } },
+    { $addFields: {
+      _normalizedReceiptNo: { $regexReplace: { input: { $toUpper: { $trim: { input: { $ifNull: ["$mrNo", ""] } } } }, regex: "\\s+", replacement: "" } },
+      _paymentDateKey: { $cond: [
+        { $eq: [{ $type: "$paymentDate" }, "date"] },
+        { $dateToString: { format: "%Y-%m-%d", date: "$paymentDate", timezone: "UTC" } },
+        ""
+      ] }
+    } },
     { $sort: { updatedAt: -1, createdAt: -1 } },
     { $group: {
       _id: {
         code: "$_normalizedStudentCode",
-        receiptKey: { $cond: [{ $and: [{ $ne: ["$mrNo", null] }, { $ne: ["$mrNo", ""] }] }, "$mrNo", { $toString: "$_id" }] },
-        paymentDate: "$paymentDate"
+        receiptKey: { $cond: [{ $ne: ["$_normalizedReceiptNo", ""] }, "$_normalizedReceiptNo", { $toString: "$_id" }] },
+        paymentDate: "$_paymentDateKey"
       },
       totalPaid: { $first: "$amountPaid" },
       enrollmentIds: { $addToSet: "$enrollmentId" },
