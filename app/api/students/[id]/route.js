@@ -83,36 +83,42 @@ export async function GET(req,{params}){
     const enrollmentByRegistration = new Map(enrollments.filter(item => item.registrationId).map(item => [String(item.registrationId), item]));
     const registrationByNameCode = new Map(enrollments.filter(item => item.registrationId).map(item => [String(item.registrationId).toUpperCase(), item]));
     const courseNameMap = new Map(courseDocuments.map(course => [String(course.code).toUpperCase(), course.name]));
-    const paymentHistory = importedPayments.map(payment => {
+    const receiptKey = payment => {
+      const date = payment.paymentDate || payment.date;
+      const normalizedDate = date && !Number.isNaN(new Date(date).getTime()) ? new Date(date).toISOString().slice(0, 10) : "";
+      const code = normalizeStudentCode(payment.normalizedStCode || payment.stCode || payment.registrationId || payment.stNameKey);
+      const receipt = normalizeReceiptNumber(payment.mrNo || payment.receiptNo || payment.reference);
+      return [code, receipt || String(payment._id || ""), normalizedDate].join("|");
+    };
+    const importedByReceipt = new Map();
+    for (const payment of importedPayments) {
       const derivedRegistrationId = String(payment.registrationId || payment.stNameKey || "").toUpperCase();
-      const codeCandidates = enrollmentByCode.get(String(payment.stCode || "")) || [];
+      const codeCandidates = enrollmentByCode.get(normalizeStudentCode(payment.normalizedStCode || payment.stCode)) || [];
       const enrollment = enrollmentMap.get(String(payment.enrollmentId))
         || enrollmentByRegistration.get(derivedRegistrationId)
         || registrationByNameCode.get(derivedRegistrationId)
         || (codeCandidates.length === 1 ? codeCandidates[0] : {});
-      return {
+      const enriched = {
         ...payment,
         registrationId: payment.registrationId || enrollment.registrationId || derivedRegistrationId,
+        stCode: normalizeStudentCode(payment.normalizedStCode || payment.stCode),
         courseCode: payment.courseCode || enrollment.courseCode || "",
         course: payment.course || enrollment.courseName || courseNameMap.get(String(payment.courseCode || enrollment.courseCode || "").toUpperCase()) || payment.courseCode || enrollment.courseCode || "Previous Course (Legacy)",
         courseName: payment.course || enrollment.courseName || courseNameMap.get(String(payment.courseCode || enrollment.courseCode || "").toUpperCase()) || payment.courseCode || enrollment.courseCode || "Previous Course (Legacy)",
         semesterLabel: enrollment.semesterLabel || "LEGACY",
         installmentApplied: (payment.allocations || []).map(item => item.label + ": ₹" + Number(item.allocatedAmount || 0).toLocaleString("en-IN")).join(", ") || (payment.importWarnings?.length ? "Needs review: " + payment.importWarnings.join(" ") : "Legacy receipt / not allocated"),
       };
-    });
-    const receiptKey = payment => {
-      const date = payment.paymentDate || payment.date;
-      const dateKey = date && !Number.isNaN(new Date(date).getTime()) ? new Date(date).toISOString().slice(0, 10) : "";
-      return [String(payment.stCode || payment.registrationId || payment.stNameKey || ""),
-        String(payment.mrNo || payment.receiptNo || payment.reference || ""), dateKey,
-        Number(payment.amountPaid ?? payment.amount ?? 0).toFixed(2)].join("|");
-    };
+      const key = receiptKey(enriched);
+      const prior = importedByReceipt.get(key);
+      if (!prior || new Date(enriched.updatedAt || enriched.createdAt || 0) > new Date(prior.updatedAt || prior.createdAt || 0)) importedByReceipt.set(key, enriched);
+    }
+    const paymentHistory = [...importedByReceipt.values()];
     const knownReceiptKeys = new Set(paymentHistory.map(receiptKey));
     const linkedStudentMap = new Map(linkedStudentDocs.map(item => [String(item._id), item]));
     for (const legacyFee of legacyFees) {
       const linkedStudent = linkedStudentMap.get(String(legacyFee.studentId)) || student;
       for (const payment of legacyFee.payments || []) {
-        const legacyStCode = String(linkedStudent.regnNo || linkedStudent.enrollmentNo || "").trim();
+        const legacyStCode = normalizeStudentCode(linkedStudent.normalizedStCode || linkedStudent.regnNo || linkedStudent.enrollmentNo);
         const legacyCleanName = String(linkedStudent.applicantName || linkedStudent.name || linkedStudent.sourceStudentName || "")
           .replace(/_[A-Z0-9-]+$/i, "").trim().toUpperCase().replace(/\s+/g, " ");
         const legacyReceipt = {
