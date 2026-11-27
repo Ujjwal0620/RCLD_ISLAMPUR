@@ -666,7 +666,7 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
       try {
         await Model.insertMany(chunk, { ordered: false });
       } catch (error) {
-        const initialErrors = getWriteErrors(error).map(item => serializeWriteError(item));
+        const initialErrors = getWriteErrors(error).map(item => serializeWriteError(item, chunk[Number(item?.index)] || null));
         if (!initialErrors.length && Number(error.code) === 11000) {
           initialErrors.push(serializeWriteError(error, chunk[0] || null));
         }
@@ -784,7 +784,7 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
             try {
               await Model.insertMany(missing, { ordered: false });
             } catch (retryError) {
-              const retryErrors = getWriteErrors(retryError).map(item => serializeWriteError(item));
+              const retryErrors = getWriteErrors(retryError).map(item => serializeWriteError(item, missing[Number(item?.index)] || null));
               if (!retryErrors.length && Number(retryError.code) === 11000) {
                 retryErrors.push(serializeWriteError(retryError, missing[0] || null));
               }
@@ -880,7 +880,7 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
           if (missing.length) {
             try { await Model.insertMany(missing, { ordered: false }); }
             catch (retryError) {
-              const retryErrors = getWriteErrors(retryError).map(item => serializeWriteError(item));
+              const retryErrors = getWriteErrors(retryError).map(item => serializeWriteError(item, missing[Number(item?.index)] || null));
               console.error("[unified-import] student-insert-retry-write-error", { phase, chunkOffset: offset, writeErrors: retryErrors, message: retryError.message });
               if (retryError.code !== 11000 && !(retryErrors.length && retryErrors.every(item => item.code === 11000))) throw retryError;
               duplicateDocsSkipped += retryErrors.length || 1;
