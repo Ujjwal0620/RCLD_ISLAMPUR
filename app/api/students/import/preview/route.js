@@ -122,7 +122,8 @@ function parseWidePayments(row, headers, slots, profile) {
     }
     payments.push({
       slot: slot.slot, rawSourceCode, sourceCode, amountPaid, mrNo,
-      paymentDate, rawPaymentDate: rawDate, warnings
+      paymentDate, rawPaymentDate: rawDate, sourceSheet: profile.sourceSheet,
+      sourceRowNo: profile.rowNo, warnings
     });
   }
   return payments;
@@ -132,7 +133,9 @@ function dedupePayments(payments) {
   const unique = new Map();
   let duplicates = 0;
   for (const payment of payments) {
-    const key = paymentCompositeKey(payment);
+    const key = cleanImportText(payment.mrNo)
+      ? paymentCompositeKey(payment)
+      : ["UNVERIFIED", payment.sourceSheet || "", payment.sourceRowNo || "", payment.slot || ""].join("|");
     if (!key) continue;
     if (unique.has(key)) { duplicates += 1; continue; }
     unique.set(key, payment);
@@ -218,7 +221,14 @@ export async function POST(request) {
           warnings.push({ row: index + Number(mapping.headerRows?.[mapping.paymentSheet] || 1) + 1, sheet: mapping.paymentSheet, code: rawCode, reason: candidates.length ? "Payment identity is ambiguous." : "Payment row has no safe student match." });
           continue;
         }
-        candidates[0].payments.push({ sourceCode: code || candidates[0].primaryCode, rawSourceCode: rawCode, amountPaid, mrNo, paymentDate, warnings: [] });
+        candidates[0].payments.push({
+          sourceCode: code || candidates[0].primaryCode, rawSourceCode: rawCode,
+          amountPaid, mrNo, paymentDate,
+          sourceSheet: mapping.paymentSheet,
+          sourceRowNo: index + Number(mapping.headerRows?.[mapping.paymentSheet] || 1) + 1,
+          course: cleanImportText(getValue(row, paymentSheet.headers, paymentColumns.course)),
+          warnings: []
+        });
       }
     }
 
