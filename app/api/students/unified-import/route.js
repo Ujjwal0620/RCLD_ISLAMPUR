@@ -960,11 +960,14 @@ async function syncFeeRows(rows = [], onProgress = () => {}, registrationMap = [
             studentId: item.studentId, masterStudentId: item.masterStudentId, enrollmentId: item.enrollmentId,
             stCode: item.stCode, sourceStCode: item.sourceStCode, normalizedStCode: item.normalizedStCode, registrationId: item.registrationId,
             stNameKey: item.stNameKey, courseCode: item.courseCode, course: item.course,
-            mrNo: item.mrNo, paymentDate: item.paymentDate, amountPaid: item.amountPaid, rawPaymentDate: item.rawPaymentDate,
+            mrNo: item.mrNo, normalizedMrNo: item.normalizedMrNo, paymentDate: item.paymentDate, amountPaid: item.amountPaid, rawPaymentDate: item.rawPaymentDate,
             sourceSheet: item.sourceSheet, sourceRowNo: item.sourceRowNo,
             sourceRowKey: item.sourceRowKey, sourceBatchKey: item.sourceBatchKey, importBatchKey: item.importBatchKey
           } } } });
-          duplicateReceiptsSkipped += 1;
+          const key = makeReceiptBusinessKey(item.normalizedStCode, item.mrNo, item.paymentDate, item.amountPaid);
+          const existedBefore = existingBySourceKey.has(item.sourceRowKey) || existingByBusinessKey.has(key);
+          if (existedBefore) duplicateReceiptsSkipped += 1;
+          else newReceiptsAdded += 1;
           existingReceiptsUpdatedOrSkipped += 1;
         }
       }
@@ -976,9 +979,17 @@ async function syncFeeRows(rows = [], onProgress = () => {}, registrationMap = [
         } catch (retryError) {
           const retryErrors = retryError.writeErrors || retryError.result?.writeErrors || [];
           if (retryError.code !== 11000 && !(retryErrors.length > 0 && retryErrors.every(item => item.code === 11000))) throw retryError;
-          const unresolved = await StudentFeePayment.find({ sourceRowKey: { $in: missing.map(item => item.sourceRowKey) } }).select("sourceRowKey").lean();
-          const savedKeys = new Set(unresolved.map(item => item.sourceRowKey));
-          const notSaved = missing.filter(item => !savedKeys.has(item.sourceRowKey));
+          const unresolved = await StudentFeePayment.find({ $or: [
+            { sourceRowKey: { $in: missing.map(item => item.sourceRowKey) } },
+            ...missing.map(item => ({ normalizedStCode: item.normalizedStCode, mrNo: item.mrNo, paymentDate: item.paymentDate }))
+          ] }).select("sourceRowKey normalizedStCode stCode mrNo paymentDate").lean();
+          const savedSourceKeys = new Set(unresolved.map(item => String(item.sourceRowKey || "")));
+          const savedBusinessKeys = new Set(unresolved.map(item => makeReceiptBusinessKey(item.normalizedStCode || item.stCode, item.mrNo, item.paymentDate)));
+          const notSaved = missing.filter(item => !savedSourceKeys.has(item.sourceRowKey)
+            && !savedBusinessKeys.has(makeReceiptBusinessKey(item.normalizedStCode, item.mrNo, item.paymentDate)));
+          const recovered = missing.length - notSaved.length;
+          newReceiptsAdded += recovered;
+          existingReceiptsUpdatedOrSkipped += recovered;
           for (const item of notSaved) unmatchedRows.push({
             row: item.sourceRowNo, sheet: item.sourceSheet, stCode: item.stCode,
             name: item.stNameKey, amountPaid: item.amountPaid, mrNo: item.mrNo,
