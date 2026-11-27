@@ -326,7 +326,7 @@ export async function POST(request) {
       const newCount = paymentKeys.length - duplicateCount;
       summary.duplicatePaymentsSkipped += duplicateCount + group.duplicatePaymentsInWorkbook;
       summary.newPaymentsToAdd += newCount;
-      const action = match.status === "MATCH" ? "UPDATE" : match.status === "NEW" && group.name ? "NEW" : match.status === "CONFLICT" ? "CONFLICT" : "REVIEW";
+      const action = match.status === "MATCH" ? "UPDATE" : match.status === "NEW" && group.name && group.codes.length ? "NEW" : match.status === "CONFLICT" ? "CONFLICT" : "REVIEW";
       if (action === "UPDATE") summary.existingStudentsToUpdate += 1;
       if (action === "NEW") summary.newStudents += 1;
       if (action === "CONFLICT" || action === "REVIEW") summary.conflicts += 1;
