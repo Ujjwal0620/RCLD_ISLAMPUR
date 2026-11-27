@@ -424,7 +424,7 @@ function buildWorkbookPayload(workbook) {
     studentRowsRead,
     studentRowsValid,
     studentRowsSkipped: studentRowsRead - studentRowsValid,
-    registrationCount: new Set([...recordsByKey.values()].map(item => item.stCode)).size,
+    registrationCount: new Set(profiles.flatMap(profile => profile.studentCodes || []).map(normalizeStudentCode).filter(Boolean)).size,
     profileCount: profiles.length,
     profiles,
     paymentRowsRead,
