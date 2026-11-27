@@ -12,6 +12,8 @@ const StudentFeePaymentSchema = new mongoose.Schema({
   enrollmentId: { type: mongoose.Schema.Types.ObjectId, ref: "StudentEnrollment", required: true, index: true },
   courseId: { type: mongoose.Schema.Types.ObjectId, ref: "Course", default: null, index: true },
   stCode: { type: String, required: true, trim: true },
+  normalizedStCode: { type: String, default: "", trim: true, index: true },
+  sourceRowKey: { type: String, default: "", trim: true, index: true },
   registrationId: { type: String, default: "", trim: true, uppercase: true, index: true },
   financialYear: { type: String, default: "" },
   stNameKey: { type: String, default: "", index: true },
