@@ -209,7 +209,7 @@ export default function StudentFeeWorkspace({
     <section className="detail-section student-fees-section">
       <div className="detail-section-title">
         <CreditCard size={17} />
-        <div><h3>Fees & Payments</h3><span>Consolidated fee history across every linked student code</span></div>
+        <div><h3>Fees & Payments</h3><span>Fee history and balances for this Student Code</span></div>
       </div>
 
       <div className="student-code-switcher" style={{ display: "flex", flexWrap: "wrap", gap: 10, margin: "16px 0" }}>
