@@ -659,6 +659,54 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
   }
   const mergedMasterOps = [...masterOpsById.values()];
   await insertChunks(Student, studentInserts, "student-code-insert");
+  if (studentInserts.length) {
+    const reconcileStarted = Date.now();
+    const persistedStudents = await Student.find({ $or: studentInserts.map(item => ({
+      $or: [
+        { normalizedStCode: normalizeStudentCode(item.normalizedStCode || item.regnNo || item.enrollmentNo) },
+        { regnNo: { $in: codeLookupVariants(item.normalizedStCode || item.regnNo || item.enrollmentNo) } },
+        { enrollmentNo: { $in: codeLookupVariants(item.normalizedStCode || item.regnNo || item.enrollmentNo) } }
+      ]
+    })) }).lean();
+    const persistedByCode = new Map();
+    for (const item of persistedStudents) {
+      const code = normalizeStudentCode(item.normalizedStCode || item.regnNo || item.enrollmentNo);
+      if (code) persistedByCode.set(code, [...(persistedByCode.get(code) || []), item]);
+    }
+    const remapStudentIds = new Map();
+    const repairStudentOps = [];
+    for (const requested of studentInserts) {
+      const code = normalizeStudentCode(requested.normalizedStCode || requested.regnNo || requested.enrollmentNo);
+      const candidates = persistedByCode.get(code) || [];
+      if (!candidates.length) throw new Error("Student insert was not confirmed for Student Code " + code + "; stopping before enrollment writes.");
+      const names = new Set(candidates.map(item => normalizeName(item.applicantName || item.name || item.sourceStudentName)).filter(Boolean));
+      if (names.size > 1) throw new Error("Multiple existing Student records with different names claim Student Code " + code + "; review required.");
+      const actual = [...candidates].sort((left, right) =>
+        new Date(right.updatedAt || right.createdAt || 0) - new Date(left.updatedAt || left.createdAt || 0)
+      )[0];
+      remapStudentIds.set(String(requested._id), actual._id);
+      const patch = {};
+      for (const [key, value] of Object.entries(requested)) {
+        if (key === "_id" || key === "createdAt" || key === "updatedAt" || value === "" || value === null || value === undefined) continue;
+        if (JSON.stringify(actual[key]) !== JSON.stringify(value)) patch[key] = value;
+      }
+      if (Object.keys(patch).length) repairStudentOps.push({ updateOne: { filter: { _id: actual._id }, update: { $set: patch } } });
+    }
+    if (repairStudentOps.length) await updateChunks(Student, repairStudentOps, "student-code-race-repair");
+    for (const item of mergedMasterOps) {
+      if (Array.isArray(item.set?.legacyStudentIds)) item.set.legacyStudentIds = item.set.legacyStudentIds.map(id => remapStudentIds.get(String(id)) || id);
+    }
+    for (const item of enrollmentInserts) {
+      if (item.legacyStudentId && remapStudentIds.has(String(item.legacyStudentId))) item.legacyStudentId = remapStudentIds.get(String(item.legacyStudentId));
+    }
+    for (const operation of enrollmentUpdates) {
+      const legacyId = operation.updateOne?.update?.$set?.legacyStudentId;
+      if (legacyId && remapStudentIds.has(String(legacyId))) operation.updateOne.update.$set.legacyStudentId = remapStudentIds.get(String(legacyId));
+    }
+    console.log("[unified-import]", "student-insert-reconcile", 1, Date.now() - reconcileStarted, {
+      requested: studentInserts.length, confirmed: persistedStudents.length, remapped: [...remapStudentIds].filter(([from, to]) => from !== String(to)).length
+    });
+  }
   await updateChunks(Student, studentUpdates, "student-code-update");
   const knownMasters = new Set(existingMasters.map(item => String(item._id)));
   const masterInserts = [], masterUpdates = [];
