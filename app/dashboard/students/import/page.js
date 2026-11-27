@@ -606,6 +606,7 @@ export default function BulkImportPage() {
         feeRowsSubmitted: preview.feeRows.length,
         feeRowsMatched: Number(finalized.databasePaymentRows || 0),
         feeRowsProcessed: Number(finalized.databasePaymentRows || 0),
+        missingDatabaseSourceRows: missingSourceRows.length,
         duplicateNameStudentCount: preview.duplicateNameStudentCount,
         duplicateNameStudents: preview.duplicateNameStudents,
         sourcePaymentTotal: preview.paymentAmountRead,
@@ -725,6 +726,7 @@ export default function BulkImportPage() {
             <div className="summary-card"><span>Database Matched Payment Total</span><strong>₹{Number(result.databasePaymentTotal || 0).toLocaleString("en-IN")}</strong></div>
             <div className="summary-card"><span>Unmatched Payment Amount</span><strong>₹{Number(result.unmatchedPaymentTotal || 0).toLocaleString("en-IN")}</strong></div>
             <div className="summary-card"><span>Database Payment Rows / Expected</span><strong>{result.databasePaymentRows} / {result.feeRowsSubmitted}</strong></div>
+            <div className="summary-card"><span>Expected Source Rows Missing From Database</span><strong>{result.missingDatabaseSourceRows}</strong></div>
             <div className="summary-card"><span>Rows Requiring Review</span><strong>{result.unmatchedRows.length}</strong></div>
             <div className="summary-card"><span>Database vs Matched Excel</span><strong>{result.paymentReconciliationMatches ? "Matched" : "Needs Review"}</strong></div>
             <div className="summary-card"><span>All Source Rows + Amounts Accounted</span><strong>{result.sourcePaymentReconciliationMatches ? "Matched" : "Needs Review"}</strong></div>
