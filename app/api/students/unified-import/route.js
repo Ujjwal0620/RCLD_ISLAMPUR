@@ -10,7 +10,7 @@ import Course from "@/models/Course";
 import { normalizeCourseCode, resolveCourseFeeConfigFromDocument } from "@/lib/student-import/course-fee-rules";
 import { buildInstallments } from "@/lib/student-import/fee-allocation";
 import { normalizeStudentName, normalizeIndianPhones } from "@/lib/student-import/identity-resolution.mjs";
-import { normalizeStudentCode, normalizeImportName, normalizeReceiptNumber, makeReceiptBusinessKey } from "@/lib/student-import/normalization.mjs";
+import { normalizeStudentCode, normalizeReceiptNumber, parseImportAmount, makeReceiptBusinessKey } from "@/lib/student-import/normalization.mjs";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -63,12 +63,6 @@ const displayName = value => clean(value).normalize("NFKC").toUpperCase().replac
 const normalizeName = value => clean(value).normalize("NFKC").toUpperCase()
   .replace(/[^A-Z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
 const normalizeFather = value => normalizeName(value);
-const normalizePhone = value => {
-  let digits = clean(value).replace(/\D/g, "");
-  if (digits.length === 12 && digits.startsWith("91")) digits = digits.slice(2);
-  if (digits.length === 11 && digits.startsWith("0")) digits = digits.slice(1);
-  return digits.length === 10 ? digits : "";
-};
 const validObjectId = value => mongoose.Types.ObjectId.isValid(String(value || ""));
 const asDate = value => {
   if (!value) return null;
@@ -77,10 +71,6 @@ const asDate = value => {
 };
 const registrationIdentity = item => clean(item.registrationId)
   || (clean(item.cleanName) && clean(item.stCode) ? normalizeName(item.cleanName) + "_" + clean(item.stCode) : "");
-
-function hasIdentityAnchor(group, candidate) {
-  return resolveStudentIdentity(group, candidate).matched;
-}
 
 function registrationSort(a, b) {
   const da = asDate(a.dateOfAdmission)?.getTime() ?? asDate(a.earliestPaymentDate)?.getTime() ?? 0;
