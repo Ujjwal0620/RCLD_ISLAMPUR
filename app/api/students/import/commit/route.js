@@ -253,8 +253,13 @@ async function commitOne(stage, importBatchId, decision) {
       $or: [
         { normalizedPaymentKey: key },
         {
-          studentId: master._id, enrollmentId: enrollment._id,
-          stCode: code, mrNo, amountPaid: amount,
+          $or: [
+            { studentId: master._id },
+            { masterStudentId: master._id }
+          ],
+          normalizedStCode: code,
+          mrNo,
+          amountPaid: amount,
           paymentDate: payment.paymentDate || null
         }
       ]
