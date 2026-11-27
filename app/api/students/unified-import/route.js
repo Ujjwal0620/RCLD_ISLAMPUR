@@ -906,6 +906,7 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
   const suppliedCodes = [...new Set((options.studentCodes || []).map(normalizeStudentCode).filter(Boolean))];
   if (!objectIds.length && !suppliedCodes.length) return { studentsFinalized: 0, enrollmentsFinalized: 0, databasePaymentRows: 0, databasePaymentTotal: 0, paymentReconciliationMatches: false };
   const masters = await StudentMaster.find({
+    mergedIntoMasterId: null, isMerged: { $ne: true },
     $or: [
       ...(objectIds.length ? [{ _id: { $in: objectIds } }] : []),
       ...(suppliedCodes.length ? [{ normalizedStCodes: { $in: suppliedCodes } }, { studentCodes: { $in: [...new Set(suppliedCodes.flatMap(codeLookupVariants))] } }] : [])
