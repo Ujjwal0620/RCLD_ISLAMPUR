@@ -86,11 +86,19 @@ export default function StudentFeeWorkspace({
   student, fee, feeWorkspaceOpen, setFeeWorkspaceOpen, feeForm, setFeeForm,
   paymentItems, setPaymentItems, saveFees, proofUploading, uploadPaymentProof, printBill,
 }) {
-  const paymentHistory = Array.isArray(student.paymentHistory) ? student.paymentHistory : [];
-  const enrollmentOptions = Array.isArray(student.enrollments) ? student.enrollments : [];
-  const historyMetadata = Array.isArray(student.masterProfile?.registrations) && student.masterProfile.registrations.length
-    ? student.masterProfile.registrations
-    : Array.isArray(student.masterProfile?.enrollments) ? student.masterProfile.enrollments : [];
+  const paymentHistory = useMemo(
+    () => Array.isArray(student.paymentHistory) ? student.paymentHistory : [],
+    [student.paymentHistory]
+  );
+  const enrollmentOptions = useMemo(
+    () => Array.isArray(student.enrollments) ? student.enrollments : [],
+    [student.enrollments]
+  );
+  const historyMetadata = useMemo(() => (
+    Array.isArray(student.masterProfile?.registrations) && student.masterProfile.registrations.length
+      ? student.masterProfile.registrations
+      : Array.isArray(student.masterProfile?.enrollments) ? student.masterProfile.enrollments : []
+  ), [student.masterProfile?.registrations, student.masterProfile?.enrollments]);
   const currentEnrollment = student.activeEnrollment
     || enrollmentOptions.find(item => String(item.registrationId || "") === String(student.masterProfile?.currentRegistrationId || ""))
     || enrollmentOptions.find(item => String(item.stCode) === String(student.masterProfile?.currentStCode || ""))
@@ -128,7 +136,7 @@ export default function StudentFeeWorkspace({
       paidTotal: paymentHistory.filter(payment => resolvePaymentCard(payment, cards)?.filterKey === item.filterKey)
         .reduce((sum, payment) => sum + Number(payment.amountPaid ?? payment.amount ?? 0), 0)
     }));
-  }, [historyMetadata, enrollmentOptions, paymentHistory]);
+  }, [historyMetadata, enrollmentOptions, paymentHistory, student.masterProfile?.fullName, student.applicantName]);
   const activeSelectedCode = selectedCode !== "ALL" && codeCards.some(item => item.filterKey === selectedCode)
     ? selectedCode
     : "ALL";
