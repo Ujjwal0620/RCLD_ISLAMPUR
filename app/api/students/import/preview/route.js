@@ -45,9 +45,12 @@ function normalizeStudentRow(row, headers, columns, rowNo, sheetName) {
   const rawName = cleanImportText(value("name"));
   const rawPrimary = value("primaryCode");
   const primaryCode = sanitizeStudentCode(rawPrimary);
+  const rawPaymentCode = value("paymentSourceCode");
+  const paymentSourceCode = sanitizeStudentCode(rawPaymentCode) || primaryCode;
   const allCodes = [...new Set([
     ...parseCodeList(value("allCodes")),
-    primaryCode
+    primaryCode,
+    paymentSourceCode
   ].filter(Boolean))];
   const phones = normalizePhoneNumbers(value("phone"));
   const dob = toDate(value("dob"));
@@ -55,6 +58,28 @@ function normalizeStudentRow(row, headers, columns, rowNo, sheetName) {
   const warnings = [];
   if (!rawName) warnings.push("Student Name is blank; choose Create as New Student or Skip after review.");
   if (rawPrimary && !primaryCode) warnings.push("Primary Student Code is malformed and was excluded from code history.");
+  if (rawPaymentCode && !sanitizeStudentCode(rawPaymentCode)) warnings.push("Payment Student Code is malformed and was excluded from code history.");
+  const rawTallAmount = value("paymentAmount");
+  const tallAmount = parseImportAmount(rawTallAmount);
+  const tallMrNo = cleanImportText(value("paymentMrNo"));
+  const rawTallDate = value("paymentDate");
+  const tallDate = toDate(rawTallDate);
+  const tallPaymentPresent = (rawTallAmount !== null && rawTallAmount !== "") || Boolean(tallMrNo) || Boolean(rawTallDate);
+  const tallPayments = tallPaymentPresent ? [{
+    sourceCode: paymentSourceCode,
+    rawSourceCode: rawPaymentCode,
+    amountPaid: tallAmount,
+    mrNo: tallMrNo,
+    paymentDate: tallDate,
+    rawPaymentDate: rawTallDate,
+    sourceSheet: sheetName,
+    sourceRowNo: rowNo,
+    warnings: [
+      ...(!Number.isFinite(tallAmount) || tallAmount < 0 ? ["Payment amount is missing or invalid."] : []),
+      ...(tallMrNo ? [] : ["Payment receipt number is missing."]),
+      ...(tallDate ? [] : ["Payment date is missing or invalid."])
+    ]
+  }] : [];
   return {
     rowNo, sourceSheet: sheetName, name: rawName, normalizedName: normalizeImportName(rawName),
     fatherName: cleanImportText(value("fatherName")),
@@ -66,7 +91,7 @@ function normalizeStudentRow(row, headers, columns, rowNo, sheetName) {
     admissionDate, course: cleanImportText(value("course")),
     totalPaid: Number.isFinite(parseImportAmount(value("totalPaid"))) ? parseImportAmount(value("totalPaid")) : null,
     matchedPayments: value("matchedPayments"),
-    primaryCode, codes: allCodes, warnings, payments: []
+    primaryCode, codes: allCodes, warnings, payments: tallPayments
   };
 }
 
@@ -140,7 +165,7 @@ export async function POST(request) {
       if (!row.some(value => value !== null && value !== "")) continue;
       studentRowsRead += 1;
       const profile = normalizeStudentRow(row, studentSheet.headers, mapping.columns || {}, index + Number(mapping.headerRows?.[mapping.studentSheet] || 1) + 1, mapping.studentSheet);
-      profile.payments = parseWidePayments(row, studentSheet.headers, slots, profile);
+      profile.payments = [...(profile.payments || []), ...parseWidePayments(row, studentSheet.headers, slots, profile)];
       const identityKey = profile.normalizedName
         ? [profile.normalizedName, normalizeImportName(profile.fatherName), dateISO(profile.dob), profile.phone].join("|")
         : "ROW|" + profile.rowNo;
