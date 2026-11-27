@@ -585,8 +585,10 @@ export default function BulkImportPage() {
         const amount = parseImportAmount(item.amountPaid);
         return sum + (Number.isFinite(amount) ? amount : 0);
       }, 0);
+      const invalidPaymentAmountRows = finalUnmatchedPayments.filter(item => !Number.isFinite(parseImportAmount(item.amountPaid))).length;
       const sourcePaymentReconciliationMatches =
-        preview.paymentRowsRead === Number(finalized.databasePaymentRows || 0) + finalUnmatchedPayments.length
+        invalidPaymentAmountRows === 0
+        && preview.paymentRowsRead === Number(finalized.databasePaymentRows || 0) + finalUnmatchedPayments.length
         && Math.abs(Number(preview.paymentAmountRead || 0) - (Number(finalized.databasePaymentTotal || 0) + finalUnmatchedPaymentTotal)) < 0.01;
       const summary = {
         studentsMatchedUpdated: checkpoint.summary.updated,
@@ -612,6 +614,7 @@ export default function BulkImportPage() {
         sourcePaymentTotal: preview.paymentAmountRead,
         matchedPaymentTotal: preview.matchedPaymentAmount,
         unmatchedPaymentTotal: finalUnmatchedPaymentTotal,
+        invalidPaymentAmountRows,
         databasePaymentRows: Number(finalized.databasePaymentRows || 0),
         databasePaymentTotal: Number(finalized.databasePaymentTotal || 0),
         paymentReconciliationMatches: Boolean(finalized.paymentReconciliationMatches),
@@ -725,6 +728,7 @@ export default function BulkImportPage() {
             <div className="summary-card"><span>Excel Matched Payment Total</span><strong>₹{Number(result.matchedPaymentTotal || 0).toLocaleString("en-IN")}</strong></div>
             <div className="summary-card"><span>Database Matched Payment Total</span><strong>₹{Number(result.databasePaymentTotal || 0).toLocaleString("en-IN")}</strong></div>
             <div className="summary-card"><span>Unmatched Payment Amount</span><strong>₹{Number(result.unmatchedPaymentTotal || 0).toLocaleString("en-IN")}</strong></div>
+            <div className="summary-card"><span>Payment Rows With Invalid Amounts</span><strong>{result.invalidPaymentAmountRows}</strong></div>
             <div className="summary-card"><span>Database Payment Rows / Expected</span><strong>{result.databasePaymentRows} / {result.feeRowsSubmitted}</strong></div>
             <div className="summary-card"><span>Expected Source Rows Missing From Database</span><strong>{result.missingDatabaseSourceRows}</strong></div>
             <div className="summary-card"><span>Rows Requiring Review</span><strong>{result.unmatchedRows.length}</strong></div>
