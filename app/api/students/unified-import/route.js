@@ -712,6 +712,18 @@ async function syncFeeRows(rows = [], onProgress = () => {}, registrationMap = [
       importWarnings: priorReceipt?.importWarnings || []
     };
     if (priorReceipt) {
+      if (clean(priorReceipt.sourceBatchKey) === clean(batchKey)
+        && clean(priorReceipt.sourceRowKey)
+        && String(priorReceipt.sourceRowKey) !== sourceRowKey) {
+        duplicateReceiptsSkipped += 1;
+        existingReceiptsUpdatedOrSkipped += 1;
+        unmatchedRows.push({
+          row: row.rowNo, sheet: row.sourceSheet || "", studentId: row.registrationId || stCode,
+          stCode, name: row.cleanName || "", amountPaid, mrNo, paymentDate,
+          reason: "This Student Code / receipt / date / amount already appears on another row in the same workbook. The second row was not counted twice."
+        });
+        continue;
+      }
       const patch = {};
       for (const [keyName, value] of Object.entries(paymentValues)) {
         if (value === "" || value === null || value === undefined) continue;
