@@ -802,10 +802,10 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
       ...(masterObjectIds.length ? [{ studentId: { $in: masterObjectIds } }, { masterStudentId: { $in: masterObjectIds } }] : [])
     ] } },
     { $addFields: {
-      _rawStudentCode: { $toUpper: { $trim: { input: { $cond: [
+      _rawStudentCode: { $toUpper: { $trim: { input: { $ifNull: [{ $cond: [
         { $and: [{ $ne: ["$normalizedStCode", null] }, { $ne: ["$normalizedStCode", ""] }] },
         "$normalizedStCode", "$stCode"
-      ] } } } }
+      ] }, ""] } } } }
     } },
     { $addFields: {
       _normalizedStudentCode: {
@@ -832,7 +832,7 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
     const code = normalizeStudentCode(item._id.code);
     const paid = Number(item.totalPaid || 0);
     paidByCode.set(code, (paidByCode.get(code) || 0) + paid);
-    if (item._id.enrollmentId) paidByEnrollment.set(String(item._id.enrollmentId), paid);
+    if (item._id.enrollmentId) paidByEnrollment.set(code + "|" + String(item._id.enrollmentId), paid);
   }
   const enrollmentsByMaster = new Map();
   for (const enrollment of enrollments) {
@@ -884,14 +884,14 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
       const current = related.find(item => String(item._id) === String(master.activeEnrollmentId))
         || related.find(item => item.status === "ACTIVE")
         || [...related].sort((a, b) => (asDate(b.admissionDate)?.getTime() || 0) - (asDate(a.admissionDate)?.getTime() || 0))[0];
-      const explicitlyAllocated = related.reduce((sum, item) => sum + Number(paidByEnrollment.get(String(item._id)) || 0), 0);
+      const explicitlyAllocated = related.reduce((sum, item) => sum + Number(paidByEnrollment.get(code + "|" + String(item._id)) || 0), 0);
       const unallocatedPaid = Math.max(0, totalPaid - explicitlyAllocated);
       for (const enrollment of related) {
         const configuredFee = Boolean(enrollment.feeConfig) && enrollment.feeConfig.configured !== false
           && enrollment.feeConfig.feeRuleSource !== "UNCONFIGURED"
           && String(enrollment.courseCode || "").toUpperCase() !== "PREVIOUS-LEGACY";
         const enrollmentFee = Number(enrollment.feeConfig?.netPayableFee ?? enrollment.summary?.totalDue ?? enrollment.feeConfig?.grossFee ?? enrollment.summary?.totalFee ?? 0);
-        let enrollmentPaid = Number(paidByEnrollment.get(String(enrollment._id)) || 0);
+        let enrollmentPaid = Number(paidByEnrollment.get(code + "|" + String(enrollment._id)) || 0);
         if (current && String(current._id) === String(enrollment._id)) enrollmentPaid += unallocatedPaid;
         const enrollmentDue = Math.max(0, enrollmentFee - enrollmentPaid);
         const enrollmentStatus = configuredFee && enrollmentDue <= 0 ? "Paid" : enrollmentPaid > 0 ? "Partial" : "Not Paid";
