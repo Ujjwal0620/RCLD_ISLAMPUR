@@ -33,8 +33,8 @@ function printReceipt(payment, student) {
 }
 
 const normalizeFeeCode = value => {
-  let code = String(value ?? "").normalize("NFKC").replace(/[\\u200B-\\u200D\\uFEFF]/g, "").replace(/[\\u00A0\\s]+/g, "").trim().toUpperCase().replace(/\\.0+$/, "");
-  if (/^\\d+$/.test(code)) code = code.replace(/^0+(?=\\d)/, "");
+  let code = String(value ?? "").normalize("NFKC").replace(/[\u200B-\u200D\uFEFF]/g, "").replace(/[\u00A0\s]+/g, "").trim().toUpperCase().replace(/\.0+$/, "");
+  if (/^\d+$/.test(code)) code = code.replace(/^0+(?=\d)/, "");
   return code;
 };
 const enrollmentCourseKey = item => String(item?.course || item?.courseCode || item?.courseName || "").trim().toUpperCase();
