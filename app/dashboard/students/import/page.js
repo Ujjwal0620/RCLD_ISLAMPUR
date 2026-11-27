@@ -371,9 +371,12 @@ export default function BulkImportPage() {
     setError(""); setResult(null); setPreview(null);
     setProgress({ stage: "Parsing Excel", percent: 2, done: 0, total: 0 });
     try {
-      const workbook = XLSX.read(await selectedFile.arrayBuffer(), { type: "array", cellDates: true });
+      const fileBuffer = await selectedFile.arrayBuffer();
+      const workbook = XLSX.read(fileBuffer, { type: "array", cellDates: true });
       const payload = buildWorkbookPayload(workbook);
-      const fingerprint = [selectedFile.name, selectedFile.size, selectedFile.lastModified].join("|");
+      const digest = await crypto.subtle.digest("SHA-256", fileBuffer);
+      const fingerprint = [...new Uint8Array(digest)].map(value => value.toString(16).padStart(2, "0")).join("");
+      payload.batchKey = "RCLD_UNIFIED_" + fingerprint;
       let savedCheckpoint = null;
       try {
         const rawCheckpoint = localStorage.getItem(IMPORT_CHECKPOINT_KEY);
@@ -393,7 +396,7 @@ export default function BulkImportPage() {
         profileCount: payload.profiles.length,
         legacyRegistrations: payload.profiles.reduce((sum, profile) => sum + profile.registrations.filter(item => item.course === "Previous Course (Legacy)").length, 0)
       });
-      setProgress({ stage: "Ready to import", percent: 0, done: 0, total: 0 });
+      if (!savedCheckpoint) setProgress({ stage: "Ready to import", percent: 0, done: 0, total: 0 });
     } catch (err) {
       setError(err.message || "Unable to parse workbook.");
       setProgress({ stage: "Error", percent: 0, done: 0, total: 0 });
@@ -408,7 +411,7 @@ export default function BulkImportPage() {
       "Import this workbook in automatic chunks?\\n\\n" +
       preview.profileCount.toLocaleString("en-IN") + " unified student profiles\\n" +
       preview.registrationCount.toLocaleString("en-IN") + " registration codes\\n" +
-      preview.feeRows.length.toLocaleString("en-IN") + " fee receipts\\n\\n" +
+      preview.paymentRowsRead.toLocaleString("en-IN") + " source payment rows (" + preview.feeRows.length.toLocaleString("en-IN") + " matched)\\n\\n" +
       "Students (200 at a time), fees (500 at a time), and fee summaries will run sequentially."
     )) return;
     if (!checkpoint) {
@@ -442,7 +445,16 @@ export default function BulkImportPage() {
         checkpoint.failedPhase = "students"; checkpoint.failedChunk = chunkIndex + 1; saveCheckpoint();
         const data = await postBatch({ action: "students", phase: "students", chunkIndex, groups });
         checkpoint.failedPhase = null; checkpoint.failedChunk = null;
-        for (const item of data.registrationMapChunk || []) checkpoint.registrationMap[item.registrationId] = item;
+        for (const item of data.registrationMapChunk || []) {
+          const code = normalizeStudentCode(item.stCode);
+          if (!code) continue;
+          const prior = checkpoint.registrationMap[code];
+          if (!prior) checkpoint.registrationMap[code] = { ...item, stCode: code, enrollmentIds: [item.enrollmentId].filter(Boolean) };
+          else {
+            const enrollmentIds = [...new Set([...(prior.enrollmentIds || []), item.enrollmentId].filter(Boolean))];
+            checkpoint.registrationMap[code] = { ...prior, enrollmentIds, ambiguous: Boolean(prior.ambiguous || String(prior.studentId) !== String(item.studentId)) };
+          }
+        }
         checkpoint.studentIds = [...new Set([...(checkpoint.studentIds || []), ...(data.studentIds || [])])];
         checkpoint.summary.created += Number(data.created || 0);
         checkpoint.summary.updated += Number(data.updated || 0);
@@ -461,9 +473,9 @@ export default function BulkImportPage() {
         const chunkIndex = Math.floor(offset / feeChunkSize);
         const rows = preview.feeRows.slice(offset, offset + feeChunkSize);
         setProgress({ stage: "Phase 2 · Fee Receipts", percent: Math.max(45, 45 + Math.floor(offset / Math.max(preview.feeRows.length,1) * 47)), done: offset, total: preview.feeRows.length, message: "Saving fee receipt chunk " + (chunkIndex + 1) });
-        const mapping = rows.map(row => checkpoint.registrationMap[row.registrationId]).filter(Boolean);
+        const mapping = [...new Set(rows.map(row => normalizeStudentCode(row.stCode)).filter(Boolean))].map(code => checkpoint.registrationMap[code]).filter(Boolean);
         checkpoint.failedPhase = "fees"; checkpoint.failedChunk = chunkIndex + 1; saveCheckpoint();
-        const data = await postBatch({ action: "fees", phase: "fees", chunkIndex, rows, registrationMap: mapping });
+        const data = await postBatch({ action: "fees", phase: "fees", chunkIndex, rows, registrationMap: mapping, batchKey: preview.batchKey });
         checkpoint.failedPhase = null; checkpoint.failedChunk = null;
         checkpoint.summary.newReceiptsAdded += Number(data.newReceiptsAdded || 0);
         checkpoint.summary.existingReceiptsUpdatedOrSkipped += Number(data.existingReceiptsUpdatedOrSkipped || 0);
@@ -478,7 +490,7 @@ export default function BulkImportPage() {
 
       setProgress({ stage: "Phase 3 · Finalizing Fee Summaries", percent: 94, done: 0, total: checkpoint.studentIds.length, message: "Recalculating totals for affected Master Students" });
       checkpoint.failedPhase = "finalize"; checkpoint.failedChunk = 1; saveCheckpoint();
-      const finalized = await postBatch({ action: "finalize", phase: "finalize", studentIds: checkpoint.studentIds });
+      const finalized = await postBatch({ action: "finalize", phase: "finalize", studentIds: checkpoint.studentIds, studentCodes: preview.profiles.map(profile => profile.studentCodes?.[0]).filter(Boolean), batchKey: preview.batchKey, expectedPaymentRows: preview.feeRows.length, expectedPaymentTotal: preview.matchedPaymentAmount, sourcePaymentRows: preview.paymentRowsRead, sourcePaymentTotal: preview.paymentAmountRead });
       checkpoint.failedPhase = null; checkpoint.failedChunk = null;
       checkpoint.percent = 100;
       checkpoint.complete = true;
@@ -492,9 +504,22 @@ export default function BulkImportPage() {
         existingReceiptsUpdatedOrSkipped: checkpoint.summary.existingReceiptsUpdatedOrSkipped,
         duplicateReceiptsSkipped: checkpoint.summary.duplicateReceiptsSkipped,
         existingReceiptsUpdated: checkpoint.summary.existingReceiptsUpdated,
-        unmatchedRows: [...preview.warnings, ...checkpoint.summary.warnings],
+        unmatchedRows: [...preview.warnings, ...preview.unmatchedPayments, ...checkpoint.summary.warnings],
+        unmatchedPayments: preview.unmatchedPayments,
+        studentRowsRead: preview.studentRowsRead,
+        studentRowsValid: preview.studentRowsValid,
         studentProfilesProcessed: preview.profiles.length,
+        paymentRowsRead: preview.paymentRowsRead,
+        feeRowsMatched: preview.feeRows.length,
         feeRowsProcessed: preview.feeRows.length,
+        duplicateNameStudentCount: preview.duplicateNameStudentCount,
+        duplicateNameStudents: preview.duplicateNameStudents,
+        sourcePaymentTotal: preview.paymentAmountRead,
+        matchedPaymentTotal: preview.matchedPaymentAmount,
+        unmatchedPaymentTotal: preview.unmatchedPaymentAmount,
+        databasePaymentRows: Number(finalized.databasePaymentRows || 0),
+        databasePaymentTotal: Number(finalized.databasePaymentTotal || 0),
+        paymentReconciliationMatches: Boolean(finalized.paymentReconciliationMatches),
         studentsFinalized: Number(finalized.studentsFinalized || 0),
         enrollmentsFinalized: Number(finalized.enrollmentsFinalized || 0)
       };
@@ -551,14 +576,14 @@ export default function BulkImportPage() {
           <label className="form-field"><span>Admission + Fee workbook (.xlsx)</span><input type="file" accept=".xlsx" disabled={busy} onChange={event => { const selected = event.target.files?.[0] || null; setFile(selected); parseSelectedWorkbook(selected); event.target.value = ""; }}/></label>
           {file && <div className="form-help">{file.name} · {(file.size / 1024 / 1024).toFixed(2)} MB</div>}
           {preview && <div className="student-summary-grid">
-            <div className="summary-card"><span>Student Data rows</span><strong>{preview.studentRows.toLocaleString("en-IN")}</strong></div>
-            <div className="summary-card"><span>Unified profiles</span><strong>{preview.profileCount.toLocaleString("en-IN")}</strong></div>
-            <div className="summary-card"><span>Registration codes</span><strong>{preview.registrationCount.toLocaleString("en-IN")}</strong></div>
-            <div className="summary-card"><span>Fee receipts</span><strong>{preview.feeRows.length.toLocaleString("en-IN")}</strong></div>
-            <div className="summary-card"><span>Legacy registrations</span><strong>{preview.legacyRegistrations.toLocaleString("en-IN")}</strong></div>
-            <div className="summary-card"><span>Rows flagged</span><strong>{preview.warnings.length.toLocaleString("en-IN")}</strong></div>
+            <div className="summary-card"><span>Student Rows Read</span><strong>{preview.studentRowsRead.toLocaleString("en-IN")}</strong></div>
+            <div className="summary-card"><span>Student Codes / Profiles</span><strong>{preview.registrationCount.toLocaleString("en-IN")} / {preview.profileCount.toLocaleString("en-IN")}</strong></div>
+            <div className="summary-card"><span>Payment Rows Read</span><strong>{preview.paymentRowsRead.toLocaleString("en-IN")}</strong></div>
+            <div className="summary-card"><span>Payments Matched</span><strong>{preview.feeRows.length.toLocaleString("en-IN")}</strong></div>
+            <div className="summary-card"><span>Payments Unmatched</span><strong>{preview.unmatchedPayments.length.toLocaleString("en-IN")}</strong></div>
+            <div className="summary-card"><span>Names Shared by Multiple Codes</span><strong>{preview.duplicateNameStudentCount.toLocaleString("en-IN")}</strong></div>
           </div>}
-          {preview && <div className="form-help"><b>Detected:</b> {preview.studentSheetName} (Student Data) · {preview.feeSheetName} (Fee Sheet). Name suffixes drive registration identity; the corrupted fee St_Code / St_Name_cr columns are not trusted when St_Name contains a code.</div>}
+          {preview && <div className="form-help"><b>Detected:</b> {preview.studentSheetName} (Student Data) · {preview.feeSheetName} (Fee Sheet). Payments are matched by normalized explicit St_Code; name fallback is allowed only when it identifies exactly one Student Code.</div>}
           {progress.stage !== "Idle" && <div style={{ display: "grid", gap: 8 }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}><strong>{progress.stage}</strong><b>{progress.percent}%</b></div>
             <div style={{ height: 10, borderRadius: 99, background: "var(--border,#e5e7eb)", overflow: "hidden" }}><div style={{ height: "100%", width: progress.percent + "%", background: "var(--primary,#315efb)", transition: "width .2s ease" }}/></div>
@@ -598,7 +623,13 @@ export default function BulkImportPage() {
             <div className="summary-card"><span>Existing Receipts Repaired</span><strong>{result.existingReceiptsUpdated}</strong></div>
             <div className="summary-card"><span>St_Code Collisions Flagged</span><strong>{collisionCount}</strong></div>
             <div className="summary-card"><span>Unmatched Fee-Only Codes</span><strong>{unmatchedFeeCodes}</strong></div>
+            <div className="summary-card"><span>Student Rows Read / Valid</span><strong>{result.studentRowsRead} / {result.studentRowsValid}</strong></div>
+            <div className="summary-card"><span>Payment Rows Read / Matched</span><strong>{result.paymentRowsRead} / {result.feeRowsMatched}</strong></div>
+            <div className="summary-card"><span>Unmatched Payment Rows</span><strong>{result.unmatchedPayments?.length || 0}</strong></div>
+            <div className="summary-card"><span>Excel Matched Payment Total</span><strong>₹{Number(result.matchedPaymentTotal || 0).toLocaleString("en-IN")}</strong></div>
+            <div className="summary-card"><span>Database Imported Payment Total</span><strong>₹{Number(result.databasePaymentTotal || 0).toLocaleString("en-IN")}</strong></div>
             <div className="summary-card"><span>Rows Requiring Review</span><strong>{result.unmatchedRows.length}</strong></div>
+            <div className="summary-card"><span>Payment Total Reconciliation</span><strong>{result.paymentReconciliationMatches ? "Matched" : "Needs Review"}</strong></div>
           </div>
           {result.unmatchedRows.length > 0 && <div style={{ padding: "0 20px 20px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <AlertTriangle size={16}/><span>{result.unmatchedRows.length} rows need manual review.</span>
