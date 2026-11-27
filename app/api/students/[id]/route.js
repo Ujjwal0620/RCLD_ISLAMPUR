@@ -7,7 +7,7 @@ import Batch from "@/models/Batch";
 import StudentMaster from "@/models/StudentMaster";
 import StudentEnrollment from "@/models/StudentEnrollment";
 import StudentFeePayment from "@/models/StudentFeePayment";
-import { normalizeStudentCode, normalizeReceiptNumber, normalizeName } from "@/lib/student-import/normalization.mjs";
+import { normalizeStudentCode, normalizeReceiptNumber, normalizeImportName } from "@/lib/student-import/normalization.mjs";
 
 
 const ReferralSchema=new mongoose.Schema({}, {strict:false});
@@ -40,7 +40,7 @@ export async function GET(req,{params}){
     const codeSpecificMasterProfile = masterProfile ? {
       ...masterProfile,
       fullName: student.applicantName || student.name || masterProfile.fullName || "",
-      normalizedFullName: normalizeName(student.applicantName || student.name || masterProfile.fullName || ""),
+      normalizedFullName: normalizeImportName(student.applicantName || student.name || masterProfile.fullName || ""),
       alternateNames: student.alternateNames || [],
       phones: [...new Set([student.mobileNumber, student.phone, student.whatsappNumber].filter(Boolean))],
       phoneNumbers: [...new Set([student.mobileNumber, student.phone, student.whatsappNumber].filter(Boolean))],
