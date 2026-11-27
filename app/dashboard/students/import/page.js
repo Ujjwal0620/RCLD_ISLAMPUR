@@ -264,9 +264,11 @@ function buildWorkbookPayload(workbook) {
     paymentRowsRead += 1;
     const sourceCodeValue = clean(feeGet(row, "stcode"));
     const sourceStCode = sourceCodeValue === "__FORMULA_WITHOUT_CACHED_VALUE__" ? "" : normalizeStudentCode(sourceCodeValue);
-    const cleanFeeName = clean(feeGet(row, "stnamecr"));
-    const fallbackFeeName = clean(feeGet(row, "stname"));
-    const feeNameRaw = cleanFeeName && cleanFeeName !== "__FORMULA_WITHOUT_CACHED_VALUE__" ? cleanFeeName : (fallbackFeeName === "__FORMULA_WITHOUT_CACHED_VALUE__" ? "" : fallbackFeeName);
+    const primaryFeeName = clean(feeGet(row, "stname"));
+    const alternateFeeName = clean(feeGet(row, "stnamecr"));
+    const feeNameRaw = primaryFeeName && primaryFeeName !== "__FORMULA_WITHOUT_CACHED_VALUE__"
+      ? primaryFeeName
+      : (alternateFeeName === "__FORMULA_WITHOUT_CACHED_VALUE__" ? "" : alternateFeeName);
     const feeName = normalizeName(clean(feeNameRaw).split(/\r?\n/)[0].replace(/_\s*\d+\s*$/, ""));
     const paymentDate = parseDate(feeGet(row, "dop"));
     const amountPaid = parseImportAmount(feeGet(row, "amtpaid"));
