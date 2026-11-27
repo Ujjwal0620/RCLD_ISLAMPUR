@@ -122,8 +122,7 @@ function registrationSort(a, b) {
 
 const enrollmentUniqueKey = item => [
   String(item.studentId || ""), normalizeStudentCode(item.normalizedStCode || item.stCode),
-  normalizeName(item.normalizedFullName), normalizeCourseCode(item.courseCode),
-  asDate(item.admissionDate)?.toISOString().slice(0, 10) || ""
+  normalizeCourseCode(item.courseCode), asDate(item.admissionDate)?.toISOString().slice(0, 10) || ""
 ].join("|");
 
 async function bulkWriteChunked(model, operations, warnings, label, chunkSize = 500) {
