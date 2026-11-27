@@ -9,7 +9,9 @@ const STUDENT_FIELDS = [
   ["dob", "Date of Birth"], ["sex", "Gender"], ["phone", "Phone"],
   ["address", "Address"], ["qualification", "Qualification"],
   ["formNo", "Form Number"], ["admissionDate", "Admission Date"],
-  ["course", "Course"], ["totalPaid", "Total Paid"], ["matchedPayments", "Payment Count"]
+  ["course", "Course"], ["totalPaid", "Total Paid"], ["matchedPayments", "Payment Count"],
+  ["paymentSourceCode", "Payment Student Code"], ["paymentAmount", "Single-row Payment Amount"],
+  ["paymentMrNo", "Single-row Payment MR No"], ["paymentDate", "Single-row Payment Date"]
 ];
 const PAYMENT_FIELDS = [
   ["sourceCode", "Student Code"], ["name", "Student Name"], ["amount", "Amount"],
