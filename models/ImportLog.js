@@ -18,6 +18,8 @@ const ImportLogSchema = new mongoose.Schema({
   totalChunks: { type: Number, default: 0 },
   completedChunks: { type: [Number], default: [] },
   lastError: { type: String, default: "" },
+  commitLockToken: { type: String, default: "" },
+  commitLockAt: { type: Date, default: null },
   startedAt: { type: Date, default: null },
   completedAt: { type: Date, default: null }
 }, { timestamps: true, collection: "import_logs" });
