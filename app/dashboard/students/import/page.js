@@ -74,7 +74,18 @@ function findSheet(workbook, kind) {
       if (kind === "student") return ["stcode", "stname", "doa", "course"].every(key => keys.includes(key));
       return ["amtpaid", "mrno", "dop"].every(key => keys.includes(key)) && (keys.includes("stname") || keys.includes("stnamecr"));
     });
-    if (index >= 0) matches.push({ name, grid, headerIndex: index });
+    if (index >= 0) {
+      // Carry vertically merged identifiers (e.g. one Student Code merged over several course/payment rows).
+      for (const merge of sheet["!merges"] || []) {
+        if (merge.s.c !== merge.e.c || merge.s.r <= index || merge.e.r <= merge.s.r) continue;
+        const value = grid[merge.s.r]?.[merge.s.c] ?? "";
+        for (let rowIndex = merge.s.r + 1; rowIndex <= merge.e.r; rowIndex += 1) {
+          const row = grid[rowIndex] || (grid[rowIndex] = []);
+          if (row[merge.s.c] === "" || row[merge.s.c] === undefined) row[merge.s.c] = value;
+        }
+      }
+      matches.push({ name, grid, headerIndex: index });
+    }
   }
   if (kind === "student") return matches.find(item => /^student\\s*data$/i.test(item.name)) || matches[0] || null;
   return matches.find(item => !/^student\\s*data$/i.test(item.name)) || matches[0] || null;
