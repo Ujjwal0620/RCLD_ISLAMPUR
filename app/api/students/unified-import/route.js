@@ -221,7 +221,11 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
       ...(master.normalizedStCodes || []), ...(master.studentCodes || []), ...(master.stCodes || []),
       master.primaryStCode, master.currentStCode,
       ...(master.registrations || []).map(item => item.stCode),
-      ...(master.enrollments || []).map(item => item.stCode)
+      ...(master.enrollments || []).map(item => item.stCode),
+      ...(master.legacyStudentIds || []).map(id => {
+        const linked = legacyStudentById.get(String(id));
+        return linked?.normalizedStCode || linked?.regnNo || linked?.enrollmentNo;
+      })
     ].map(normalizeStudentCode).filter(Boolean));
     for (const code of masterCodes) masterByCode.set(code, [...(masterByCode.get(code) || []), master]);
     for (const id of master.legacyStudentIds || []) masterByStudentId.set(String(id), master);
@@ -1036,7 +1040,11 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
       ...(master.normalizedStCodes || []), ...(master.studentCodes || []), ...(master.stCodes || []),
       master.primaryStCode, master.currentStCode,
       ...(master.registrations || []).map(item => item.stCode),
-      ...(master.enrollments || []).map(item => item.stCode)
+      ...(master.enrollments || []).map(item => item.stCode),
+      ...(master.legacyStudentIds || []).map(id => {
+        const linked = legacyStudentById.get(String(id));
+        return linked?.normalizedStCode || linked?.regnNo || linked?.enrollmentNo;
+      })
     ].map(normalizeStudentCode).filter(Boolean));
     for (const code of ownerCodes) codeOwnerCounts.set(code, (codeOwnerCounts.get(code) || 0) + 1);
   }
