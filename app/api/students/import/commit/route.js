@@ -88,6 +88,85 @@ async function ensureEnrollment(master, student, registration, importBatchId, se
   return enrollment;
 }
 
+async function reconcileImportedFeeSummary(master) {
+  const [enrollments, payments] = await Promise.all([
+    StudentEnrollment.find({ studentId: master._id }).lean(),
+    StudentFeePayment.find({
+      $or: [{ studentId: master._id }, { masterStudentId: master._id }]
+    }).lean()
+  ]);
+  const seenPaymentKeys = new Set();
+  const paidByEnrollment = new Map();
+  let totalPaidAcrossProfile = 0;
+  for (const payment of payments) {
+    const key = payment.normalizedPaymentKey || paymentCompositeKey({
+      sourceCode: payment.sourceStCode || payment.normalizedStCode || payment.stCode,
+      mrNo: payment.normalizedMrNo || payment.mrNo,
+      paymentDate: payment.paymentDate,
+      amountPaid: payment.amountPaid
+    }) || String(payment._id);
+    if (seenPaymentKeys.has(key)) continue;
+    seenPaymentKeys.add(key);
+    const amount = Number(payment.amountPaid || 0);
+    if (!Number.isFinite(amount) || amount < 0) continue;
+    totalPaidAcrossProfile += amount;
+    const enrollmentId = String(payment.enrollmentId || "");
+    if (enrollmentId) paidByEnrollment.set(enrollmentId, (paidByEnrollment.get(enrollmentId) || 0) + amount);
+  }
+
+  let grossFee = 0;
+  let discount = 0;
+  let balanceDue = 0;
+  let configuredCount = 0;
+  const operations = [];
+  for (const enrollment of enrollments) {
+    const enrollmentPaid = Number(paidByEnrollment.get(String(enrollment._id)) || 0);
+    const isConfigured = Boolean(enrollment.feeConfig)
+      && enrollment.feeConfig.configured !== false
+      && enrollment.feeConfig.feeRuleSource !== "UNCONFIGURED"
+      && enrollment.feeConfig.feeRuleSource !== "NO_FEE_RULE"
+      && String(enrollment.courseCode || "").toUpperCase() !== "PREVIOUS-LEGACY";
+    const enrollmentGross = Number(enrollment.feeConfig?.grossFee ?? enrollment.summary?.totalFee ?? 0);
+    const enrollmentPayable = Number(enrollment.feeConfig?.netPayableFee ?? enrollment.summary?.totalDue ?? 0);
+    const enrollmentBalance = isConfigured
+      ? Math.max(0, enrollmentPayable - enrollmentPaid)
+      : Number(enrollment.summary?.balanceDue || 0);
+    const feeStatus = isConfigured && enrollmentBalance <= 0
+      ? "Paid"
+      : enrollmentPaid > 0 ? "Partial" : "Unpaid";
+    if (isConfigured) {
+      configuredCount += 1;
+      grossFee += enrollmentGross;
+      discount += Number(enrollment.feeConfig?.discountAmount || 0);
+      balanceDue += enrollmentBalance;
+    }
+    operations.push({
+      updateOne: {
+        filter: { _id: enrollment._id },
+        update: { $set: {
+          "summary.totalFee": enrollmentGross,
+          "summary.totalDue": isConfigured ? enrollmentPayable : Number(enrollment.summary?.totalDue || 0),
+          "summary.totalPaid": enrollmentPaid,
+          "summary.balanceDue": enrollmentBalance,
+          "summary.feeStatus": feeStatus
+        } }
+      }
+    });
+  }
+  if (operations.length) await StudentEnrollment.bulkWrite(operations, { ordered: true });
+  master.feeSummary = {
+    totalFee: grossFee,
+    discount,
+    totalPaid: totalPaidAcrossProfile,
+    balanceDue,
+    feeStatus: configuredCount && balanceDue <= 0 ? "Paid" : totalPaidAcrossProfile > 0 ? "Partial" : "Unpaid",
+    courseCount: enrollments.length,
+    updatedAt: new Date()
+  };
+  await master.save();
+  return { totalPaid: totalPaidAcrossProfile, totalFee: grossFee, balanceDue, courseCount: enrollments.length };
+}
+
 async function commitOne(stage, importBatchId, decision) {
   const incoming = stage.student || {};
   const chosen = decision?.decision || stage.action;
@@ -331,6 +410,8 @@ async function commitOne(stage, importBatchId, decision) {
     paymentResults.inserted += 1;
   }
 
+  const feeReconciliation = await reconcileImportedFeeSummary(master);
+
   if (stage.matchedLegacyStudentId) {
     const legacy = await Student.findById(stage.matchedLegacyStudentId);
     if (legacy) {
@@ -349,6 +430,14 @@ async function commitOne(stage, importBatchId, decision) {
       if (text(incoming.sex) && !text(legacy.gender || legacy.sex)) legacy.gender = text(incoming.sex);
       if (text(incoming.address) && !text(legacy.address)) legacy.address = text(incoming.address);
       if (text(incoming.phone) && !text(legacy.mobileNumber)) legacy.mobileNumber = text(incoming.phone);
+      legacy.totalPaid = feeReconciliation.totalPaid;
+      legacy.feeSummaryUpdatedAt = new Date();
+      if (Number(legacy.totalFee || 0) > 0) {
+        const legacyDue = Math.max(0, Number(legacy.totalFee || 0) - Number(legacy.totalPaid || 0));
+        legacy.dueAmount = legacyDue;
+        legacy.feeStatus = legacyDue <= 0 ? "Paid" : legacy.totalPaid > 0 ? "Partial" : "Not Paid";
+        legacy.paymentStatus = legacy.feeStatus;
+      }
       legacy.importBatchId = importBatchId;
       if (resolvedCode && oldLegacyCode !== resolvedCode) {
         legacy.codeUpdatedAt = new Date();
@@ -361,7 +450,7 @@ async function commitOne(stage, importBatchId, decision) {
   await StudentImportStaging.updateOne({ _id: stage._id, committedAt: null }, {
     $set: {
       committedAt: new Date(),
-      committedResult: { masterId: String(master._id), decision: chosen, enrollmentCount: enrollmentByCode.size, payments: paymentResults }
+      committedResult: { masterId: String(master._id), decision: chosen, enrollmentCount: enrollmentByCode.size, payments: paymentResults, feeReconciliation }
     }
   });
   return { masterId: String(master._id), enrollmentCount: enrollmentByCode.size, payments: paymentResults };
