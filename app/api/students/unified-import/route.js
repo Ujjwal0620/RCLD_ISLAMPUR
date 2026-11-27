@@ -730,12 +730,12 @@ async function syncFeeRows(rows = [], onProgress = () => {}, registrationMap = [
     { stCode: { $in: variants } },
     { registrationId: { $in: ids } },
     ...(sourceRowKeys.length ? [{ sourceRowKey: { $in: sourceRowKeys } }] : [])
-  ] }).select("sourceRowKey sourceBatchKey sourceStCode sourceSheet sourceRowNo normalizedStCode registrationId stNameKey stCode mrNo paymentDate amountPaid studentId masterStudentId enrollmentId courseCode course importBatchKey").lean();
+  ] }).select("sourceRowKey sourceBatchKey sourceStCode sourceSheet sourceRowNo normalizedStCode normalizedMrNo registrationId stNameKey stCode mrNo paymentDate amountPaid studentId masterStudentId enrollmentId courseCode course importBatchKey").lean();
   const existingByBusinessKey = new Map();
   const existingBySourceKey = new Map();
   for (const item of existing) {
     const code = normalizeStudentCode(item.normalizedStCode || item.stCode);
-    const key = makeReceiptBusinessKey(code, item.mrNo, item.paymentDate, item.amountPaid);
+    const key = makeReceiptBusinessKey(code, item.normalizedMrNo || item.mrNo, item.paymentDate, item.amountPaid);
     if (code && key && !existingByBusinessKey.has(key)) existingByBusinessKey.set(key, item);
     if (item.sourceRowKey) existingBySourceKey.set(String(item.sourceRowKey), item);
   }
@@ -811,7 +811,7 @@ async function syncFeeRows(rows = [], onProgress = () => {}, registrationMap = [
       registrationId: enrollment.registrationId || row.registrationId || "",
       stNameKey: enrollment.registrationId || row.registrationId || "",
       courseCode, course: enrollment.course || enrollment.courseName || row.course || "",
-      mrNo, paymentDate, amountPaid, rawPaymentDate: paymentDate,
+      mrNo, normalizedMrNo: normalizeReceiptNumber(mrNo), paymentDate, amountPaid, rawPaymentDate: paymentDate,
       sourceSheet: clean(row.sourceSheet), sourceRowNo: Number(row.rowNo || 0),
       importBatchKey: "UNIFIED_WORKBOOK_IMPORT",
       sourceBatchKey: clean(batchKey), sourceRowKey,
@@ -1004,7 +1004,7 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
     } },
     { $match: { _normalizedStudentCode: { $in: codes } } },
     { $addFields: {
-      _normalizedReceiptNo: { $regexReplace: { input: { $toUpper: { $trim: { input: { $ifNull: ["$mrNo", ""] } } } }, regex: "\\s+", replacement: "" } },
+      _normalizedReceiptNo: { $regexReplace: { input: { $toUpper: { $trim: { input: { $ifNull: ["$normalizedMrNo", "$mrNo"] } } } }, regex: "\\s+", replacement: "" } },
       _paymentDateKey: { $cond: [
         { $eq: [{ $type: "$paymentDate" }, "date"] },
         { $dateToString: { format: "%Y-%m-%d", date: "$paymentDate", timezone: "UTC" } },
@@ -1060,10 +1060,10 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
   const importedReceiptKeys = new Set();
   const importedPaymentDocs = codes.length ? await StudentFeePayment.find({
     $or: [...codes.map(code => ({ normalizedStCode: code })), { stCode: { $in: codeVariants } }]
-  }).select("normalizedStCode stCode mrNo paymentDate").lean() : [];
+  }).select("normalizedStCode stCode mrNo normalizedMrNo paymentDate").lean() : [];
   for (const payment of importedPaymentDocs) {
     const code = normalizeStudentCode(payment.normalizedStCode || payment.stCode);
-    const receipt = normalizeReceiptNumber(payment.mrNo);
+    const receipt = normalizeReceiptNumber(payment.normalizedMrNo || payment.mrNo);
     if (code && receipt) importedReceiptKeys.add([code, receipt, dateKey(payment.paymentDate)].join("|"));
   }
   const legacyPaidByCode = new Map();
