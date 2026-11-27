@@ -40,19 +40,27 @@ async function ensureReceiptIndex() {
 
       const legacyCodeDocs = await StudentFeePayment.find({
         stCode: { $exists: true, $nin: [null, ""] }
-      }).select("_id stCode normalizedStCode").lean();
+      }).select("_id stCode normalizedStCode mrNo normalizedMrNo").lean();
       const codeRepairs = legacyCodeDocs.flatMap(item => {
-        const normalized = normalizeStudentCode(item.stCode || item.normalizedStCode);
-        return normalized && normalized !== item.normalizedStCode
-          ? [{ updateOne: { filter: { _id: item._id }, update: { $set: { normalizedStCode: normalized } } } }]
-          : [];
+        const normalizedCode = normalizeStudentCode(item.stCode || item.normalizedStCode);
+        const normalizedReceipt = normalizeReceiptNumber(item.mrNo || item.normalizedMrNo);
+        const set = {};
+        if (normalizedCode && normalizedCode !== item.normalizedStCode) set.normalizedStCode = normalizedCode;
+        if (normalizedReceipt && normalizedReceipt !== item.normalizedMrNo) set.normalizedMrNo = normalizedReceipt;
+        return Object.keys(set).length ? [{ updateOne: { filter: { _id: item._id }, update: { $set: set } } }] : [];
       });
       for (let offset = 0; offset < codeRepairs.length; offset += 500) {
         await StudentFeePayment.bulkWrite(codeRepairs.slice(offset, offset + 500), { ordered: false });
       }
-      if (codeRepairs.length) console.log("[unified-import]", "normalize-existing-receipt-codes", 1, 0, { updated: codeRepairs.length });
+      if (codeRepairs.length) console.log("[unified-import]", "normalize-existing-receipt-keys", 1, 0, { updated: codeRepairs.length });
 
-      const currentIndexes = await StudentFeePayment.collection.indexes().catch(() => []);
+      let currentIndexes = await StudentFeePayment.collection.indexes().catch(() => []);
+      const expectedReceiptIndex = { normalizedStCode: 1, normalizedMrNo: 1, paymentDate: 1 };
+      const existingReceiptIndex = currentIndexes.find(index => index.name === "normalized_stcode_receipt_date_unique");
+      if (existingReceiptIndex && JSON.stringify(existingReceiptIndex.key) !== JSON.stringify(expectedReceiptIndex)) {
+        await StudentFeePayment.collection.dropIndex("normalized_stcode_receipt_date_unique");
+        currentIndexes = await StudentFeePayment.collection.indexes().catch(() => []);
+      }
       if (!currentIndexes.some(index => index.name === "student_fee_source_row_unique")) {
         await StudentFeePayment.collection.createIndex(
           { sourceRowKey: 1 },
@@ -68,11 +76,11 @@ async function ensureReceiptIndex() {
           { $match: {
             importBatchKey: "UNIFIED_WORKBOOK_IMPORT",
             normalizedStCode: { $type: "string", $gt: "" },
-            mrNo: { $type: "string", $gt: "" },
+            normalizedMrNo: { $type: "string", $gt: "" },
             paymentDate: { $type: "date" }
           } },
           { $group: {
-            _id: { normalizedStCode: "$normalizedStCode", mrNo: "$mrNo", paymentDate: "$paymentDate" },
+            _id: { normalizedStCode: "$normalizedStCode", normalizedMrNo: "$normalizedMrNo", paymentDate: "$paymentDate" },
             count: { $sum: 1 }
           } },
           { $match: { count: { $gt: 1 } } },
@@ -80,14 +88,14 @@ async function ensureReceiptIndex() {
         ]).toArray();
         if (!duplicateKeys.length) {
           await StudentFeePayment.collection.createIndex(
-            { normalizedStCode: 1, mrNo: 1, paymentDate: 1 },
+            { normalizedStCode: 1, normalizedMrNo: 1, paymentDate: 1 },
             {
               unique: true,
               name: "normalized_stcode_receipt_date_unique",
               partialFilterExpression: {
                 importBatchKey: "UNIFIED_WORKBOOK_IMPORT",
                 normalizedStCode: { $type: "string", $gt: "" },
-                mrNo: { $type: "string", $gt: "" },
+                normalizedMrNo: { $type: "string", $gt: "" },
                 paymentDate: { $type: "date" }
               }
             }
