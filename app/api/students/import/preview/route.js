@@ -94,7 +94,7 @@ function normalizeStudentRow(row, headers, columns, rowNo, sheetName) {
     primaryCode, codes: allCodes, warnings, payments: tallPayments,
     registrations: primaryCode ? [{
       stCode: primaryCode, course: cleanImportText(value("course")),
-      admissionDate, formNo: cleanImportText(value("formNo")).replace(/\\.0+$/, ""),
+      admissionDate, formNo: cleanImportText(value("formNo")).replace(/\.0+$/, ""),
       qualification: cleanImportText(value("qualification")),
       address: normalizeImportAddress(value("address")),
       earliestPaymentDate: null
