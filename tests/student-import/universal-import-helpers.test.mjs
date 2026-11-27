@@ -64,6 +64,10 @@ test("payment identity includes normalized receipt, date, amount and source code
     paymentCompositeKey({ sourceCode: "18696", mrNo: "", paymentDate: "2025-05-10", amountPaid: 600 }),
     "2025-05-10|600.00|18696"
   );
+  assert.equal(
+    paymentCompositeKey({ sourceCode: "18696", mrNo: "MR-12/88", paymentDate: "2025-05-10", amountPaid: 600 }),
+    "MR1288|2025-05-10|600.00|18696"
+  );
 });
 
 test("code collision with a different student name is flagged", () => {
