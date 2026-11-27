@@ -278,6 +278,7 @@ export async function POST(request) {
       newStudents: 0,
       conflicts: 0,
       warnings: 0,
+      paymentRowsNeedingReview: 0,
       paymentRowsRead: groups.reduce((sum, group) => sum + group.payments.length + group.duplicatePaymentsInWorkbook, 0)
     };
 
@@ -314,7 +315,13 @@ export async function POST(request) {
         existingTimeline: timeline
       });
       const codeSet = new Set(group.codes);
-      const paymentKeys = group.payments.map(paymentCompositeKey).filter(Boolean);
+      const validPayments = group.payments.filter(payment =>
+        Boolean(text(payment.mrNo)) &&
+        Number.isFinite(Number(payment.amountPaid)) && Number(payment.amountPaid) >= 0 &&
+        Boolean(payment.paymentDate)
+      );
+      summary.paymentRowsNeedingReview += group.payments.length - validPayments.length;
+      const paymentKeys = validPayments.map(paymentCompositeKey).filter(Boolean);
       const duplicateCount = paymentKeys.filter(key => existingPaymentKeys.has(key)).length;
       const newCount = paymentKeys.length - duplicateCount;
       summary.duplicatePaymentsSkipped += duplicateCount + group.duplicatePaymentsInWorkbook;
