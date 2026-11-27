@@ -659,7 +659,7 @@ async function syncFeeRows(rows = [], onProgress = () => {}, registrationMap = [
     { stCode: { $in: variants } },
     { registrationId: { $in: ids } },
     ...(sourceRowKeys.length ? [{ sourceRowKey: { $in: sourceRowKeys } }] : [])
-  ] }).select("sourceRowKey sourceBatchKey normalizedStCode registrationId stNameKey stCode mrNo paymentDate amountPaid studentId masterStudentId enrollmentId courseCode course importBatchKey").lean();
+  ] }).select("sourceRowKey sourceBatchKey sourceStCode normalizedStCode registrationId stNameKey stCode mrNo paymentDate amountPaid studentId masterStudentId enrollmentId courseCode course importBatchKey").lean();
   const existingByBusinessKey = new Map();
   const existingBySourceKey = new Map();
   for (const item of existing) {
@@ -737,7 +737,7 @@ async function syncFeeRows(rows = [], onProgress = () => {}, registrationMap = [
     const courseCode = normalizeCourseCode(enrollment.courseCode || row.course);
     const paymentValues = {
       studentId: enrollment.studentId, masterStudentId: enrollment.studentId,
-      enrollmentId: enrollment._id, stCode, normalizedStCode: stCode,
+      enrollmentId: enrollment._id, stCode, sourceStCode: clean(row.sourceStCode || row.stCode), normalizedStCode: stCode,
       registrationId: enrollment.registrationId || row.registrationId || "",
       stNameKey: enrollment.registrationId || row.registrationId || "",
       courseCode, course: enrollment.course || enrollment.courseName || row.course || "",
@@ -810,7 +810,7 @@ async function syncFeeRows(rows = [], onProgress = () => {}, registrationMap = [
         if (prior) {
           repairs.push({ updateOne: { filter: { _id: prior._id }, update: { $set: {
             studentId: item.studentId, masterStudentId: item.masterStudentId, enrollmentId: item.enrollmentId,
-            stCode: item.stCode, normalizedStCode: item.normalizedStCode, registrationId: item.registrationId,
+            stCode: item.stCode, sourceStCode: item.sourceStCode, normalizedStCode: item.normalizedStCode, registrationId: item.registrationId,
             stNameKey: item.stNameKey, courseCode: item.courseCode, course: item.course,
             sourceRowKey: item.sourceRowKey, sourceBatchKey: item.sourceBatchKey, importBatchKey: item.importBatchKey
           } } } });
