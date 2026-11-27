@@ -63,14 +63,23 @@ async function ensureReceiptIndex() {
         currentIndexes = await StudentFeePayment.collection.indexes().catch(() => []);
       }
       if (!currentIndexes.some(index => index.name === "student_fee_source_row_unique")) {
-        await StudentFeePayment.collection.createIndex(
-          { sourceRowKey: 1 },
-          {
-            unique: true,
-            name: "student_fee_source_row_unique",
-            partialFilterExpression: { sourceRowKey: { $type: "string", $gt: "" } }
-          }
-        );
+        const duplicateSourceKeys = await StudentFeePayment.collection.aggregate([
+          { $match: { sourceRowKey: { $type: "string", $gt: "" } } },
+          { $group: { _id: "$sourceRowKey", count: { $sum: 1 } } },
+          { $match: { count: { $gt: 1 } } }, { $limit: 1 }
+        ]).toArray();
+        if (!duplicateSourceKeys.length) {
+          await StudentFeePayment.collection.createIndex(
+            { sourceRowKey: 1 },
+            {
+              unique: true,
+              name: "student_fee_source_row_unique",
+              partialFilterExpression: { sourceRowKey: { $type: "string", $gt: "" } }
+            }
+          );
+        } else {
+          console.warn("[unified-import] duplicate sourceRowKey documents exist; in-memory deduplication remains active and no unique index was added.");
+        }
       }
       if (!currentIndexes.some(index => index.name === "normalized_stcode_receipt_date_unique")) {
         const duplicateKeys = await StudentFeePayment.collection.aggregate([
