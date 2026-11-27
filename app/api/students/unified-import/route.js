@@ -821,6 +821,15 @@ async function syncFeeRows(rows = [], onProgress = () => {}, registrationMap = [
     const businessKey = makeReceiptBusinessKey(stCode, mrNo, paymentDate, amountPaid);
     const sourceRowKey = [clean(batchKey), clean(row.sourceSheet), Number(row.rowNo || 0), businessKey].join("|");
     const mapped = mappedByCode.get(stCode);
+    if (!mapped) {
+      unmatchedRows.push({
+        row: row.rowNo || "", stCode, name: row.cleanName || "",
+        amountPaid: Number.isFinite(amountPaid) ? amountPaid : row.amountPaid,
+        mrNo, paymentDate: paymentDate || row.paymentDate || "",
+        reason: "No confirmed Student Code-to-enrollment mapping was returned by the student import phase; payment was not assigned."
+      });
+      continue;
+    }
     let candidates = enrollmentByCode.get(stCode) || [];
     if (mapped?.ambiguous) candidates = [];
     if (mapped?.studentId) candidates = candidates.filter(item => String(item.studentId) === String(mapped.studentId));
