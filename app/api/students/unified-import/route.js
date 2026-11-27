@@ -951,9 +951,6 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
     paidByCode.set(code, (paidByCode.get(code) || 0) + paid);
     if (item._id.enrollmentId) paidByEnrollment.set(code + "|" + String(item._id.enrollmentId), paid);
   }
-  for (const [code, paid] of legacyPaidByCode) {
-    paidByCode.set(code, (paidByCode.get(code) || 0) + paid);
-  }
   const enrollmentsByMaster = new Map();
   for (const enrollment of enrollments) {
     const key = String(enrollment.studentId);
@@ -1023,6 +1020,9 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
       }
       legacyPaidByCode.set(code, (legacyPaidByCode.get(code) || 0) + Math.max(0, coursePaid));
     }
+  }
+  for (const [code, paid] of legacyPaidByCode) {
+    paidByCode.set(code, (paidByCode.get(code) || 0) + paid);
   }
   const studentsByCode = new Map();
   for (const student of legacyStudents) {
