@@ -299,7 +299,7 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
       continue;
     }
     const codeAmbiguous = registrations.some(item => item.stCodeUnique === false);
-    const incomingName = normalizeName(group.cleanName || newest.cleanName);
+    let incomingName = normalizeName(group.cleanName || newest.cleanName);
     if (codeAmbiguous) {
       flaggedRows.push({
         row: newest.rowNo || "", stCode: code, name: incomingName,
@@ -356,6 +356,13 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
       continue;
     }
     const master = linkedMaster || codeMasters[0] || null;
+    const incomingNameMissing = incomingName === "STUDENT " + code;
+    if (incomingNameMissing) {
+      incomingName = normalizeName(master?.fullName || canonicalStudent?.applicantName || canonicalStudent?.name || incomingName);
+    }
+    const incomingCourseValue = newest.course === "Previous Course (Legacy)"
+      ? (canonicalStudent?.course || canonicalStudent?.courseName || "")
+      : newest.course;
     const masterExistingCodes = new Set([
       ...(master?.normalizedStCodes || []), ...(master?.studentCodes || []), ...(master?.stCodes || []),
       master?.primaryStCode, master?.currentStCode,
@@ -376,9 +383,9 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
       formNo: newest.formNo || "",
       admissionDate: newest.dateOfAdmission?.toISOString() || "",
       dateOfAdmission: newest.dateOfAdmission?.toISOString() || "",
-      applicantName: displayName(group.cleanName || newest.cleanName),
-      name: displayName(group.cleanName || newest.cleanName),
-      sourceStudentName: displayName(group.cleanName || newest.cleanName) + "_" + code,
+      applicantName: displayName(incomingName),
+      name: displayName(incomingName),
+      sourceStudentName: displayName(incomingName) + "_" + code,
       sourceSex: newest.sex || "",
       sex: newest.sex || "",
       gender: newest.sex || "",
@@ -391,9 +398,9 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
       sourcePhone: (group.phones || []).join(","),
       qualification: newest.qualification || "",
       sourceQualification: newest.qualification || "",
-      courseCode: newest.course || "",
-      courseName: newest.course || "",
-      course: newest.course || "",
+      courseCode: incomingCourseValue,
+      courseName: incomingCourseValue,
+      course: incomingCourseValue,
       importSource: "Unified Excel Workbook"
     };
     if (!canonicalStudent) {
@@ -462,13 +469,13 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
     const incomingPhones = normalizeIndianPhones([...(group.phones || []), ...(master?.phoneNumbers || []), ...(master?.phones || [])]);
     const legacyIds = [...new Set([...(master?.legacyStudentIds || []).map(String), String(studentId)])];
     const masterSet = {
-      fullName: masterHasOtherCodes ? (master?.fullName || displayName(group.cleanName || newest.cleanName)) : displayName(group.cleanName || newest.cleanName),
+      fullName: masterHasOtherCodes || incomingNameMissing ? (master?.fullName || displayName(incomingName)) : displayName(incomingName),
       normalizedFullName: masterHasOtherCodes ? (master?.normalizedFullName || incomingName) : incomingName,
       normalizedStCodes: [...new Set([...(master?.normalizedStCodes || []).map(normalizeStudentCode), code])],
       primaryStCode: master?.primaryStCode || code,
       studentCodes: [...new Set([...(master?.studentCodes || []), code])],
       stCodes: [...new Set([...(master?.stCodes || []), code])],
-      alternateNames: [...new Set([...(master?.alternateNames || []), master?.fullName || "", group.cleanName || ""].map(normalizeStudentName).filter(Boolean))],
+      alternateNames: [...new Set([...(master?.alternateNames || []), master?.fullName || "", ...(incomingNameMissing ? [] : [group.cleanName || ""])].map(normalizeStudentName).filter(Boolean))],
       phones: incomingPhones,
       phoneNumbers: incomingPhones,
       registrations: mergedRegistrations,
@@ -483,9 +490,11 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
     if (!masterHasOtherCodes || !master?.currentStCode) {
       masterSet.currentStCode = code;
       masterSet.currentRegistrationId = current.registrationId;
-      masterSet.currentCourse = current.course;
-      masterSet.currentAdmissionDate = current.dateOfAdmission || null;
-      masterSet.dateOfAdmission = current.dateOfAdmission || null;
+      masterSet.currentCourse = current.course === "Previous Course (Legacy)" && master?.currentCourse ? master.currentCourse : current.course;
+      if (current.dateOfAdmission) {
+        masterSet.currentAdmissionDate = current.dateOfAdmission;
+        masterSet.dateOfAdmission = current.dateOfAdmission;
+      }
     }
     masterSet.formNo = current.formNo || master?.formNo || "";
     if (!master?.address && currentIncoming.address) masterSet.address = currentIncoming.address;
