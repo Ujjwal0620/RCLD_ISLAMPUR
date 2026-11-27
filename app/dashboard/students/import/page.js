@@ -129,6 +129,7 @@ function chooseRegistration(candidates, paymentDate, courseValue) {
     });
     if (eligible.length) matches = eligible;
     else return null;
+    if (matches.length > 1 && matches.some(item => !parseDate(item.dateOfAdmission))) return null;
   }
   const dated = matches.filter(item => parseDate(item.dateOfAdmission));
   if (dated.length) {
