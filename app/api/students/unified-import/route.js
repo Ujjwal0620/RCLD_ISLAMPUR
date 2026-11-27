@@ -38,6 +38,20 @@ async function ensureReceiptIndex() {
         && !index.key?.registrationId);
       for (const index of obsolete) await StudentFeePayment.collection.dropIndex(index.name);
 
+      const legacyCodeDocs = await StudentFeePayment.find({
+        stCode: { $exists: true, $nin: [null, ""] }
+      }).select("_id stCode normalizedStCode").lean();
+      const codeRepairs = legacyCodeDocs.flatMap(item => {
+        const normalized = normalizeStudentCode(item.stCode || item.normalizedStCode);
+        return normalized && normalized !== item.normalizedStCode
+          ? [{ updateOne: { filter: { _id: item._id }, update: { $set: { normalizedStCode: normalized } } } }]
+          : [];
+      });
+      for (let offset = 0; offset < codeRepairs.length; offset += 500) {
+        await StudentFeePayment.bulkWrite(codeRepairs.slice(offset, offset + 500), { ordered: false });
+      }
+      if (codeRepairs.length) console.log("[unified-import]", "normalize-existing-receipt-codes", 1, 0, { updated: codeRepairs.length });
+
       const currentIndexes = await StudentFeePayment.collection.indexes().catch(() => []);
       if (!currentIndexes.some(index => index.name === "student_fee_source_row_unique")) {
         await StudentFeePayment.collection.createIndex(
