@@ -5,6 +5,7 @@ import { ArrowLeft, Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, Downlo
 import * as XLSX from "xlsx";
 import ERPLayout from "@/components/ERPLayout";
 import BulkStudentPhotoUploadDialog from "@/components/students/BulkStudentPhotoUploadDialog";
+import UniversalWorkbookImport from "@/components/students/UniversalWorkbookImport";
 import { useErpCache, useErpToast } from "@/components/providers/ERPUIProvider";
 import { normalizeIndianPhones } from "@/lib/student-import/identity-resolution.mjs";
 import { normalizeStudentCode, normalizeImportName, parseImportAmount, normalizeReceiptNumber, makeReceiptBusinessKey } from "@/lib/student-import/normalization.mjs";
@@ -735,6 +736,8 @@ export default function BulkImportPage() {
         <div><div className="crumb">Students / Bulk Import</div><h1>Bulk Import & Photos</h1></div>
         <a className="ghost-btn" href="/dashboard/students"><ArrowLeft size={16}/> Back to Students</a>
       </header>
+
+      <UniversalWorkbookImport />
 
       <section className="panel" style={{ marginBottom: 18 }}>
         <div className="panel-head"><div><h3>1. Bulk Import — Unified Excel Upload</h3><p>Upload one .xlsx workbook with Student Data and Fee sheets. Students, course registrations and receipts are synced in batches.</p></div><FileSpreadsheet size={22}/></div>
