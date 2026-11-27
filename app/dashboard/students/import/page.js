@@ -68,8 +68,8 @@ function parseIdentity(rawName, explicitCode) {
   const nameWithoutSuffix = firstLine.replace(/_\\s*\\d+\\s*$/, "").trim();
   const name = normalizeName(nameWithoutSuffix || firstLine);
   const stCode = normalizeStudentCode(explicitCode);
-  if (!name || !stCode) return { cleanName: name, stCode, registrationId: "" };
-  return { cleanName: name, stCode, registrationId: stCode };
+  if (!stCode) return { cleanName: name, stCode, registrationId: "", missingCode: true };
+  return { cleanName: name || ("STUDENT " + stCode), stCode, registrationId: stCode, missingName: !name };
 }
 
 function phonesFrom(value) {
@@ -158,10 +158,14 @@ function buildWorkbookPayload(workbook) {
     if (!row.some(value => clean(value))) continue;
     studentRowsRead += 1;
     const identity = parseIdentity(studentGet(row, "stname"), studentGet(row, "stcode"));
-    if (!identity.stCode || !identity.cleanName) {
-      studentWarnings.push({ sheet: studentSheet.name, row: index + 1, stCode: identity.stCode, name: identity.cleanName, reason: "Student row is missing a usable explicit St_Code or student name; it was not imported." });
+    if (!identity.stCode) {
+      studentWarnings.push({ sheet: studentSheet.name, row: index + 1, stCode: identity.stCode, name: identity.cleanName, reason: "Student row is missing a usable explicit St_Code; it cannot be safely upserted." });
       continue;
     }
+    if (identity.missingName) studentWarnings.push({
+      sheet: studentSheet.name, row: index + 1, stCode: identity.stCode, name: "",
+      reason: "Student name is blank; a Student Code-based placeholder name was used so the valid coded record is retained."
+    });
     const course = clean(studentGet(row, "course")) || "Previous Course (Legacy)";
     const dateOfAdmission = parseDate(studentGet(row, "doa"));
     const dateKey = dateOfAdmission ? dateOfAdmission.slice(0, 10) : "";
