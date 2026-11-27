@@ -29,9 +29,12 @@ async function ensureReceiptIndex() {
         && index.name !== "student_fee_source_row_unique"
         && index.key?.mrNo === 1
         && index.key?.paymentDate === 1
-        && (index.key?.amountPaid === 1 || index.key?.stCode === 1
-          || index.key?.normalizedStCode === 1 || index.key?.registrationId === 1
-          || index.key?.masterStudentId === 1));
+        && !index.key?.studentId
+        && !index.key?.enrollmentId
+        && !index.key?.masterStudentId
+        && !index.key?.stCode
+        && !index.key?.normalizedStCode
+        && !index.key?.registrationId);
       for (const index of obsolete) await StudentFeePayment.collection.dropIndex(index.name);
 
       const currentIndexes = await StudentFeePayment.collection.indexes().catch(() => []);
