@@ -907,14 +907,14 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
       }
     } },
     { $match: { _normalizedStudentCode: { $in: codes } } },
+    { $sort: { updatedAt: -1, createdAt: -1 } },
     { $group: {
       _id: {
         code: "$_normalizedStudentCode",
         mrNo: "$mrNo",
-        paymentDate: "$paymentDate",
-        amountPaid: "$amountPaid"
+        paymentDate: "$paymentDate"
       },
-      totalPaid: { $max: "$amountPaid" },
+      totalPaid: { $first: "$amountPaid" },
       enrollmentIds: { $addToSet: "$enrollmentId" },
       duplicateDocumentCount: { $sum: 1 }
     } },
