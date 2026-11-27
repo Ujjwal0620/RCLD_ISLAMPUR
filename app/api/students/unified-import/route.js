@@ -951,6 +951,9 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
     paidByCode.set(code, (paidByCode.get(code) || 0) + paid);
     if (item._id.enrollmentId) paidByEnrollment.set(code + "|" + String(item._id.enrollmentId), paid);
   }
+  for (const [code, paid] of legacyPaidByCode) {
+    paidByCode.set(code, (paidByCode.get(code) || 0) + paid);
+  }
   const enrollmentsByMaster = new Map();
   for (const enrollment of enrollments) {
     const key = String(enrollment.studentId);
@@ -964,6 +967,63 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
       ...(codes.length ? [{ normalizedStCode: { $in: codes } }, { regnNo: { $in: codeVariants } }, { enrollmentNo: { $in: codeVariants } }] : [])
     ]
   }).lean();
+  const LegacyFeeSchema = new mongoose.Schema({ studentId: mongoose.Schema.Types.ObjectId, payments: [mongoose.Schema.Types.Mixed] }, { strict: false });
+  const StudentFee = mongoose.models.StudentFee || mongoose.model("StudentFee", LegacyFeeSchema);
+  const legacyStudentIds = legacyStudents.map(item => item._id);
+  const legacyFees = legacyStudentIds.length ? await StudentFee.find({ studentId: { $in: legacyStudentIds } }).lean() : [];
+  const legacyStudentById = new Map(legacyStudents.map(item => [String(item._id), item]));
+  const importedReceiptKeys = new Set();
+  const importedPaymentDocs = codes.length ? await StudentFeePayment.find({
+    $or: [...codes.map(code => ({ normalizedStCode: code })), { stCode: { $in: codeVariants } }]
+  }).select("normalizedStCode stCode mrNo paymentDate").lean() : [];
+  for (const payment of importedPaymentDocs) {
+    const code = normalizeStudentCode(payment.normalizedStCode || payment.stCode);
+    const receipt = normalizeReceiptNumber(payment.mrNo);
+    if (code && receipt) importedReceiptKeys.add([code, receipt, dateKey(payment.paymentDate)].join("|"));
+  }
+  const legacyPaidByCode = new Map();
+  const legacyFeeByCode = new Map();
+  const legacyReceiptKeys = new Set();
+  const courseFeePurposes = new Set(["course fee", "admission fee", "installment", "tuition fee"]);
+  for (const fee of legacyFees) {
+    const linkedStudent = legacyStudentById.get(String(fee.studentId));
+    const code = normalizeStudentCode(linkedStudent?.normalizedStCode || linkedStudent?.regnNo || linkedStudent?.enrollmentNo);
+    if (!code || !codes.includes(code)) continue;
+    const payable = Math.max(0, Number(fee.totalFee || 0) - Number(fee.discount || 0));
+    const priorFee = legacyFeeByCode.get(code);
+    if (!priorFee || new Date(fee.updatedAt || fee.createdAt || 0) > new Date(priorFee.updatedAt || priorFee.createdAt || 0)) legacyFeeByCode.set(code, fee);
+    for (const payment of fee.payments || []) {
+      const receipt = normalizeReceiptNumber(payment.receiptNo || payment.reference);
+      const paymentDate = asDate(payment.date);
+      const receiptKey = [code, receipt || String(payment._id || ""), dateKey(paymentDate)].join("|");
+      if ((receipt && importedReceiptKeys.has(receiptKey)) || legacyReceiptKeys.has(receiptKey)) continue;
+      legacyReceiptKeys.add(receiptKey);
+      const items = Array.isArray(payment.items) ? payment.items : [];
+      const hasPurpose = items.some(item => {
+        const purpose = String(item.purpose || item.type || "").trim().toLowerCase();
+        return purpose && purpose !== "other";
+      });
+      let coursePaid = 0;
+      if (hasPurpose) {
+        coursePaid = items.filter(item => courseFeePurposes.has(String(item.purpose || item.type || "").trim().toLowerCase()))
+          .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+      } else {
+        const noteMatch = String(payment.note || "").match(/Fee sections:\\s*([\\s\\S]*)$/i);
+        if (noteMatch) {
+          coursePaid = noteMatch[1].split(/;\\s*/).reduce((sum, part) => {
+            const item = part.match(/^(.*?):\\s*₹([\\d,.]+)(?:\\s*\\((.*?)\\))?$/);
+            return item && courseFeePurposes.has(item[1].trim().toLowerCase())
+              ? sum + Number(item[2].replace(/,/g, "")) : sum;
+          }, 0);
+        } else {
+          const type = String(payment.paymentType || "").toLowerCase();
+          coursePaid = ["late fine", "lab charge", "registration fee"].some(label => type.includes(label))
+            ? 0 : Number(payment.amount || 0);
+        }
+      }
+      legacyPaidByCode.set(code, (legacyPaidByCode.get(code) || 0) + Math.max(0, coursePaid));
+    }
+  }
   const studentsByCode = new Map();
   for (const student of legacyStudents) {
     const code = normalizeStudentCode(student.normalizedStCode || student.regnNo || student.enrollmentNo);
@@ -1001,15 +1061,21 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
       }
       const related = relatedAll.filter(item => normalizeStudentCode(item.normalizedStCode || item.stCode) === code);
       const totalPaid = Number(paidByCode.get(code) || 0);
-      const totalFee = related.reduce((sum, item) => sum + Number(item.feeConfig?.netPayableFee ?? item.summary?.totalDue ?? item.feeConfig?.grossFee ?? item.summary?.totalFee ?? 0), 0);
-      const balanceDue = Math.max(0, totalFee - totalPaid);
-      const hasConfiguredFee = related.some(item => Boolean(item.feeConfig) && item.feeConfig.configured !== false
+      const enrollmentFeeTotal = related.reduce((sum, item) => sum + Number(item.feeConfig?.netPayableFee ?? item.summary?.totalDue ?? item.feeConfig?.grossFee ?? item.summary?.totalFee ?? 0), 0);
+      const hasEnrollmentFee = related.some(item => Boolean(item.feeConfig) && item.feeConfig.configured !== false
         && item.feeConfig.feeRuleSource !== "UNCONFIGURED"
         && String(item.courseCode || "").toUpperCase() !== "PREVIOUS-LEGACY");
+      const legacyFeeRecord = legacyFeeByCode.get(code);
+      const legacyGrossFee = Number(legacyFeeRecord?.totalFee || 0);
+      const legacyDiscount = Number(legacyFeeRecord?.discount || 0);
+      const legacyPayable = Math.max(0, legacyGrossFee - legacyDiscount);
+      const totalFee = hasEnrollmentFee || enrollmentFeeTotal > 0 ? enrollmentFeeTotal : legacyPayable;
+      const balanceDue = Math.max(0, totalFee - totalPaid);
+      const hasConfiguredFee = hasEnrollmentFee || legacyPayable > 0 || enrollmentFeeTotal > 0;
       masterTotalFee += totalFee;
       masterTotalPaid += totalPaid;
       masterBalanceDue += balanceDue;
-      masterDiscount += related.reduce((sum, item) => sum + Number(item.feeConfig?.discountAmount || 0), 0);
+      masterDiscount += hasEnrollmentFee ? related.reduce((sum, item) => sum + Number(item.feeConfig?.discountAmount || 0), 0) : legacyDiscount;
       masterCourseCount += related.length;
       anyConfiguredFee ||= hasConfiguredFee;
 
@@ -1019,10 +1085,14 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
       const explicitlyAllocated = related.reduce((sum, item) => sum + Number(paidByEnrollment.get(code + "|" + String(item._id)) || 0), 0);
       const unallocatedPaid = Math.max(0, totalPaid - explicitlyAllocated);
       for (const enrollment of related) {
-        const configuredFee = Boolean(enrollment.feeConfig) && enrollment.feeConfig.configured !== false
+        const enrollmentConfiguredFee = Boolean(enrollment.feeConfig) && enrollment.feeConfig.configured !== false
           && enrollment.feeConfig.feeRuleSource !== "UNCONFIGURED"
           && String(enrollment.courseCode || "").toUpperCase() !== "PREVIOUS-LEGACY";
-        const enrollmentFee = Number(enrollment.feeConfig?.netPayableFee ?? enrollment.summary?.totalDue ?? enrollment.feeConfig?.grossFee ?? enrollment.summary?.totalFee ?? 0);
+        const usesLegacyFee = !hasEnrollmentFee && enrollment._id && current && String(current._id) === String(enrollment._id) && legacyPayable > 0;
+        const configuredFee = enrollmentConfiguredFee || usesLegacyFee;
+        const enrollmentFee = enrollmentConfiguredFee
+          ? Number(enrollment.feeConfig?.netPayableFee ?? enrollment.summary?.totalDue ?? enrollment.feeConfig?.grossFee ?? enrollment.summary?.totalFee ?? 0)
+          : usesLegacyFee ? legacyPayable : Number(enrollment.summary?.totalDue || 0);
         let enrollmentPaid = Number(paidByEnrollment.get(code + "|" + String(enrollment._id)) || 0);
         if (current && String(current._id) === String(enrollment._id)) enrollmentPaid += unallocatedPaid;
         const enrollmentDue = Math.max(0, enrollmentFee - enrollmentPaid);
@@ -1031,7 +1101,7 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
           filter: { _id: enrollment._id },
           update: { $set: { summary: {
             ...(enrollment.summary || {}),
-            totalFee: Number(enrollment.feeConfig?.grossFee ?? enrollment.summary?.totalFee ?? enrollmentFee),
+            totalFee: usesLegacyFee ? legacyGrossFee : Number(enrollment.feeConfig?.grossFee ?? enrollment.summary?.totalFee ?? enrollmentFee),
             totalDue: enrollmentFee, totalPaid: enrollmentPaid, balanceDue: enrollmentDue,
             nextDueDate: enrollment.summary?.nextDueDate || null,
             feeStatus: enrollmentStatus
