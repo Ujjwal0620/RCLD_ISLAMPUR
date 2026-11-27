@@ -529,6 +529,14 @@ export default function BulkImportPage() {
       checkpoint.percent = 100;
       checkpoint.complete = true;
       saveCheckpoint();
+      const finalUnmatchedPayments = [...preview.unmatchedPayments, ...(checkpoint.summary.unmatchedPayments || [])];
+      const finalUnmatchedPaymentTotal = finalUnmatchedPayments.reduce((sum, item) => {
+        const amount = parseImportAmount(item.amountPaid);
+        return sum + (Number.isFinite(amount) ? amount : 0);
+      }, 0);
+      const sourcePaymentReconciliationMatches =
+        preview.paymentRowsRead === Number(finalized.databasePaymentRows || 0) + finalUnmatchedPayments.length
+        && Math.abs(Number(preview.paymentAmountRead || 0) - (Number(finalized.databasePaymentTotal || 0) + finalUnmatchedPaymentTotal)) < 0.01;
       const summary = {
         studentsMatchedUpdated: checkpoint.summary.updated,
         newStudentsCreated: checkpoint.summary.created,
@@ -539,21 +547,24 @@ export default function BulkImportPage() {
         duplicateReceiptsSkipped: checkpoint.summary.duplicateReceiptsSkipped,
         existingReceiptsUpdated: checkpoint.summary.existingReceiptsUpdated,
         unmatchedRows: [...preview.warnings, ...preview.unmatchedPayments, ...checkpoint.summary.warnings],
-        unmatchedPayments: [...preview.unmatchedPayments, ...(checkpoint.summary.unmatchedPayments || [])],
+        unmatchedPayments: finalUnmatchedPayments,
         studentRowsRead: preview.studentRowsRead,
         studentRowsValid: preview.studentRowsValid,
         studentProfilesProcessed: preview.profiles.length,
         paymentRowsRead: preview.paymentRowsRead,
-        feeRowsMatched: preview.feeRows.length,
-        feeRowsProcessed: preview.feeRows.length,
+        feeRowsSubmitted: preview.feeRows.length,
+        feeRowsMatched: Number(finalized.databasePaymentRows || 0),
+        feeRowsProcessed: Number(finalized.databasePaymentRows || 0),
         duplicateNameStudentCount: preview.duplicateNameStudentCount,
         duplicateNameStudents: preview.duplicateNameStudents,
         sourcePaymentTotal: preview.paymentAmountRead,
         matchedPaymentTotal: preview.matchedPaymentAmount,
-        unmatchedPaymentTotal: preview.unmatchedPaymentAmount,
+        unmatchedPaymentTotal: finalUnmatchedPaymentTotal,
         databasePaymentRows: Number(finalized.databasePaymentRows || 0),
         databasePaymentTotal: Number(finalized.databasePaymentTotal || 0),
         paymentReconciliationMatches: Boolean(finalized.paymentReconciliationMatches),
+        sourcePaymentReconciliationMatches,
+        duplicatePaymentDocumentsFound: Number(finalized.duplicatePaymentDocumentsFound || 0),
         studentsFinalized: Number(finalized.studentsFinalized || 0),
         enrollmentsFinalized: Number(finalized.enrollmentsFinalized || 0)
       };
@@ -660,11 +671,15 @@ export default function BulkImportPage() {
             <div className="summary-card"><span>Student Rows Read / Valid</span><strong>{result.studentRowsRead} / {result.studentRowsValid}</strong></div>
             <div className="summary-card"><span>Payment Rows Read / Matched</span><strong>{result.paymentRowsRead} / {result.feeRowsMatched}</strong></div>
             <div className="summary-card"><span>Unmatched Payment Rows</span><strong>{result.unmatchedPayments?.length || 0}</strong></div>
-            <div className="summary-card"><span>Excel Matched Payment Total</span><strong>₹{Number(result.matchedPaymentTotal || 0).toLocaleString("en-IN")}</strong></div>
+            <div className="summary-card"><span>Excel Source Payment Total</span><strong>₹{Number(result.sourcePaymentTotal || 0).toLocaleString("en-IN")}</strong></div>
+            <div className="summary-card"><span>Database Matched Payment Total</span><strong>₹{Number(result.databasePaymentTotal || 0).toLocaleString("en-IN")}</strong></div>
+            <div className="summary-card"><span>Unmatched Payment Amount</span><strong>₹{Number(result.unmatchedPaymentTotal || 0).toLocaleString("en-IN")}</strong></div>
             <div className="summary-card"><span>Database Imported Payment Total</span><strong>₹{Number(result.databasePaymentTotal || 0).toLocaleString("en-IN")}</strong></div>
             <div className="summary-card"><span>Database Payment Rows / Expected</span><strong>{result.databasePaymentRows} / {result.feeRowsMatched}</strong></div>
             <div className="summary-card"><span>Rows Requiring Review</span><strong>{result.unmatchedRows.length}</strong></div>
-            <div className="summary-card"><span>Payment Total Reconciliation</span><strong>{result.paymentReconciliationMatches ? "Matched" : "Needs Review"}</strong></div>
+            <div className="summary-card"><span>Database vs Matched Excel</span><strong>{result.paymentReconciliationMatches ? "Matched" : "Needs Review"}</strong></div>
+            <div className="summary-card"><span>All Source Rows + Amounts Accounted</span><strong>{result.sourcePaymentReconciliationMatches ? "Matched" : "Needs Review"}</strong></div>
+            <div className="summary-card"><span>Duplicate Payment Documents in DB</span><strong>{result.duplicatePaymentDocumentsFound}</strong></div>
           </div>
           {result.unmatchedPayments?.length > 0 && <div style={{ padding: "0 20px 20px" }}>
             <h4>Unmatched / Rejected Payment Rows ({result.unmatchedPayments.length})</h4>
