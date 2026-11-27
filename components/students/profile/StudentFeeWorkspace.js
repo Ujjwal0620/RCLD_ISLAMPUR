@@ -98,7 +98,7 @@ export default function StudentFeeWorkspace({
     Array.isArray(student.masterProfile?.registrations) && student.masterProfile.registrations.length
       ? student.masterProfile.registrations
       : Array.isArray(student.masterProfile?.enrollments) ? student.masterProfile.enrollments : []
-  ), [student.masterProfile?.registrations, student.masterProfile?.enrollments]);
+  ), [student.masterProfile]);
   const currentEnrollment = student.activeEnrollment
     || enrollmentOptions.find(item => String(item.registrationId || "") === String(student.masterProfile?.currentRegistrationId || ""))
     || enrollmentOptions.find(item => String(item.stCode) === String(student.masterProfile?.currentStCode || ""))
