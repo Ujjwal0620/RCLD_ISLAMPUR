@@ -1098,18 +1098,18 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
                     { $cond: [
                       { $eq: [{ $size: "$masterLegacyCodes" }, 1] }, { $arrayElemAt: ["$masterLegacyCodes", 0] },
                       { $cond: [
-                        { $or: [
-                          { $eq: [{ $ifNull: ["$_linkedMaster.primaryStCode", ""] }, ""] },
-                          { $eq: [{ $ifNull: ["$_linkedMaster.currentStCode", ""] }, ""] },
-                          { $eq: ["$_linkedMaster.primaryStCode", "$_linkedMaster.currentStCode"] }
-                        ] },
+                        { $eq: [{ $ifNull: ["$_linkedMaster.primaryStCode", ""] }, ""] },
+                        "$_linkedMaster.currentStCode",
                         { $cond: [
-                          { $ne: [{ $ifNull: ["$_linkedMaster.primaryStCode", ""], ""] },
+                          { $eq: [{ $ifNull: ["$_linkedMaster.currentStCode", ""] }, ""] },
                           "$_linkedMaster.primaryStCode",
-                          "$_linkedMaster.currentStCode"
-                        ] },
-                        ""
-                      ] }
+                          { $cond: [
+                            { $eq: ["$_linkedMaster.primaryStCode", "$_linkedMaster.currentStCode"] },
+                            "$_linkedMaster.primaryStCode",
+                            ""
+                          ] }
+                        ] }
+                      ] }}
                     ] }
                   ] }
                 ] }
