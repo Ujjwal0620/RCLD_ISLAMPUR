@@ -253,6 +253,53 @@ function buildWorkbookPayload(workbook) {
   const feeHeaders = feeSheet.grid[feeSheet.headerIndex].map(headerKey);
   const feeAt = key => columnIndex(feeHeaders, key);
   const feeGet = (row, key) => feeAt(key) >= 0 ? row[feeAt(key)] : "";
+
+  // Some historic fee receipts refer to students who are no longer present in
+  // the current Student Data sheet. Preserve those receipts by creating a
+  // minimal legacy registration only when the explicit Student Code maps to
+  // exactly one name in the fee sheet. Conflicting names for the same code
+  // remain visible for manual review instead of being guessed.
+  const feeOnlyByCode = new Map();
+  for (let index = feeSheet.headerIndex + 1; index < feeSheet.grid.length; index += 1) {
+    const row = feeSheet.grid[index] || [];
+    if (!row.some(value => clean(value))) continue;
+    const rawCode = clean(feeGet(row, "stcode"));
+    const code = rawCode === "__FORMULA_WITHOUT_CACHED_VALUE__" ? "" : normalizeStudentCode(rawCode);
+    if (!code || codeToProfiles.has(code)) continue;
+    const primaryName = clean(feeGet(row, "stname"));
+    const alternateName = clean(feeGet(row, "stnamecr"));
+    const rawName = primaryName && primaryName !== "__FORMULA_WITHOUT_CACHED_VALUE__"
+      ? primaryName
+      : (alternateName === "__FORMULA_WITHOUT_CACHED_VALUE__" ? "" : alternateName);
+    const name = normalizeName(clean(rawName).split(/\r?\n/)[0].replace(/_\s*\d+\s*$/, ""));
+    if (!name) continue;
+    const item = feeOnlyByCode.get(code) || { names: new Map(), rows: [] };
+    item.names.set(name, [...(item.names.get(name) || []), { row, rowNo: index + 1, rawName }]);
+    item.rows.push({ row, rowNo: index + 1, rawName });
+    feeOnlyByCode.set(code, item);
+  }
+  for (const [code, item] of feeOnlyByCode) {
+    if (item.names.size !== 1) continue;
+    const [name, sourceRows] = [...item.names.entries()][0];
+    const paymentDates = sourceRows.map(source => parseDate(feeGet(source.row, "dop"))).filter(Boolean).sort();
+    const registrationId = [code, name, "PREVIOUS-LEGACY"].join("|");
+    const registration = {
+      cleanName: name, stCode: code, registrationId, rawStName: sourceRows[0]?.rawName || name,
+      course: "Previous Course (Legacy)", dateOfAdmission: null,
+      earliestPaymentDate: paymentDates[0] || null, formNo: "", dob: null, sex: "",
+      fatherName: "", address: "", phones: [], qualification: "",
+      rowNo: sourceRows[0]?.rowNo || "", stCodeUnique: true, isCurrent: true
+    };
+    const profileIndex = profiles.length;
+    profiles.push({
+      cleanName: name, alternateNames: [name], studentCodes: [code], dob: null,
+      dobs: [], fatherName: "", fatherNames: [], phones: [], registrations: [registration],
+      feeOnlyLegacyProfile: true
+    });
+    codeToProfiles.set(code, [profileIndex]);
+    nameToCodes.set(name, new Set([...(nameToCodes.get(name) || []), code]));
+  }
+
   const feeRows = [];
   const unmatchedPayments = [];
   let paymentRowsRead = 0;
@@ -279,7 +326,24 @@ function buildWorkbookPayload(workbook) {
     let resolvedCode = sourceStCode;
     let matchMethod = "ST_CODE";
     let candidates = resolvedCode ? (codeToProfiles.get(resolvedCode) || []).flatMap(profileIndex => profiles[profileIndex].registrations) : [];
-    if (!candidates.length) {
+
+    // A reused/colliding Student Code can still be resolved when the receipt's
+    // own name exactly identifies one of the profiles carrying that code.
+    if (candidates.length) {
+      const candidateNames = new Set(candidates.map(item => normalizeName(item.cleanName)));
+      if (candidateNames.size > 1) {
+        const exactNameCandidates = candidates.filter(item => normalizeName(item.cleanName) === feeName);
+        if (exactNameCandidates.length) {
+          candidates = exactNameCandidates;
+          matchMethod = "ST_CODE_AND_NAME";
+        }
+      }
+    }
+
+    // Name fallback is only for receipts whose Student Code cell is blank.
+    // A nonblank but unknown code must never silently be reassigned to a
+    // different student's code just because the name happens to match.
+    if (!candidates.length && !sourceStCode) {
       const nameCodes = nameToCodes.get(feeName) || new Set();
       if (nameCodes.size === 1) {
         resolvedCode = [...nameCodes][0];
@@ -291,11 +355,22 @@ function buildWorkbookPayload(workbook) {
           amountPaid: Number.isFinite(amountPaid) ? amountPaid : clean(feeGet(row, "amtpaid")),
           mrNo, paymentDate: paymentDate || clean(feeGet(row, "dop")),
           reason: nameCodes.size > 1
-            ? "No Student Code match; normalized name maps to multiple Student Codes, so the payment was not guessed."
-            : "No Student Code match and no unique normalized student-name fallback exists."
+            ? "Student Code is blank and normalized name maps to multiple Student Codes, so the payment was not guessed."
+            : "Student Code is blank and no unique normalized student-name fallback exists."
         });
         continue;
       }
+    }
+    if (!candidates.length) {
+      unmatchedPayments.push({
+        sheet: feeSheet.name, row: index + 1, stCode: sourceStCode, name: feeNameRaw || "",
+        amountPaid: Number.isFinite(amountPaid) ? amountPaid : clean(feeGet(row, "amtpaid")),
+        mrNo, paymentDate: paymentDate || clean(feeGet(row, "dop")),
+        reason: sourceStCode
+          ? "Explicit Student Code is not present in Student Data and its fee-sheet name conflicts with other names for that code."
+          : "No Student Code or safely resolvable student name was available."
+      });
+      continue;
     }
     const matchingProfiles = codeToProfiles.get(resolvedCode) || [];
     if (matchingProfiles.length !== 1) {
@@ -371,7 +446,7 @@ function buildWorkbookPayload(workbook) {
   };
 }
 
-const IMPORT_CHECKPOINT_KEY = "rcld-unified-import-checkpoint-v4";
+const IMPORT_CHECKPOINT_KEY = "rcld-unified-import-checkpoint-v5";
 async function postBatch(body) {
   let lastError;
   for (let attempt = 0; attempt < 3; attempt += 1) {
