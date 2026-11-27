@@ -18,7 +18,11 @@ const PAYMENT_FIELDS = [
 
 async function readJson(response) {
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.detail || payload.error || "Request failed.");
+  if (!response.ok) {
+    const error = new Error(payload.detail || payload.error || "Request failed.");
+    error.payload = payload;
+    throw error;
+  }
   return payload;
 }
 
@@ -89,7 +93,7 @@ export default function UniversalWorkbookImport() {
       setStatus(current => ({ ...(current || {}), status: result.status, pendingGroups: result.pendingGroups, committedGroups: (current?.committedGroups || 0) + result.processed }));
     } catch (err) {
       setError(err.message);
-      if (err.requiresDecision) setCommitResult({ requiresDecision: err.requiresDecision });
+      if (err.payload?.requiresDecision) setCommitResult({ requiresDecision: err.payload.requiresDecision });
       else {
         try {
           const result = await readJson(await fetch("/api/students/import/status?importBatchId=" + encodeURIComponent(preview.importBatchId)));
@@ -103,7 +107,7 @@ export default function UniversalWorkbookImport() {
     setDecisions(current => ({ ...current, [sequence]: { decision, ...(masterId ? { masterId } : {}) } }));
   }
 
-  const conflicts = preview?.conflicts || [];
+  const conflicts = [...(preview?.conflicts || []), ...(commitResult?.requiresDecision || []).filter(item => !(preview?.conflicts || []).some(existing => existing.sequence === item.sequence))];
   const done = status?.status === "COMPLETED";
 
   return (
