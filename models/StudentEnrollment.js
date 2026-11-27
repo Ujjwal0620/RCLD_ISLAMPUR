@@ -23,6 +23,7 @@ const StudentEnrollmentSchema = new mongoose.Schema({
   courseId: { type: mongoose.Schema.Types.ObjectId, ref: "Course", default: null, index: true },
   legacyStudentId: { type: mongoose.Schema.Types.ObjectId, ref: "Student", default: null, index: true },
   stCode: { type: String, required: true, trim: true },
+  normalizedStCode: { type: String, default: "", trim: true, index: true },
   registrationId: { type: String, default: "", trim: true, uppercase: true, index: true },
   normalizedFullName: { type: String, required: true, index: true },
   formNo: { type: String, default: "" },
