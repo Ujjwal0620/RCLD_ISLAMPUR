@@ -25,7 +25,9 @@ export async function GET(req,{params}){
     const studentCodeVariants = studentCode ? [studentCode, ...(/^\d+$/.test(studentCode) ? Array.from({ length: 8 }, (_, index) => "0".repeat(index + 1) + studentCode) : [])] : [];
     if (studentCode && /^\d+$/.test(studentCode)) studentCodeVariants.push(new RegExp("^\\s*0*" + studentCode + "(?:\\.0+)?\\s*$", "i"));
     const enrollmentQuery = masterProfile
-      ? { studentId: masterProfile._id, $or: [{ normalizedStCode: studentCode }, { stCode: { $in: studentCodeVariants } }] }
+      ? (studentCode
+        ? { studentId: masterProfile._id, $or: [{ normalizedStCode: studentCode }, { stCode: { $in: studentCodeVariants } }] }
+        : { studentId: masterProfile._id, legacyStudentId: student._id })
       : { legacyStudentId: student._id };
     const enrollments = await StudentEnrollment.find({ ...enrollmentQuery, mergedIntoEnrollmentId: null }).sort({ admissionDate: -1, createdAt: -1 }).lean();
     const masterCodeSet = new Set([
