@@ -601,8 +601,9 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
           || [];
         const writeErrors = extractWriteErrors(error);
         if (!writeErrors.length && Number(error.code) === 11000) writeErrors.push({ ...error, index: 0 });
-        const onlyDuplicates = error.code === 11000
-          || (writeErrors.length > 0 && writeErrors.every(item => Number(item.code || item.err?.code) === 11000));
+        const onlyDuplicates = writeErrors.length
+          ? writeErrors.every(item => Number(item.code || item.err?.code) === 11000)
+          : Number(error.code) === 11000;
         if (!onlyDuplicates) throw error;
         duplicateDocsSkipped += writeErrors.filter(item => Number(item.code || item.err?.code) === 11000).length || 1;
 
@@ -693,8 +694,9 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
             } catch (retryError) {
               const retryErrors = extractWriteErrors(retryError);
               if (!retryErrors.length && Number(retryError.code) === 11000) retryErrors.push({ ...retryError, index: 0 });
-              const duplicateRetryOnly = retryError.code === 11000
-                || (retryErrors.length > 0 && retryErrors.every(item => Number(item.code || item.err?.code) === 11000));
+              const duplicateRetryOnly = retryErrors.length
+                ? retryErrors.every(item => Number(item.code || item.err?.code) === 11000)
+                : Number(retryError.code) === 11000;
               if (!duplicateRetryOnly) throw retryError;
               const retryByIndex = new Map(retryErrors.map(item => [Number(item.index), item]));
               const retryFilters = retryErrors.map(item => {
