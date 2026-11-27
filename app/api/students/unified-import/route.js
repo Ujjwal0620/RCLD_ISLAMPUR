@@ -1446,68 +1446,55 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
         }
       }
     } },
-    { $addFields: {
-      _normalizedStudentCode: {
-        $let: {
-          vars: { raw: { $regexReplace: { input: { $toUpper: "$_rawStudentCode" }, regex: "\\s+", replacement: "" } } },
-          in: {
-            $cond: [
-              { $regexMatch: { input: "$$raw", regex: "^[0-9]+$" } },
-              { $let: {
-                vars: { stripped: { $regexReplace: { input: "$$raw", regex: "^0+", replacement: "" } } },
-                in: { $cond: [{ $eq: ["$$stripped", ""] }, "0", "$$stripped"] }
-              } },
-              "$$raw"
-            ]
-          }
-        }
-      }
+    { $project: {
+      _rawStudentCode: 1,
+      normalizedMrNo: 1,
+      mrNo: 1,
+      paymentDate: 1,
+      amountPaid: 1,
+      enrollmentId: 1,
+      updatedAt: 1,
+      createdAt: 1
     } },
-    { $match: { _normalizedStudentCode: { $in: codes } } },
-    { $addFields: {
-      _normalizedReceiptNo: { $regexReplace: { input: { $toUpper: { $trim: { input: { $ifNull: ["$normalizedMrNo", "$mrNo"] } } } }, regex: "\\s+", replacement: "" } },
-      _paymentDateKey: { $cond: [
-        { $eq: [{ $type: "$paymentDate" }, "date"] },
-        { $dateToString: { format: "%Y-%m-%d", date: "$paymentDate", timezone: "UTC" } },
-        ""
-      ] }
-    } },
-    { $sort: { updatedAt: -1, createdAt: -1 } },
-    { $group: {
-      _id: {
-        code: "$_normalizedStudentCode",
-        receiptKey: { $cond: [{ $ne: ["$_normalizedReceiptNo", ""] }, "$_normalizedReceiptNo", { $toString: "$_id" }] },
-        paymentDate: "$_paymentDateKey"
-      },
-      totalPaid: { $first: "$amountPaid" },
-      enrollmentIds: { $addToSet: "$enrollmentId" },
-      duplicateDocumentCount: { $sum: 1 }
-    } },
-    { $addFields: {
-      canonicalEnrollmentId: {
-        $cond: [
-          { $eq: [{ $size: "$enrollmentIds" }, 1] },
-          { $arrayElemAt: ["$enrollmentIds", 0] },
-          null
-        ]
-      }
-    } },
-    { $group: {
-      _id: { code: "$_id.code", enrollmentId: "$canonicalEnrollmentId" },
-      totalPaid: { $sum: "$totalPaid" },
-      paymentCount: { $sum: 1 },
-      duplicateDocumentCount: { $sum: { $subtract: ["$duplicateDocumentCount", 1] } }
-    } }
+    { $sort: { updatedAt: -1, createdAt: -1 } }
+
   ]);
+  // Normalize and reconcile receipt keys in Node.js. MongoDB aggregation
+  // supports $regexMatch/$regexFind, but does not provide a $regexReplace
+  // expression; doing this in JS is portable across supported server versions.
+  const receiptGroups = new Map();
+  for (const payment of paymentTotals) {
+    const code = normalizeStudentCode(payment._rawStudentCode);
+    if (!code || !codes.includes(code)) continue;
+    const receipt = normalizeReceiptNumber(payment.normalizedMrNo || payment.mrNo);
+    const paidOn = payment.paymentDate instanceof Date && !Number.isNaN(payment.paymentDate.getTime())
+      ? payment.paymentDate.toISOString().slice(0, 10)
+      : "";
+    const receiptKey = code + "|" + (receipt || String(payment._id)) + "|" + paidOn;
+    if (!receiptGroups.has(receiptKey)) {
+      receiptGroups.set(receiptKey, {
+        code,
+        totalPaid: Number(payment.amountPaid || 0),
+        enrollmentIds: new Set(payment.enrollmentId ? [String(payment.enrollmentId)] : []),
+        duplicateDocumentCount: 0
+      });
+    } else {
+      const group = receiptGroups.get(receiptKey);
+      group.duplicateDocumentCount += 1;
+      if (payment.enrollmentId) group.enrollmentIds.add(String(payment.enrollmentId));
+    }
+  }
   const paidByCode = new Map();
   const paidByEnrollment = new Map();
   let duplicatePaymentDocumentsFound = 0;
-  for (const item of paymentTotals) {
-    duplicatePaymentDocumentsFound += Number(item.duplicateDocumentCount || 0);
-    const code = normalizeStudentCode(item._id.code);
-    const paid = Number(item.totalPaid || 0);
-    paidByCode.set(code, (paidByCode.get(code) || 0) + paid);
-    if (item._id.enrollmentId) paidByEnrollment.set(code + "|" + String(item._id.enrollmentId), paid);
+  for (const group of receiptGroups.values()) {
+    duplicatePaymentDocumentsFound += group.duplicateDocumentCount;
+    paidByCode.set(group.code, (paidByCode.get(group.code) || 0) + group.totalPaid);
+    if (group.enrollmentIds.size === 1) {
+      const enrollmentId = [...group.enrollmentIds][0];
+      const key = group.code + "|" + enrollmentId;
+      paidByEnrollment.set(key, (paidByEnrollment.get(key) || 0) + group.totalPaid);
+    }
   }
   const enrollmentsByMaster = new Map();
   for (const enrollment of enrollments) {
