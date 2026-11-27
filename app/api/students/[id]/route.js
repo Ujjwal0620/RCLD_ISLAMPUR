@@ -45,6 +45,8 @@ export async function GET(req,{params}){
       primaryStCode: studentCode || masterProfile.primaryStCode,
       currentStCode: studentCode || masterProfile.currentStCode,
       legacyStudentIds: [student._id],
+      registrations: (masterProfile.registrations || []).filter(item => normalizeStudentCode(item.stCode) === studentCode),
+      enrollments: (masterProfile.enrollments || []).filter(item => normalizeStudentCode(item.stCode) === studentCode),
       feeSummary: student.feeSummaryUpdatedAt ? {
         ...(masterProfile.feeSummary || {}),
         totalFee: Number(student.totalFee || 0), totalPaid: Number(student.totalPaid || 0),
