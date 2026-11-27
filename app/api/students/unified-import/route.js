@@ -39,7 +39,8 @@ async function ensureReceiptIndex() {
       for (const index of obsolete) await StudentFeePayment.collection.dropIndex(index.name);
 
       const legacyCodeDocs = await StudentFeePayment.find({
-        stCode: { $exists: true, $nin: [null, ""] }
+        mrNo: { $exists: true, $nin: [null, ""] },
+        $or: [{ stCode: { $exists: true, $nin: [null, ""] } }, { normalizedStCode: { $exists: true, $nin: [null, ""] } }]
       }).select("_id stCode normalizedStCode mrNo normalizedMrNo").lean();
       const codeRepairs = legacyCodeDocs.flatMap(item => {
         const normalizedCode = normalizeStudentCode(item.stCode || item.normalizedStCode);
