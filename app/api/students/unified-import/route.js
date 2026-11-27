@@ -1418,8 +1418,17 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
   }
   const expectedRows = Number(options.expectedPaymentRows || 0);
   const expectedTotal = Number(options.expectedPaymentTotal || 0);
+  const expectedSourceRowKeys = [...new Set((options.expectedSourceRowKeys || []).map(clean).filter(Boolean))];
+  if (expectedSourceRowKeys.length > 20000) throw new Error("Final reconciliation accepts at most 20,000 source receipt keys.");
+  const persistedSourceRows = expectedSourceRowKeys.length ? await StudentFeePayment.find({
+    sourceBatchKey: batchKey,
+    sourceRowKey: { $in: expectedSourceRowKeys }
+  }).select("sourceRowKey").lean() : [];
+  const persistedSourceKeySet = new Set(persistedSourceRows.map(item => String(item.sourceRowKey || "")));
+  const missingSourceRowKeys = expectedSourceRowKeys.filter(key => !persistedSourceKeySet.has(key));
   const paymentReconciliationMatches = Boolean(batchKey)
     && databasePaymentRows === expectedRows
+    && missingSourceRowKeys.length === 0
     && Math.abs(databasePaymentTotal - expectedTotal) < 0.01;
   return {
     studentsFinalized: masterOps.length,
@@ -1428,6 +1437,7 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
     databasePaymentTotal: Number(databasePaymentTotal.toFixed(2)),
     expectedPaymentRows: expectedRows,
     expectedPaymentTotal: Number(expectedTotal.toFixed(2)),
+    missingSourceRowKeys,
     paymentReconciliationMatches,
     ambiguousCodes: [...ambiguousCodes],
     duplicatePaymentDocumentsFound
