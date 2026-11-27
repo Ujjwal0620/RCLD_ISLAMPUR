@@ -7,6 +7,7 @@ import Student from "@/models/Student";
 import StudentMaster from "@/models/StudentMaster";
 import StudentEnrollment from "@/models/StudentEnrollment";
 import StudentFeePayment from "@/models/StudentFeePayment";
+import StudentImportPaymentClaim from "@/models/StudentImportPaymentClaim";
 import ImportLog from "@/models/ImportLog";
 import StudentImportStaging from "@/models/StudentImportStaging";
 import {
@@ -249,6 +250,21 @@ async function commitOne(stage, importBatchId, decision) {
       paymentResults.skipped += 1;
       continue;
     }
+    let claim;
+    try {
+      claim = await StudentImportPaymentClaim.create({ paymentKey: key, importBatchId });
+    } catch (claimError) {
+      if (claimError.code !== 11000) throw claimError;
+      claim = await StudentImportPaymentClaim.findOne({ paymentKey: key }).lean();
+      if (!claim || String(claim.importBatchId) !== String(importBatchId)) {
+        paymentResults.duplicates += 1;
+        continue;
+      }
+      if (claim.paymentId) {
+        paymentResults.duplicates += 1;
+        continue;
+      }
+    }
     const existing = await StudentFeePayment.findOne({
       $or: [
         { normalizedPaymentKey: key },
@@ -262,11 +278,12 @@ async function commitOne(stage, importBatchId, decision) {
       ]
     }).select("_id").lean();
     if (existing) {
+      await StudentImportPaymentClaim.updateOne({ paymentKey: key }, { $set: { paymentId: existing._id, completedAt: new Date() } });
       paymentResults.duplicates += 1;
       continue;
     }
     const normalizedMrNo = mrNo.toUpperCase().replace(/[^A-Z0-9]/g, "");
-    await StudentFeePayment.create({
+    const createdPayment = await StudentFeePayment.create({
       studentId: master._id,
       masterStudentId: master._id,
       enrollmentId: enrollment._id,
@@ -294,6 +311,7 @@ async function commitOne(stage, importBatchId, decision) {
       importBatchKey: importBatchId,
       importBatchId
     });
+    await StudentImportPaymentClaim.updateOne({ paymentKey: key }, { $set: { paymentId: createdPayment._id, completedAt: new Date() } });
     paymentResults.inserted += 1;
   }
 
