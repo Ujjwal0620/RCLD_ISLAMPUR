@@ -75,6 +75,7 @@ const StudentMasterSchema = new mongoose.Schema({
 }, { timestamps: true, collection: "student_master_profiles" });
 
 StudentMasterSchema.index({ stCodes: 1 });
+StudentMasterSchema.index({ activeEnrollmentId: 1 });
 StudentMasterSchema.index({ alternateNames: 1 });
 StudentMasterSchema.index({ "registrations.registrationId": 1 });
 StudentMasterSchema.index({ phoneNumbers: 1 });
