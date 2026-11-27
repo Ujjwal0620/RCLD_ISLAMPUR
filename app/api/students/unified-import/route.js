@@ -1097,7 +1097,19 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
                     { $eq: [{ $size: "$masterCodes" }, 1] }, { $arrayElemAt: ["$masterCodes", 0] },
                     { $cond: [
                       { $eq: [{ $size: "$masterLegacyCodes" }, 1] }, { $arrayElemAt: ["$masterLegacyCodes", 0] },
-                      { $ifNull: ["$_linkedMaster.primaryStCode", "$_linkedMaster.currentStCode"] }
+                      { $cond: [
+                        { $or: [
+                          { $eq: [{ $ifNull: ["$_linkedMaster.primaryStCode", ""] }, ""] },
+                          { $eq: [{ $ifNull: ["$_linkedMaster.currentStCode", ""] }, ""] },
+                          { $eq: ["$_linkedMaster.primaryStCode", "$_linkedMaster.currentStCode"] }
+                        ] },
+                        { $cond: [
+                          { $ne: [{ $ifNull: ["$_linkedMaster.primaryStCode", ""], ""] },
+                          "$_linkedMaster.primaryStCode",
+                          "$_linkedMaster.currentStCode"
+                        ] },
+                        ""
+                      ] }
                     ] }
                   ] }
                 ] }
