@@ -101,6 +101,8 @@ async function commitOne(stage, importBatchId, decision) {
   let master = null;
   if (chosen === "LINK_EXISTING") {
     if (!mongoose.Types.ObjectId.isValid(decision?.masterId)) throw new Error("A valid existing Student Master ID is required for LINK_EXISTING.");
+    const allowedCandidate = (stage.conflicts || []).some(item => String(item.studentId || "") === String(decision.masterId));
+    if (!allowedCandidate) throw new Error("Selected profile was not one of the identity candidates in this preview.");
     master = await StudentMaster.findById(decision.masterId);
     if (!master || master.isMerged) throw new Error("Selected Student Master does not exist or is merged.");
   } else if (stage.matchedMasterId && chosen === "UPDATE") {
