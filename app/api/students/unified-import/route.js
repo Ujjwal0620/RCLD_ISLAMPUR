@@ -738,7 +738,6 @@ async function syncFeeRows(rows = [], onProgress = () => {}, registrationMap = [
   const seenBusinessKeys = new Set();
   const seenSourceKeys = new Set();
   let newReceiptsAdded = 0, existingReceiptsUpdatedOrSkipped = 0, duplicateReceiptsSkipped = 0, existingReceiptsUpdated = 0;
-  let newReceiptsAdded = 0, existingReceiptsUpdatedOrSkipped = 0, duplicateReceiptsSkipped = 0, existingReceiptsUpdated = 0;
   for (const row of rows) {
     const stCode = normalizeStudentCode(row.stCode);
     const paymentDate = asDate(row.paymentDate);
