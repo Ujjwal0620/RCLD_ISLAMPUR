@@ -562,6 +562,7 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
     }
   }
 
+  let duplicateDocsSkipped = 0;
   const insertChunks = async (Model, docs, phase, size = 200) => {
     for (let offset = 0; offset < docs.length; offset += size) {
       const chunk = docs.slice(offset, offset + size);
@@ -572,11 +573,11 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
         const writeErrors = error.writeErrors || error.result?.writeErrors || [];
         const onlyDuplicates = error.code === 11000 || (writeErrors.length && writeErrors.every(item => item.code === 11000));
         if (!onlyDuplicates) throw error;
+        duplicateDocsSkipped += writeErrors.filter(item => item.code === 11000).length || 1;
         if (Model.modelName === "StudentEnrollment") {
           const naturalQuery = { $or: chunk.map(item => ({
             studentId: item.studentId, normalizedStCode: item.normalizedStCode,
-            normalizedFullName: item.normalizedFullName, courseCode: item.courseCode,
-            admissionDate: item.admissionDate
+            courseCode: item.courseCode, admissionDate: item.admissionDate || null
           })) };
           let persisted = await StudentEnrollment.find(naturalQuery).lean();
           const persistedKeys = new Set(persisted.map(enrollmentUniqueKey));
@@ -586,6 +587,7 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
             catch (retryError) {
               const retryErrors = retryError.writeErrors || retryError.result?.writeErrors || [];
               if (retryError.code !== 11000 && !(retryErrors.length && retryErrors.every(item => item.code === 11000))) throw retryError;
+              duplicateDocsSkipped += retryErrors.filter(item => item.code === 11000).length || 1;
               persisted = await StudentEnrollment.find(naturalQuery).lean();
               const afterRetry = new Set(persisted.map(enrollmentUniqueKey));
               const unresolved = missing.filter(item => !afterRetry.has(enrollmentUniqueKey(item)));
@@ -593,18 +595,25 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
             }
           }
         } else if (Model.modelName === "Student") {
-          const query = { normalizedStCode: { $in: chunk.map(item => item.normalizedStCode) } };
-          let persisted = await Student.find(query).select("normalizedStCode").lean();
-          const persistedCodes = new Set(persisted.map(item => normalizeStudentCode(item.normalizedStCode)));
-          const missing = chunk.filter(item => !persistedCodes.has(normalizeStudentCode(item.normalizedStCode)));
+          const query = { $or: chunk.map(item => ({
+            $or: [
+              { normalizedStCode: normalizeStudentCode(item.normalizedStCode || item.regnNo || item.enrollmentNo) },
+              { regnNo: { $in: codeLookupVariants(item.normalizedStCode || item.regnNo || item.enrollmentNo) } },
+              { enrollmentNo: { $in: codeLookupVariants(item.normalizedStCode || item.regnNo || item.enrollmentNo) } }
+            ]
+          })) };
+          let persisted = await Student.find(query).select("normalizedStCode regnNo enrollmentNo applicantName").lean();
+          const persistedCodes = new Set(persisted.map(item => normalizeStudentCode(item.normalizedStCode || item.regnNo || item.enrollmentNo)));
+          const missing = chunk.filter(item => !persistedCodes.has(normalizeStudentCode(item.normalizedStCode || item.regnNo || item.enrollmentNo)));
           if (missing.length) {
             try { await Model.insertMany(missing, { ordered: false }); }
             catch (retryError) {
               const retryErrors = retryError.writeErrors || retryError.result?.writeErrors || [];
               if (retryError.code !== 11000 && !(retryErrors.length && retryErrors.every(item => item.code === 11000))) throw retryError;
-              persisted = await Student.find(query).select("normalizedStCode").lean();
-              const afterRetry = new Set(persisted.map(item => normalizeStudentCode(item.normalizedStCode)));
-              const unresolved = missing.filter(item => !afterRetry.has(normalizeStudentCode(item.normalizedStCode)));
+              duplicateDocsSkipped += retryErrors.filter(item => item.code === 11000).length || 1;
+              persisted = await Student.find(query).select("normalizedStCode regnNo enrollmentNo applicantName").lean();
+              const afterRetry = new Set(persisted.map(item => normalizeStudentCode(item.normalizedStCode || item.regnNo || item.enrollmentNo)));
+              const unresolved = missing.filter(item => !afterRetry.has(normalizeStudentCode(item.normalizedStCode || item.regnNo || item.enrollmentNo)));
               if (unresolved.length) throw new Error("Student Code duplicate recovery could not confirm " + unresolved.length + " Student records.");
             }
           }
@@ -756,7 +765,7 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
   onPhase("enrollments");
   return {
     studentsMatchedUpdated: matchedProfiles, newStudentsCreated: newProfiles,
-    registrationsLinked, registrationsSeen, duplicatesSkipped: 0,
+    registrationsLinked, registrationsSeen, duplicatesSkipped: duplicateDocsSkipped,
     registrationMap: outputMap, flaggedRows
   };
 }
