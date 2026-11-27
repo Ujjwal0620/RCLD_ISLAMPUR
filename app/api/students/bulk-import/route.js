@@ -368,7 +368,7 @@ export async function POST(request) {
       await connectMongoDB();
       const feeResult = await reconcileStudentFeesOnly(workbook, { sourceName: String(file.name || "Fee-only reconciliation").slice(0, 180) });
       return NextResponse.json({
-        message: "Fee-only reconciliation completed. Student and non-fee records were not imported or modified.",
+        message: "Fee-only reconciliation completed. Student profile fields were preserved; payment links, fee totals and fee statuses were refreshed.",
         feeImport: feeResult,
         feeOnly: true
       });
