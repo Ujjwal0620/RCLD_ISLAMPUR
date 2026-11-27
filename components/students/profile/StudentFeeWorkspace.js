@@ -140,16 +140,16 @@ export default function StudentFeeWorkspace({
     }
     return counts;
   }, [codeCards]);
-  const selectedCard = codeCards.find(item => item.filterKey === selectedCode) || null;
+  const selectedCard = codeCards.find(item => item.filterKey === activeSelectedCode) || null;
   const selectedEnrollment = selectedCard?._id
     ? enrollmentOptions.find(item => String(item._id) === String(selectedCard._id))
     : null;
-  const selectedHistory = historyMetadata.find(item => enrollmentFilterKey(item) === selectedCode) || {};
+  const selectedHistory = historyMetadata.find(item => enrollmentFilterKey(item) === activeSelectedCode) || {};
   const selectedRegistration = selectedCard || selectedHistory;
   const visibleRows = useMemo(() => [...paymentHistory]
-    .filter(payment => selectedCode === "ALL" || resolvePaymentCard(payment, codeCards)?.filterKey === selectedCode)
+    .filter(payment => activeSelectedCode === "ALL" || resolvePaymentCard(payment, codeCards)?.filterKey === activeSelectedCode)
     .sort((a, b) => new Date(a.paymentDate || a.rawPaymentDate || 0).getTime() - new Date(b.paymentDate || b.rawPaymentDate || 0).getTime()),
-  [paymentHistory, selectedCode, codeCards]);
+  [paymentHistory, activeSelectedCode, codeCards]);
   const courseSubtotals = useMemo(() => {
     const totals = new Map();
     for (const payment of paymentHistory) {
@@ -168,7 +168,7 @@ export default function StudentFeeWorkspace({
     };
   }), [visibleRows, codeCards]);
   const selectedPaid = paymentRows.reduce((sum, item) => sum + Number(item.amountPaid ?? item.amount ?? 0), 0);
-  const selectedCourse = selectedCode === "ALL"
+  const selectedCourse = activeSelectedCode === "ALL"
     ? [...new Set(codeCards.map(item => item.course || item.courseName || item.courseCode).filter(Boolean))].join(", ") || "All Codes"
     : selectedEnrollment?.courseName || selectedEnrollment?.courseCode || selectedRegistration?.course || selectedRegistration?.courseCode || "Previous Course (Legacy)";
   const configuredFee = enrollment => Boolean(enrollment?.feeConfig)
@@ -180,19 +180,19 @@ export default function StudentFeeWorkspace({
   const enrollmentForRegistration = item => enrollmentOptions.find(entry => String(entry.registrationId || "") === String(item.registrationId))
     || (codeCount.get(normalizeFeeCode(item.normalizedStCode || item.stCode)) === 1 ? enrollmentOptions.find(entry => normalizeFeeCode(entry.normalizedStCode || entry.stCode) === normalizeFeeCode(item.normalizedStCode || item.stCode)) : null);
   const configuredRegistrationCount = codeCards.filter(item => configuredFee(enrollmentForRegistration(item))).length;
-  const selectedTotalFee = selectedCode === "ALL"
+  const selectedTotalFee = activeSelectedCode === "ALL"
     ? (configuredRegistrationCount ? codeCards.reduce((sum, item) => {
         const enrollment = enrollmentForRegistration(item);
         return sum + (configuredFee(enrollment) ? Number(enrollment?.feeConfig?.grossFee ?? enrollment?.summary?.totalFee ?? 0) : 0);
       }, 0) : null)
     : configuredFee(selectedEnrollment) ? Number(selectedEnrollment?.feeConfig?.grossFee ?? selectedEnrollment?.summary?.totalFee ?? 0) : null;
-  const selectedPayable = selectedCode === "ALL"
+  const selectedPayable = activeSelectedCode === "ALL"
     ? (configuredRegistrationCount ? codeCards.reduce((sum, item) => {
         const enrollment = enrollmentForRegistration(item);
         return sum + (configuredFee(enrollment) ? Number(enrollment?.feeConfig?.netPayableFee ?? enrollment?.summary?.totalDue ?? 0) : 0);
       }, 0) : null)
     : configuredFee(selectedEnrollment) ? Number(selectedEnrollment?.feeConfig?.netPayableFee ?? selectedEnrollment?.summary?.totalDue ?? 0) : null;
-  const selectedBalance = selectedCode === "ALL"
+  const selectedBalance = activeSelectedCode === "ALL"
     ? (configuredRegistrationCount ? codeCards.reduce((sum, item) => {
         const enrollment = enrollmentForRegistration(item);
         if (!configuredFee(enrollment)) return sum;
@@ -200,7 +200,7 @@ export default function StudentFeeWorkspace({
         return sum + Math.max(0, payable - Number(item.paidTotal || 0));
       }, 0) : null)
     : selectedPayable === null ? null : Math.max(0, selectedPayable - selectedPaid);
-  const selectedDiscount = selectedCode === "ALL"
+  const selectedDiscount = activeSelectedCode === "ALL"
     ? enrollmentOptions.reduce((sum, item) => sum + (configuredFee(item) ? Number(item.feeConfig?.discountAmount || 0) : 0), 0)
     : Number(selectedEnrollment?.feeConfig?.discountAmount || 0);
   const currentPayable = Number(currentEnrollment?.feeConfig?.netPayableFee || currentEnrollment?.summary?.totalDue || fee?.payable || 0);
@@ -215,16 +215,16 @@ export default function StudentFeeWorkspace({
 
       <div className="student-code-switcher" style={{ display: "flex", flexWrap: "wrap", gap: 10, margin: "16px 0" }}>
         <label style={{ display: "grid", gap: 5, minWidth: 230, fontSize: 12, fontWeight: 700 }}>Filter fee ledger by code
-          <select value={selectedCode} onChange={event => setSelectedCodeState(event.target.value)} style={{ minHeight: 40, padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border,#dbe1ea)", background: "var(--surface,#fff)", color: "inherit" }}>
+          <select value={activeSelectedCode} onChange={event => setSelectedCodeState(event.target.value)} style={{ minHeight: 40, padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border,#dbe1ea)", background: "var(--surface,#fff)", color: "inherit" }}>
             <option value="ALL">All Codes</option>
             {codeCards.map(item => <option key={item.filterKey} value={item.filterKey}>#{item.stCode} · {item.course || item.courseCode || "Previous Course"}</option>)}
           </select>
         </label>
-        <button type="button" className={selectedCode === "ALL" ? "primary-btn" : "ghost-btn"} onClick={() => setSelectedCodeState("ALL")} aria-pressed={selectedCode === "ALL"}>All Codes</button>
+        <button type="button" className={activeSelectedCode === "ALL" ? "primary-btn" : "ghost-btn"} onClick={() => setSelectedCodeState("ALL")} aria-pressed={activeSelectedCode === "ALL"}>All Codes</button>
         {codeCards.map(item => {
           const id = item.filterKey;
           const current = id === enrollmentFilterKey(currentEnrollment || {}) || Boolean(item.isCurrent && String(item.stCode) === currentStCode);
-          const active = selectedCode === id;
+          const active = activeSelectedCode === id;
           return <button key={id} type="button" onClick={() => setSelectedCodeState(id)}
             className={active ? "primary-btn" : "ghost-btn"} aria-pressed={active}
             style={{ minWidth: 190, textAlign: "left", display: "grid", gap: 4, padding: "9px 12px" }}>
@@ -238,20 +238,20 @@ export default function StudentFeeWorkspace({
 
       <div className="student-fee-overview">
         <div className="fee-overview-card"><span>Course(s)</span><strong style={{ fontSize: 17 }}>{selectedCourse || "—"}</strong></div>
-        <div className="fee-overview-card"><span>Registration Code</span><strong>{selectedCode === "ALL" ? "All Codes" : selectedCode}</strong></div>
+        <div className="fee-overview-card"><span>Registration Code</span><strong>{activeSelectedCode === "ALL" ? "All Codes" : activeSelectedCode}</strong></div>
         <div className="fee-overview-card fee-total"><span>Total Course Fee</span><strong>{selectedTotalFee === null ? "—" : money(selectedTotalFee)}</strong><small>{selectedDiscount ? "Discount: " + money(selectedDiscount) : "Course fee rule"}</small></div>
         <div className="fee-overview-card fee-paid"><span>Total Paid</span><strong>{money(selectedPaid)}</strong><small>{paymentRows.length} receipt(s)</small></div>
         <div className="fee-overview-card fee-due"><span>Balance Due</span><strong>{selectedBalance === null ? "—" : money(selectedBalance)}</strong></div>
       </div>
 
-      {selectedCode === "ALL" && courseSubtotals.length > 0 && <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 14 }}>
+      {activeSelectedCode === "ALL" && courseSubtotals.length > 0 && <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 14 }}>
         {courseSubtotals.map(([course, total]) => <div key={course} style={{ border: "1px solid var(--border,#e3e7ef)", borderRadius: 10, padding: "9px 12px", minWidth: 170 }}>
           <small style={{ display: "block", color: "var(--text-muted,#748094)" }}>{course} · total paid</small><strong>{money(total)}</strong>
         </div>)}
       </div>}
       <section className="student-payment-history-ledger" style={{ marginTop: 20, padding: 16, border: "1px solid var(--border,#e3e7ef)", borderRadius: 12 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <div><h3 style={{ margin: 0 }}>Date-wise Payment Ledger</h3><small>Sorted chronologically by D_O_P · {selectedCode === "ALL" ? "all linked student codes" : selectedCode}</small></div>
+          <div><h3 style={{ margin: 0 }}>Date-wise Payment Ledger</h3><small>Sorted chronologically by D_O_P · {activeSelectedCode === "ALL" ? "all linked student codes" : activeSelectedCode}</small></div>
         </div>
         <div style={{ overflowX: "auto", marginTop: 12 }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 820 }}>
