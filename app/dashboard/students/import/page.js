@@ -120,7 +120,7 @@ function findSheet(workbook, kind) {
     }
   }
   if (kind === "student") return matches.find(item => /^student\s*data$/i.test(item.name)) || matches[0] || null;
-  return matches.find(item => !/^student\\s*data$/i.test(item.name)) || matches[0] || null;
+  return matches.find(item => !/^student\s*data$/i.test(item.name)) || matches[0] || null;
 }
 
 function chooseRegistration(candidates, paymentDate, courseValue) {
@@ -190,7 +190,7 @@ function buildWorkbookPayload(workbook) {
       rawStName: clean(studentGet(row, "stname")),
       course,
       dateOfAdmission,
-      formNo: clean(studentGet(row, "formno")).replace(/\\.0+$/, ""),
+      formNo: clean(studentGet(row, "formno")).replace(/\.0+$/, ""),
       dob: parseDate(studentGet(row, "dob")),
       sex: clean(studentGet(row, "sex")).toUpperCase(),
       fatherName: clean(studentGet(row, "stfather")),
@@ -462,10 +462,10 @@ export default function BulkImportPage() {
     const fingerprint = preview.fingerprint || preview.batchKey?.replace(/^RCLD_UNIFIED_/, "") || "";
     let checkpoint = resume ? checkpointRef.current : null;
     if (!resume && !window.confirm(
-      "Import this workbook in automatic chunks?\\n\\n" +
-      preview.profileCount.toLocaleString("en-IN") + " unified student profiles\\n" +
-      preview.registrationCount.toLocaleString("en-IN") + " registration codes\\n" +
-      preview.paymentRowsRead.toLocaleString("en-IN") + " source payment rows (" + preview.feeRows.length.toLocaleString("en-IN") + " matched)\\n\\n" +
+      "Import this workbook in automatic chunks?\n\n" +
+      preview.profileCount.toLocaleString("en-IN") + " unified student profiles\n" +
+      preview.registrationCount.toLocaleString("en-IN") + " registration codes\n" +
+      preview.paymentRowsRead.toLocaleString("en-IN") + " source payment rows (" + preview.feeRows.length.toLocaleString("en-IN") + " matched)\n\n" +
       "Students (200 at a time), fees (500 at a time), and fee summaries will run sequentially."
     )) return;
     if (!checkpoint) {
