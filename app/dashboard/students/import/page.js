@@ -550,7 +550,7 @@ export default function BulkImportPage() {
       checkpoint.failedPhase = "finalize"; checkpoint.failedChunk = 1; saveCheckpoint();
       const expectedSourceRowsByKey = new Map(preview.feeRows.map(row => {
         const businessKey = makeReceiptBusinessKey(row.stCode, row.mrNo, row.paymentDate, row.amountPaid);
-        const sourceRowKey = [preview.batchKey, row.sourceSheet, Number(row.rowNo || 0), businessKey].join("|");
+        const sourceRowKey = [clean(preview.batchKey), clean(row.sourceSheet), Number(row.rowNo || 0), businessKey].join("|");
         return [sourceRowKey, row];
       }));
       const finalized = await postBatch({
