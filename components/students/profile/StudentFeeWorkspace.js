@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, CreditCard, WalletCards, Printer } from "lucide-react";
 import StudentFeePlanSection from "@/components/students/profile/fee-workspace/StudentFeePlanSection";
 import StudentPaymentEntrySection from "@/components/students/profile/fee-workspace/StudentPaymentEntrySection";
@@ -98,7 +98,7 @@ export default function StudentFeeWorkspace({
     || enrollmentOptions[0];
   const currentStCode = normalizeFeeCode(student.masterProfile?.currentStCode || currentEnrollment?.normalizedStCode || currentEnrollment?.stCode || student.normalizedStCode || student.regnNo || student.enrollmentNo || "");
   const currentRegistrationId = String(student.masterProfile?.currentRegistrationId || currentEnrollment?.registrationId || (currentStCode && (student.masterProfile?.fullName || student.applicantName) ? String(student.masterProfile?.fullName || student.applicantName).trim().toUpperCase().replace(/\s+/g, " ") + "_" + currentStCode : ""));
-  const selectedCode = "ALL";
+  const [selectedCode, setSelectedCodeState] = useState("ALL");
   const codeCards = useMemo(() => {
     const map = new Map();
     for (const item of historyMetadata) {
@@ -129,6 +129,11 @@ export default function StudentFeeWorkspace({
         .reduce((sum, payment) => sum + Number(payment.amountPaid ?? payment.amount ?? 0), 0)
     }));
   }, [historyMetadata, enrollmentOptions, paymentHistory]);
+  useEffect(() => {
+    if (selectedCode !== "ALL" && !codeCards.some(item => item.filterKey === selectedCode)) {
+      setSelectedCodeState("ALL");
+    }
+  }, [selectedCode, codeCards]);
   const codeCount = useMemo(() => {
     const counts = new Map();
     for (const item of codeCards) {
