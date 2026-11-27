@@ -150,7 +150,7 @@ export async function GET(request, { params }) {
     }
     const importedPayments = code ? await StudentFeePayment.find({
       $or: [{ normalizedStCode: code }, { stCode: { $in: variants } }]
-    }).select("stCode normalizedStCode mrNo paymentDate amountPaid updatedAt createdAt").lean() : [];
+    }).select("stCode normalizedStCode mrNo normalizedMrNo paymentDate amountPaid updatedAt createdAt").lean() : [];
     const base = feeSummary(fee || { totalFee: 0, discount: 0, admissionFee: 0, registrationFee: 0, payments: [] });
     const legacyReceiptKeys = new Set((fee?.payments || []).map(payment => [
       code, normalizeReceiptNumber(payment.receiptNo || payment.reference),
@@ -158,7 +158,7 @@ export async function GET(request, { params }) {
     ].join("|")));
     const importedByReceipt = new Map();
     for (const payment of importedPayments) {
-      const receipt = normalizeReceiptNumber(payment.mrNo);
+      const receipt = normalizeReceiptNumber(payment.normalizedMrNo || payment.mrNo);
       const date = payment.paymentDate ? new Date(payment.paymentDate).toISOString().slice(0, 10) : "";
       const key = [normalizeStCode(payment.normalizedStCode || payment.stCode), receipt || String(payment._id), date].join("|");
       if (receipt && legacyReceiptKeys.has(key)) continue;
