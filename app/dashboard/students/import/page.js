@@ -610,10 +610,6 @@ export default function BulkImportPage() {
     .filter(item => /st.?code collision|registration code is reused/i.test(String(item.reason || "")))
     .flatMap(item => Array.isArray(item.stCode) ? item.stCode : String(item.stCode || item.studentId || "").split(","))
     .map(value => String(value).trim()).filter(Boolean)).size;
-  const unmatchedFeeCodes = new Set((result?.unmatchedRows || [])
-    .filter(item => /fee registration|no matching registration\/enrollment|fee-only|legacy registration name is ambiguous/i.test(String(item.reason || "")))
-    .map(item => String(item.stCode || item.studentId || "").trim()).filter(Boolean)).size;
-
   return (
     <ERPLayout active="/dashboard/students">
       <header className="topbar">
