@@ -359,6 +359,12 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
       continue;
     }
     const master = linkedMaster || codeMasters[0] || null;
+    // Fee-only legacy rows may have abbreviated or inconsistent names. When
+    // the Student Code already exists in MongoDB, preserve its established
+    // identity and use the workbook name only as an alternate name.
+    if (group.feeOnlyLegacyProfile && (canonicalStudent?.applicantName || canonicalStudent?.name || master?.fullName)) {
+      incomingName = normalizeName(canonicalStudent?.applicantName || canonicalStudent?.name || master?.fullName);
+    }
     const incomingNameMissing = incomingName === "STUDENT " + code;
     if (incomingNameMissing) {
       incomingName = normalizeName(master?.fullName || canonicalStudent?.applicantName || canonicalStudent?.name || incomingName);
