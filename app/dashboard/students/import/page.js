@@ -373,7 +373,10 @@ function buildWorkbookPayload(workbook) {
       continue;
     }
     const matchingProfiles = codeToProfiles.get(resolvedCode) || [];
-    if (matchingProfiles.length !== 1) {
+    const selectedProfileIndexes = matchingProfiles.filter(profileIndex =>
+      profiles[profileIndex].registrations.some(item => candidates.includes(item))
+    );
+    if (selectedProfileIndexes.length !== 1) {
       unmatchedPayments.push({
         sheet: feeSheet.name, row: index + 1, stCode: sourceStCode, name: feeNameRaw || "",
         amountPaid: Number.isFinite(amountPaid) ? amountPaid : clean(feeGet(row, "amtpaid")),
