@@ -865,6 +865,7 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
   const studentIds = [...new Set((rawStudentIds || []).filter(validObjectId).map(id => String(id)))];
   const objectIds = studentIds.map(id => new mongoose.Types.ObjectId(id));
   const suppliedCodes = [...new Set((options.studentCodes || []).map(normalizeStudentCode).filter(Boolean))];
+  if (!objectIds.length && !suppliedCodes.length) return { studentsFinalized: 0, enrollmentsFinalized: 0, databasePaymentRows: 0, databasePaymentTotal: 0, paymentReconciliationMatches: false };
   const masters = await StudentMaster.find({
     $or: [
       ...(objectIds.length ? [{ _id: { $in: objectIds } }] : []),
@@ -873,12 +874,22 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
   }).lean();
   const legacyIds = [...new Set(masters.flatMap(master => master.legacyStudentIds || []).filter(validObjectId).map(String))];
   const legacyObjectIds = legacyIds.map(id => new mongoose.Types.ObjectId(id));
-  const legacyStudents = await Student.find({
+  const preliminaryCodes = [...new Set([
+    ...suppliedCodes,
+    ...masters.flatMap(master => [
+      ...(master.normalizedStCodes || []), ...(master.studentCodes || []), ...(master.stCodes || []),
+      master.primaryStCode, master.currentStCode,
+      ...(master.registrations || []).map(item => item.stCode),
+      ...(master.enrollments || []).map(item => item.stCode)
+    ])
+  ].map(normalizeStudentCode).filter(Boolean))];
+  const preliminaryVariants = [...new Set(preliminaryCodes.flatMap(codeLookupVariants))];
+  const legacyStudents = (legacyObjectIds.length || preliminaryCodes.length) ? await Student.find({
     $or: [
       ...(legacyObjectIds.length ? [{ _id: { $in: legacyObjectIds } }] : []),
-      ...(suppliedCodes.length ? [{ normalizedStCode: { $in: suppliedCodes } }, { regnNo: { $in: [...new Set(suppliedCodes.flatMap(codeLookupVariants))] } }, { enrollmentNo: { $in: [...new Set(suppliedCodes.flatMap(codeLookupVariants))] } }] : [])
+      ...(preliminaryCodes.length ? [{ normalizedStCode: { $in: preliminaryCodes } }, { regnNo: { $in: preliminaryVariants } }, { enrollmentNo: { $in: preliminaryVariants } }] : [])
     ]
-  }).lean();
+  }).lean() : [];
   const legacyStudentById = new Map(legacyStudents.map(item => [String(item._id), item]));
   const codes = [...new Set([
     ...suppliedCodes,
