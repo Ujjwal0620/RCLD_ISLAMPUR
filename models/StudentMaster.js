@@ -41,6 +41,7 @@ const StudentMasterSchema = new mongoose.Schema({
   hasPhoto: { type: Boolean, default: false },
   primaryStCode: { type: String, default: "", trim: true, index: true },
   studentCodes: { type: [String], default: [], index: true },
+  normalizedStCodes: { type: [String], default: [], index: true },
   alternateNames: { type: [String], default: [] },
   phones: { type: [String], default: [], index: true },
   stCodes: { type: [String], default: [] },
