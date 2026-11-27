@@ -51,12 +51,12 @@ async function ensureReceiptIndex() {
   return receiptIndexPromise;
 }
 
-const clean = value => String(value ?? "").replace(/[\\u200B-\\u200D\\uFEFF]/g, "").replace(/\\u00A0/g, " ").trim();
+const clean = value => String(value ?? "").replace(/[\u200B-\u200D\uFEFF]/g, "").replace(/\u00A0/g, " ").trim();
 const codeLookupVariants = value => {
   const code = normalizeStudentCode(value);
   if (!code) return [];
   const variants = new Set([code, String(value ?? "").trim()]);
-  if (/^\\d+$/.test(code)) for (let zeroes = 1; zeroes <= 8; zeroes += 1) variants.add("0".repeat(zeroes) + code);
+  if (/^\d+$/.test(code)) for (let zeroes = 1; zeroes <= 8; zeroes += 1) variants.add("0".repeat(zeroes) + code);
   return [...variants].filter(Boolean);
 };
 const displayName = value => clean(value).normalize("NFKC").toUpperCase().replace(/\s+/g, " ").trim();
