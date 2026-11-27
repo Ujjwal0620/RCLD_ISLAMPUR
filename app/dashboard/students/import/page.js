@@ -9,7 +9,7 @@ import { useErpCache, useErpToast } from "@/components/providers/ERPUIProvider";
 import { normalizeIndianPhones } from "@/lib/student-import/identity-resolution.mjs";
 import { normalizeStudentCode, normalizeImportName, parseImportAmount, normalizeReceiptNumber } from "@/lib/student-import/normalization.mjs";
 
-const clean = value => String(value ?? "").trim();
+const clean = value => String(value ?? "").replace(/[\\u200B-\\u200D\\uFEFF]/g, "").replace(/\\u00A0/g, " ").trim();
 const headerKey = value => clean(value).toLowerCase().replace(/[^a-z0-9]/g, "");
 const normalizeName = value => normalizeImportName(value);
 
@@ -47,7 +47,7 @@ function parseDate(value) {
 
 function parseIdentity(rawName, explicitCode) {
   const firstLine = clean(rawName).split(/\\r?\\n/)[0].replace(/[\\u200B-\\u200D\\uFEFF]/g, "").replace(/\\s+/g, " ").trim();
-  const nameWithoutSuffix = firstLine.replace(/_\\s*[A-Z0-9-]+\\s*$/, "").trim();
+  const nameWithoutSuffix = firstLine.replace(/_\\s*\\d+\\s*$/, "").trim();
   const name = normalizeName(nameWithoutSuffix || firstLine);
   const stCode = normalizeStudentCode(explicitCode);
   if (!name || !stCode) return { cleanName: name, stCode, registrationId: "" };
@@ -87,8 +87,12 @@ function chooseRegistration(candidates, paymentDate, courseValue) {
     const byCourse = matches.filter(item => normalizeImportName(item.course) === courseKey);
     if (byCourse.length) matches = byCourse;
   }
-  if (matches.length === 1) return matches[0];
   const paymentTime = paymentDate ? new Date(paymentDate).getTime() : NaN;
+  if (matches.length === 1) {
+    const admission = parseDate(matches[0].dateOfAdmission);
+    if (admission && Number.isFinite(paymentTime) && new Date(admission).getTime() > paymentTime) return null;
+    return matches[0];
+  }
   if (Number.isFinite(paymentTime)) {
     const eligible = matches.filter(item => {
       const admission = parseDate(item.dateOfAdmission);
@@ -213,7 +217,7 @@ function buildWorkbookPayload(workbook) {
     paymentRowsRead += 1;
     const sourceStCode = normalizeStudentCode(feeGet(row, "stcode"));
     const feeNameRaw = feeGet(row, "stname") || feeGet(row, "stnamecr");
-    const feeName = normalizeName(clean(feeNameRaw).split(/\\r?\\n/)[0].replace(/_\\s*[A-Z0-9-]+\\s*$/, ""));
+    const feeName = normalizeName(clean(feeNameRaw).split(/\\r?\\n/)[0].replace(/_\\s*\\d+\\s*$/, ""));
     const paymentDate = parseDate(feeGet(row, "dop"));
     const amountPaid = parseImportAmount(feeGet(row, "amtpaid"));
     const mrNo = normalizeReceiptNumber(feeGet(row, "mrno"));
@@ -417,7 +421,7 @@ export default function BulkImportPage() {
     if (!checkpoint) {
       checkpoint = {
         fingerprint, studentIndex: 0, feeIndex: 0, registrationMap: {}, studentIds: [],
-        summary: { created: 0, updated: 0, enrollmentsLinked: 0, duplicatesSkipped: 0, newReceiptsAdded: 0, existingReceiptsUpdatedOrSkipped: 0, duplicateReceiptsSkipped: 0, existingReceiptsUpdated: 0, warnings: [] },
+        summary: { created: 0, updated: 0, enrollmentsLinked: 0, duplicatesSkipped: 0, unmatchedPayments: [], newReceiptsAdded: 0, existingReceiptsUpdatedOrSkipped: 0, duplicateReceiptsSkipped: 0, existingReceiptsUpdated: 0, warnings: [] },
         percent: 0, telemetry: { studentsDone: 0, studentsTotal: preview.profiles.length, registrationsDone: 0, registrationsTotal: preview.registrationCount, feesDone: 0, feesTotal: preview.feeRows.length, elapsedSeconds: 0 }
       };
     }
@@ -481,6 +485,7 @@ export default function BulkImportPage() {
         checkpoint.summary.existingReceiptsUpdatedOrSkipped += Number(data.existingReceiptsUpdatedOrSkipped || 0);
         checkpoint.summary.duplicateReceiptsSkipped += Number(data.duplicateReceiptsSkipped || 0);
         checkpoint.summary.existingReceiptsUpdated += Number(data.existingReceiptsUpdated || 0);
+        checkpoint.summary.unmatchedPayments.push(...(data.unmatchedRows || []));
         checkpoint.summary.warnings.push(...(data.unmatchedRows || []));
         checkpoint.feeIndex = Math.min(offset + rows.length, preview.feeRows.length);
         checkpoint.telemetry.feesDone = checkpoint.feeIndex;
@@ -505,7 +510,7 @@ export default function BulkImportPage() {
         duplicateReceiptsSkipped: checkpoint.summary.duplicateReceiptsSkipped,
         existingReceiptsUpdated: checkpoint.summary.existingReceiptsUpdated,
         unmatchedRows: [...preview.warnings, ...preview.unmatchedPayments, ...checkpoint.summary.warnings],
-        unmatchedPayments: preview.unmatchedPayments,
+        unmatchedPayments: [...preview.unmatchedPayments, ...(checkpoint.summary.unmatchedPayments || [])],
         studentRowsRead: preview.studentRowsRead,
         studentRowsValid: preview.studentRowsValid,
         studentProfilesProcessed: preview.profiles.length,
@@ -628,9 +633,26 @@ export default function BulkImportPage() {
             <div className="summary-card"><span>Unmatched Payment Rows</span><strong>{result.unmatchedPayments?.length || 0}</strong></div>
             <div className="summary-card"><span>Excel Matched Payment Total</span><strong>₹{Number(result.matchedPaymentTotal || 0).toLocaleString("en-IN")}</strong></div>
             <div className="summary-card"><span>Database Imported Payment Total</span><strong>₹{Number(result.databasePaymentTotal || 0).toLocaleString("en-IN")}</strong></div>
+            <div className="summary-card"><span>Database Payment Rows / Expected</span><strong>{result.databasePaymentRows} / {result.feeRowsMatched}</strong></div>
             <div className="summary-card"><span>Rows Requiring Review</span><strong>{result.unmatchedRows.length}</strong></div>
             <div className="summary-card"><span>Payment Total Reconciliation</span><strong>{result.paymentReconciliationMatches ? "Matched" : "Needs Review"}</strong></div>
           </div>
+          {result.unmatchedPayments?.length > 0 && <div style={{ padding: "0 20px 20px" }}>
+            <h4>Unmatched / Rejected Payment Rows ({result.unmatchedPayments.length})</h4>
+            <div style={{ maxHeight: 360, overflow: "auto", border: "1px solid var(--border,#e5e7eb)", borderRadius: 10 }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                <thead><tr><th style={{ padding: 8, textAlign: "left" }}>Excel Row</th><th style={{ padding: 8, textAlign: "left" }}>Student Code</th><th style={{ padding: 8, textAlign: "left" }}>Student Name</th><th style={{ padding: 8, textAlign: "right" }}>Amount</th><th style={{ padding: 8, textAlign: "left" }}>Receipt</th><th style={{ padding: 8, textAlign: "left" }}>Reason</th></tr></thead>
+                <tbody>{result.unmatchedPayments.map((item, index) => <tr key={String(item.row || index) + "-" + String(item.stCode || "") + "-" + String(item.mrNo || "")}>
+                  <td style={{ padding: 8 }}>{item.row || "—"}</td>
+                  <td style={{ padding: 8 }}>{item.stCode || "—"}</td>
+                  <td style={{ padding: 8 }}>{item.name || "—"}</td>
+                  <td style={{ padding: 8, textAlign: "right" }}>{item.amountPaid ?? "—"}</td>
+                  <td style={{ padding: 8 }}>{item.mrNo || "—"}</td>
+                  <td style={{ padding: 8 }}>{item.reason || "Unspecified import issue"}</td>
+                </tr>)}</tbody>
+              </table>
+            </div>
+          </div>}
           {result.unmatchedRows.length > 0 && <div style={{ padding: "0 20px 20px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <AlertTriangle size={16}/><span>{result.unmatchedRows.length} rows need manual review.</span>
             <button className="ghost-btn" type="button" onClick={() => downloadWarnings("csv")}><Download size={15}/> Download CSV</button>
