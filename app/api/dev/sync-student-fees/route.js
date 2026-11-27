@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectMongoDB } from "@/lib/mongodb";
+import { getSession } from "@/lib/auth";
 import mongoose from "mongoose";
 import Course from "@/models/Course";
 
@@ -73,10 +74,18 @@ function calculate(fee) {
 
 export async function POST(request) {
   try {
+    if (process.env.NODE_ENV !== "development") {
+      return NextResponse.json({ error: "This developer fee seeder is disabled outside local development." }, { status: 404 });
+    }
+    const session = await getSession();
+    if (!session?.sub) return NextResponse.json({ error: "Please sign in." }, { status: 401 });
+    if (!["superadmin", "admin"].includes(String(session.role || "").toLowerCase())) {
+      return NextResponse.json({ error: "You do not have permission to run the developer fee seeder." }, { status: 403 });
+    }
     await connectMongoDB();
 
     const body = await request.json().catch(() => ({}));
-    const addDummyPayments = body.addDummyPayments !== false;
+    const addDummyPayments = body.addDummyPayments === true;
 
     const [students, courses] = await Promise.all([
       Student.find({}).sort({ createdAt: 1, _id: 1 }).lean(),
@@ -188,23 +197,7 @@ export async function POST(request) {
         calc = calculate(fee);
       }
 
-      const paymentStatus =
-        calc.due <= 0
-          ? "Paid"
-          : calc.paid > 0
-            ? "Partial"
-            : "Pending";
-
-      await Student.updateOne(
-        { _id: student._id },
-        {
-          $set: {
-            dueAmount: calc.due,
-            paymentStatus,
-          },
-        }
-      );
-
+      // This legacy sandbox never overwrites StudentFeePayment-derived status on Student.
       synced += 1;
       totalPayable += calc.payable;
       totalPaid += calc.paid;
@@ -214,7 +207,7 @@ export async function POST(request) {
     return NextResponse.json({
       success: true,
       message:
-        "Existing student fees synchronized with the current course master. Existing payments were preserved.",
+        "Local developer fee sandbox synchronized. It does not modify canonical Student payment status; dummy payments require explicit addDummyPayments: true.",
       students: students.length,
       synced,
       paymentsSeeded,
