@@ -620,6 +620,7 @@ async function syncFeeRows(rows = [], onProgress = () => {}, registrationMap = [
   const seenBusinessKeys = new Set();
   const seenSourceKeys = new Set();
   let newReceiptsAdded = 0, existingReceiptsUpdatedOrSkipped = 0, duplicateReceiptsSkipped = 0, existingReceiptsUpdated = 0;
+  let newReceiptsAdded = 0, existingReceiptsUpdatedOrSkipped = 0, duplicateReceiptsSkipped = 0, existingReceiptsUpdated = 0;
   for (const row of rows) {
     const stCode = normalizeStudentCode(row.stCode);
     const paymentDate = asDate(row.paymentDate);
@@ -757,7 +758,7 @@ async function syncFeeRows(rows = [], onProgress = () => {}, registrationMap = [
           newReceiptsAdded += inserted.length;
         } catch (retryError) {
           const retryErrors = retryError.writeErrors || retryError.result?.writeErrors || [];
-          if (retryError.code !== 11000 && !retryErrors.every(item => item.code === 11000)) throw retryError;
+          if (retryError.code !== 11000 && !(retryErrors.length > 0 && retryErrors.every(item => item.code === 11000))) throw retryError;
           const unresolved = await StudentFeePayment.find({ sourceRowKey: { $in: missing.map(item => item.sourceRowKey) } }).select("sourceRowKey").lean();
           const savedKeys = new Set(unresolved.map(item => item.sourceRowKey));
           const notSaved = missing.filter(item => !savedKeys.has(item.sourceRowKey));
