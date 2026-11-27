@@ -23,57 +23,26 @@ async function ensureReceiptIndex() {
         if (error.code === 26 || error.codeName === "NamespaceNotFound") return [];
         throw error;
       });
-      const oldCodeOnlyReceiptIndex = indexes.find(index => index.name === "stcode_receipt_date_amount_unique");
-      if (oldCodeOnlyReceiptIndex) await StudentFeePayment.collection.dropIndex(oldCodeOnlyReceiptIndex.name);
-      const legacyIndexes = indexes.filter(index => index.unique
-        && !index.key?.registrationId
+      // Receipt-only unique indexes reject the same MR/date/amount for different students.
+      // Registration-name indexes are also unsuitable now that normalized Student Code is primary.
+      const obsolete = indexes.filter(index => index.unique
         && !index.key?.stCode
-        && ["mrNo", "paymentDate", "amountPaid"].every(key => index.key?.[key] === 1));
-      const oldRegistrationIndexes = indexes.filter(index => index.unique
-        && index.key?.registrationId === 1
-        && ["mrNo", "paymentDate", "amountPaid"].every(key => index.key?.[key] === 1)
-        && index.partialFilterExpression?.importBatchKey !== "UNIFIED_WORKBOOK_IMPORT");
-      for (const legacy of [...legacyIndexes, ...oldRegistrationIndexes]) {
-        await StudentFeePayment.collection.dropIndex(legacy.name);
-      }
-      const duplicateGroups = await StudentFeePayment.collection.aggregate([
-        { $match: {
-          importBatchKey: "UNIFIED_WORKBOOK_IMPORT",
-          masterStudentId: { $type: "objectId" },
-          stCode: { $type: "string", $gt: "" },
-          mrNo: { $type: "string", $gt: "" },
-          paymentDate: { $type: "date" },
-          amountPaid: { $type: "number" }
-        } },
-        { $group: {
-          _id: { masterStudentId: "$masterStudentId", stCode: "$stCode", mrNo: "$mrNo", paymentDate: "$paymentDate", amountPaid: "$amountPaid" },
-          ids: { $push: "$_id" },
-          count: { $sum: 1 }
-        } },
-        { $match: { count: { $gt: 1 } } }
-      ]).toArray();
-      const duplicateArchiveIds = duplicateGroups.flatMap(group => group.ids.slice(1));
-      if (duplicateArchiveIds.length) {
-        await StudentFeePayment.collection.updateMany(
-          { _id: { $in: duplicateArchiveIds } },
-          { $set: { importBatchKey: "UNIFIED_WORKBOOK_IMPORT_DUPLICATE_ARCHIVE" } }
-        );
-      }
-      await StudentFeePayment.collection.createIndex(
-        { masterStudentId: 1, stCode: 1, mrNo: 1, paymentDate: 1, amountPaid: 1 },
+        && !index.key?.normalizedStCode
+        && (
+          ["mrNo", "paymentDate", "amountPaid"].every(key => index.key?.[key] === 1)
+          || (index.key?.registrationId === 1 && ["mrNo", "paymentDate", "amountPaid"].every(key => index.key?.[key] === 1))
+        ));
+      for (const index of obsolete) await StudentFeePayment.collection.dropIndex(index.name);
+      const current = indexes.find(index => index.name === "student_fee_source_row_unique");
+      if (!current) await StudentFeePayment.collection.createIndex(
+        { sourceRowKey: 1 },
         {
           unique: true,
-          name: "master_stcode_receipt_date_amount_unique",
-          partialFilterExpression: {
-            importBatchKey: "UNIFIED_WORKBOOK_IMPORT",
-            masterStudentId: { $type: "objectId" },
-            stCode: { $type: "string", $gt: "" },
-            mrNo: { $type: "string", $gt: "" },
-            paymentDate: { $type: "date" },
-            amountPaid: { $type: "number" }
-          }
+          name: "student_fee_source_row_unique",
+          partialFilterExpression: { sourceRowKey: { $type: "string", $gt: "" } }
         }
       );
+      // Existing receipt documents are never deleted, archived, or rewritten during index setup.
     })().catch(error => {
       receiptIndexPromise = null;
       throw error;
