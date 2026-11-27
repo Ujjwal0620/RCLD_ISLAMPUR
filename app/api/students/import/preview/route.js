@@ -357,7 +357,7 @@ export async function POST(request) {
       sourceFileHash: fileHash, actorId: String(session.sub), actorRole: String(session.role || ""),
       status: "PREVIEW_READY", layoutType: mapping.layoutType, mapping,
       summary, warnings, conflictCount: summary.conflicts, totalGroups: staged.length,
-      totalChunks: Math.ceil(staged.length / 100)
+      totalChunks: Math.ceil(staged.length / 50)
     });
     if (staged.length) {
       await StudentImportStaging.insertMany(staged.map(item => ({ ...item, importBatchId })), { ordered: true });
