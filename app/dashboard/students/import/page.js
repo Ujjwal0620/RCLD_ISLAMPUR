@@ -6,11 +6,12 @@ import * as XLSX from "xlsx";
 import ERPLayout from "@/components/ERPLayout";
 import BulkStudentPhotoUploadDialog from "@/components/students/BulkStudentPhotoUploadDialog";
 import { useErpCache, useErpToast } from "@/components/providers/ERPUIProvider";
-import { clusterStudentRegistrations, normalizeStudentName, normalizeIndianPhones } from "@/lib/student-import/identity-resolution.mjs";
+import { normalizeIndianPhones } from "@/lib/student-import/identity-resolution.mjs";
+import { normalizeStudentCode, normalizeImportName, parseImportAmount, normalizeReceiptNumber } from "@/lib/student-import/normalization.mjs";
 
 const clean = value => String(value ?? "").trim();
 const headerKey = value => clean(value).toLowerCase().replace(/[^a-z0-9]/g, "");
-const normalizeName = value => normalizeStudentName(value);
+const normalizeName = value => normalizeImportName(value);
 
 
 function parseDate(value) {
@@ -44,14 +45,13 @@ function parseDate(value) {
   return date.toISOString();
 }
 
-function parseIdentity(rawName, fallbackCode) {
-  const firstLine = clean(rawName).split(/\r?\n/)[0].replace(/\s+/g, " ").trim().toUpperCase();
-  const suffix = firstLine.match(/_(\d+)(?![\s\S]*_\d+)/);
-  const name = normalizeStudentName(firstLine);
-  let code = suffix?.[1] || "";
-  if (!code) code = clean(fallbackCode).replace(/\.0+$/, "").replace(/\D/g, "");
-  if (!name || !code) return { cleanName: name, stCode: code, registrationId: "" };
-  return { cleanName: name, stCode: code, registrationId: name + "_" + code };
+function parseIdentity(rawName, explicitCode) {
+  const firstLine = clean(rawName).split(/\\r?\\n/)[0].replace(/[\\u200B-\\u200D\\uFEFF]/g, "").replace(/\\s+/g, " ").trim();
+  const nameWithoutSuffix = firstLine.replace(/_\\s*[A-Z0-9-]+\\s*$/, "").trim();
+  const name = normalizeName(nameWithoutSuffix || firstLine);
+  const stCode = normalizeStudentCode(explicitCode);
+  if (!name || !stCode) return { cleanName: name, stCode, registrationId: "" };
+  return { cleanName: name, stCode, registrationId: stCode };
 }
 
 function phonesFrom(value) {
@@ -61,47 +61,85 @@ function phonesFrom(value) {
 function findSheet(workbook, kind) {
   const matches = [];
   for (const name of workbook.SheetNames) {
-    const grid = XLSX.utils.sheet_to_json(workbook.Sheets[name], { header: 1, defval: "", raw: true });
+    const sheet = workbook.Sheets[name];
+    const grid = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: true, blankrows: true });
+    for (const merge of sheet["!merges"] || []) {
+      if (merge.s.r !== merge.e.r) continue;
+      const row = grid[merge.s.r] || (grid[merge.s.r] = []);
+      const value = row[merge.s.c] ?? "";
+      for (let col = merge.s.c; col <= merge.e.c; col += 1) if (row[col] === "" || row[col] === undefined) row[col] = value;
+    }
     const index = grid.findIndex(row => {
       const keys = row.map(headerKey);
-      if (kind === "student") return ["stcode","stname","doa","course"].every(key => keys.includes(key));
-      return ["amtpaid","mrno","dop"].every(key => keys.includes(key)) && (keys.includes("stname") || keys.includes("stnamecr"));
+      if (kind === "student") return ["stcode", "stname", "doa", "course"].every(key => keys.includes(key));
+      return ["amtpaid", "mrno", "dop"].every(key => keys.includes(key)) && (keys.includes("stname") || keys.includes("stnamecr"));
     });
     if (index >= 0) matches.push({ name, grid, headerIndex: index });
   }
-  if (kind === "student") return matches.find(item => /^student\s*data$/i.test(item.name)) || matches[0] || null;
-  return matches.find(item => !/^student\s*data$/i.test(item.name)) || matches[0] || null;
+  if (kind === "student") return matches.find(item => /^student\\s*data$/i.test(item.name)) || matches[0] || null;
+  return matches.find(item => !/^student\\s*data$/i.test(item.name)) || matches[0] || null;
+}
+
+function chooseRegistration(candidates, paymentDate, courseValue) {
+  let matches = [...candidates];
+  const courseKey = normalizeImportName(courseValue);
+  if (courseKey) {
+    const byCourse = matches.filter(item => normalizeImportName(item.course) === courseKey);
+    if (byCourse.length) matches = byCourse;
+  }
+  if (matches.length === 1) return matches[0];
+  const paymentTime = paymentDate ? new Date(paymentDate).getTime() : NaN;
+  if (Number.isFinite(paymentTime)) {
+    const eligible = matches.filter(item => {
+      const admission = parseDate(item.dateOfAdmission);
+      return !admission || new Date(admission).getTime() <= paymentTime;
+    });
+    if (eligible.length) matches = eligible;
+    else return null;
+  }
+  const dated = matches.filter(item => parseDate(item.dateOfAdmission));
+  if (dated.length) {
+    const latest = Math.max(...dated.map(item => new Date(item.dateOfAdmission).getTime()));
+    const latestMatches = dated.filter(item => new Date(item.dateOfAdmission).getTime() === latest);
+    return latestMatches.length === 1 ? latestMatches[0] : null;
+  }
+  return matches.length === 1 ? matches[0] : null;
 }
 
 function buildWorkbookPayload(workbook) {
   const studentSheet = findSheet(workbook, "student");
   const feeSheet = findSheet(workbook, "fee");
   if (!studentSheet || !feeSheet || studentSheet.name === feeSheet.name) {
-    throw new Error("Workbook must contain a Student Data sheet and a separate Fee sheet with Amt_Paid, MR_No and D_O_P.");
+    throw new Error("Workbook must contain a Student Data sheet and a separate Fee sheet with St_Code, Amt_Paid, MR_No and D_O_P.");
   }
   const studentHeaders = studentSheet.grid[studentSheet.headerIndex].map(headerKey);
   const studentAt = key => studentHeaders.indexOf(key);
   const studentGet = (row, key) => studentAt(key) >= 0 ? row[studentAt(key)] : "";
-  const registrations = new Map();
+  const recordsByKey = new Map();
   const studentWarnings = [];
-  let studentDataRows = 0;
+  let studentRowsRead = 0;
+  let studentRowsValid = 0;
   for (let index = studentSheet.headerIndex + 1; index < studentSheet.grid.length; index += 1) {
-    const row = studentSheet.grid[index];
+    const row = studentSheet.grid[index] || [];
     if (!row.some(value => clean(value))) continue;
-    studentDataRows += 1;
+    studentRowsRead += 1;
     const identity = parseIdentity(studentGet(row, "stname"), studentGet(row, "stcode"));
-    if (!identity.registrationId) {
-      studentWarnings.push({ sheet: studentSheet.name, row: index + 1, studentId: studentGet(row, "stcode"), reason: "Student row has no usable registration code or name suffix." });
+    if (!identity.stCode || !identity.cleanName) {
+      studentWarnings.push({ sheet: studentSheet.name, row: index + 1, stCode: identity.stCode, name: identity.cleanName, reason: "Student row is missing a usable explicit St_Code or student name; it was not imported." });
       continue;
     }
+    const course = clean(studentGet(row, "course")) || "Previous Course (Legacy)";
+    const dateOfAdmission = parseDate(studentGet(row, "doa"));
+    const dateKey = dateOfAdmission ? dateOfAdmission.slice(0, 10) : "";
+    const recordKey = [identity.stCode, normalizeName(identity.cleanName), normalizeImportName(course), dateKey].join("|");
     const record = {
       ...identity,
+      registrationId: recordKey,
       rawStName: clean(studentGet(row, "stname")),
-      course: clean(studentGet(row, "course")) || "Previous Course (Legacy)",
-      dateOfAdmission: parseDate(studentGet(row, "doa")),
-      formNo: clean(studentGet(row, "formno")).replace(/\.0+$/, ""),
+      course,
+      dateOfAdmission,
+      formNo: clean(studentGet(row, "formno")).replace(/\\.0+$/, ""),
       dob: parseDate(studentGet(row, "dob")),
-      invalidDob: Boolean(parseDate(studentGet(row, "dob")) && (new Date(parseDate(studentGet(row, "dob"))).getUTCFullYear() < 1965 || new Date(parseDate(studentGet(row, "dob"))).getUTCFullYear() > 2023)),
       sex: clean(studentGet(row, "sex")).toUpperCase(),
       fatherName: clean(studentGet(row, "stfather")),
       address: clean(studentGet(row, "address")),
@@ -109,147 +147,172 @@ function buildWorkbookPayload(workbook) {
       qualification: clean(studentGet(row, "qualification")),
       rowNo: index + 1
     };
-    if (record.invalidDob) { studentWarnings.push({ sheet: studentSheet.name, row: index + 1, studentId: identity.registrationId, reason: "DOB year is outside the allowed 1965–2023 range; DOB was ignored for identity matching." }); record.dob = null; }
-    const previous = registrations.get(identity.registrationId);
-    if (!previous) registrations.set(identity.registrationId, record);
+    const previous = recordsByKey.get(recordKey);
+    if (!previous) recordsByKey.set(recordKey, record);
     else {
-      previous.phones = [...new Set([...previous.phones, ...record.phones])];
-      for (const key of ["course","dateOfAdmission","formNo","dob","sex","fatherName","address","qualification"]) if (!previous[key] && record[key]) previous[key] = record[key];
+      previous.phones = [...new Set([...(previous.phones || []), ...(record.phones || [])])];
+      for (const key of ["dob", "sex", "fatherName", "address", "qualification", "formNo", "rawStName"]) if (!previous[key] && record[key]) previous[key] = record[key];
+    }
+    studentRowsValid += 1;
+  }
+
+  // One import profile per normalized Student Code + name. Different codes are never clustered by name or demographics.
+  const profileMap = new Map();
+  for (const record of recordsByKey.values()) {
+    const key = [record.stCode, normalizeName(record.cleanName)].join("|");
+    if (!profileMap.has(key)) profileMap.set(key, {
+      cleanName: record.cleanName, alternateNames: [record.cleanName], studentCodes: [record.stCode],
+      dob: record.dob || null, dobs: record.dob ? [record.dob] : [],
+      fatherName: record.fatherName || "", fatherNames: record.fatherName ? [record.fatherName] : [],
+      phones: [...(record.phones || [])], registrations: []
+    });
+    const profile = profileMap.get(key);
+    profile.registrations.push({ ...record, stCodeUnique: true, isCurrent: false });
+    profile.phones = [...new Set([...profile.phones, ...(record.phones || [])])];
+    if (!profile.dob && record.dob) profile.dob = record.dob;
+    if (record.dob) profile.dobs = [...new Set([...profile.dobs, record.dob])];
+    if (record.fatherName) profile.fatherNames = [...new Set([...profile.fatherNames, record.fatherName])];
+    if (!profile.fatherName && record.fatherName) profile.fatherName = record.fatherName;
+  }
+  const profiles = [...profileMap.values()];
+  const codeToProfiles = new Map();
+  const nameToCodes = new Map();
+  for (const [profileIndex, profile] of profiles.entries()) {
+    const code = normalizeStudentCode(profile.studentCodes[0]);
+    codeToProfiles.set(code, [...(codeToProfiles.get(code) || []), profileIndex]);
+    const name = normalizeName(profile.cleanName);
+    nameToCodes.set(name, new Set([...(nameToCodes.get(name) || []), code]));
+    profile.registrations.sort((a, b) => new Date(b.dateOfAdmission || 0) - new Date(a.dateOfAdmission || 0));
+    profile.registrations.forEach((item, index) => { item.isCurrent = index === 0; });
+  }
+  for (const [code, indexes] of codeToProfiles) {
+    if (indexes.length > 1) {
+      for (const profileIndex of indexes) {
+        const profile = profiles[profileIndex];
+        for (const registration of profile.registrations) registration.stCodeUnique = false;
+        studentWarnings.push({
+          sheet: studentSheet.name, row: profile.registrations[0]?.rowNo || "", stCode: code,
+          name: profile.cleanName,
+          reason: "The same Student Code appears under multiple different student names. Payments for this code are ambiguous and will not be assigned automatically."
+        });
+      }
     }
   }
 
-  const rawRecords = [...registrations.values()];
-  const clusters = clusterStudentRegistrations(rawRecords);
-  const profiles = clusters.map(items => {
-    items.sort((a,b) => new Date(b.dateOfAdmission || 0) - new Date(a.dateOfAdmission || 0));
-    const latest = items[0];
-    const names = [...new Set(items.map(item => item.cleanName).filter(Boolean))];
-    const enrollmentMap = new Map();
-    for (const item of items) {
-      const admissionDateKey = item.dateOfAdmission ? new Date(item.dateOfAdmission).toISOString().slice(0, 10) : "";
-      const enrollmentKey = [item.stCode, String(item.course || "").toUpperCase(), admissionDateKey].join("|");
-      const previous = enrollmentMap.get(enrollmentKey);
-      if (!previous) enrollmentMap.set(enrollmentKey, { ...item });
-      else {
-        previous.phones = [...new Set([...(previous.phones || []), ...(item.phones || [])])];
-        previous.alternateNames = [...new Set([...(previous.alternateNames || []), item.cleanName].filter(Boolean))];
-        if (!previous.formNo && item.formNo) previous.formNo = item.formNo;
-        if (!previous.qualification && item.qualification) previous.qualification = item.qualification;
-        if (!previous.address && item.address) previous.address = item.address;
-        if (!previous.rawStName && item.rawStName) previous.rawStName = item.rawStName;
-      }
-    }
-    const uniqueItems = [...enrollmentMap.values()].sort((a,b) => new Date(b.dateOfAdmission || b.earliestPaymentDate || 0) - new Date(a.dateOfAdmission || a.earliestPaymentDate || 0));
-    return {
-      cleanName: latest.cleanName,
-      alternateNames: names,
-      dob: items.find(item => item.dob && !item.invalidDob)?.dob || null,
-      dobs: [...new Set(items.map(item => item.dob).filter(Boolean))],
-      fatherName: items.find(item => item.fatherName)?.fatherName || "",
-      fatherNames: [...new Set(items.map(item => item.fatherName).filter(Boolean))],
-      phones: [...new Set(items.flatMap(item => item.phones))],
-      studentCodes: [...new Set(uniqueItems.map(item => item.stCode))],
-      registrations: uniqueItems.map(item => ({ ...item, alternateNames: names, isCurrent: item.stCode === latest.stCode && item.course === latest.course && String(item.dateOfAdmission || "") === String(latest.dateOfAdmission || "") }))
-    };
-  });
-  const studentCodeProfiles = new Map();
-  for (const [profileIndex, profile] of profiles.entries()) for (const record of profile.registrations) {
-    studentCodeProfiles.set(record.stCode, new Set([...(studentCodeProfiles.get(record.stCode) || []), profileIndex]));
-  }
-  for (const profile of profiles) for (const record of profile.registrations) {
-    record.stCodeUnique = studentCodeProfiles.get(record.stCode)?.size === 1;
-    if (!record.stCodeUnique) studentWarnings.push({
-      sheet: studentSheet.name, row: record.rowNo, studentId: record.registrationId,
-      stCode: record.stCode, name: record.cleanName,
-      reason: "St_Code collision: this code belongs to more than one distinct identity in the workbook; manual review required."
-    });
-  }
   const feeHeaders = feeSheet.grid[feeSheet.headerIndex].map(headerKey);
   const feeAt = key => feeHeaders.indexOf(key);
   const feeGet = (row, key) => feeAt(key) >= 0 ? row[feeAt(key)] : "";
-  const profileByName = new Map();
-  for (const profile of profiles) for (const alias of new Set([profile.cleanName, ...(profile.alternateNames || [])])) {
-    profileByName.set(alias, [...(profileByName.get(alias) || []), profile]);
-  }
-  const registrationById = new Map();
-  const registrationByCode = new Map();
-  for (const profile of profiles) for (const registration of profile.registrations) {
-    registrationById.set(registration.registrationId, registration);
-    registrationByCode.set(registration.stCode, [...(registrationByCode.get(registration.stCode) || []), registration]);
-  }
   const feeRows = [];
-  const feeWarnings = [];
+  const unmatchedPayments = [];
+  let paymentRowsRead = 0;
+  let paymentAmountRead = 0;
+  let matchedPaymentAmount = 0;
   for (let index = feeSheet.headerIndex + 1; index < feeSheet.grid.length; index += 1) {
-    const row = feeSheet.grid[index];
+    const row = feeSheet.grid[index] || [];
     if (!row.some(value => clean(value))) continue;
-    const primaryIdentity = parseIdentity(feeGet(row, "stname"), feeGet(row, "stcode"));
-    const identity = primaryIdentity.cleanName ? primaryIdentity : parseIdentity(feeGet(row, "stnamecr"), feeGet(row, "stcode"));
-    const feeName = feeGet(row, "stname") || feeGet(row, "stnamecr");
-    if (!identity.cleanName || !identity.stCode) {
-      feeWarnings.push({ sheet: feeSheet.name, row: index + 1, studentId: clean(feeGet(row,"stcode")), name: feeName, mrNo: clean(feeGet(row,"mrno")), paymentDate: parseDate(feeGet(row,"dop")), amountPaid: feeGet(row,"amtpaid"), reason: "Fee row has no valid name/code identity." });
-      continue;
-    }
-    let registrationId = identity.registrationId;
-    let registration = registrationById.get(registrationId);
-    if (!registration && (registrationByCode.get(identity.stCode) || []).length === 1) {
-      registration = registrationByCode.get(identity.stCode)[0];
-      registrationId = registration.registrationId;
-    }
-    if (!registration) {
-      const nameMatches = profileByName.get(identity.cleanName) || [];
-      if (nameMatches.length === 1) {
-        const profile = nameMatches[0];
-        const sameCodeAdmissions = profile.registrations.filter(item => String(item.stCode) === String(identity.stCode));
-        if (sameCodeAdmissions.length === 1) {
-          registration = sameCodeAdmissions[0];
-          registrationId = registration.registrationId;
-        } else if (sameCodeAdmissions.length === 0) {
-          const legacy = {
-            ...identity, course: "Previous Course (Legacy)", dateOfAdmission: null,
-            earliestPaymentDate: parseDate(feeGet(row,"dop")), formNo: "", dob: null,
-            sex: "", fatherName: "", address: "", phones: [], qualification: ""
-          };
-          profile.registrations.push(legacy);
-          registration = legacy;
-          registrationId = legacy.registrationId;
-          registrationById.set(registrationId, registration);
-        } else {
-          feeWarnings.push({ sheet: feeSheet.name, row: index + 1, studentId: identity.registrationId, name: identity.cleanName, stCode: identity.stCode, mrNo: clean(feeGet(row,"mrno")), paymentDate: parseDate(feeGet(row,"dop")), amountPaid: feeGet(row,"amtpaid"), reason: "This student has multiple admissions under the same St_Code; fee row could not be assigned to one course without a matching registration identity." });
-          continue;
-        }
+    paymentRowsRead += 1;
+    const sourceStCode = normalizeStudentCode(feeGet(row, "stcode"));
+    const feeNameRaw = feeGet(row, "stname") || feeGet(row, "stnamecr");
+    const feeName = normalizeName(clean(feeNameRaw).split(/\\r?\\n/)[0].replace(/_\\s*[A-Z0-9-]+\\s*$/, ""));
+    const paymentDate = parseDate(feeGet(row, "dop"));
+    const amountPaid = parseImportAmount(feeGet(row, "amtpaid"));
+    const mrNo = normalizeReceiptNumber(feeGet(row, "mrno"));
+    const sourceCourse = clean(feeGet(row, "course"));
+    if (Number.isFinite(amountPaid)) paymentAmountRead += amountPaid;
+
+    let resolvedCode = sourceStCode;
+    let matchMethod = "ST_CODE";
+    let candidates = resolvedCode ? (codeToProfiles.get(resolvedCode) || []).flatMap(profileIndex => profiles[profileIndex].registrations) : [];
+    if (!candidates.length) {
+      const nameCodes = nameToCodes.get(feeName) || new Set();
+      if (nameCodes.size === 1) {
+        resolvedCode = [...nameCodes][0];
+        matchMethod = "UNAMBIGUOUS_NAME_FALLBACK";
+        candidates = (codeToProfiles.get(resolvedCode) || []).flatMap(profileIndex => profiles[profileIndex].registrations);
       } else {
-        feeWarnings.push({ sheet: feeSheet.name, row: index + 1, studentId: identity.registrationId, name: identity.cleanName, stCode: identity.stCode, mrNo: clean(feeGet(row,"mrno")), paymentDate: parseDate(feeGet(row,"dop")), amountPaid: feeGet(row,"amtpaid"), reason: nameMatches.length > 1 ? "Legacy registration name is ambiguous across multiple student profiles." : "Fee registration does not match Student Data." });
+        unmatchedPayments.push({
+          sheet: feeSheet.name, row: index + 1, stCode: sourceStCode, name: feeNameRaw || "",
+          amountPaid: Number.isFinite(amountPaid) ? amountPaid : clean(feeGet(row, "amtpaid")),
+          mrNo, paymentDate: paymentDate || clean(feeGet(row, "dop")),
+          reason: nameCodes.size > 1
+            ? "No Student Code match; normalized name maps to multiple Student Codes, so the payment was not guessed."
+            : "No Student Code match and no unique normalized student-name fallback exists."
+        });
         continue;
       }
     }
-    const paymentDate = parseDate(feeGet(row, "dop"));
-    const amountPaid = Number(clean(feeGet(row, "amtpaid")).replace(/[₹,\s]/g, ""));
-    const mrNo = clean(feeGet(row, "mrno")).replace(/\.0+$/, "");
-    if (!paymentDate || !mrNo || !Number.isFinite(amountPaid) || amountPaid < 0) {
-      feeWarnings.push({ sheet: feeSheet.name, row: index + 1, studentId: registrationId, name: identity.cleanName, stCode: identity.stCode, mrNo, paymentDate, amountPaid: feeGet(row,"amtpaid"), reason: "Receipt number, date, or amount is invalid." });
+    const matchingProfiles = codeToProfiles.get(resolvedCode) || [];
+    if (matchingProfiles.length !== 1) {
+      unmatchedPayments.push({
+        sheet: feeSheet.name, row: index + 1, stCode: sourceStCode, name: feeNameRaw || "",
+        amountPaid: Number.isFinite(amountPaid) ? amountPaid : clean(feeGet(row, "amtpaid")),
+        mrNo, paymentDate: paymentDate || clean(feeGet(row, "dop")),
+        reason: "Student Code is duplicated across different student names in Student Data; payment cannot be safely assigned."
+      });
       continue;
     }
-    if (!registration.course || registration.course === "Previous Course (Legacy)") registration.course = "Previous Course (Legacy)";
-    feeRows.push({ registrationId, stCode: registration.stCode || identity.stCode, cleanName: registration.cleanName || identity.cleanName, course: registration.course, paymentDate, amountPaid, mrNo, sourceSheet: feeSheet.name, rowNo: index + 1 });
+    const registration = chooseRegistration(candidates, paymentDate, sourceCourse);
+    if (!registration) {
+      unmatchedPayments.push({
+        sheet: feeSheet.name, row: index + 1, stCode: sourceStCode, name: feeNameRaw || "",
+        amountPaid: Number.isFinite(amountPaid) ? amountPaid : clean(feeGet(row, "amtpaid")),
+        mrNo, paymentDate: paymentDate || clean(feeGet(row, "dop")),
+        reason: "Student Code matched, but multiple course/admission records remain ambiguous for this payment date."
+      });
+      continue;
+    }
+    if (!paymentDate || !mrNo || !Number.isFinite(amountPaid) || amountPaid < 0) {
+      unmatchedPayments.push({
+        sheet: feeSheet.name, row: index + 1, stCode: sourceStCode, name: feeNameRaw || "",
+        amountPaid: Number.isFinite(amountPaid) ? amountPaid : clean(feeGet(row, "amtpaid")),
+        mrNo, paymentDate: paymentDate || clean(feeGet(row, "dop")),
+        reason: "Receipt number, payment date, or amount is invalid."
+      });
+      continue;
+    }
+    feeRows.push({
+      registrationId: registration.registrationId,
+      stCode: resolvedCode,
+      sourceStCode,
+      cleanName: registration.cleanName,
+      course: registration.course,
+      paymentDate,
+      amountPaid,
+      mrNo,
+      sourceSheet: feeSheet.name,
+      rowNo: index + 1,
+      matchMethod
+    });
+    matchedPaymentAmount += amountPaid;
     if (registration.course === "Previous Course (Legacy)") {
       const priorDate = parseDate(registration.earliestPaymentDate);
       if (!priorDate || new Date(paymentDate) < new Date(priorDate)) registration.earliestPaymentDate = paymentDate;
     }
   }
-  const allRegistrationCodeProfiles = new Map();
-  for (const [profileIndex, profile] of profiles.entries()) for (const item of profile.registrations) {
-    allRegistrationCodeProfiles.set(item.stCode, new Set([...(allRegistrationCodeProfiles.get(item.stCode) || []), profileIndex]));
-  }
-  for (const profile of profiles) {
-    const seen = new Set();
-    profile.registrations = profile.registrations.filter(item => {
-      if (seen.has(item.registrationId)) return false;
-      seen.add(item.registrationId); return true;
-    }).sort((a,b) => new Date(b.dateOfAdmission || b.earliestPaymentDate || 0) - new Date(a.dateOfAdmission || a.earliestPaymentDate || 0));
-    profile.registrations.forEach(item => { item.stCodeUnique = allRegistrationCodeProfiles.get(item.stCode)?.size === 1; });
-    profile.registrations.forEach((item,index) => { item.isCurrent = index === 0; });
-  }
-  return { studentSheetName: studentSheet.name, feeSheetName: feeSheet.name, studentRows: studentDataRows, registrationCount: registrations.size, profiles, feeRows, warnings: [...studentWarnings, ...feeWarnings] };
+
+  const duplicateNameStudents = [...nameToCodes.entries()]
+    .filter(([, codes]) => codes.size > 1)
+    .map(([name, codes]) => ({ name, studentCodes: [...codes].sort() }));
+  return {
+    studentSheetName: studentSheet.name,
+    feeSheetName: feeSheet.name,
+    studentRows: studentRowsRead,
+    studentRowsRead,
+    studentRowsValid,
+    studentRowsSkipped: studentRowsRead - studentRowsValid,
+    registrationCount: new Set([...recordsByKey.values()].map(item => item.stCode)).size,
+    profileCount: profiles.length,
+    profiles,
+    paymentRowsRead,
+    feeRows,
+    unmatchedPayments,
+    warnings: studentWarnings,
+    duplicateNameStudentCount: duplicateNameStudents.length,
+    duplicateNameStudents,
+    paymentAmountRead: Number(paymentAmountRead.toFixed(2)),
+    matchedPaymentAmount: Number(matchedPaymentAmount.toFixed(2)),
+    unmatchedPaymentAmount: Number((paymentAmountRead - matchedPaymentAmount).toFixed(2))
+  };
 }
 
 const IMPORT_CHECKPOINT_KEY = "rcld-unified-import-checkpoint-v2";
