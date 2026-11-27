@@ -24,6 +24,7 @@ const StudentFeePaymentSchema = new mongoose.Schema({
   course: { type: String, default: "" },
   mrNo: { type: String, required: true, trim: true },
   normalizedMrNo: { type: String, default: "", trim: true, index: true },
+  normalizedPaymentKey: { type: String, default: "", trim: true, index: true },
   paymentMode: { type: String, default: "" },
   amountPaid: { type: Number, required: true, min: 0 },
   paymentDate: { type: Date, default: null },
@@ -32,11 +33,14 @@ const StudentFeePaymentSchema = new mongoose.Schema({
   allocations: { type: [AllocationSchema], default: [] },
   sourceSheet: { type: String, default: "" },
   sourceRowNo: Number,
-  importBatchKey: { type: String, default: "" }
+  importBatchKey: { type: String, default: "" },
+  importBatchId: { type: String, default: "", index: true }
 }, { timestamps: true, collection: "student_fee_payments" });
 
 StudentFeePaymentSchema.index({ studentId: 1, enrollmentId: 1, mrNo: 1, paymentDate: 1, amountPaid: 1 }, { name: "student_course_receipt_lookup" });
-// The importer creates the unique source-row index only after checking historical duplicates.
-
+StudentFeePaymentSchema.index({ normalizedPaymentKey: 1 }, {
+  name: "student_payment_normalized_key_lookup",
+  partialFilterExpression: { normalizedPaymentKey: { $type: "string", $gt: "" } }
+});
 
 export default mongoose.models.StudentFeePayment || mongoose.model("StudentFeePayment", StudentFeePaymentSchema);
