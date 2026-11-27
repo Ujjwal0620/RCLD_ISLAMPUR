@@ -64,8 +64,8 @@ function parseDate(value) {
 }
 
 function parseIdentity(rawName, explicitCode) {
-  const firstLine = clean(rawName).split(/\\r?\\n/)[0].replace(/[\\u200B-\\u200D\\uFEFF]/g, "").replace(/\\s+/g, " ").trim();
-  const nameWithoutSuffix = firstLine.replace(/_\\s*\\d+\\s*$/, "").trim();
+  const firstLine = clean(rawName).split(/\r?\n/)[0].replace(/[\u200B-\u200D\uFEFF]/g, "").replace(/\s+/g, " ").trim();
+  const nameWithoutSuffix = firstLine.replace(/_\s*\d+\s*$/, "").trim();
   const name = normalizeName(nameWithoutSuffix || firstLine);
   const stCode = normalizeStudentCode(explicitCode);
   if (!stCode) return { cleanName: name, stCode, registrationId: "", missingCode: true };
@@ -81,6 +81,19 @@ function findSheet(workbook, kind) {
   for (const name of workbook.SheetNames) {
     const sheet = workbook.Sheets[name];
     const grid = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: true, blankrows: true });
+    // Preserve formula-only cells with no cached result so their rows are reported, never silently dropped.
+    if (sheet["!ref"]) {
+      const range = XLSX.utils.decode_range(sheet["!ref"]);
+      for (let rowIndex = range.s.r; rowIndex <= range.e.r; rowIndex += 1) {
+        for (let columnIndex = range.s.c; columnIndex <= range.e.c; columnIndex += 1) {
+          const cell = sheet[XLSX.utils.encode_cell({ r: rowIndex, c: columnIndex })];
+          if (cell?.f && (cell.v === undefined || cell.v === null || cell.v === "")) {
+            const row = grid[rowIndex] || (grid[rowIndex] = []);
+            if (row[columnIndex] === "" || row[columnIndex] === undefined) row[columnIndex] = "__FORMULA_WITHOUT_CACHED_VALUE__";
+          }
+        }
+      }
+    }
     for (const merge of sheet["!merges"] || []) {
       if (merge.s.r !== merge.e.r) continue;
       const row = grid[merge.s.r] || (grid[merge.s.r] = []);
@@ -105,7 +118,7 @@ function findSheet(workbook, kind) {
       matches.push({ name, grid, headerIndex: index });
     }
   }
-  if (kind === "student") return matches.find(item => /^student\\s*data$/i.test(item.name)) || matches[0] || null;
+  if (kind === "student") return matches.find(item => /^student\s*data$/i.test(item.name)) || matches[0] || null;
   return matches.find(item => !/^student\\s*data$/i.test(item.name)) || matches[0] || null;
 }
 
@@ -250,8 +263,8 @@ function buildWorkbookPayload(workbook) {
     if (!row.some(value => clean(value))) continue;
     paymentRowsRead += 1;
     const sourceStCode = normalizeStudentCode(feeGet(row, "stcode"));
-    const feeNameRaw = feeGet(row, "stname") || feeGet(row, "stnamecr");
-    const feeName = normalizeName(clean(feeNameRaw).split(/\\r?\\n/)[0].replace(/_\\s*\\d+\\s*$/, ""));
+    const feeNameRaw = feeGet(row, "stnamecr") || feeGet(row, "stname");
+    const feeName = normalizeName(clean(feeNameRaw).split(/\r?\n/)[0].replace(/_\s*\d+\s*$/, ""));
     const paymentDate = parseDate(feeGet(row, "dop"));
     const amountPaid = parseImportAmount(feeGet(row, "amtpaid"));
     const mrNo = normalizeReceiptNumber(feeGet(row, "mrno"));
