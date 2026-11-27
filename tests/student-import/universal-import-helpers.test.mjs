@@ -9,7 +9,7 @@ import {
   resolveCurrentStudentCode,
   paymentCompositeKey,
   matchStudentByIdentity
-} from "../lib/student-import/universal-import-helpers.mjs";
+} from "../../lib/student-import/universal-import-helpers.mjs";
 
 test("student code sanitizer rejects control characters instead of concatenating digits", () => {
   assert.equal(sanitizeStudentCode("6\n500"), "");
