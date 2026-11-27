@@ -1060,7 +1060,7 @@ async function finalizeFeeSummaries(rawStudentIds = [], options = {}) {
       let coursePaid = 0;
       if (hasPurpose) {
         coursePaid = items.filter(item => courseFeePurposes.has(String(item.purpose || item.type || "").trim().toLowerCase()))
-          .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+          .reduce((sum, item) => { const value = parseImportAmount(item.amount); return sum + (Number.isFinite(value) ? value : 0); }, 0);
       } else {
         const noteMatch = String(payment.note || "").match(/Fee sections:\s*([\s\S]*)$/i);
         if (noteMatch) {
