@@ -59,7 +59,7 @@ const StudentEnrollmentSchema = new mongoose.Schema({
     totalPaid: { type: Number, default: 0 },
     balanceDue: { type: Number, default: 0 },
     nextDueDate: { type: Date, default: null },
-    feeStatus: { type: String, enum: ["Paid", "Partial", "Unpaid"], default: "Unpaid" }
+    feeStatus: { type: String, enum: ["Paid", "Partial", "Unpaid", "Not Paid"], default: "Unpaid" }
   },
   sourceRowNo: Number,
   importBatchKey: { type: String, default: "" },
