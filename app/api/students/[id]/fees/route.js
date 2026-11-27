@@ -5,6 +5,8 @@ import { getSession, roleOfEmployee } from "@/lib/auth";
 import Student from "@/models/Student";
 import { normalizeStCode } from "@/lib/student-import/normalization";
 import { recalculateImportedStudentCodes } from "@/lib/student-import/import-payment-sheet";
+import StudentFeePayment from "@/models/StudentFeePayment";
+import { normalizeReceiptNumber } from "@/lib/student-import/normalization.mjs";
 
 const PaymentSchema = new mongoose.Schema({
   amount: { type: Number, required: true, min: 0 },
@@ -139,7 +141,39 @@ export async function GET(request, { params }) {
     const { id } = await params;
     if (!mongoose.Types.ObjectId.isValid(id)) return NextResponse.json({ error: "Invalid student ID." }, { status: 400 });
     const fee = await StudentFee.findOne({ studentId: id }).lean();
-    return NextResponse.json({ fee: feeSummary(fee || { totalFee: 0, discount: 0, admissionFee: 0, registrationFee: 0, payments: [] }) });
+    const student = await Student.findById(id).select("normalizedStCode regnNo enrollmentNo").lean();
+    const code = normalizeStCode(student?.normalizedStCode || student?.regnNo || student?.enrollmentNo);
+    const variants = [code];
+    if (/^\d+$/.test(code)) {
+      for (let zeroes = 1; zeroes <= 8; zeroes += 1) variants.push("0".repeat(zeroes) + code);
+      variants.push(new RegExp("^\\s*0*" + code + "(?:\\.0+)?\\s*$", "i"));
+    }
+    const importedPayments = code ? await StudentFeePayment.find({
+      $or: [{ normalizedStCode: code }, { stCode: { $in: variants } }]
+    }).select("stCode normalizedStCode mrNo paymentDate amountPaid updatedAt createdAt").lean() : [];
+    const base = feeSummary(fee || { totalFee: 0, discount: 0, admissionFee: 0, registrationFee: 0, payments: [] });
+    const legacyReceiptKeys = new Set((fee?.payments || []).map(payment => [
+      code, normalizeReceiptNumber(payment.receiptNo || payment.reference),
+      String(payment.date || "").slice(0, 10)
+    ].join("|")));
+    const importedByReceipt = new Map();
+    for (const payment of importedPayments) {
+      const receipt = normalizeReceiptNumber(payment.mrNo);
+      const date = payment.paymentDate ? new Date(payment.paymentDate).toISOString().slice(0, 10) : "";
+      const key = [normalizeStCode(payment.normalizedStCode || payment.stCode), receipt || String(payment._id), date].join("|");
+      if (receipt && legacyReceiptKeys.has(key)) continue;
+      const prior = importedByReceipt.get(key);
+      if (!prior || new Date(payment.updatedAt || payment.createdAt || 0) > new Date(prior.updatedAt || prior.createdAt || 0)) importedByReceipt.set(key, payment);
+    }
+    const importedPaid = [...importedByReceipt.values()].reduce((sum, payment) => sum + Number(payment.amountPaid || 0), 0);
+    const legacyCoursePaid = Math.max(0, Number(base.paid || 0) - Number(base.discount || 0));
+    const paid = Math.min(Number(base.courseFeeTotal || 0), Number(base.discount || 0) + legacyCoursePaid + importedPaid);
+    const due = Math.max(0, Number(base.courseFeeTotal || 0) - paid);
+    return NextResponse.json({ fee: {
+      ...base, paid, historicalPaid: paid, due,
+      totalCollected: Number(base.totalCollected || 0) + importedPaid,
+      importedPaymentRows: importedByReceipt.size
+    } });
   } catch (error) {
     return NextResponse.json({ error: "Unable to load fee details.", detail: error.message }, { status: 500 });
   }
