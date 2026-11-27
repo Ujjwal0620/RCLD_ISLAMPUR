@@ -34,7 +34,7 @@ export async function GET(req,{params}){
       ...(masterProfile?.registrations || []).map(item => item.stCode),
       ...(masterProfile?.enrollments || []).map(item => item.stCode)
     ].map(normalizeStudentCode).filter(Boolean));
-    const includeMasterPaymentScope = !masterProfile || masterCodeSet.size <= 1 || masterCodeSet.has(studentCode);
+    const includeMasterPaymentScope = !masterProfile || (masterCodeSet.size === 1 && masterCodeSet.has(studentCode));
     const codeSpecificMasterProfile = masterProfile ? {
       ...masterProfile,
       normalizedStCodes: studentCode ? [studentCode] : [],
