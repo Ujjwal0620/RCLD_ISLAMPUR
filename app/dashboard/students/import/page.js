@@ -7,7 +7,7 @@ import ERPLayout from "@/components/ERPLayout";
 import BulkStudentPhotoUploadDialog from "@/components/students/BulkStudentPhotoUploadDialog";
 import { useErpCache, useErpToast } from "@/components/providers/ERPUIProvider";
 import { normalizeIndianPhones } from "@/lib/student-import/identity-resolution.mjs";
-import { normalizeStudentCode, normalizeImportName, parseImportAmount, normalizeReceiptNumber } from "@/lib/student-import/normalization.mjs";
+import { normalizeStudentCode, normalizeImportName, parseImportAmount, normalizeReceiptNumber, makeReceiptBusinessKey } from "@/lib/student-import/normalization.mjs";
 
 const clean = value => String(value ?? "").replace(/[\u200B-\u200D\uFEFF]/g, "").replace(/\u00A0/g, " ").trim();
 const headerKey = value => clean(value).toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -546,12 +546,41 @@ export default function BulkImportPage() {
 
       setProgress({ stage: "Phase 3 · Finalizing Fee Summaries", percent: 94, done: 0, total: checkpoint.studentIds.length, message: "Recalculating totals for affected Master Students" });
       checkpoint.failedPhase = "finalize"; checkpoint.failedChunk = 1; saveCheckpoint();
-      const finalized = await postBatch({ action: "finalize", phase: "finalize", studentIds: checkpoint.studentIds, studentCodes: preview.profiles.map(profile => profile.studentCodes?.[0]).filter(Boolean), batchKey: preview.batchKey, expectedPaymentRows: preview.feeRows.length, expectedPaymentTotal: preview.matchedPaymentAmount, sourcePaymentRows: preview.paymentRowsRead, sourcePaymentTotal: preview.paymentAmountRead });
+      const expectedSourceRowsByKey = new Map(preview.feeRows.map(row => {
+        const businessKey = makeReceiptBusinessKey(row.stCode, row.mrNo, row.paymentDate, row.amountPaid);
+        const sourceRowKey = [preview.batchKey, row.sourceSheet, Number(row.rowNo || 0), businessKey].join("|");
+        return [sourceRowKey, row];
+      }));
+      const finalized = await postBatch({
+        action: "finalize", phase: "finalize", studentIds: checkpoint.studentIds,
+        studentCodes: preview.profiles.map(profile => profile.studentCodes?.[0]).filter(Boolean),
+        batchKey: preview.batchKey, expectedPaymentRows: preview.feeRows.length,
+        expectedPaymentTotal: preview.matchedPaymentAmount,
+        expectedSourceRowKeys: [...expectedSourceRowsByKey.keys()],
+        sourcePaymentRows: preview.paymentRowsRead, sourcePaymentTotal: preview.paymentAmountRead
+      });
       checkpoint.failedPhase = null; checkpoint.failedChunk = null;
       checkpoint.percent = 100;
       checkpoint.complete = true;
       saveCheckpoint();
-      const finalUnmatchedPayments = [...preview.unmatchedPayments, ...(checkpoint.summary.unmatchedPayments || [])];
+      const alreadyReportedPaymentRows = new Set([
+        ...preview.unmatchedPayments,
+        ...(checkpoint.summary.unmatchedPayments || [])
+      ].map(item => [item.sheet || preview.feeSheetName, String(item.row || ""), normalizeStudentCode(item.stCode), normalizeReceiptNumber(item.mrNo)].join("|")));
+      const missingSourceRows = (finalized.missingSourceRowKeys || [])
+        .map(key => expectedSourceRowsByKey.get(key))
+        .filter(Boolean)
+        .map(row => ({
+          sheet: row.sourceSheet, row: row.rowNo, stCode: row.stCode, name: row.cleanName,
+          amountPaid: row.amountPaid, mrNo: row.mrNo, paymentDate: row.paymentDate,
+          reason: "The receipt was not found in MongoDB during final source-row verification."
+        }))
+        .filter(item => !alreadyReportedPaymentRows.has([item.sheet, String(item.row), normalizeStudentCode(item.stCode), normalizeReceiptNumber(item.mrNo)].join("|")));
+      const finalUnmatchedPayments = [
+        ...preview.unmatchedPayments,
+        ...(checkpoint.summary.unmatchedPayments || []),
+        ...missingSourceRows
+      ];
       const finalUnmatchedPaymentTotal = finalUnmatchedPayments.reduce((sum, item) => {
         const amount = parseImportAmount(item.amountPaid);
         return sum + (Number.isFinite(amount) ? amount : 0);
@@ -568,7 +597,7 @@ export default function BulkImportPage() {
         existingReceiptsUpdatedOrSkipped: checkpoint.summary.existingReceiptsUpdatedOrSkipped,
         duplicateReceiptsSkipped: checkpoint.summary.duplicateReceiptsSkipped,
         existingReceiptsUpdated: checkpoint.summary.existingReceiptsUpdated,
-        unmatchedRows: [...preview.warnings, ...preview.unmatchedPayments, ...checkpoint.summary.warnings],
+        unmatchedRows: [...preview.warnings, ...preview.unmatchedPayments, ...checkpoint.summary.warnings, ...missingSourceRows],
         unmatchedPayments: finalUnmatchedPayments,
         studentRowsRead: preview.studentRowsRead,
         studentRowsValid: preview.studentRowsValid,
