@@ -600,6 +600,7 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
           || value?.cause?.writeErrors
           || [];
         const writeErrors = extractWriteErrors(error);
+        if (!writeErrors.length && Number(error.code) === 11000) writeErrors.push({ ...error, index: 0 });
         const onlyDuplicates = error.code === 11000
           || (writeErrors.length > 0 && writeErrors.every(item => Number(item.code || item.err?.code) === 11000));
         if (!onlyDuplicates) throw error;
@@ -691,6 +692,7 @@ async function syncStudentGroups(groups = [], onPhase = () => {}) {
               await Model.insertMany(missing, { ordered: false });
             } catch (retryError) {
               const retryErrors = extractWriteErrors(retryError);
+              if (!retryErrors.length && Number(retryError.code) === 11000) retryErrors.push({ ...retryError, index: 0 });
               const duplicateRetryOnly = retryError.code === 11000
                 || (retryErrors.length > 0 && retryErrors.every(item => Number(item.code || item.err?.code) === 11000));
               if (!duplicateRetryOnly) throw retryError;
@@ -1652,7 +1654,17 @@ export async function POST(request) {
     }
     return NextResponse.json({ error: "Unsupported import batch action." }, { status: 400 });
   } catch (error) {
-    console.error("[unified-student-import]", error);
-    return NextResponse.json({ error: "Unified workbook batch failed.", detail: error.message }, { status: 500 });
+    console.error("[unified-student-import]", {
+      message: error.message,
+      code: error.code || null,
+      unresolved: error.unresolved || [],
+      stack: error.stack
+    });
+    return NextResponse.json({
+      error: "Unified workbook batch failed.",
+      detail: error.message,
+      code: error.code || null,
+      diagnostics: error.unresolved || []
+    }, { status: 500 });
   }
 }
