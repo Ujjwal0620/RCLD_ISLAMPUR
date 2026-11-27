@@ -1,10 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import { Save } from "lucide-react";
 import StudentPaymentMetadataFields from "@/components/students/profile/fee-workspace/StudentPaymentMetadataFields";
 import StudentPaymentItemsEditor from "@/components/students/profile/fee-workspace/StudentPaymentItemsEditor";
 
 export default function StudentPaymentEntrySection({ feeForm, setFeeForm, paymentItems, setPaymentItems, saveFees, proofUploading, uploadPaymentProof }) {
+  const [localProofUploading, setLocalProofUploading] = useState(false);
+  const [proofMessage, setProofMessage] = useState("");
+  const isProofUploading = Boolean(proofUploading || localProofUploading);
   return (
     <section className="fee-modal-section">
                               <div className="fee-modal-section-heading">
@@ -31,15 +35,15 @@ export default function StudentPaymentEntrySection({ feeForm, setFeeForm, paymen
                                     <input
                                       type="file"
                                       accept="image/*"
-                                      disabled={proofUploading}
+                                      disabled={isProofUploading}
                                       onChange={async (e) => {
                                         const file = e.target.files?.[0];
                                         if (!file) return;
                                           if (file.size > 5 * 1024 * 1024) {
-                                          setMessage("Payment screenshot must be smaller than 5 MB.");
+                                          setProofMessage("Payment screenshot must be smaller than 5 MB.");
                                           return;
                                         }
-                                        setProofUploading(true);
+                                        setLocalProofUploading(true);
                                         try {
                                           const fd = new FormData();
                                           fd.append("file", file);
@@ -52,11 +56,11 @@ export default function StudentPaymentEntrySection({ feeForm, setFeeForm, paymen
                                           if (!up.ok)
                                             throw new Error(ud.error || "Unable to upload screenshot.");
                                           setFeeForm((f) => ({ ...f, screenshotUrl: ud.url }));
-                                          setMessage("Payment screenshot uploaded.");
+                                          setProofMessage("Payment screenshot uploaded.");
                                         } catch (err) {
-                                          setMessage(err.message);
+                                          setProofMessage(err.message);
                                         } finally {
-                                          setProofUploading(false);
+                                          setLocalProofUploading(false);
                                         }
                                       }}
                                     />
@@ -67,10 +71,11 @@ export default function StudentPaymentEntrySection({ feeForm, setFeeForm, paymen
                                     )}
                                   </label>
                                 </div>
+                                {proofMessage && <p className="form-hint" role="status">{proofMessage}</p>}
                                 <div className="fee-modal-actions">
-                                  <button className="primary-btn operation-btn" disabled={proofUploading}>
+                                  <button className="primary-btn operation-btn" disabled={isProofUploading}>
                                     <Save size={16} />
-                                    {proofUploading ? "Uploading…" : "Save Payment Entry"}
+                                    {isProofUploading ? "Uploading…" : "Save Payment Entry"}
                                   </button>
                                 </div>
                               </form>
