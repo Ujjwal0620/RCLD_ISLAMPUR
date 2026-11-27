@@ -1789,7 +1789,8 @@ export async function POST(request) {
       error: "Unified workbook batch failed.",
       detail: error.message,
       code: error.code || null,
-      diagnostics: error.unresolved || []
+      diagnostics: error.unresolved || [],
+      mongoWriteErrors: error.writeErrors || []
     }, { status: 500 });
   }
 }
