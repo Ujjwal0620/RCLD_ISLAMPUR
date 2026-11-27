@@ -5,6 +5,10 @@ const StudentSchema = new mongoose.Schema({
   aecCode: String,
   regnNo: { type: String, trim: true },
   normalizedStCode: { type: String, default: "", trim: true, index: true },
+  previousCodes: { type: [String], default: [], index: true },
+  allRegistrationCodes: { type: [String], default: [], index: true },
+  codeUpdatedAt: { type: Date, default: null },
+  codeSourceDate: { type: Date, default: null },
   totalFee: { type: Number, default: 0 },
   totalPaid: { type: Number, default: 0 },
   feeStatus: { type: String, enum: ["Paid", "Partial", "Not Paid"], default: "Not Paid" },
@@ -78,21 +82,20 @@ const StudentSchema = new mongoose.Schema({
   signatureUrl: String,
   photoUrl: String,
   hasPhoto: { type: Boolean, default: false },
-  idCardNo: String, // Legacy compatibility for existing ID-card templates and records.
+  idCardNo: String,
   idCardNumber: { type: String, default: null, trim: true },
   isIdDownloaded: { type: Boolean, default: false },
-  isDownloaded: { type: Boolean, default: false }, // Legacy UI compatibility.
+  isDownloaded: { type: Boolean, default: false },
   idIssuedAt: { type: Date, default: null },
   lastDownloadedAt: { type: Date, default: null },
   currentSemester: Number,
   semesterStatus: { type: String, default: "Not Started" },
   semesterHistory: { type: [mongoose.Schema.Types.Mixed], default: [] },
-  status: { type: String, default: "Admission Pending" }
+  status: { type: String, default: "Admission Pending" },
+  importBatchId: { type: String, default: "", index: true }
 }, { timestamps: true });
 
-// Fast registration-code lookups used by safe bulk-import matching.
 StudentSchema.index({ regnNo: 1 });
-
 StudentSchema.index({ enrollmentNo: 1 }, {
   unique: true,
   partialFilterExpression: { enrollmentNo: { $type: "string", $gt: "" } }
