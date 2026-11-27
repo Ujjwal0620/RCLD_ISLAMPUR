@@ -91,7 +91,14 @@ function normalizeStudentRow(row, headers, columns, rowNo, sheetName) {
     admissionDate, course: cleanImportText(value("course")),
     totalPaid: Number.isFinite(parseImportAmount(value("totalPaid"))) ? parseImportAmount(value("totalPaid")) : null,
     matchedPayments: value("matchedPayments"),
-    primaryCode, codes: allCodes, warnings, payments: tallPayments
+    primaryCode, codes: allCodes, warnings, payments: tallPayments,
+    registrations: primaryCode ? [{
+      stCode: primaryCode, course: cleanImportText(value("course")),
+      admissionDate, formNo: cleanImportText(value("formNo")).replace(/\\.0+$/, ""),
+      qualification: cleanImportText(value("qualification")),
+      address: normalizeImportAddress(value("address")),
+      earliestPaymentDate: null
+    }] : []
   };
 }
 
@@ -174,6 +181,14 @@ export async function POST(request) {
       else {
         previous.codes = [...new Set([...previous.codes, ...profile.codes])];
         previous.payments.push(...profile.payments);
+        const registrationKeys = new Set((previous.registrations || []).map(item => [item.stCode, normalizeImportName(item.course), dateISO(item.admissionDate)].join("|")));
+        for (const registration of profile.registrations || []) {
+          const key = [registration.stCode, normalizeImportName(registration.course), dateISO(registration.admissionDate)].join("|");
+          if (!registrationKeys.has(key)) {
+            previous.registrations = [...(previous.registrations || []), registration];
+            registrationKeys.add(key);
+          }
+        }
         for (const field of ["fatherName", "dob", "sex", "phone", "address", "qualification", "formNo", "admissionDate", "course"]) {
           if (!previous[field] && profile[field]) previous[field] = profile[field];
         }
@@ -295,7 +310,7 @@ export async function POST(request) {
         incomingPrimaryCode: group.primaryCode,
         allRegistrationCodes: group.codes,
         paymentRecords: group.payments.map(item => ({ sourceCode: item.sourceCode, paymentDate: item.paymentDate })),
-        admissionRecords: group.admissionDate ? [{ code: group.primaryCode, admissionDate: group.admissionDate }] : [],
+        admissionRecords: (group.registrations || []).filter(item => item.admissionDate).map(item => ({ code: item.stCode, admissionDate: item.admissionDate })),
         existingTimeline: timeline
       });
       const codeSet = new Set(group.codes);
@@ -322,7 +337,7 @@ export async function POST(request) {
         action, matchedMasterId: matchedMaster?._id || null, matchedLegacyStudentId: matchedLegacy?._id || null,
         resolvedCurrentCode: resolution.currentCode, codeHistory: resolution.previousCodes,
         codeSourceDate: resolution.sourceDate, student: group,
-        registrations: group.course ? [{ stCode: resolution.currentCode || group.primaryCode, course: group.course, admissionDate: group.admissionDate, formNo: group.formNo, qualification: group.qualification, address: group.address }] : [],
+        registrations: (group.registrations || []).map(item => ({ ...item })),
         payments: group.payments, warnings: groupWarnings, conflicts: match.conflicts || []
       });
     }
