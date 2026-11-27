@@ -414,6 +414,7 @@ export default function BulkImportPage() {
       const payload = buildWorkbookPayload(workbook);
       const digest = await crypto.subtle.digest("SHA-256", fileBuffer);
       const fingerprint = [...new Uint8Array(digest)].map(value => value.toString(16).padStart(2, "0")).join("");
+      payload.fingerprint = fingerprint;
       payload.batchKey = "RCLD_UNIFIED_" + fingerprint;
       let savedCheckpoint = null;
       try {
@@ -443,7 +444,7 @@ export default function BulkImportPage() {
 
   async function runImport(resume = false) {
     if (!preview || busy || runningRef.current) return;
-    const fingerprint = [file?.name, file?.size, file?.lastModified].join("|");
+    const fingerprint = preview.fingerprint || preview.batchKey?.replace(/^RCLD_UNIFIED_/, "") || "";
     let checkpoint = resume ? checkpointRef.current : null;
     if (!resume && !window.confirm(
       "Import this workbook in automatic chunks?\\n\\n" +
