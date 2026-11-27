@@ -316,7 +316,7 @@ export async function POST(request) {
       });
       const codeSet = new Set(group.codes);
       const validPayments = group.payments.filter(payment =>
-        Boolean(text(payment.mrNo)) &&
+        Boolean(cleanImportText(payment.mrNo)) &&
         Number.isFinite(Number(payment.amountPaid)) && Number(payment.amountPaid) >= 0 &&
         Boolean(payment.paymentDate)
       );
