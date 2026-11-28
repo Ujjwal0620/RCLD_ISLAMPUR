@@ -5,12 +5,18 @@ import {
 } from "@/features/students/print/printStudentICard";
 import { printStudentForm as printStudentFormAction } from "@/features/students/print/printStudentForm";
 import { printStudentBill } from "@/features/students/print/printStudentBill";
+import { downloadDiplomaStudentIcardJpg } from "@/features/students/print/printTemplateStudentIcard";
+import { isCodingForKidsCourse } from "@/lib/student-icard/courseRouting.mjs";
 
 export default function useStudentPrint({ student, fee, courses, setMessage }) {
   const printStudentICard = (selectedSemester = "", outputMode = "print", selectedTemplate = "") =>
     printStudentICardAction(student, setMessage, selectedSemester, outputMode, selectedTemplate);
-  const downloadStudentICardJpg = () =>
-    printStudentICardAction(student, setMessage, "", "jpg");
+  const downloadStudentICardJpg = () => {
+    if (isCodingForKidsCourse(student)) {
+      return printStudentICardAction(student, setMessage, "", "jpg");
+    }
+    return downloadDiplomaStudentIcardJpg({ student, setMessage });
+  };
   const printStudentForm = () => printStudentFormAction(student);
   const printBill = (selectedPayment = null) =>
     printStudentBill(student, fee, courses, selectedPayment);
