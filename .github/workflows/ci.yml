@@ -20,8 +20,8 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
       - name: Run ESLint
-        run: npx eslint "app/dashboard/students/[id]/page.js" "app/dashboard/students/icards/page.js" "app/api/students/route.js" "app/api/batches/[id]/notes/route.js" "app/api/students/import" components/students/profile components/students/UniversalWorkbookImport.js features/students/hooks features/students/print models/ImportLog.js models/StudentImportStaging.js models/StudentImportPaymentClaim.js tests/student-import/universal-import-helpers.test.mjs lib/student-import
+        run: npx eslint "app/dashboard/students/[id]/page.js" "app/dashboard/students/icards/page.js" "app/api/students/route.js" "app/api/batches/[id]/notes/route.js" "app/api/students/import" components/students/profile components/students/UniversalWorkbookImport.js features/students/hooks features/students/print lib/student-icard tests/student-icard models/ImportLog.js models/StudentImportStaging.js models/StudentImportPaymentClaim.js tests/student-import/universal-import-helpers.test.mjs lib/student-import
       - name: Run student import unit tests
-        run: node --test tests/student-import/*.test.mjs
+        run: node --test tests/student-import/*.test.mjs tests/student-icard/*.test.mjs
       - name: Build Next.js application
         run: npm run build
