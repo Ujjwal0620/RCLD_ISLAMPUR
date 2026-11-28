@@ -19,7 +19,6 @@ import StudentAcademicDetails from "@/components/students/profile/StudentAcademi
 import useStudentProfile from "@/features/students/hooks/useStudentProfile";
 import indiaLocations from "@/lib/indiaStatesDistricts.json";
 import { isIcardEligible } from "@/features/students/utils/studentProfile";
-import { isCodingForKidsCourse } from "@/lib/student-icard/courseRouting.mjs";
 import { formatDisplayValue as value } from "@/lib/formatters";
 import { useEffect, useState } from "react";
 import { useErpCache, useErpToast } from "@/components/providers/ERPUIProvider";
@@ -32,7 +31,7 @@ export default function StudentDetailsPage({ params }) {
     editing, setEditing, editForm, setEditForm, history, setHistory, contactLogs,
     transition, setTransition, transitioning, setTransitioning, icardDialogOpen,
     setIcardDialogOpen, semesterBusy, updateCfkSemester, saveStudent, deleteStudent,
-    saveFees, uploadPaymentProof, uploadStudentPhoto, photoUploading, printStudentICard, printStudentForm, printBill,
+    saveFees, uploadPaymentProof, uploadStudentPhoto, photoUploading, printStudentICard, downloadStudentICardJpg, printStudentForm, printBill,
     saveAttendance,
   } = useStudentProfile(params);
   const [icardOutputMode, setIcardOutputMode] = useState("print");
@@ -79,13 +78,17 @@ export default function StudentDetailsPage({ params }) {
       {student && (
         <main className="student-details student-profile-page">
           <CodingForKidsIcardDialog
-            open={icardDialogOpen && isCodingForKidsCourse(student)}
+            open={icardDialogOpen}
             student={student}
             mode={icardOutputMode}
             onClose={() => setIcardDialogOpen(false)}
             onSelect={(templateName, _records, mode) => {
               setIcardDialogOpen(false);
-              printStudentICard("", mode || icardOutputMode, templateName);
+              if (mode === "jpg" || icardOutputMode === "jpg") {
+                downloadStudentICardJpg();
+              } else {
+                printStudentICard("", mode || icardOutputMode, templateName);
+              }
             }}
           />
           <StudentEditPanel
