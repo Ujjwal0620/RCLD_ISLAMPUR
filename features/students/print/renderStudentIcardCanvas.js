@@ -1,3 +1,5 @@
+import { renderDiplomaIdCard } from "@/features/students/print/renderDiplomaIdCard";
+import { isCodingForKidsCourse } from "@/lib/student-icard/courseRouting.mjs";
 const FONT_FAMILY = '"Arial Narrow", "Liberation Sans Narrow", "Roboto Condensed", sans-serif';
 const TEMPLATE_ROOT = "/api/icard-templates/";
 const templateImageCache = new Map();
@@ -228,6 +230,9 @@ export async function renderStudentIcardCanvas(student, templateName, fallbackIn
   if (!student || !templateName || templateName.includes("/") || templateName.includes(String.fromCharCode(92))) {
     throw new Error("A student and valid ID-card template are required.");
   }
+  if (templateName.toLowerCase() === "id card diploma.jpg") {
+    return await renderDiplomaIdCard(null, student);
+  }
   await document.fonts.ready;
   await document.fonts.load('700 92px "Arial Narrow"').catch(() => []);
   await document.fonts.load('600 42px "Roboto Condensed"').catch(() => []);
@@ -364,37 +369,13 @@ export async function exportStudentIcards({ students, templateName, outputMode =
 
 export function getRecommendedIcardTemplate(student, templates) {
   if (!Array.isArray(templates) || !templates.length) return "";
-  const course = String(firstValue(student?.courseName, student?.courseCode, student?.sourceCourseLabel, "")).toLowerCase();
-  const candidates = [
-    student?.semesterLabel,
-    student?.semester,
-    student?.activeSemester,
-    student?.currentSemester,
-    student?.courseCode,
-    student?.sourceCourseLabel,
-    student?.courseName,
-  ].map(value => String(value ?? "").trim()).filter(Boolean);
-  const explicitSemester = candidates.find(value => /(?:SM|SEM(?:ESTER)?)\s*[-_ ]?\s*(?:VI|IV|V|III|II|I|[1-6])\b/i.test(value));
-  const numericSemester = candidates.find(value => /^(?:VI|IV|V|III|II|I|[1-6])$/i.test(value));
-  const semesterSource = explicitSemester || numericSemester || "";
-  const romanMap = { i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6 };
-  const semesterMatch = semesterSource.match(/(?:SM|SEM(?:ESTER)?)\s*[-_ ]?\s*(VI|IV|V|III|II|I|[1-6])\b/i)
-    || semesterSource.match(/^(VI|IV|V|III|II|I|[1-6])$/i);
-  const token = semesterMatch?.[1] || "";
-  const semester = token ? (romanMap[token.toLowerCase()] || Number(token)) : 0;
-  let expected = "";
-
-  if (/robotics/.test(course)) {
-    const courseYear = Number(course.match(/([1-3])(?:st|nd|rd)?\s*year/i)?.[1] || 0);
-    const year = Number(firstValue(student?.roboticsYear, student?.courseYear, student?.yearOfCourse, courseYear || semester || 1));
-    const safeYear = Math.min(3, Math.max(1, Number.isFinite(year) ? year : 1));
-    expected = "ID Card Robotics " + safeYear + (safeYear === 1 ? "st" : safeYear === 2 ? "nd" : "rd") + " year.jpg";
-  } else if (/coding\s*for\s*kids|\bkids\b/.test(course) || explicitSemester) {
-    expected = `ID Card Sem-${Math.min(6, Math.max(1, semester || 1))}.jpg`;
-  } else if (/school/.test(course)) {
-    expected = "ID Card School Course.jpg";
-  } else {
-    expected = "ID Card Diploma.jpg";
+  if (!isCodingForKidsCourse(student)) {
+    return templates.includes("ID Card Diploma.jpg")
+      ? "ID Card Diploma.jpg"
+      : templates.find(name => /diploma/i.test(name)) || "";
   }
-  return templates.includes(expected) ? expected : templates[0];
+  const semesterRaw = student?.currentSemester ?? student?.semester ?? student?.activeSemester ?? 1;
+  const semester = Math.min(6, Math.max(1, Number(String(semesterRaw).match(/\d+/)?.[0] || 1)));
+  const expected = "ID Card Sem-" + semester + ".jpg";
+  return templates.includes(expected) ? expected : templates.find(name => /sem[-_ ]?1/i.test(name)) || templates[0];
 }
