@@ -1,6 +1,7 @@
 "use client";
 
 import { isIcardEligible } from "@/features/students/utils/studentProfile";
+import { isCodingForKidsCourse } from "@/lib/student-icard/courseRouting.mjs";
 import { toJpeg } from "html-to-image";
 import { getStudentIcardStyles } from "@/features/students/print/studentIcardStyles";
 import {
@@ -23,8 +24,16 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
     return;
   }
 
-  if (selectedTemplate) {
-    return await printTemplateStudentIcard({ student, templateName: selectedTemplate, outputMode, setMessage, onStudentUpdated });
+  // Every non-Coding-for-Kids course uses the Diploma template automatically.
+  // Coding for Kids continues below through its original semester-aware HTML renderer.
+  if (!isCodingForKidsCourse(student)) {
+    return await printTemplateStudentIcard({
+      student,
+      templateName: "ID Card Diploma.jpg",
+      outputMode,
+      setMessage,
+      onStudentUpdated,
+    });
   }
 
   // ---------- Institute and print settings ----------
@@ -40,7 +49,7 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
 
   const firstNonEmpty = (...values) => values.find((value) => value !== null && value !== undefined && String(value).trim() !== "");
   const courseText = String(firstNonEmpty(student.courseName, student.course?.name, student.courseCode, "")).trim();
-  const isCFK = /coding\s*for\s*kids|\bCFK\b|\bKIDS\b/i.test(courseText);
+  const isCFK = isCodingForKidsCourse(student);
   const semesterRaw = firstNonEmpty(student.currentSemester, student.semester, student.activeSemester, 1);
   const semesterNumber = Number(String(semesterRaw).match(/\d+/)?.[0] || 1);
   const activeSemester = isCFK
