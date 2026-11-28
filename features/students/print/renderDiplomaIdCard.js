@@ -162,9 +162,12 @@ function getCourseName(student) {
 }
 
 function titleCase(value) {
-  return String(value || "").trim().toLocaleLowerCase().replace(/(^|[\s'-])([a-z])/g, (_, prefix, letter) => prefix + letter.toLocaleUpperCase());
+  const smallWords = new Set(["in", "of", "for", "and", "on", "to"]);
+  return String(value || "").trim().toLocaleLowerCase().split(/\s+/).map((word, index) => {
+    if (index > 0 && smallWords.has(word)) return word;
+    return word ? word[0].toLocaleUpperCase() + word.slice(1) : word;
+  }).join(" ");
 }
-
 function roundRectPath(ctx, x, y, width, height, radius) {
   const r = Math.min(radius, width / 2, height / 2);
   ctx.beginPath();
