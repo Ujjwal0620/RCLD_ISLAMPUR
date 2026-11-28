@@ -6,6 +6,7 @@ import {
   getRecommendedIcardTemplate,
   renderStudentIcardCanvas,
 } from "@/features/students/print/renderStudentIcardCanvas";
+import { isCodingForKidsCourse } from "@/lib/student-icard/courseRouting.mjs";
 
 const titleFor = name => name.replace(/\.(jpe?g|png)$/i, "").replace(/\bsem-(\d+)/i, "Semester $1");
 
@@ -40,7 +41,10 @@ export default function CodingForKidsIcardDialog({
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Unable to load templates.");
         if (cancelled) return;
-        const available = data.templates || [];
+        const allTemplates = data.templates || [];
+        const available = isCodingForKidsCourse(previewStudent)
+          ? allTemplates
+          : allTemplates.filter(template => template === "ID Card Diploma.jpg");
         setTemplates(available);
         setSelectedTemplate(getRecommendedIcardTemplate(previewStudent, available));
       })
