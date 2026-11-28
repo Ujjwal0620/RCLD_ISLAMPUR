@@ -4,7 +4,7 @@ const DIPLOMA_HEIGHT_300_DPI = Math.round((85.6 / 25.4) * 300);
 
 export const DIPLOMA_ID_LAYOUT = {
   registration: {
-    x: 0.203, line1Y: 0.077, line2Y: 0.117,
+    x: 0.203, line1Y: 0.077, line2Y: 0.117, singleY: 0.097,
     line1Font: 0.0265, line2Font: 0.037,
     color: "#111111",
   },
@@ -12,7 +12,7 @@ export const DIPLOMA_ID_LAYOUT = {
   idCard: { x: 0.824, y: 0.145, font: 0.0265, color: "#111111" },
   photo: { x: 0.326, y: 0.331, width: 0.348, height: 0.266, radius: 0.022, border: "#3C3378", borderWidth: 0.0075 },
   details: {
-    x: 0.309, maxWidth: 0.65,
+    x: 0.309, maxWidth: 0.65, courseMaxWidth: 0.47,
     nameY: 0.638, nameFont: 0.031, nameMinFont: 0.022,
     fatherY: 0.673, fatherFont: 0.024, fatherMinFont: 0.019,
     addressY: 0.702, addressFont: 0.0235, addressMinFont: 0.0185, addressLineHeight: 0.028,
@@ -264,7 +264,7 @@ function drawDiplomaText(ctx, student, W, H) {
     ctx.fillText(registration.slice(slash + 1), reg.x * W, reg.line2Y * H);
   } else if (registration) {
     setSerif(ctx, "bold", reg.line1Font * H);
-    ctx.fillText(registration, reg.x * W, 0.097 * H);
+    ctx.fillText(registration, reg.x * W, reg.singleY * H);
   }
 
   const session = getSession(student);
@@ -329,7 +329,7 @@ function drawDiplomaText(ctx, student, W, H) {
 
   const course = getCourseName(student);
   if (course) {
-    const courseMaxWidth = Math.min(maxWidth, W * 0.47);
+    const courseMaxWidth = Math.min(maxWidth, W * d.courseMaxWidth);
     const size = fitText(ctx, course, d.courseFont * H, d.courseFont * H * 0.78, courseMaxWidth, "bold");
     setSerif(ctx, "bold", size);
     ctx.fillText(course, x, d.courseY * H, courseMaxWidth);
