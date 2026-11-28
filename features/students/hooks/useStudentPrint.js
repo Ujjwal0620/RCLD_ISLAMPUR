@@ -11,9 +11,9 @@ import { isCodingForKidsCourse } from "@/lib/student-icard/courseRouting.mjs";
 export default function useStudentPrint({ student, fee, courses, setMessage }) {
   const printStudentICard = (selectedSemester = "", outputMode = "print", selectedTemplate = "") =>
     printStudentICardAction(student, setMessage, selectedSemester, outputMode, selectedTemplate);
-  const downloadStudentICardJpg = () => {
+  const downloadStudentICardJpg = (selectedTemplate = "") => {
     if (isCodingForKidsCourse(student)) {
-      return printStudentICardAction(student, setMessage, "", "jpg");
+      return printStudentICardAction(student, setMessage, "", "jpg", selectedTemplate);
     }
     return downloadDiplomaStudentIcardJpg({ student, setMessage });
   };
