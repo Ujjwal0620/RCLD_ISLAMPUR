@@ -329,7 +329,7 @@ function drawDiplomaText(ctx, student, W, H) {
 
   const course = getCourseName(student);
   if (course) {
-    const courseMaxWidth = Math.min(maxWidth, W * 0.55);
+    const courseMaxWidth = Math.min(maxWidth, W * 0.47);
     const size = fitText(ctx, course, d.courseFont * H, d.courseFont * H * 0.78, courseMaxWidth, "bold");
     setSerif(ctx, "bold", size);
     ctx.fillText(course, x, d.courseY * H, courseMaxWidth);
