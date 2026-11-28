@@ -85,7 +85,7 @@ export default function StudentDetailsPage({ params }) {
             onSelect={(templateName, _records, mode) => {
               setIcardDialogOpen(false);
               if (mode === "jpg" || icardOutputMode === "jpg") {
-                downloadStudentICardJpg();
+                downloadStudentICardJpg(templateName);
               } else {
                 printStudentICard("", mode || icardOutputMode, templateName);
               }
