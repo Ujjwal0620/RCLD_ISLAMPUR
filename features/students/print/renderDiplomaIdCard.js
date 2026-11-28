@@ -124,29 +124,36 @@ function getPhotoUrl(student) {
 function getAddress(student) {
   const raw = firstValue(student.presentAddress, student.address, student.completeAddress, student.fullAddress, student.applicantAddress, student.permanentAddress, "");
   const parts = [];
+  const normalize = value => String(value || "").toLocaleLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   const add = value => {
     const text = String(value ?? "").trim();
-    if (text && !parts.some(item => item.toLowerCase() === text.toLowerCase())) parts.push(text);
+    if (!text) return;
+    const normalized = normalize(text);
+    if (parts.some(item => {
+      const existing = normalize(item);
+      return existing === normalized || existing.includes(normalized) || normalized.includes(existing);
+    })) return;
+    parts.push(text);
   };
+
   if (typeof raw === "string") add(raw);
   else if (raw && typeof raw === "object") {
-    ["village", "vill", "ward", "po", "postOffice", "ps", "policeStation", "nearestLandmark", "district", "state", "pin", "pincode"].forEach(key => add(raw[key]));
+    ["village", "vill", "ward", "po", "postOffice", "ps", "policeStation", "nearestLandmark", "district", "state", "pin", "pincode"]
+      .forEach(key => add(raw[key]));
   }
-  if (typeof raw !== "object" || !raw) {
-    add(student.village || student.vill || student.ward);
-    const po = firstValue(student.po, student.postOffice);
-    const ps = firstValue(student.ps, student.policeStation);
-    if (po) add("P.O. " + po);
-    if (ps) add("P.S. " + ps);
-    add(student.nearestLandmark);
-    const district = firstValue(student.district, student.permanentDistrict);
-    if (district) add("DIST. " + district);
-    add(firstValue(student.state, student.permanentState));
-    add(firstValue(student.pin, student.pincode, student.permanentPin));
-  }
+
+  add(student.village || student.vill || student.ward);
+  const po = firstValue(student.po, student.postOffice);
+  const ps = firstValue(student.ps, student.policeStation);
+  if (po) add("P.O. " + po);
+  if (ps) add("P.S. " + ps);
+  add(student.nearestLandmark);
+  const district = firstValue(student.district, student.permanentDistrict);
+  if (district) add("DIST. " + district);
+  add(firstValue(student.state, student.permanentState));
+  add(firstValue(student.pin, student.pincode, student.permanentPin));
   return parts.join(", ").replace(/\s+/g, " ").trim().toLocaleUpperCase();
 }
-
 function getCourseName(student) {
   const courseObject = student.course && typeof student.course === "object" ? student.course : {};
   const enrollment = student.activeEnrollment || student.currentEnrollment || {};
