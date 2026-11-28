@@ -164,7 +164,11 @@ function getCourseName(student) {
   )).trim();
   const code = String(firstValue(student.courseCode, courseObject.code, enrollment.courseCode, "")).trim().toUpperCase();
   const key = raw.toUpperCase().replace(/[^A-Z0-9]/g, "");
-  const mapped = COURSE_FULL_NAME_MAP[code] || COURSE_FULL_NAME_MAP[key];
+  const courseCodePattern = /^(ADCA|DCST|DCAP|DHNT|DCPP|DWPD|CCA|DCA|CCC|CAO|DOM)/;
+  const codePrefix = code.match(courseCodePattern)?.[1] || "";
+  const namePrefix = key.match(courseCodePattern)?.[1] || "";
+  const mapped = COURSE_FULL_NAME_MAP[code] || COURSE_FULL_NAME_MAP[key]
+    || COURSE_FULL_NAME_MAP[codePrefix] || COURSE_FULL_NAME_MAP[namePrefix];
   return titleCase(mapped || raw);
 }
 
