@@ -6,6 +6,7 @@ import StudentProfileHeader from "@/components/students/profile/StudentProfileHe
 import StudentProfileHero from "@/components/students/profile/StudentProfileHero";
 import StudentIdentityHistory from "@/components/students/profile/StudentIdentityHistory";
 import CodingForKidsSemesterPanel from "@/components/students/profile/CodingForKidsSemesterPanel";
+import CodingForKidsIcardDialog from "@/components/students/profile/CodingForKidsIcardDialog";
 import StudentEditPanel from "@/components/students/profile/StudentEditPanel";
 import StudentFeeWorkspace from "@/components/students/profile/StudentFeeWorkspace";
 import StudentAttendanceSection from "@/components/students/profile/StudentAttendanceSection";
@@ -18,6 +19,7 @@ import StudentAcademicDetails from "@/components/students/profile/StudentAcademi
 import useStudentProfile from "@/features/students/hooks/useStudentProfile";
 import indiaLocations from "@/lib/indiaStatesDistricts.json";
 import { isIcardEligible } from "@/features/students/utils/studentProfile";
+import { isCodingForKidsCourse } from "@/lib/student-icard/courseRouting.mjs";
 import { formatDisplayValue as value } from "@/lib/formatters";
 import { useEffect, useState } from "react";
 import { useErpCache, useErpToast } from "@/components/providers/ERPUIProvider";
@@ -28,11 +30,12 @@ export default function StudentDetailsPage({ params }) {
     feeForm, setFeeForm, paymentItems, setPaymentItems, proofUploading,
     feeWorkspaceOpen, setFeeWorkspaceOpen, attForm, setAttForm, message, setMessage,
     editing, setEditing, editForm, setEditForm, history, setHistory, contactLogs,
-    transition, setTransition, transitioning, setTransitioning,
-    semesterBusy, updateCfkSemester, saveStudent, deleteStudent,
+    transition, setTransition, transitioning, setTransitioning, icardDialogOpen,
+    setIcardDialogOpen, semesterBusy, updateCfkSemester, saveStudent, deleteStudent,
     saveFees, uploadPaymentProof, uploadStudentPhoto, photoUploading, printStudentICard, printStudentForm, printBill,
     saveAttendance,
   } = useStudentProfile(params);
+  const [icardOutputMode, setIcardOutputMode] = useState("print");
   const [activeTab, setActiveTab] = useState("overview");
   const notify = useErpToast();
   const { invalidate } = useErpCache();
@@ -50,8 +53,22 @@ export default function StudentDetailsPage({ params }) {
       <StudentProfileHeader
         student={student}
         printStudentForm={printStudentForm}
-        onDownloadIcardJpg={() => printStudentICard("", "jpg")}
-        onPrintIcard={() => printStudentICard("", "print")}
+        onDownloadIcardJpg={() => {
+          if (isCodingForKidsCourse(student)) {
+            setIcardOutputMode("jpg");
+            setIcardDialogOpen(true);
+          } else {
+            printStudentICard("", "jpg");
+          }
+        }}
+        onPrintIcard={() => {
+          if (isCodingForKidsCourse(student)) {
+            setIcardOutputMode("print");
+            setIcardDialogOpen(true);
+          } else {
+            printStudentICard("", "print");
+          }
+        }}
         printBill={printBill}
         onEdit={() => setEditing(true)}
         deleteStudent={deleteStudent}
@@ -69,6 +86,16 @@ export default function StudentDetailsPage({ params }) {
       )}
       {student && (
         <main className="student-details student-profile-page">
+          <CodingForKidsIcardDialog
+            open={icardDialogOpen && isCodingForKidsCourse(student)}
+            student={student}
+            mode={icardOutputMode}
+            onClose={() => setIcardDialogOpen(false)}
+            onSelect={(templateName, _records, mode) => {
+              setIcardDialogOpen(false);
+              printStudentICard("", mode || icardOutputMode, templateName);
+            }}
+          />
           <StudentEditPanel
             editing={editing}
             setEditing={setEditing}
