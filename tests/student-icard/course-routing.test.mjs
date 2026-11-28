@@ -24,3 +24,8 @@ test("does not misclassify other courses that contain semester metadata", () => 
     assert.equal(isCodingForKidsCourse({ courseName, currentSemester: 1 }), false, courseName);
   }
 });
+
+test("prefers the current course label when stale course fields conflict", () => {
+  assert.equal(isCodingForKidsCourse({ courseName: "DCA", courseCode: "KIDS" }), false);
+  assert.equal(isCodingForKidsCourse({ courseName: "DOM", activeEnrollment: { courseName: "Coding for Kids" } }), true);
+});
