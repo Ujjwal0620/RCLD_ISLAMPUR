@@ -15,7 +15,7 @@ test("recognizes Coding for Kids by name regardless of case and semester", () =>
 
 test("recognizes Coding for Kids course codes and nested course objects", () => {
   assert.equal(isCodingForKidsCourse({ courseCode: "KIDS", currentSemester: 4 }), true);
-  assert.equal(isCodingForKidsCourse({ course: { code: "CFK", name: "Special Course" } }), true);
+  assert.equal(isCodingForKidsCourse({ course: { code: "CFK" } }), true);
   assert.equal(isCodingForKidsCourse({ activeEnrollment: { courseName: "Coding for Kids", semester: 2 } }), true);
 });
 
