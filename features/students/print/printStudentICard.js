@@ -36,6 +36,17 @@ export async function printStudentICard(student, setMessage, selectedSemester = 
     });
   }
 
+  // Preserve the existing Coding for Kids template-gallery selection and renderer.
+  if (selectedTemplate) {
+    return await printTemplateStudentIcard({
+      student,
+      templateName: selectedTemplate,
+      outputMode,
+      setMessage,
+      onStudentUpdated,
+    });
+  }
+
   // ---------- Institute and print settings ----------
   const DEFAULT_SESSION = "2025-2026";
   const AEC_LINE_1 = "AEC: CYBER WORLD, DESHBANDHU PARA, ISLAMPUR";
