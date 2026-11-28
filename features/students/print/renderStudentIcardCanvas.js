@@ -374,8 +374,25 @@ export function getRecommendedIcardTemplate(student, templates) {
       ? "ID Card Diploma.jpg"
       : templates.find(name => /diploma/i.test(name)) || "";
   }
-  const semesterRaw = student?.currentSemester ?? student?.semester ?? student?.activeSemester ?? 1;
-  const semester = Math.min(6, Math.max(1, Number(String(semesterRaw).match(/\d+/)?.[0] || 1)));
-  const expected = "ID Card Sem-" + semester + ".jpg";
-  return templates.includes(expected) ? expected : templates.find(name => /sem[-_ ]?1/i.test(name)) || templates[0];
+
+  // Keep the existing semester resolution order for Coding for Kids unchanged.
+  const candidates = [
+    student?.semesterLabel,
+    student?.semester,
+    student?.activeSemester,
+    student?.currentSemester,
+    student?.courseCode,
+    student?.sourceCourseLabel,
+    student?.courseName,
+  ].map(value => String(value ?? "").trim()).filter(Boolean);
+  const explicitSemester = candidates.find(value => /(?:SM|SEM(?:ESTER)?)\s*[-_ ]?\s*(?:VI|IV|V|III|II|I|[1-6])\b/i.test(value));
+  const numericSemester = candidates.find(value => /^(?:VI|IV|V|III|II|I|[1-6])$/i.test(value));
+  const semesterSource = explicitSemester || numericSemester || "";
+  const romanMap = { i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6 };
+  const semesterMatch = semesterSource.match(/(?:SM|SEM(?:ESTER)?)\s*[-_ ]?\s*(VI|IV|V|III|II|I|[1-6])\b/i)
+    || semesterSource.match(/^(VI|IV|V|III|II|I|[1-6])$/i);
+  const token = semesterMatch?.[1] || "";
+  const semester = token ? (romanMap[token.toLowerCase()] || Number(token)) : 0;
+  const expected = "ID Card Sem-" + Math.min(6, Math.max(1, semester || 1)) + ".jpg";
+  return templates.includes(expected) ? expected : templates[0];
 }
