@@ -19,7 +19,6 @@ import StudentAcademicDetails from "@/components/students/profile/StudentAcademi
 import useStudentProfile from "@/features/students/hooks/useStudentProfile";
 import indiaLocations from "@/lib/indiaStatesDistricts.json";
 import { isIcardEligible } from "@/features/students/utils/studentProfile";
-import { isCodingForKidsCourse } from "@/lib/student-icard/courseRouting.mjs";
 import { formatDisplayValue as value } from "@/lib/formatters";
 import { useEffect, useState } from "react";
 import { useErpCache, useErpToast } from "@/components/providers/ERPUIProvider";
@@ -54,20 +53,12 @@ export default function StudentDetailsPage({ params }) {
         student={student}
         printStudentForm={printStudentForm}
         onDownloadIcardJpg={() => {
-          if (isCodingForKidsCourse(student)) {
-            setIcardOutputMode("jpg");
-            setIcardDialogOpen(true);
-          } else {
-            printStudentICard("", "jpg");
-          }
+          setIcardOutputMode("jpg");
+          setIcardDialogOpen(true);
         }}
         onPrintIcard={() => {
-          if (isCodingForKidsCourse(student)) {
-            setIcardOutputMode("print");
-            setIcardDialogOpen(true);
-          } else {
-            printStudentICard("", "print");
-          }
+          setIcardOutputMode("print");
+          setIcardDialogOpen(true);
         }}
         printBill={printBill}
         onEdit={() => setEditing(true)}
