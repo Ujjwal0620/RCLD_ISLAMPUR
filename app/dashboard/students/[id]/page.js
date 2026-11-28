@@ -30,7 +30,7 @@ export default function StudentDetailsPage({ params }) {
     editing, setEditing, editForm, setEditForm, history, setHistory, contactLogs,
     transition, setTransition, transitioning, setTransitioning,
     semesterBusy, updateCfkSemester, saveStudent, deleteStudent,
-    saveFees, uploadPaymentProof, uploadStudentPhoto, photoUploading, printStudentICard, downloadStudentICardJpg, printStudentForm, printBill,
+    saveFees, uploadPaymentProof, uploadStudentPhoto, photoUploading, printStudentICard, printStudentForm, printBill,
     saveAttendance,
   } = useStudentProfile(params);
   const [activeTab, setActiveTab] = useState("overview");
